@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,36 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// Eat Meet Club custom colors
+				"brand": {
+					50: "#FFF3E0",
+					100: "#FFE0B2",
+					200: "#FFCC80",
+					300: "#FFB74D",
+					400: "#FFA726",
+					500: "#FF9800", // Primary orange
+					600: "#FB8C00",
+					700: "#F57C00",
+					800: "#EF6C00",
+					900: "#E65100",
+				},
+				"teal": {
+					50: "#E0F2F1",
+					100: "#B2DFDB",
+					200: "#80CBC4",
+					300: "#4DB6AC",
+					400: "#26A69A",
+					500: "#009688", // Secondary teal
+					600: "#00897B",
+					700: "#00796B",
+					800: "#00695C",
+					900: "#004D40",
+				},
+			},
+			fontFamily: {
+				sans: ["Inter", "sans-serif"],
+				serif: ["Playfair Display", "serif"],
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -69,26 +99,28 @@ export default {
 				sm: 'calc(var(--radius) - 4px)'
 			},
 			keyframes: {
-				'accordion-down': {
-					from: {
-						height: '0'
-					},
-					to: {
-						height: 'var(--radix-accordion-content-height)'
-					}
+				"accordion-down": {
+					from: { height: '0' },
+					to: { height: 'var(--radix-accordion-content-height)' },
 				},
-				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
-					},
-					to: {
-						height: '0'
-					}
+				"accordion-up": {
+					from: { height: 'var(--radix-accordion-content-height)' },
+					to: { height: '0' },
+				},
+				"fade-in": {
+					"0%": { opacity: "0" },
+					"100%": { opacity: "1" }
+				},
+				"fade-out": {
+					"0%": { opacity: "1" },
+					"100%": { opacity: "0" }
 				}
 			},
 			animation: {
-				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				"accordion-down": "accordion-down 0.2s ease-out",
+				"accordion-up": "accordion-up 0.2s ease-out",
+				"fade-in": "fade-in 0.3s ease-out",
+				"fade-out": "fade-out 0.3s ease-out"
 			}
 		}
 	},
