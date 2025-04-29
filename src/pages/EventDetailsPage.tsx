@@ -36,7 +36,7 @@ const EventDetailsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { canEditEvent } = useEventAccess(event);
   
   // State
