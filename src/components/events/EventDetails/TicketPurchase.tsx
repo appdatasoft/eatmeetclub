@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Button } from "@/components/common/Button";
+import { Button } from "@/components/ui/button";
 
 interface TicketPurchaseProps {
   price: number;
@@ -81,7 +81,7 @@ const TicketPurchase: React.FC<TicketPurchaseProps> = ({
         onClick={() => onBuyTickets(ticketCount)} 
         className="w-full" 
         size="lg"
-        isLoading={isPaymentProcessing}
+        disabled={isPaymentProcessing}
       >
         {isPaymentProcessing ? "Processing..." : `Buy Ticket${ticketCount > 1 ? 's' : ''}`}
       </Button>

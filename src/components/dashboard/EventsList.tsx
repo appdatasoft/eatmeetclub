@@ -38,6 +38,10 @@ const EventsList = ({ events, isLoading, onPublishEvent }: EventsListProps) => {
     }
   };
   
+  const handleEventClick = (eventId: string) => {
+    navigate(`/event/${eventId}`);
+  };
+  
   console.log("Events in EventsList:", events); // Debug: Log events to console
   
   return (
@@ -67,7 +71,14 @@ const EventsList = ({ events, isLoading, onPublishEvent }: EventsListProps) => {
               <TableBody>
                 {events.map((event) => (
                   <TableRow key={event.id}>
-                    <TableCell className="font-medium">{event.title}</TableCell>
+                    <TableCell className="font-medium">
+                      <span 
+                        className="cursor-pointer text-primary hover:underline"
+                        onClick={() => handleEventClick(event.id)}
+                      >
+                        {event.title}
+                      </span>
+                    </TableCell>
                     <TableCell>{event.restaurant?.name || 'Unknown'}</TableCell>
                     <TableCell>{formatEventDate(event.date)}</TableCell>
                     <TableCell>${event.price.toFixed(2)}</TableCell>
