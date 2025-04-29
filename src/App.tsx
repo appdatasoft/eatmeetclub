@@ -11,6 +11,7 @@ import "./App.css";
 import Index from "./pages/Index";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Events from "./pages/Events";
 import EventDetails from "./pages/EventDetails";
@@ -46,6 +47,10 @@ function App() {
         <Route
           path="/login"
           element={!session ? <Login /> : <Navigate to="/dashboard" />}
+        />
+        <Route
+          path="/signup"
+          element={!session ? <Signup /> : <Navigate to="/dashboard" />}
         />
         <Route
           path="/dashboard"
