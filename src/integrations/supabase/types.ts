@@ -48,6 +48,7 @@ export type Database = {
           payment_status: string | null
           price: number
           restaurant_id: string
+          tickets_sold: number | null
           time: string
           title: string
           updated_at: string
@@ -64,6 +65,7 @@ export type Database = {
           payment_status?: string | null
           price: number
           restaurant_id: string
+          tickets_sold?: number | null
           time: string
           title: string
           updated_at?: string
@@ -80,6 +82,7 @@ export type Database = {
           payment_status?: string | null
           price?: number
           restaurant_id?: string
+          tickets_sold?: number | null
           time?: string
           title?: string
           updated_at?: string
@@ -142,6 +145,53 @@ export type Database = {
           zipcode?: string
         }
         Relationships: []
+      }
+      tickets: {
+        Row: {
+          event_id: string
+          id: string
+          payment_id: string | null
+          payment_status: string | null
+          price: number
+          purchase_date: string | null
+          quantity: number
+          service_fee: number
+          total_amount: number
+          user_id: string
+        }
+        Insert: {
+          event_id: string
+          id?: string
+          payment_id?: string | null
+          payment_status?: string | null
+          price: number
+          purchase_date?: string | null
+          quantity: number
+          service_fee: number
+          total_amount: number
+          user_id: string
+        }
+        Update: {
+          event_id?: string
+          id?: string
+          payment_id?: string | null
+          payment_status?: string | null
+          price?: number
+          purchase_date?: string | null
+          quantity?: number
+          service_fee?: number
+          total_amount?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

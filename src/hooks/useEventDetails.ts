@@ -56,6 +56,23 @@ export const useEventDetails = (eventId?: string) => {
         throw error;
       }
       
+      // Count tickets sold for this event
+      const { data: ticketsData, error: ticketsError } = await supabase
+        .from('tickets')
+        .select('quantity')
+        .eq('event_id', eventId)
+        .eq('payment_status', 'completed');
+        
+      if (ticketsError) {
+        console.error("Error fetching tickets:", ticketsError);
+      }
+      
+      // Calculate total tickets sold
+      let ticketsSold = 0;
+      if (ticketsData && ticketsData.length > 0) {
+        ticketsSold = ticketsData.reduce((total, ticket) => total + ticket.quantity, 0);
+      }
+        
       // Format the event data
       if (data) {
         // Format the date to a more readable format
@@ -65,9 +82,6 @@ export const useEventDetails = (eventId?: string) => {
           month: 'long',
           day: 'numeric'
         });
-        
-        // For now, hardcode tickets_sold to 0 since we don't have a tickets table yet
-        const ticketsSold = 0;
         
         setEvent({
           ...data,
@@ -126,11 +140,19 @@ export const useEventDetails = (eventId?: string) => {
         return;
       }
       
+      // Calculate service fee (5% of total)
+      const unitPrice = event.price;
+      const subtotal = unitPrice * ticketCount;
+      const serviceFee = subtotal * 0.05; // 5% service fee
+      const totalAmount = subtotal + serviceFee;
+      
       // Prepare ticket purchase data
       const purchaseData = {
         eventId: event.id,
         quantity: ticketCount,
-        unitPrice: event.price
+        unitPrice: unitPrice,
+        serviceFee: serviceFee,
+        totalAmount: totalAmount
       };
       
       console.log("Creating payment session with data:", purchaseData);
@@ -146,7 +168,7 @@ export const useEventDetails = (eventId?: string) => {
       console.log("Payment session response:", response);
       
       if (response.error) {
-        throw new Error(response.error || "Failed to create payment session");
+        throw new Error(response.error.message || "Failed to create payment session");
       }
       
       if (!response.data?.url) {
@@ -158,7 +180,9 @@ export const useEventDetails = (eventId?: string) => {
         eventId: event.id,
         eventTitle: event.title,
         quantity: ticketCount,
-        totalAmount: (event.price * ticketCount * 1.05)
+        unitPrice: event.price,
+        serviceFee: serviceFee,
+        totalAmount: totalAmount
       }));
       
       // Redirect to Stripe checkout

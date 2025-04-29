@@ -1,1 +1,12 @@
+
 project_id = "wocfwpedauuhlrfugxuu"
+
+[functions]
+[functions.create-ticket-payment]
+verify_jwt = true
+
+[functions.create-event-payment]
+verify_jwt = true
+
+[functions.verify-event-payment]
+verify_jwt = true

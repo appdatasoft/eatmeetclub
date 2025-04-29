@@ -1,149 +1,163 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@14.18.0";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { stripe } from "../_shared/stripe.ts";
 
+// CORS headers for browser requests
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
+  if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { purchaseData } = await req.json();
-    const { eventId, quantity, unitPrice } = purchaseData;
-    
-    if (!eventId || !quantity || !unitPrice) {
-      throw new Error("Missing required purchase information");
+    // Create Supabase client with auth context from request
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing Authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log("Processing ticket purchase:", { eventId, quantity, unitPrice });
-    
-    // Create Supabase client for authentication
+    // Create Supabase client with admin privileges
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      }
     );
 
-    // Authenticate the user
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("Missing Authorization header");
+    // Get the user from the auth context
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-    
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: authError } = await supabaseClient.auth.getUser(token);
-    
-    if (authError || !userData.user) {
-      throw new Error("Invalid token or user not found");
+
+    // Parse request body
+    const { purchaseData } = await req.json();
+    const { eventId, quantity, unitPrice, serviceFee, totalAmount } = purchaseData;
+
+    if (!eventId || !quantity || !unitPrice) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required purchase information' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-    
-    // Fetch event details to confirm it exists and is valid
-    const { data: eventData, error: eventError } = await supabaseClient
-      .from("events")
-      .select("title, price, restaurant_id")
-      .eq("id", eventId)
+
+    // Verify event exists
+    const { data: event, error: eventError } = await supabaseClient
+      .from('events')
+      .select('title, tickets_sold, capacity')
+      .eq('id', eventId)
       .single();
-    
-    if (eventError || !eventData) {
-      throw new Error("Event not found or no longer available");
+
+    if (eventError || !event) {
+      return new Response(
+        JSON.stringify({ error: 'Event not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Fetch the restaurant details
-    const { data: restaurantData, error: restaurantError } = await supabaseClient
-      .from("restaurants")
-      .select("name")
-      .eq("id", eventData.restaurant_id)
-      .single();
-      
-    if (restaurantError) {
-      console.error("Error fetching restaurant:", restaurantError);
-    }
-    
-    // Initialize Stripe
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-      apiVersion: "2023-10-16",
-    });
-    
-    // Calculate total amount with service fee
-    const subtotal = quantity * unitPrice;
-    const serviceFee = subtotal * 0.05; // 5% service fee
-    const totalAmount = Math.round((subtotal + serviceFee) * 100); // Convert to cents for Stripe
-
-    // Check if user already has a Stripe customer ID
-    const customers = await stripe.customers.list({
-      email: userData.user.email,
-      limit: 1
-    });
-    
-    let customerId;
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
-      console.log("Using existing customer:", customerId);
+    // Check if there are enough tickets available
+    const ticketsAvailable = event.capacity - (event.tickets_sold || 0);
+    if (quantity > ticketsAvailable) {
+      return new Response(
+        JSON.stringify({ error: `Only ${ticketsAvailable} tickets available` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Create a Stripe checkout session
-    const origin = req.headers.get("origin") || "http://localhost:5173";
+    // Log information for debugging
+    console.log(`Creating payment session for user ${user.id}, event ${eventId}, quantity ${quantity}`);
+
+    // Create a Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      customer_email: customerId ? undefined : userData.user.email,
+      payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
-            currency: "usd",
+            currency: 'usd',
             product_data: {
-              name: `Tickets for ${eventData.title}`,
-              description: `${quantity} ticket(s) at ${restaurantData?.name || 'Restaurant'}`,
+              name: `Ticket for ${event.title}`,
+              description: `${quantity} ticket(s) at $${unitPrice.toFixed(2)} each`,
             },
-            unit_amount: Math.round(unitPrice * 100), // Convert to cents
+            unit_amount: Math.round(unitPrice * 100), // Stripe uses cents
           },
           quantity: quantity,
         },
         {
           price_data: {
-            currency: "usd",
+            currency: 'usd',
             product_data: {
-              name: "Service Fee",
-              description: "5% processing fee",
+              name: 'Service Fee',
+              description: '5% service fee',
             },
-            unit_amount: Math.round(serviceFee * 100 / quantity), // Per ticket service fee in cents
+            unit_amount: Math.round((serviceFee / quantity) * 100), // Stripe uses cents
           },
           quantity: quantity,
-        }
+        },
       ],
-      mode: "payment",
-      success_url: `${origin}/ticket-success?session_id={CHECKOUT_SESSION_ID}&event_id=${eventId}`,
-      cancel_url: `${origin}/event/${eventId}`,
+      mode: 'payment',
+      success_url: `${req.headers.get('origin')}/ticket-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.headers.get('origin')}/event/${eventId}`,
+      client_reference_id: user.id,
+      customer_email: user.email,
       metadata: {
         eventId,
-        userId: userData.user.id,
+        userId: user.id,
         quantity,
-        unitPrice: unitPrice.toString(),
+        unitPrice,
+        serviceFee,
+        totalAmount
       },
     });
 
-    console.log("Checkout session created:", { id: session.id, url: session.url });
+    // Create a pending ticket record in the database
+    const { data: ticketData, error: ticketError } = await supabaseClient
+      .from('tickets')
+      .insert([
+        {
+          user_id: user.id,
+          event_id: eventId,
+          quantity: quantity,
+          price: unitPrice,
+          service_fee: serviceFee,
+          total_amount: totalAmount,
+          payment_id: session.id,
+          payment_status: 'pending'
+        }
+      ]);
+
+    if (ticketError) {
+      console.error('Error creating ticket record:', ticketError);
+      // Continue anyway as the payment might still be processed
+    }
 
     return new Response(
       JSON.stringify({ url: session.url }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error("Error creating payment session:", error);
+    console.error('Error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
