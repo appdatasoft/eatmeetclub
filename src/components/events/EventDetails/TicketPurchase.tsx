@@ -1,19 +1,22 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 interface TicketPurchaseProps {
   price: number;
   ticketsRemaining: number;
   onBuyTickets: (quantity: number) => void;
   isPaymentProcessing: boolean;
+  isLoggedIn?: boolean;
 }
 
 const TicketPurchase: React.FC<TicketPurchaseProps> = ({ 
   price, 
   ticketsRemaining,
   onBuyTickets,
-  isPaymentProcessing
+  isPaymentProcessing,
+  isLoggedIn = true
 }) => {
   const [ticketCount, setTicketCount] = useState(1);
 
@@ -80,14 +83,31 @@ const TicketPurchase: React.FC<TicketPurchaseProps> = ({
         </div>
       </div>
       
-      <Button 
-        onClick={() => onBuyTickets(ticketCount)} 
-        className="w-full" 
-        size="lg"
-        disabled={isPaymentProcessing}
-      >
-        {isPaymentProcessing ? "Processing..." : `Buy Ticket${ticketCount > 1 ? 's' : ''}`}
-      </Button>
+      {!isLoggedIn ? (
+        <div>
+          <Button 
+            onClick={() => onBuyTickets(ticketCount)} 
+            className="w-full mb-2" 
+            size="lg"
+          >
+            Log in to Buy Tickets
+          </Button>
+          <div className="text-center mt-2">
+            <Link to="/become-member" className="text-primary hover:underline">
+              Not a member? Join now to buy tickets
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <Button 
+          onClick={() => onBuyTickets(ticketCount)} 
+          className="w-full" 
+          size="lg"
+          disabled={isPaymentProcessing}
+        >
+          {isPaymentProcessing ? "Processing..." : `Buy Ticket${ticketCount > 1 ? 's' : ''}`}
+        </Button>
+      )}
       
       <p className="text-xs text-gray-500 text-center mt-4">
         By purchasing tickets, you agree to our Terms of Service and Privacy Policy. An invoice will be sent to your email.

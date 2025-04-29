@@ -8,6 +8,7 @@ import QuickActions from '@/components/dashboard/QuickActions';
 import UpcomingEvents from '@/components/dashboard/UpcomingEvents';
 import EventsList from '@/components/dashboard/EventsList';
 import RestaurantsList from '@/components/dashboard/RestaurantsList';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Restaurant {
   id: string;
@@ -40,6 +41,7 @@ interface Event {
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, isAdmin } = useAuth();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,10 +50,18 @@ const Dashboard = () => {
   const fetchRestaurants = async () => {
     try {
       console.log("Fetching restaurants...");
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('restaurants')
         .select('id, name, cuisine_type, city, state, address, phone, website, zipcode')
         .order('created_at', { ascending: false });
+      
+      // Only filter by user_id if not an admin
+      if (!isAdmin && user) {
+        query = query.eq('user_id', user.id);
+      }
+      
+      const { data, error } = await query;
       
       if (error) {
         throw error;
@@ -73,10 +83,18 @@ const Dashboard = () => {
   const fetchEvents = async () => {
     try {
       console.log("Fetching events...");
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('events')
-        .select('id, title, date, time, restaurant_id, capacity, price, payment_status, published, tickets_sold, restaurant:restaurants(name)')
+        .select('id, title, date, time, restaurant_id, capacity, price, payment_status, published, tickets_sold, restaurant:restaurants(name), user_id')
         .order('created_at', { ascending: false });
+      
+      // Only filter by user_id if not an admin
+      if (!isAdmin && user) {
+        query = query.eq('user_id', user.id);
+      }
+      
+      const { data, error } = await query;
       
       if (error) {
         throw error;
@@ -128,6 +146,7 @@ const Dashboard = () => {
         events={events} 
         isLoading={isLoading} 
         onRefresh={fetchEvents} 
+        isAdmin={isAdmin}
       />
       
       <RestaurantsList 

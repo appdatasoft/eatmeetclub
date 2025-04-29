@@ -25,6 +25,7 @@ export interface EventDetails {
   tickets_sold?: number;
   user_id: string;
   cover_image?: string;
+  published: boolean;
 }
 
 export const useEventDetails = (eventId?: string) => {
@@ -41,7 +42,7 @@ export const useEventDetails = (eventId?: string) => {
     try {
       setLoading(true);
       
-      // First get the current user
+      // First get the current user (if logged in)
       const { data: { session } } = await supabase.auth.getSession();
       const currentUserId = session?.user?.id;
       

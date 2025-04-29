@@ -1,161 +1,165 @@
 
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { useState, useEffect } from "react";
+import { supabase } from "../integrations/supabase/client";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/common/Button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, Mail } from "lucide-react";
-
-const loginSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(1, { message: "Password is required" }),
-});
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [searchParams] = useSearchParams();
-  const success = searchParams.get('success') === 'true';
-  const sessionId = searchParams.get('session_id');
+  const location = useLocation();
 
-  const form = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
-
-  // Handle the success redirect from payment
   useEffect(() => {
-    if (success && sessionId) {
-      toast({
-        title: "Payment Successful!",
-        description: "Your membership has been activated.",
-      });
+    // Check if we have a redirect path from state
+    const state = location.state as { from?: string };
+    const fromPath = state?.from;
+    
+    if (fromPath) {
+      setRedirectUrl(fromPath);
+    } else {
+      // Check for pending ticket purchase stored in localStorage
+      const pendingPurchase = localStorage.getItem('pendingTicketPurchase');
+      if (pendingPurchase) {
+        const { redirectPath } = JSON.parse(pendingPurchase);
+        if (redirectPath) {
+          setRedirectUrl(redirectPath);
+        }
+      } else {
+        // Check general redirect after login
+        const redirect = localStorage.getItem('redirectAfterLogin');
+        if (redirect) {
+          setRedirectUrl(redirect);
+        }
+      }
     }
-  }, [success, sessionId, toast]);
+  }, [location]);
 
-  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
     try {
-      setIsLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       toast({
-        title: "Login successful",
-        description: "You are now signed in.",
+        title: "Login successful!",
+        description: "Welcome back!",
       });
 
-      navigate("/dashboard");
+      // Handle redirects after login
+      if (redirectUrl) {
+        localStorage.removeItem('redirectAfterLogin');
+        navigate(redirectUrl);
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error: any) {
       toast({
         title: "Login failed",
-        description: error.message || "There was a problem signing you in",
+        description: error.message || "Invalid login credentials",
         variant: "destructive",
       });
-      console.error(error);
+      console.error("Error logging in:", error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full">
-        {success && sessionId && (
-          <Alert className="mb-6 bg-green-50 border-green-200">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <AlertDescription className="text-green-800 font-medium">
-                Membership payment successful!
-              </AlertDescription>
-            </div>
-            <div className="mt-2 ml-6">
-              <div className="flex items-start mt-2">
-                <Mail className="h-4 w-4 text-gray-500 mr-2 mt-0.5" />
-                <p className="text-sm text-gray-600">
-                  We've sent you an email with your invoice and account details. Please check your inbox!
-                </p>
-              </div>
-            </div>
-          </Alert>
-        )}
-        
-        <div className="bg-white p-8 rounded-lg shadow-md">
-          <div className="text-center mb-6">
-            <Link to="/" className="inline-block">
-              <span className="font-serif text-2xl font-bold text-brand-500">Eat<span className="text-teal-500">Meet</span>Club</span>
-            </Link>
-            <h1 className="text-2xl font-bold mt-4">Log in to your account</h1>
+    <div className="flex min-h-screen bg-gray-50">
+      <div className="m-auto w-full max-w-md p-8 bg-white rounded-xl shadow-lg">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold">Welcome back</h1>
+          <p className="text-gray-600 mt-2">Sign in to your account</p>
+        </div>
+
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full"
+              placeholder="your@email.com"
+              autoComplete="email"
+            />
           </div>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="you@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button
-                type="submit"
-                className="w-full"
-                isLoading={isLoading}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <Link
+                to="/forgot-password"
+                className="text-sm font-medium text-primary hover:underline"
               >
-                Log in
-              </Button>
-
-              <div className="text-center text-sm mt-4">
-                <Link to="/reset-password" className="text-brand-500 hover:text-brand-600">
-                  Forgot your password?
-                </Link>
-              </div>
-            </form>
-          </Form>
-
-          <div className="mt-6 text-center text-sm text-gray-600">
-            <p>
-              Don't have an account?{" "}
-              <Link to="/become-member" className="text-brand-500 hover:text-brand-600 font-medium">
-                Join as a member
+                Forgot password?
               </Link>
+            </div>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full"
+              placeholder="••••••••"
+              autoComplete="current-password"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={loading}
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </Button>
+        </form>
+
+        <div className="mt-6 text-center text-sm">
+          <span className="text-gray-600">Don't have an account?</span>{" "}
+          <Link 
+            to="/signup" 
+            className="font-medium text-primary hover:underline"
+            state={{ from: redirectUrl }}
+          >
+            Sign up
+          </Link>
+        </div>
+        
+        <div className="mt-4 text-center">
+          <Link 
+            to="/become-member" 
+            className="font-medium text-brand-600 hover:underline text-sm"
+          >
+            Become a Member
+          </Link>
+        </div>
+        
+        {redirectUrl && redirectUrl.includes('/event/') && (
+          <div className="mt-6 p-3 bg-amber-50 border border-amber-200 rounded-md">
+            <p className="text-sm text-amber-800">
+              Login to purchase tickets for this event.
             </p>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

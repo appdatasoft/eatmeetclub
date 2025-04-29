@@ -35,7 +35,24 @@ function App() {
     supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
-  }, []);
+    
+    // Check for pending redirect after login
+    const checkPendingRedirect = async () => {
+      const pendingPurchase = localStorage.getItem('pendingTicketPurchase');
+      if (pendingPurchase && session) {
+        const { redirectPath } = JSON.parse(pendingPurchase);
+        if (redirectPath) {
+          // Clear the pending purchase
+          localStorage.removeItem('pendingTicketPurchase');
+          window.location.href = redirectPath;
+        }
+      }
+    };
+    
+    if (session) {
+      checkPendingRedirect();
+    }
+  }, [session]);
 
   return (
     <Router>
@@ -67,6 +84,7 @@ function App() {
           element={session ? <CreateEvent /> : <Navigate to="/login" />}
         />
         <Route path="/events" element={<Events />} />
+        {/* Public event details page - no auth required */}
         <Route path="/event/:id" element={<EventDetails />} />
         <Route
           path="/create-event"
@@ -75,6 +93,10 @@ function App() {
         <Route
           path="/edit-event/:id"
           element={session ? <EditEvent /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/dashboard/payment/:eventId"
+          element={session ? <EventPayment /> : <Navigate to="/login" />}
         />
         <Route
           path="/event-payment/:eventId"

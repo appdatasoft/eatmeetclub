@@ -1,10 +1,11 @@
 
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEventDetails } from "@/hooks/useEventDetails";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/useAuth";
 
 // Layout components
 import Navbar from "@/components/layout/Navbar";
@@ -31,22 +32,61 @@ const EventDetails = () => {
     refreshEventDetails 
   } = useEventDetails(id);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { user, isAdmin } = useAuth();
   
   // State
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditCoverDialogOpen, setIsEditCoverDialogOpen] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [canEditEvent, setCanEditEvent] = useState(false);
   
   // Get current URL for QR code
   const eventUrl = window.location.href;
   
+  useEffect(() => {
+    if (event && user) {
+      // Check if user is owner or admin
+      const isOwner = event.user_id === user.id;
+      setCanEditEvent(isOwner || isAdmin);
+    } else {
+      setCanEditEvent(false);
+    }
+  }, [event, user, isAdmin]);
+  
+  useEffect(() => {
+    // Check if this event is published, if not, only owners and admins can view
+    const checkAccess = async () => {
+      if (!id) return;
+      if (!user) return; // Public users can only see published events
+      
+      try {
+        // If we have event data already from useEventDetails, use that
+        if (event && !event.published) {
+          // For unpublished events, check if user is owner or admin
+          const isOwner = event.user_id === user.id;
+          if (!isOwner && !isAdmin) {
+            toast({
+              title: "Access Denied",
+              description: "This event is not currently published.",
+              variant: "destructive"
+            });
+            navigate('/events');
+          }
+        }
+      } catch (error) {
+        console.error("Error checking event access:", error);
+      }
+    };
+    
+    checkAccess();
+  }, [event, id, user, navigate, toast, isAdmin]);
+  
   const handleEditEvent = () => {
-    // Navigate to edit event page (to be implemented)
-    // For now just go to dashboard
-    navigate(`/dashboard`);
+    navigate(`/edit-event/${id}`);
   };
   
   const handleEditCover = () => {
@@ -113,6 +153,26 @@ const EventDetails = () => {
   const handleDeleteEvent = async () => {
     if (!event) return;
     
+    // Check if user can delete this event
+    if (!canEditEvent) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to delete this event",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Published events cannot be deleted unless by admin
+    if (event.published && !isAdmin) {
+      toast({
+        title: "Cannot Delete",
+        description: "Published events cannot be deleted.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsDeleting(true);
     try {
       const { error } = await supabase
@@ -128,7 +188,7 @@ const EventDetails = () => {
       });
       
       // Navigate back to events list
-      navigate('/events');
+      navigate('/dashboard');
     } catch (error: any) {
       console.error("Error deleting event:", error);
       toast({
@@ -140,6 +200,30 @@ const EventDetails = () => {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
     }
+  };
+  
+  // Handle ticket purchase for non-logged in users
+  const handleTicketPurchase = (ticketCount: number) => {
+    if (!user) {
+      // Store event ID and ticket count in local storage
+      localStorage.setItem('pendingTicketPurchase', JSON.stringify({
+        eventId: id,
+        ticketCount: ticketCount,
+        redirectPath: location.pathname
+      }));
+      
+      // Redirect to login page
+      toast({
+        title: "Login Required",
+        description: "Please log in or become a member to purchase tickets",
+      });
+      
+      navigate('/login', { state: { from: location.pathname } });
+      return;
+    }
+    
+    // User is logged in, proceed with ticket purchase
+    handleBuyTickets(ticketCount);
   };
 
   if (loading) {
@@ -164,6 +248,27 @@ const EventDetails = () => {
     );
   }
 
+  // If event is not published and user is not owner or admin
+  // This is a backup check in case the useEffect didn't redirect
+  if (!event.published && !canEditEvent) {
+    return (
+      <>
+        <Navbar />
+        <div className="container-custom py-8 text-center">
+          <h1 className="text-2xl font-bold mb-4">Event Not Available</h1>
+          <p className="mb-6">This event is not currently published.</p>
+          <button 
+            className="px-4 py-2 bg-primary text-white rounded-md"
+            onClick={() => navigate('/events')}
+          >
+            Back to Events
+          </button>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
   const ticketsRemaining = event.capacity - (event.tickets_sold || 0);
   const ticketsPercentage = ((event.tickets_sold || 0) / event.capacity) * 100;
   const location = `${event.restaurant.address}, ${event.restaurant.city}, ${event.restaurant.state} ${event.restaurant.zipcode}`;
@@ -176,18 +281,19 @@ const EventDetails = () => {
         <EventHeader 
           title={event.title} 
           restaurantName={event.restaurant.name} 
-          isOwner={isCurrentUserOwner}
+          isOwner={canEditEvent}
           onEditCover={handleEditCover}
           coverImage={coverImageUrl}
         />
 
         <div className="container-custom py-4 md:py-8">
-          {isCurrentUserOwner && (
+          {canEditEvent && (
             <EventActions
               eventUrl={eventUrl}
               eventTitle={event.title}
               onEditEvent={handleEditEvent}
               onDeleteEvent={() => setIsDeleteDialogOpen(true)}
+              isPublished={event.published}
             />
           )}
           
@@ -204,12 +310,32 @@ const EventDetails = () => {
 
             {/* Ticket purchase sidebar */}
             <div className="lg:col-span-1">
-              <TicketPurchase 
-                price={event.price}
-                ticketsRemaining={ticketsRemaining}
-                onBuyTickets={handleBuyTickets}
-                isPaymentProcessing={isPaymentProcessing}
-              />
+              {event.published && (
+                <TicketPurchase 
+                  price={event.price}
+                  ticketsRemaining={ticketsRemaining}
+                  onBuyTickets={handleTicketPurchase}
+                  isPaymentProcessing={isPaymentProcessing}
+                  isLoggedIn={!!user}
+                />
+              )}
+              
+              {!event.published && canEditEvent && (
+                <div className="bg-white p-6 rounded-lg shadow-sm sticky top-24">
+                  <div className="mb-4 text-amber-600 font-medium">⚠️ This event is not published</div>
+                  <p className="text-gray-600 mb-4">
+                    This event is currently in draft mode and is only visible to you and admins.
+                    Publish your event to make it available to the public.
+                  </p>
+                  <Button 
+                    className="w-full" 
+                    variant="outline"
+                    onClick={() => navigate('/dashboard')}
+                  >
+                    Back to Dashboard
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>
