@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardDescription, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CalendarPlus, Edit, Trash2, ExternalLinkIcon } from "lucide-react";
+import { CalendarPlus, Edit, Trash2, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import EditRestaurantDialog from '@/components/restaurants/EditRestaurantDialog';
 import DeleteRestaurantDialog from '@/components/restaurants/DeleteRestaurantDialog';
@@ -35,17 +35,21 @@ const RestaurantsList = ({ restaurants, isLoading, onRestaurantUpdate }: Restaur
   const [deleteRestaurant, setDeleteRestaurant] = useState<{id: string, name: string} | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
+  console.log("Restaurants in RestaurantsList:", restaurants); // Debug log
+  
   const handleCreateEvent = (restaurantId: string) => {
     navigate(`/dashboard/create-event?restaurantId=${restaurantId}`);
   };
   
   // Restaurant editing functions
   const openEditDialog = (restaurant: Restaurant) => {
+    console.log("Opening edit dialog for:", restaurant);
     setEditRestaurant(restaurant);
     setIsEditDialogOpen(true);
   };
 
   const openDeleteDialog = (id: string, name: string) => {
+    console.log("Opening delete dialog for:", id, name);
     setDeleteRestaurant({ id, name });
     setIsDeleteDialogOpen(true);
   };
@@ -62,7 +66,7 @@ const RestaurantsList = ({ restaurants, isLoading, onRestaurantUpdate }: Restaur
             <div className="flex justify-center py-4">
               <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
             </div>
-          ) : restaurants.length > 0 ? (
+          ) : restaurants && restaurants.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -120,7 +124,7 @@ const RestaurantsList = ({ restaurants, isLoading, onRestaurantUpdate }: Restaur
                             onClick={() => window.open(restaurant.website!, '_blank')}
                             title="Visit Website"
                           >
-                            <ExternalLinkIcon className="h-4 w-4" />
+                            <ExternalLink className="h-4 w-4" />
                           </Button>
                         )}
                       </TableCell>
@@ -138,7 +142,7 @@ const RestaurantsList = ({ restaurants, isLoading, onRestaurantUpdate }: Restaur
             </div>
           )}
         </CardContent>
-        {restaurants.length > 0 && (
+        {restaurants && restaurants.length > 0 && (
           <CardFooter>
             <Button onClick={() => navigate('/dashboard/add-restaurant')}>
               Add Another Restaurant

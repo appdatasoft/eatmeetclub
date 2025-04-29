@@ -100,8 +100,13 @@ const Dashboard = () => {
       } else {
         // Fetch user's restaurants and events
         setIsLoading(true);
-        await Promise.all([fetchRestaurants(), fetchEvents()]);
-        setIsLoading(false);
+        try {
+          await Promise.all([fetchRestaurants(), fetchEvents()]);
+        } catch (error) {
+          console.error("Error loading dashboard data:", error);
+        } finally {
+          setIsLoading(false);
+        }
       }
     };
     
