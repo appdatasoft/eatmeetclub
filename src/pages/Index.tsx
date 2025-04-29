@@ -9,9 +9,9 @@ import CallToAction from "@/components/home/CallToAction";
 
 const Index = () => {
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Navbar />
-      <main>
+      <main className="flex-grow">
         <Hero />
         <HowItWorks />
         <FeaturedEvents />
@@ -19,7 +19,7 @@ const Index = () => {
         <CallToAction />
       </main>
       <Footer />
-    </>
+    </div>
   );
 };
 
