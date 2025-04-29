@@ -7,13 +7,37 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import PaymentForm from "@/components/payment/PaymentForm";
 import { Button } from "@/components/common/Button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const membershipSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  phone: z.string().optional(),
+});
+
+type MembershipFormValues = z.infer<typeof membershipSchema>;
 
 const MembershipPayment = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [membershipFee, setMembershipFee] = useState(25);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [membershipDetails, setMembershipDetails] = useState<MembershipFormValues | null>(null);
+
+  const form = useForm<MembershipFormValues>({
+    resolver: zodResolver(membershipSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+    },
+  });
 
   useEffect(() => {
     const fetchMembershipFee = async () => {
@@ -24,36 +48,75 @@ const MembershipPayment = () => {
           .eq('key', 'MEMBERSHIP_FEE')
           .single();
         
-        if (error) {
-          console.error('Error fetching membership fee:', error);
-        } else if (data) {
+        if (!error && data) {
           setMembershipFee(Number(data.value));
         }
       } catch (error) {
         console.error('Error:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    const getUser = async () => {
-      const { data } = await supabase.auth.getSession();
-      setUser(data.session?.user || null);
-      setIsLoading(false);
-    };
-
     fetchMembershipFee();
-    getUser();
   }, []);
 
-  const handlePaymentSuccess = (details: any) => {
-    toast({
-      title: "Membership activated!",
-      description: "Your membership has been successfully activated.",
-    });
-    navigate("/dashboard");
+  const onSubmit = (values: MembershipFormValues) => {
+    setMembershipDetails(values);
+    setShowPaymentForm(true);
+  };
+
+  const handlePaymentSuccess = async (paymentDetails: any) => {
+    if (!membershipDetails) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Send user details and payment ID to the membership verification function
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-membership-payment`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paymentId: paymentDetails.id,
+            email: membershipDetails.email,
+            name: membershipDetails.name,
+            phone: membershipDetails.phone,
+          }),
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: "Welcome to Eat Meet Club!",
+          description: "Your membership has been activated. Please check your email to set your password.",
+        });
+        navigate("/login");
+      } else {
+        throw new Error(data.message || "Failed to activate membership");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "There was a problem activating your membership",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancel = () => {
-    navigate("/");
+    if (showPaymentForm) {
+      setShowPaymentForm(false);
+    } else {
+      navigate("/");
+    }
   };
 
   if (isLoading) {
@@ -68,33 +131,6 @@ const MembershipPayment = () => {
     );
   }
 
-  if (!user) {
-    return (
-      <>
-        <Navbar />
-        <div className="min-h-screen bg-gray-50 py-16 px-4">
-          <div className="container-custom">
-            <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
-              <h1 className="text-2xl font-bold mb-6 text-center">Sign In Required</h1>
-              <p className="text-gray-600 mb-6 text-center">
-                Please sign in or create an account to proceed with your membership.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button href="/login" variant="primary" className="justify-center">
-                  Log In
-                </Button>
-                <Button href="/signup" variant="outline" className="justify-center">
-                  Sign Up
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <Footer />
-      </>
-    );
-  }
-
   return (
     <>
       <Navbar />
@@ -103,8 +139,8 @@ const MembershipPayment = () => {
           <div className="max-w-xl mx-auto">
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
               <div className="p-6 bg-brand-500 text-white">
-                <h1 className="text-2xl font-bold">Monthly Membership</h1>
-                <p className="mt-1 text-white/90">Unlock premium features and exclusive events</p>
+                <h1 className="text-2xl font-bold">Become a Member</h1>
+                <p className="mt-1 text-white/90">Join our exclusive community for just ${membershipFee.toFixed(2)}/month</p>
               </div>
               
               <div className="p-6">
@@ -139,16 +175,76 @@ const MembershipPayment = () => {
                 </div>
                 
                 <div className="border-t border-gray-200 pt-6">
-                  <div className="flex justify-between mb-6">
-                    <span className="text-gray-600">Monthly membership fee</span>
-                    <span className="font-medium">${membershipFee.toFixed(2)}</span>
-                  </div>
-                  
-                  <PaymentForm 
-                    amount={membershipFee} 
-                    onSuccess={handlePaymentSuccess} 
-                    onCancel={handleCancel} 
-                  />
+                  {!showPaymentForm ? (
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Full Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter your full name" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input type="email" placeholder="Enter your email" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone Number (optional)</FormLabel>
+                              <FormControl>
+                                <Input type="tel" placeholder="Enter your phone number" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div className="flex justify-between mt-6">
+                          <Button type="button" variant="outline" onClick={handleCancel}>
+                            Cancel
+                          </Button>
+                          <Button type="submit">
+                            Continue to Payment
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  ) : (
+                    <>
+                      <div className="mb-6">
+                        <h3 className="font-medium mb-2">Membership Details</h3>
+                        <p className="text-sm text-gray-600">Name: {membershipDetails?.name}</p>
+                        <p className="text-sm text-gray-600">Email: {membershipDetails?.email}</p>
+                        {membershipDetails?.phone && (
+                          <p className="text-sm text-gray-600">Phone: {membershipDetails.phone}</p>
+                        )}
+                      </div>
+                      <PaymentForm 
+                        amount={membershipFee} 
+                        onSuccess={handlePaymentSuccess} 
+                        onCancel={handleCancel} 
+                      />
+                    </>
+                  )}
                 </div>
               </div>
             </div>

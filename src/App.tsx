@@ -11,7 +11,6 @@ import "./App.css";
 import Index from "./pages/Index";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Events from "./pages/Events";
 import EventDetails from "./pages/EventDetails";
@@ -22,6 +21,8 @@ import TicketSuccess from "./pages/TicketSuccess";
 import AddRestaurant from "./pages/dashboard/AddRestaurant";
 import HowItWorks from "./pages/HowItWorks";
 import MembershipPayment from "./pages/MembershipPayment";
+import PaymentSuccessPage from "./pages/dashboard/PaymentSuccessPage";
+import RestaurantJoin from "./pages/restaurants/RestaurantJoin";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -45,10 +46,6 @@ function App() {
         <Route
           path="/login"
           element={!session ? <Login /> : <Navigate to="/dashboard" />}
-        />
-        <Route
-          path="/register"
-          element={!session ? <Register /> : <Navigate to="/dashboard" />}
         />
         <Route
           path="/dashboard"
@@ -83,6 +80,14 @@ function App() {
         <Route
           path="/become-member"
           element={<MembershipPayment />}
+        />
+        <Route
+          path="/payment-success"
+          element={<PaymentSuccessPage />}
+        />
+        <Route
+          path="/restaurants/join"
+          element={<RestaurantJoin />}
         />
       </Routes>
     </Router>
