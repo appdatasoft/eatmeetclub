@@ -33,6 +33,8 @@ const PaymentSuccessPage = () => {
           return;
         }
         
+        console.log("Verifying payment with session ID:", sessionId);
+        
         // Get event details from local storage
         const storedEventDetails = localStorage.getItem('eventDetails');
         if (!storedEventDetails) {
@@ -55,12 +57,15 @@ const PaymentSuccessPage = () => {
           throw new Error("Not authenticated");
         }
         
+        console.log("Invoking verify-event-payment function");
         const { data: responseData, error } = await supabase.functions.invoke('verify-event-payment', {
           body: { sessionId, eventDetails },
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
+
+        console.log("Verification response:", responseData);
 
         if (error || !responseData?.success) {
           throw new Error(error?.message || responseData?.error || "Failed to verify payment");

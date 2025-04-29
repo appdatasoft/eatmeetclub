@@ -47,8 +47,11 @@ serve(async (req) => {
       apiVersion: "2023-10-16",
     });
 
+    console.log("Verifying payment for session:", sessionId);
+
     // Retrieve the checkout session to verify payment status
     const session = await stripe.checkout.sessions.retrieve(sessionId);
+    console.log("Payment status:", session.payment_status);
 
     if (session.payment_status !== "paid") {
       return new Response(
@@ -61,6 +64,7 @@ serve(async (req) => {
     }
 
     // Payment successful, save the event to the database
+    console.log("Saving event to database:", eventDetails);
     const { data, error } = await supabaseAdmin
       .from("events")
       .insert({
@@ -72,9 +76,11 @@ serve(async (req) => {
       .select();
 
     if (error) {
+      console.error("Database error:", error);
       throw new Error(`Failed to save event: ${error.message}`);
     }
 
+    console.log("Event saved successfully:", data[0]);
     return new Response(
       JSON.stringify({ success: true, event: data[0] }),
       {
@@ -83,6 +89,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
+    console.error("Verification error:", error);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       {

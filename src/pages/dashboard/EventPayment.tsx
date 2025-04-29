@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import PaymentForm from '@/components/payment/PaymentForm';
+import { Button } from '@/components/common/Button';
 
 // Fixed admin fee for creating an event
 const EVENT_CREATION_FEE = 50;
@@ -16,6 +16,7 @@ const EventPayment = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [eventDetails, setEventDetails] = useState<any>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   useEffect(() => {
     const fetchEventDetails = async () => {
@@ -78,43 +79,47 @@ const EventPayment = () => {
     fetchEventDetails();
   }, [eventId, navigate, toast]);
 
-  const handlePaymentSuccess = async (paymentDetails: any) => {
-    setIsLoading(true);
+  const handlePayment = async () => {
+    setIsProcessingPayment(true);
     
     try {
-      // Update the event payment status in the database
-      const { error } = await supabase
-        .from('events')
-        .update({
-          payment_status: 'completed',
-          payment_id: paymentDetails.id,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', eventId);
+      // Get session for the API call
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
       
-      if (error) throw error;
+      if (!token) {
+        throw new Error("Not authenticated");
+      }
       
-      // Show success message
-      toast({
-        title: "Payment Successful",
-        description: "Your event payment has been completed successfully."
+      // Create a Stripe checkout session
+      const { data: responseData, error } = await supabase.functions.invoke('create-event-payment', {
+        body: { eventDetails },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
       
-      // Navigate to dashboard
-      navigate('/dashboard');
+      if (error || !responseData?.url) {
+        throw new Error(error?.message || "Failed to create payment session");
+      }
+      
+      // Store event details in localStorage to be accessed after payment
+      localStorage.setItem('eventDetails', JSON.stringify(eventDetails));
+      
+      // Redirect to Stripe checkout
+      window.location.href = responseData.url;
     } catch (error) {
-      console.error('Error updating payment status:', error);
+      console.error('Error creating payment session:', error);
       toast({
         title: "Error",
-        description: "Failed to update payment status. Please contact support.",
+        description: "Failed to initiate payment. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
+      setIsProcessingPayment(false);
     }
   };
 
-  const handlePaymentCancel = () => {
+  const handleCancel = () => {
     navigate('/dashboard');
   };
 
@@ -171,14 +176,31 @@ const EventPayment = () => {
                     <span>${EVENT_CREATION_FEE.toFixed(2)}</span>
                   </div>
                 </div>
+                
+                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
+                  <p className="text-amber-800 text-sm">You will be redirected to Stripe to complete your payment.</p>
+                </div>
               </div>
             )}
             
-            <PaymentForm 
-              amount={EVENT_CREATION_FEE} 
-              onSuccess={handlePaymentSuccess} 
-              onCancel={handlePaymentCancel} 
-            />
+            <div className="pt-4 flex space-x-2">
+              <Button
+                onClick={handlePayment}
+                isLoading={isProcessingPayment}
+                className="flex-1"
+              >
+                Pay ${EVENT_CREATION_FEE.toFixed(2)} Now
+              </Button>
+              
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isProcessingPayment}
+              >
+                Cancel
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

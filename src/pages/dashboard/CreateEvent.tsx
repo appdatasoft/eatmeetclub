@@ -6,8 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card } from '@/components/ui/card';
 import EventForm from '@/components/events/EventForm';
-import PaymentForm from '@/components/payment/PaymentForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from '@/components/common/Button';
 
 // Fixed admin fee for creating an event
 const EVENT_CREATION_FEE = 50;
@@ -64,13 +64,8 @@ const CreateEvent = () => {
     }
   };
 
-  const handleEventSubmit = (eventDetails: any) => {
-    // Store event details and show payment form
+  const handleEventSubmit = async (eventDetails: any) => {
     setCurrentEventDetails(eventDetails);
-    setShowPaymentDialog(true);
-  };
-
-  const handlePaymentSuccess = async (paymentDetails: any) => {
     setIsLoading(true);
     
     try {
@@ -82,48 +77,41 @@ const CreateEvent = () => {
         throw new Error("Not authenticated");
       }
       
-      // Store the event in the database with verified payment
-      const { data: eventData, error } = await supabase
-        .from('events')
-        .insert({
-          ...currentEventDetails,
-          user_id: data.session?.user.id,
-          payment_status: 'completed',
-          payment_id: paymentDetails.id
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      // Close the payment dialog
-      setShowPaymentDialog(false);
-      
-      // Show success message
-      toast({
-        title: "Success!",
-        description: "Your event has been created successfully."
+      // Create a Stripe checkout session
+      const { data: responseData, error } = await supabase.functions.invoke('create-event-payment', {
+        body: { eventDetails },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
       
-      // Navigate to dashboard
-      navigate('/dashboard');
+      if (error || !responseData?.url) {
+        throw new Error(error?.message || "Failed to create payment session");
+      }
+      
+      // Store event details in localStorage to be accessed after payment
+      localStorage.setItem('eventDetails', JSON.stringify(eventDetails));
+      
+      // Redirect to Stripe checkout
+      window.location.href = responseData.url;
     } catch (error) {
-      console.error('Error creating event:', error);
+      console.error('Error creating payment session:', error);
+      setShowPaymentDialog(false);
       toast({
         title: "Error",
-        description: "Failed to create event. Please try again.",
+        description: "Failed to initiate payment. Please try again.",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handlePaymentCancel = () => {
+  
+  const handleCancelPayment = () => {
     setShowPaymentDialog(false);
     setIsLoading(false);
   };
-
+  
   return (
     <DashboardLayout>
       <h1 className="text-2xl font-bold mb-6">Create New Event</h1>
@@ -144,11 +132,26 @@ const CreateEvent = () => {
           <DialogHeader>
             <DialogTitle>Payment for Event Creation</DialogTitle>
           </DialogHeader>
-          <PaymentForm 
-            amount={EVENT_CREATION_FEE} 
-            onSuccess={handlePaymentSuccess} 
-            onCancel={handlePaymentCancel} 
-          />
+          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
+            <p className="text-amber-800 text-sm">You will be redirected to Stripe to complete your payment of ${EVENT_CREATION_FEE}.00</p>
+          </div>
+          <div className="flex space-x-2 mt-4">
+            <Button 
+              isLoading={isLoading} 
+              disabled={isLoading}
+              className="flex-1"
+            >
+              Processing...
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleCancelPayment}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </DashboardLayout>

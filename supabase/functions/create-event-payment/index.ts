@@ -43,7 +43,7 @@ serve(async (req) => {
     });
 
     // Calculate amount in cents (Stripe requires amount in smallest currency unit)
-    const amount = Math.round(parseFloat(eventDetails.price) * 100);
+    const amount = Math.round(EVENT_CREATION_FEE * 100);
 
     // Create a payment session
     const session = await stripe.checkout.sessions.create({
@@ -53,8 +53,8 @@ serve(async (req) => {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `Event: ${eventDetails.title}`,
-              description: eventDetails.description || "Event registration",
+              name: "Event Creation Fee",
+              description: `Event Creation Fee for: ${eventDetails.title}`,
             },
             unit_amount: amount,
           },
@@ -71,14 +71,22 @@ serve(async (req) => {
       },
     });
 
+    // Store event details in localStorage to be accessed after payment
+    const responseData = {
+      url: session.url,
+      sessionId: session.id,
+      eventDetails: eventDetails
+    };
+
     return new Response(
-      JSON.stringify({ url: session.url, sessionId: session.id }),
+      JSON.stringify(responseData),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       }
     );
   } catch (error) {
+    console.error("Create payment error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
@@ -88,3 +96,6 @@ serve(async (req) => {
     );
   }
 });
+
+// Fixed admin fee for creating an event (in USD)
+const EVENT_CREATION_FEE = 50;
