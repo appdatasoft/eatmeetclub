@@ -15,6 +15,8 @@ import {
   SelectTrigger,
   SelectValue 
 } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import PaymentForm from '@/components/payment/PaymentForm';
 
 const CreateEvent = () => {
   const navigate = useNavigate();
@@ -23,6 +25,8 @@ const CreateEvent = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
+  const [showPayment, setShowPayment] = useState(false);
+  const [eventData, setEventData] = useState<any>(null);
 
   // Extract restaurantId from URL query parameters
   useEffect(() => {
@@ -70,16 +74,83 @@ const CreateEvent = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate form submission
-    setTimeout(() => {
-      setIsLoading(false);
+    // Get form data
+    const formElement = e.target as HTMLFormElement;
+    const formData = new FormData(formElement);
+    
+    const eventDetails = {
+      title: formData.get('eventTitle') as string,
+      description: formData.get('eventDescription') as string,
+      date: formData.get('eventDate') as string,
+      time: formData.get('eventTime') as string,
+      restaurant_id: selectedRestaurantId,
+      capacity: parseInt(formData.get('capacity') as string),
+      price: parseFloat(formData.get('price') as string),
+    };
+
+    // Store event data for later submission after payment
+    setEventData(eventDetails);
+    setShowPayment(true);
+    setIsLoading(false);
+  };
+
+  const handlePaymentSuccess = async (paymentDetails: any) => {
+    try {
+      // Save event details to database
+      const { data, error } = await supabase
+        .from('events')
+        .insert({
+          ...eventData,
+          payment_status: 'completed',
+          payment_id: paymentDetails.id,
+        })
+        .select();
+      
+      if (error) throw error;
+      
       toast({
         title: "Event created",
         description: "Your event has been created successfully."
       });
+      
       navigate('/dashboard');
-    }, 1500);
+    } catch (error) {
+      console.error('Error creating event:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create event. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
+
+  const handlePaymentCancel = () => {
+    setShowPayment(false);
+  };
+
+  if (showPayment) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-md mx-auto">
+          <Card className="border-brand-100">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold">Complete Your Payment</CardTitle>
+              <CardDescription>
+                Pay $50.00 to publish your event
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PaymentForm 
+                amount={50.00}
+                onSuccess={handlePaymentSuccess}
+                onCancel={handlePaymentCancel}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -91,13 +162,14 @@ const CreateEvent = () => {
           
           <div className="space-y-2">
             <Label htmlFor="eventTitle">Event Title*</Label>
-            <Input id="eventTitle" required placeholder="Give your event a catchy title" />
+            <Input id="eventTitle" name="eventTitle" required placeholder="Give your event a catchy title" />
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="eventDescription">Description*</Label>
             <Textarea 
-              id="eventDescription" 
+              id="eventDescription"
+              name="eventDescription" 
               required 
               placeholder="Describe what makes this event special..." 
               className="min-h-[120px]"
@@ -107,11 +179,11 @@ const CreateEvent = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="eventDate">Event Date*</Label>
-              <Input id="eventDate" type="date" required />
+              <Input id="eventDate" name="eventDate" type="date" required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="eventTime">Event Time*</Label>
-              <Input id="eventTime" type="time" required />
+              <Input id="eventTime" name="eventTime" type="time" required />
             </div>
           </div>
           
@@ -147,18 +219,18 @@ const CreateEvent = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="capacity">Capacity*</Label>
-              <Input id="capacity" type="number" min="1" required placeholder="Number of seats available" />
+              <Input id="capacity" name="capacity" type="number" min="1" required placeholder="Number of seats available" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="price">Price per Person ($)*</Label>
-              <Input id="price" type="number" min="0" step="0.01" required placeholder="0.00" />
+              <Input id="price" name="price" type="number" min="0" step="0.01" required placeholder="0.00" />
             </div>
           </div>
         </div>
         
         <div>
           <Button type="submit" isLoading={isLoading}>
-            Create Event
+            Continue to Payment
           </Button>
         </div>
       </form>
