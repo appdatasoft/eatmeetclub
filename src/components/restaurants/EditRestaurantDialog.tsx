@@ -138,7 +138,7 @@ const EditRestaurantDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[550px] bg-background">
         <DialogHeader>
           <DialogTitle>Edit Restaurant</DialogTitle>
         </DialogHeader>
