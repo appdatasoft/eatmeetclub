@@ -4,9 +4,9 @@ import { Button } from "@/components/common/Button";
 const Hero = () => {
   return (
     <div 
-      className="bg-gray-300 py-12 md:py-24 relative h-[500px] w-full"
+      className="w-full py-12 md:py-24 relative h-[500px]"
       style={{ 
-        backgroundImage: `url('/lovable-uploads/2db24df8-eae3-4bee-9783-534552ad2fa2.png')`,
+        backgroundImage: `url('/lovable-uploads/336cfa0d-8737-4ca0-bdcc-68021b3ca206.png')`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat"
