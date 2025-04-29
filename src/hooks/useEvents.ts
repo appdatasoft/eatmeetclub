@@ -15,6 +15,7 @@ export const useEvents = () => {
       setFetchError(null);
       console.log("Fetching published events...");
       
+      // Make sure we're only fetching published events - crucial for logged out users
       const { data, error } = await supabase
         .from('events')
         .select(`
