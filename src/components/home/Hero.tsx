@@ -25,11 +25,11 @@ const Hero = () => {
           </p>
           
           <Button 
-            href="/signup" 
+            href="/become-member" 
             size="lg" 
             className="bg-[#FEC6A1] text-[#703E1E] hover:bg-[#FDE1D3] px-10 py-4 text-xl font-bold rounded-full"
           >
-            BECOME A MEMBER
+            JOIN FOR $25/MONTH
           </Button>
         </div>
       </div>
