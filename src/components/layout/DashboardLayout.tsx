@@ -1,8 +1,9 @@
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -10,6 +11,35 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const location = useLocation();
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        // Check if user is logged in
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (sessionData.session?.user) {
+          // Check if user is an admin
+          const { data, error } = await supabase.rpc(
+            'is_admin',
+            { user_id: sessionData.session.user.id }
+          );
+          
+          if (error) {
+            throw error;
+          }
+          
+          setIsAdmin(!!data);
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      }
+    };
+    
+    checkAdminStatus();
+  }, []);
   
   const isActive = (path: string) => {
     return location.pathname === path ? 'bg-brand-50 text-brand-600 font-medium' : 'text-gray-600 hover:bg-gray-50';
@@ -53,6 +83,33 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                         Add Restaurant
                       </Link>
                     </li>
+                    <li>
+                      <Link 
+                        to="/dashboard/settings" 
+                        className={`block px-3 py-2 rounded-md ${isActive('/dashboard/settings')}`}
+                      >
+                        Settings
+                      </Link>
+                    </li>
+                    {isAdmin && (
+                      <li className="pt-2 mt-2 border-t border-gray-100">
+                        <div className="px-3 py-1 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Admin
+                        </div>
+                        <Link 
+                          to="/dashboard/admin-settings" 
+                          className={`block px-3 py-2 rounded-md ${isActive('/dashboard/admin-settings')}`}
+                        >
+                          Admin Settings
+                        </Link>
+                        <Link 
+                          to="/dashboard/users" 
+                          className={`block px-3 py-2 rounded-md ${isActive('/dashboard/users')}`}
+                        >
+                          Manage Users
+                        </Link>
+                      </li>
+                    )}
                   </ul>
                 </nav>
               </div>

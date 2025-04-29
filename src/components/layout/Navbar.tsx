@@ -99,11 +99,6 @@ const Navbar = () => {
                 <Button href="/dashboard" variant="ghost" size="md">
                   Dashboard
                 </Button>
-                {isAdmin && (
-                  <Button href="/admin" variant="ghost" size="md" className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                    Admin
-                  </Button>
-                )}
                 <Button onClick={handleLogout} variant="outline" size="md">
                   Log out
                 </Button>
@@ -194,15 +189,6 @@ const Navbar = () => {
                   <Button href="/dashboard" variant="ghost" className="justify-center">
                     Dashboard
                   </Button>
-                  {isAdmin && (
-                    <Button 
-                      href="/admin" 
-                      variant="ghost" 
-                      className="justify-center text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      Admin
-                    </Button>
-                  )}
                   <Button onClick={handleLogout} variant="outline" className="justify-center">
                     Log out
                   </Button>
