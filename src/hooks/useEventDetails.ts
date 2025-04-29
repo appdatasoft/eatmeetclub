@@ -66,14 +66,8 @@ export const useEventDetails = (eventId?: string) => {
           day: 'numeric'
         });
         
-        // Query for tickets sold (we need to implement this)
-        const { data: ticketsData, error: ticketsError } = await supabase
-          .from('tickets')
-          .select('count')
-          .eq('event_id', eventId)
-          .single();
-        
-        const ticketsSold = ticketsData?.count || 0;
+        // For now, hardcode tickets_sold to 0 since we don't have a tickets table yet
+        const ticketsSold = 0;
         
         setEvent({
           ...data,
