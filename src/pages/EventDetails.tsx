@@ -1,31 +1,41 @@
-import { useParams } from "react-router-dom";
+
+import { useParams, useNavigate } from "react-router-dom";
 import { useEventDetails } from "@/hooks/useEventDetails";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import EventHeader from "@/components/events/EventHeader";
-import EventInfo from "@/components/events/EventDetails/EventInfo";
-import RestaurantInfo from "@/components/events/EventDetails/RestaurantInfo";
-import TicketPurchase from "@/components/events/EventDetails/TicketPurchase";
-import EventSkeleton from "@/components/events/EventDetails/EventSkeleton";
-import EventNotFound from "@/components/events/EventDetails/EventNotFound";
-import QRCode from "@/components/events/EventDetails/QRCode";
-import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Upload } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useState, ChangeEvent } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+// Layout components
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import EventHeader from "@/components/events/EventHeader";
+
+// Event components
+import EventDetailsContainer from "@/components/events/EventDetails/EventDetailsContainer";
+import TicketPurchase from "@/components/events/EventDetails/TicketPurchase";
+import EventSkeleton from "@/components/events/EventDetails/EventSkeleton";
+import EventNotFound from "@/components/events/EventDetails/EventNotFound";
+import EventActions from "@/components/events/EventDetails/EventActions";
+import DeleteEventDialog from "@/components/events/EventDetails/DeleteEventDialog";
+import EditCoverDialog from "@/components/events/EventDetails/EditCoverDialog";
+
 const EventDetails = () => {
   const { id } = useParams<{ id: string }>();
-  const { event, loading, isPaymentProcessing, handleBuyTickets, isCurrentUserOwner, refreshEventDetails } = useEventDetails(id);
+  const { 
+    event, 
+    loading, 
+    isPaymentProcessing, 
+    handleBuyTickets, 
+    isCurrentUserOwner, 
+    refreshEventDetails 
+  } = useEventDetails(id);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // State
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditCoverDialogOpen, setIsEditCoverDialogOpen] = useState(false);
-  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   
   // Get current URL for QR code
@@ -41,14 +51,8 @@ const EventDetails = () => {
     setIsEditCoverDialogOpen(true);
   };
   
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setCoverFile(e.target.files[0]);
-    }
-  };
-  
-  const handleSaveCover = async () => {
-    if (!coverFile || !event) return;
+  const handleSaveCover = async (coverFile: File) => {
+    if (!event) return;
     
     try {
       setIsUploadingCover(true);
@@ -101,7 +105,6 @@ const EventDetails = () => {
       });
     } finally {
       setIsUploadingCover(false);
-      setCoverFile(null);
     }
   };
   
@@ -178,49 +181,24 @@ const EventDetails = () => {
 
         <div className="container-custom py-8">
           {isCurrentUserOwner && (
-            <div className="flex justify-end mb-4 space-x-2">
-              <QRCode url={eventUrl} eventTitle={event.title} />
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center" 
-                onClick={handleEditEvent}
-              >
-                <Edit className="h-4 w-4 mr-1" /> Edit
-              </Button>
-              <Button 
-                variant="destructive" 
-                size="sm" 
-                className="flex items-center" 
-                onClick={() => setIsDeleteDialogOpen(true)}
-              >
-                <Trash2 className="h-4 w-4 mr-1" /> Delete
-              </Button>
-            </div>
+            <EventActions
+              eventUrl={eventUrl}
+              eventTitle={event.title}
+              onEditEvent={handleEditEvent}
+              onDeleteEvent={() => setIsDeleteDialogOpen(true)}
+            />
           )}
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main content */}
-            <div className="lg:col-span-2">
-              <EventInfo 
-                description={event.description}
-                date={event.date}
-                time={event.time}
-                location={location}
-                capacity={event.capacity}
-                ticketsRemaining={ticketsRemaining}
-                ticketsPercentage={ticketsPercentage}
-              />
-              <RestaurantInfo 
-                name={event.restaurant.name} 
-                description={event.restaurant.description}
-              />
-              {!isCurrentUserOwner && (
-                <div className="mt-6 flex justify-end">
-                  <QRCode url={eventUrl} eventTitle={event.title} />
-                </div>
-              )}
-            </div>
+            <EventDetailsContainer
+              event={event}
+              ticketsRemaining={ticketsRemaining}
+              ticketsPercentage={ticketsPercentage}
+              location={location}
+              eventUrl={eventUrl}
+              isCurrentUserOwner={isCurrentUserOwner}
+            />
 
             {/* Ticket purchase sidebar */}
             <div className="lg:col-span-1">
@@ -236,81 +214,20 @@ const EventDetails = () => {
       </div>
       <Footer />
       
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="bg-background">
-          <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this event? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting}>
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteEvent} 
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Deleting..." : "Delete Event"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Dialogs */}
+      <DeleteEventDialog 
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onDelete={handleDeleteEvent}
+        isDeleting={isDeleting}
+      />
       
-      {/* Edit Cover Dialog */}
-      <Dialog open={isEditCoverDialogOpen} onOpenChange={setIsEditCoverDialogOpen}>
-        <DialogContent className="bg-background">
-          <DialogHeader>
-            <DialogTitle>Edit Cover Image</DialogTitle>
-            <DialogDescription>
-              Upload a new cover image for your event
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid items-center gap-4">
-              <input
-                type="file"
-                accept="image/*"
-                className="w-full"
-                onChange={handleFileChange}
-              />
-              {coverFile && (
-                <div className="relative mt-2 rounded-md overflow-hidden h-40">
-                  <img 
-                    src={URL.createObjectURL(coverFile)} 
-                    alt="Preview" 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-              <p className="text-sm text-muted-foreground">
-                Recommended image size: 1200 x 600px. Max file size: 5MB
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditCoverDialogOpen(false)} disabled={isUploadingCover}>
-              Cancel
-            </Button>
-            <Button 
-              type="button" 
-              onClick={handleSaveCover} 
-              disabled={!coverFile || isUploadingCover}
-            >
-              {isUploadingCover ? (
-                <>Uploading...</>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-1" /> Save Changes
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditCoverDialog
+        isOpen={isEditCoverDialogOpen}
+        onClose={() => setIsEditCoverDialogOpen(false)}
+        onSave={handleSaveCover}
+        isUploading={isUploadingCover}
+      />
     </>
   );
 };
