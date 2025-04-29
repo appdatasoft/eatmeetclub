@@ -23,6 +23,7 @@ export interface EventDetails {
   capacity: number;
   restaurant: Restaurant;
   tickets_sold?: number;
+  user_id: string;
 }
 
 export const useEventDetails = (eventId?: string) => {
@@ -31,6 +32,7 @@ export const useEventDetails = (eventId?: string) => {
   const [event, setEvent] = useState<EventDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [isCurrentUserOwner, setIsCurrentUserOwner] = useState(false);
 
   useEffect(() => {
     const fetchEventDetails = async () => {
@@ -38,6 +40,10 @@ export const useEventDetails = (eventId?: string) => {
       
       try {
         setLoading(true);
+        
+        // First get the current user
+        const { data: { session } } = await supabase.auth.getSession();
+        const currentUserId = session?.user?.id;
         
         // Fetch event data with restaurant details
         const { data, error } = await supabase
@@ -68,6 +74,11 @@ export const useEventDetails = (eventId?: string) => {
             date: formattedDate,
             tickets_sold: ticketsSold
           });
+          
+          // Check if the current user is the owner of this event
+          if (currentUserId && data.user_id === currentUserId) {
+            setIsCurrentUserOwner(true);
+          }
         }
       } catch (error) {
         console.error("Error fetching event details:", error);
@@ -152,6 +163,7 @@ export const useEventDetails = (eventId?: string) => {
     event,
     loading,
     isPaymentProcessing,
+    isCurrentUserOwner,
     handleBuyTickets
   };
 };

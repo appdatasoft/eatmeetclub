@@ -9,10 +9,59 @@ import RestaurantInfo from "@/components/events/EventDetails/RestaurantInfo";
 import TicketPurchase from "@/components/events/EventDetails/TicketPurchase";
 import EventSkeleton from "@/components/events/EventDetails/EventSkeleton";
 import EventNotFound from "@/components/events/EventDetails/EventNotFound";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const EventDetails = () => {
   const { id } = useParams<{ id: string }>();
-  const { event, loading, isPaymentProcessing, handleBuyTickets } = useEventDetails(id);
+  const { event, loading, isPaymentProcessing, handleBuyTickets, isCurrentUserOwner } = useEventDetails(id);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const handleEditEvent = () => {
+    // Navigate to edit event page (to be implemented)
+    // For now just go to dashboard
+    navigate(`/dashboard`);
+  };
+  
+  const handleDeleteEvent = async () => {
+    if (!event) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', event.id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Event Deleted",
+        description: "Event has been successfully deleted",
+      });
+      
+      // Navigate back to events list
+      navigate('/events');
+    } catch (error: any) {
+      console.error("Error deleting event:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete event",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -47,6 +96,27 @@ const EventDetails = () => {
         <EventHeader title={event.title} restaurantName={event.restaurant.name} />
 
         <div className="container-custom py-8">
+          {isCurrentUserOwner && (
+            <div className="flex justify-end mb-4 space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center" 
+                onClick={handleEditEvent}
+              >
+                <Edit className="h-4 w-4 mr-1" /> Edit
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                className="flex items-center" 
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" /> Delete
+              </Button>
+            </div>
+          )}
+          
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main content */}
             <div className="lg:col-span-2">
@@ -78,6 +148,30 @@ const EventDetails = () => {
         </div>
       </div>
       <Footer />
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="bg-background">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this event? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteEvent} 
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete Event"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
