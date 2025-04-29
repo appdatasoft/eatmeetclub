@@ -6,13 +6,13 @@ const Hero = () => {
     <div 
       className="bg-cover bg-center py-12 md:py-24 relative h-[500px]"
       style={{ 
-        backgroundImage: "url('/lovable-uploads/53a1adde-ac56-4fea-91d6-043c2ceeb26e.png')",
+        backgroundImage: "url('/lovable-uploads/efd1ce8c-19a4-4199-8205-408597d057eb.png')",
         backgroundSize: "cover",
         backgroundPosition: "center"
       }}
     >
       {/* Dark overlay for better text readability */}
-      <div className="absolute inset-0 bg-black bg-opacity-50"></div>
+      <div className="absolute inset-0 bg-black bg-opacity-30"></div>
       
       <div className="container-custom relative z-10 h-full flex items-center">
         <div className="flex flex-col items-center text-center w-full">
