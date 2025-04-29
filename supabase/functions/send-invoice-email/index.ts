@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { stripe } from "../_shared/stripe.ts";
 import { Resend } from "npm:resend@1.0.0";
@@ -94,7 +95,7 @@ serve(async (req) => {
       }
       
       const emailResponse = await resend.emails.send({
-        from: "Eat Meet Club <onboarding@resend.dev>", // Update with your verified domain in production
+        from: "Eat Meet Club <hello@resend.dev>", // Update to your verified domain when available
         to: email,
         subject: "Your Eat Meet Club Membership Invoice",
         html: invoiceHtml,
@@ -260,3 +261,4 @@ function generateInvoiceEmail(name: string, invoiceDetails: {
   </html>
   `;
 }
+

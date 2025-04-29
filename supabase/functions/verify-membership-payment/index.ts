@@ -114,10 +114,37 @@ serve(async (req) => {
     // Send invoice email - add more detailed logging
     try {
       console.log(`Attempting to send invoice email for session ${sessionId} to ${email}`);
-      const invoiceResult = await sendInvoiceEmail(sessionId, email, name);
-      console.log("Invoice email result:", invoiceResult);
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      if (!supabaseUrl) {
+        throw new Error("SUPABASE_URL environment variable is not set");
+      }
+      
+      // Full URL construction for the edge function call
+      const invoiceEmailUrl = `${supabaseUrl}/functions/v1/send-invoice-email`;
+      console.log("Calling invoice email function at:", invoiceEmailUrl);
+      
+      const response = await fetch(invoiceEmailUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionId,
+          email,
+          name
+        }),
+      });
+      
+      console.log("Invoice email API response status:", response.status);
+      
+      const responseData = await response.json();
+      console.log("Invoice email function response:", responseData);
+      
+      if (!response.ok) {
+        throw new Error(`Invoice email API returned error: ${responseData.message || responseData.error || "Unknown error"}`);
+      }
     } catch (invoiceError) {
-      console.error("Error sending invoice email:", invoiceError.message);
+      console.error("Error sending invoice email:", invoiceError);
       // Don't fail the whole process if the invoice email fails
     }
 
@@ -217,3 +244,4 @@ async function sendInvoiceEmail(sessionId: string, email: string, name: string) 
     throw error;
   }
 }
+
