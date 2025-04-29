@@ -66,17 +66,18 @@ const MembershipPayment = () => {
       setIsLoading(true);
       console.log("Initiating payment process with values:", values);
       
-      // Get the Supabase URL directly from the client
-      const supabaseUrl = supabase.supabaseUrl;
+      // Get the Supabase URL
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || '';
       
       // Create a Stripe checkout session
       const response = await fetch(
-        `${supabaseUrl}/functions/v1/create-membership-checkout`,
+        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${supabase.auth.session()?.access_token || ''}`,
+            "Authorization": `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             email: values.email,
