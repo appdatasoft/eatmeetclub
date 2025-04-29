@@ -4,6 +4,7 @@ import { useEventDetails } from "@/hooks/useEventDetails";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Layout components
 import Navbar from "@/components/layout/Navbar";
@@ -31,6 +32,7 @@ const EventDetails = () => {
   } = useEventDetails(id);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   // State
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -144,7 +146,7 @@ const EventDetails = () => {
     return (
       <>
         <Navbar />
-        <div className="container-custom py-12">
+        <div className="container-custom py-8 md:py-12">
           <EventSkeleton />
         </div>
         <Footer />
@@ -179,7 +181,7 @@ const EventDetails = () => {
           coverImage={coverImageUrl}
         />
 
-        <div className="container-custom py-8">
+        <div className="container-custom py-4 md:py-8">
           {isCurrentUserOwner && (
             <EventActions
               eventUrl={eventUrl}
@@ -189,7 +191,7 @@ const EventDetails = () => {
             />
           )}
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-4 md:gap-6 lg:gap-8 lg:grid-cols-3">
             {/* Main content */}
             <EventDetailsContainer
               event={event}

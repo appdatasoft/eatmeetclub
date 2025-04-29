@@ -4,6 +4,7 @@ import EventInfo from "./EventInfo";
 import RestaurantInfo from "./RestaurantInfo";
 import QRCode from "./QRCode";
 import { EventDetails } from "@/hooks/useEventDetails";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EventDetailsContainerProps {
   event: EventDetails;
@@ -22,6 +23,8 @@ const EventDetailsContainer: React.FC<EventDetailsContainerProps> = ({
   eventUrl,
   isCurrentUserOwner
 }) => {
+  const isMobile = useIsMobile();
+  
   return (
     <div className="lg:col-span-2">
       <EventInfo 
@@ -37,8 +40,13 @@ const EventDetailsContainer: React.FC<EventDetailsContainerProps> = ({
         name={event.restaurant.name} 
         description={event.restaurant.description}
       />
-      {!isCurrentUserOwner && (
+      {!isCurrentUserOwner && !isMobile && (
         <div className="mt-6 flex justify-end">
+          <QRCode url={eventUrl} eventTitle={event.title} />
+        </div>
+      )}
+      {!isCurrentUserOwner && isMobile && (
+        <div className="mt-6 flex justify-center">
           <QRCode url={eventUrl} eventTitle={event.title} />
         </div>
       )}
