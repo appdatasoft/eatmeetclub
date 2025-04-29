@@ -44,7 +44,7 @@ const EventForm: React.FC<EventFormProps> = ({
       time: formData.get('eventTime') as string,
       restaurant_id: selectedRestaurantId,
       capacity: parseInt(formData.get('capacity') as string),
-      price: parseFloat(formData.get('price') as string),
+      price: 50, // Fixed price at $50
     };
     
     onSubmit(eventDetails);
@@ -117,15 +117,15 @@ const EventForm: React.FC<EventFormProps> = ({
             <Input id="capacity" name="capacity" type="number" min="1" required placeholder="Number of seats available" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="price">Price per Person ($)*</Label>
-            <Input id="price" name="price" type="number" min="0" step="0.01" required placeholder="0.00" />
+            <Label>Price per Person</Label>
+            <p className="py-2 px-3 border border-input bg-background rounded-md text-base md:text-sm">$50.00</p>
           </div>
         </div>
       </div>
       
       <div>
         <Button type="submit" isLoading={isLoading}>
-          Continue to Payment
+          Add Event
         </Button>
       </div>
     </form>

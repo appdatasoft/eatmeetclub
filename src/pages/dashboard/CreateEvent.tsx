@@ -6,6 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card } from '@/components/ui/card';
 import EventForm from '@/components/events/EventForm';
+import PaymentForm from '@/components/payment/PaymentForm';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const CreateEvent = () => {
   const navigate = useNavigate();
@@ -14,6 +16,8 @@ const CreateEvent = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [currentEventDetails, setCurrentEventDetails] = useState<any>(null);
 
   // Extract restaurantId from URL query parameters
   useEffect(() => {
@@ -57,13 +61,16 @@ const CreateEvent = () => {
     }
   };
 
-  const handleEventSubmit = async (eventDetails: any) => {
+  const handleEventSubmit = (eventDetails: any) => {
+    // Store event details and show payment form
+    setCurrentEventDetails(eventDetails);
+    setShowPaymentDialog(true);
+  };
+
+  const handlePaymentSuccess = async (paymentDetails: any) => {
     setIsLoading(true);
     
     try {
-      // Store event details in localStorage for use after payment
-      localStorage.setItem('eventDetails', JSON.stringify(eventDetails));
-      
       // Get session for the API call
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
@@ -72,29 +79,46 @@ const CreateEvent = () => {
         throw new Error("Not authenticated");
       }
       
-      // Create a payment session with Stripe
-      const { data: responseData, error } = await supabase.functions.invoke('create-event-payment', {
-        body: { eventDetails },
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      // Store the event in the database with verified payment
+      const { data: eventData, error } = await supabase
+        .from('events')
+        .insert({
+          ...currentEventDetails,
+          user_id: data.session?.user.id,
+          payment_status: 'completed',
+          payment_id: paymentDetails.id
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Close the payment dialog
+      setShowPaymentDialog(false);
+      
+      // Show success message
+      toast({
+        title: "Success!",
+        description: "Your event has been created successfully."
       });
       
-      if (error || !responseData?.url) {
-        throw new Error(error?.message || "Failed to create payment session");
-      }
-      
-      // Redirect to Stripe checkout
-      window.location.href = responseData.url;
+      // Navigate to dashboard
+      navigate('/dashboard');
     } catch (error) {
-      console.error('Error creating payment session:', error);
+      console.error('Error creating event:', error);
       toast({
         title: "Error",
-        description: "Failed to process payment. Please try again.",
+        description: "Failed to create event. Please try again.",
         variant: "destructive"
       });
+    } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePaymentCancel = () => {
+    setShowPaymentDialog(false);
+    setIsLoading(false);
   };
 
   return (
@@ -111,6 +135,19 @@ const CreateEvent = () => {
           onAddRestaurant={() => navigate('/dashboard/add-restaurant')}
         />
       </Card>
+
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Complete Payment</DialogTitle>
+          </DialogHeader>
+          <PaymentForm 
+            amount={50} 
+            onSuccess={handlePaymentSuccess} 
+            onCancel={handlePaymentCancel} 
+          />
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
