@@ -1,18 +1,43 @@
 
 project_id = "wocfwpedauuhlrfugxuu"
 
-[functions]
-[functions.create-ticket-payment]
-verify_jwt = true
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+
+[db]
+port = 54322
+
+[studio]
+port = 54323
+
+[auth]
+enabled = true
+
+[realtime]
+enabled = true
+
+[storage]
+enabled = true
 
 [functions.create-event-payment]
-verify_jwt = true
-
-[functions.verify-event-payment]
 verify_jwt = true
 
 [functions.create-membership-checkout]
 verify_jwt = false
 
-[functions.verify-membership-payment]
+[functions.create-ticket-payment]
+verify_jwt = true
+
+[functions.send-member-notification]
 verify_jwt = false
+
+[functions.verify-event-payment]
+verify_jwt = true
+
+[functions.verify-membership-payment]
+verify_jwt = true
+
+[functions.verify-ticket-payment]
+verify_jwt = true

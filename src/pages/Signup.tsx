@@ -15,6 +15,7 @@ const Signup = () => {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [userDetails, setUserDetails] = useState<SignupFormValues | null>(null);
   const [membershipFee] = useState(25);
+  const [isNotificationSent, setIsNotificationSent] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -36,6 +37,30 @@ const Signup = () => {
       });
 
       if (error) throw error;
+
+      // Send notification via the edge function
+      const notificationResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-member-notification`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: values.email,
+            name: values.email.split('@')[0], // Just using part of email as name since we don't collect full name
+            phone: values.phoneNumber,
+          }),
+        }
+      );
+
+      if (notificationResponse.ok) {
+        setIsNotificationSent(true);
+        toast({
+          title: "Confirmation sent!",
+          description: "We've sent you an email and text confirmation.",
+        });
+      }
 
       toast({
         title: "Registration successful",
@@ -143,6 +168,14 @@ const Signup = () => {
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     Payment was canceled. Please try again when you're ready.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {isNotificationSent && (
+                <Alert className="mb-4 bg-green-50 border-green-200">
+                  <AlertDescription className="text-green-800">
+                    We've sent you a confirmation email and text message! Please proceed to payment to complete your membership.
                   </AlertDescription>
                 </Alert>
               )}

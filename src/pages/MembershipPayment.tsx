@@ -27,6 +27,7 @@ const MembershipPayment = () => {
   const navigate = useNavigate();
   const [membershipFee, setMembershipFee] = useState(25);
   const [isLoading, setIsLoading] = useState(true);
+  const [isNotificationSent, setIsNotificationSent] = useState(false);
   const [searchParams] = useSearchParams();
   const paymentCanceled = searchParams.get('canceled') === 'true';
 
@@ -61,12 +62,66 @@ const MembershipPayment = () => {
     fetchMembershipFee();
   }, []);
 
+  const sendNotification = async (values: MembershipFormValues) => {
+    try {
+      // Send notification via the edge function
+      const notificationResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-member-notification`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: values.email,
+            name: values.name,
+            phone: values.phone,
+          }),
+        }
+      );
+
+      const notificationData = await notificationResponse.json();
+      
+      if (!notificationResponse.ok) {
+        throw new Error(notificationData.message || "Failed to send notification");
+      }
+      
+      console.log("Notification sent:", notificationData);
+      
+      // Show success toast
+      toast({
+        title: "Confirmation sent!",
+        description: "We've sent you an email and text confirmation.",
+      });
+      
+      setIsNotificationSent(true);
+      return true;
+      
+    } catch (error: any) {
+      console.error("Notification error:", error);
+      toast({
+        title: "Notification failed",
+        description: error.message || "Could not send confirmation",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const onSubmit = async (values: MembershipFormValues) => {
     try {
       setIsLoading(true);
-      console.log("Initiating payment process with values:", values);
+      console.log("Processing membership signup with values:", values);
       
-      // Get the Supabase URL
+      // First, send the notification
+      const notificationSent = await sendNotification(values);
+      
+      if (!notificationSent) {
+        // Continue anyway - the notification is nice to have but shouldn't block payment
+        console.warn("Notification failed but continuing with payment process");
+      }
+      
+      // Get the Supabase session
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token || '';
       
@@ -188,6 +243,14 @@ const MembershipPayment = () => {
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>
                         Payment was canceled. Please try again when you're ready.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {isNotificationSent && (
+                    <Alert className="mb-4 bg-green-50 border-green-200">
+                      <AlertDescription className="text-green-800">
+                        We've sent you a confirmation email and text message! Please proceed to payment to complete your membership.
                       </AlertDescription>
                     </Alert>
                   )}
