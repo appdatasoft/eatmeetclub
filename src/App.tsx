@@ -1,3 +1,4 @@
+
 import {
   BrowserRouter as Router,
   Route,
@@ -10,13 +11,14 @@ import "./App.css";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/dashboard/Dashboard";
 import Events from "./pages/Events";
 import EventDetails from "./pages/EventDetails";
 import CreateEvent from "./pages/CreateEvent";
 import EditEvent from "./pages/EditEvent";
 import EventPayment from "./pages/dashboard/EventPayment";
 import TicketSuccess from "./pages/TicketSuccess";
+import AddRestaurant from "./pages/dashboard/AddRestaurant";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -46,6 +48,14 @@ function App() {
         <Route
           path="/dashboard"
           element={session ? <Dashboard /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/dashboard/add-restaurant"
+          element={session ? <AddRestaurant /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/dashboard/create-event"
+          element={session ? <CreateEvent /> : <Navigate to="/login" />}
         />
         <Route path="/events" element={<Events />} />
         <Route path="/event/:id" element={<EventDetails />} />
