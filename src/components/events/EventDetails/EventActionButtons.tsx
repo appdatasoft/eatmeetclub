@@ -3,9 +3,9 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Share2 } from "lucide-react";
 import QRCode from "./QRCode";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 
-interface EventActionsProps {
+interface EventActionButtonsProps {
   eventUrl: string;
   eventTitle: string;
   onEditEvent: () => void;
@@ -13,35 +13,41 @@ interface EventActionsProps {
   isPublished?: boolean;
 }
 
-const EventActions: React.FC<EventActionsProps> = ({
+const EventActionButtons = ({
   eventUrl,
   eventTitle,
   onEditEvent,
   onDeleteEvent,
   isPublished = true
-}) => {
-  const isMobile = useIsMobile();
+}: EventActionButtonsProps) => {
+  const { toast } = useToast();
   
+  const handleShareClick = () => {
+    navigator.clipboard.writeText(eventUrl);
+    toast({
+      title: "Link Copied",
+      description: "Event link has been copied to clipboard"
+    });
+  };
+
   return (
-    <div className={`flex ${isMobile ? 'flex-col' : 'justify-end'} mb-4 ${isMobile ? 'space-y-2' : 'space-x-2'}`}>
+    <>
       {isPublished && <QRCode url={eventUrl} eventTitle={eventTitle} />}
-      <div className={`flex ${isMobile ? 'justify-end space-x-2' : ''}`}>
+      
+      <div className="flex space-x-2">
         {isPublished && (
           <Button 
             variant="outline" 
-            size={isMobile ? "sm" : "sm"} 
-            className="flex items-center mr-2" 
-            onClick={() => {
-              navigator.clipboard.writeText(eventUrl);
-              // Alert or toast notification could go here
-            }}
+            size="sm" 
+            className="flex items-center" 
+            onClick={handleShareClick}
           >
             <Share2 className="h-4 w-4 mr-1" /> Share
           </Button>
         )}
         <Button 
           variant="outline" 
-          size={isMobile ? "sm" : "sm"} 
+          size="sm" 
           className="flex items-center" 
           onClick={onEditEvent}
         >
@@ -49,15 +55,15 @@ const EventActions: React.FC<EventActionsProps> = ({
         </Button>
         <Button 
           variant="destructive" 
-          size={isMobile ? "sm" : "sm"} 
+          size="sm" 
           className="flex items-center" 
           onClick={onDeleteEvent}
         >
           <Trash2 className="h-4 w-4 mr-1" /> Delete
         </Button>
       </div>
-    </div>
+    </>
   );
 };
 
-export default EventActions;
+export default EventActionButtons;
