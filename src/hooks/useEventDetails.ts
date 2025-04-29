@@ -66,8 +66,14 @@ export const useEventDetails = (eventId?: string) => {
           day: 'numeric'
         });
         
-        // Calculate tickets sold (this is a placeholder - you'd need to implement actual ticket tracking)
-        const ticketsSold = 0; // Replace with actual query once you have tickets table
+        // Query for tickets sold (we need to implement this)
+        const { data: ticketsData, error: ticketsError } = await supabase
+          .from('tickets')
+          .select('count')
+          .eq('event_id', eventId)
+          .single();
+        
+        const ticketsSold = ticketsData?.count || 0;
         
         setEvent({
           ...data,
@@ -105,44 +111,14 @@ export const useEventDetails = (eventId?: string) => {
   const handleBuyTickets = async (ticketCount: number) => {
     if (!event) return;
     
-    setIsPaymentProcessing(true);
-    
     try {
+      setIsPaymentProcessing(true);
+      
       // Get session for the API call
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       
-      // Prepare ticket purchase data
-      const purchaseData = {
-        eventId: event.id,
-        quantity: ticketCount,
-        unitPrice: event.price
-      };
-      
-      if (token) {
-        // User is authenticated, create payment session with Stripe
-        const response = await supabase.functions.invoke('create-ticket-payment', {
-          body: { purchaseData },
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
-        if (response.error || !response.data?.url) {
-          throw new Error(response.error?.message || "Failed to create payment session");
-        }
-        
-        // Store ticket purchase details in localStorage for access after payment
-        localStorage.setItem('ticketDetails', JSON.stringify({
-          eventId: event.id,
-          eventTitle: event.title,
-          quantity: ticketCount,
-          totalAmount: (event.price * ticketCount * 1.05)
-        }));
-        
-        // Redirect to Stripe checkout
-        window.location.href = response.data.url;
-      } else {
+      if (!token) {
         // User is not authenticated, redirect to login
         toast({
           title: "Authentication Required",
@@ -153,12 +129,51 @@ export const useEventDetails = (eventId?: string) => {
         // Save the current page to redirect back after login
         localStorage.setItem('redirectAfterLogin', `/event/${eventId}`);
         navigate('/login');
+        return;
       }
-    } catch (error) {
+      
+      // Prepare ticket purchase data
+      const purchaseData = {
+        eventId: event.id,
+        quantity: ticketCount,
+        unitPrice: event.price
+      };
+      
+      console.log("Creating payment session with data:", purchaseData);
+      
+      // User is authenticated, create payment session with Stripe
+      const response = await supabase.functions.invoke('create-ticket-payment', {
+        body: { purchaseData },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      console.log("Payment session response:", response);
+      
+      if (response.error) {
+        throw new Error(response.error || "Failed to create payment session");
+      }
+      
+      if (!response.data?.url) {
+        throw new Error("No checkout URL returned from payment service");
+      }
+      
+      // Store ticket purchase details in localStorage for access after payment
+      localStorage.setItem('ticketDetails', JSON.stringify({
+        eventId: event.id,
+        eventTitle: event.title,
+        quantity: ticketCount,
+        totalAmount: (event.price * ticketCount * 1.05)
+      }));
+      
+      // Redirect to Stripe checkout
+      window.location.href = response.data.url;
+    } catch (error: any) {
       console.error("Error creating payment session:", error);
       toast({
         title: "Error",
-        description: "Failed to process ticket purchase. Please try again.",
+        description: error.message || "Failed to process ticket purchase. Please try again.",
         variant: "destructive"
       });
     } finally {

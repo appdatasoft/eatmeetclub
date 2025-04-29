@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Button } from "@/components/common/Button";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 const TicketSuccess = () => {
@@ -61,7 +61,7 @@ const TicketSuccess = () => {
         <Card className="max-w-lg mx-auto p-8">
           {isLoading ? (
             <div className="flex flex-col items-center py-8">
-              <div className="h-12 w-12 border-4 border-t-transparent border-brand-500 rounded-full animate-spin mb-4"></div>
+              <div className="h-12 w-12 border-4 border-t-transparent border-primary rounded-full animate-spin mb-4"></div>
               <p>Confirming your purchase...</p>
             </div>
           ) : (

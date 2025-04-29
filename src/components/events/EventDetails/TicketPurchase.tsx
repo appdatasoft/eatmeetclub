@@ -33,9 +33,10 @@ const TicketPurchase: React.FC<TicketPurchaseProps> = ({
         </label>
         <div className="flex items-center">
           <button
+            type="button"
             onClick={() => setTicketCount(Math.max(1, ticketCount - 1))}
             className="bg-gray-100 p-2 rounded-l-md border border-gray-300"
-            disabled={ticketCount <= 1}
+            disabled={ticketCount <= 1 || isPaymentProcessing}
           >
             <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -49,11 +50,13 @@ const TicketPurchase: React.FC<TicketPurchaseProps> = ({
             min="1"
             max={ticketsRemaining}
             className="p-2 w-12 text-center border-y border-gray-300"
+            disabled={isPaymentProcessing}
           />
           <button
+            type="button"
             onClick={() => setTicketCount(Math.min(ticketsRemaining, ticketCount + 1))}
             className="bg-gray-100 p-2 rounded-r-md border border-gray-300"
-            disabled={ticketCount >= ticketsRemaining}
+            disabled={ticketCount >= ticketsRemaining || isPaymentProcessing}
           >
             <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
