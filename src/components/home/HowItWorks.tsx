@@ -10,13 +10,15 @@ const HowItWorks = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Step 1 */}
+          {/* Step 1 - Envelope Icon */}
           <div className="flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300">
             <div className="mb-6 transform transition-transform duration-300 group-hover:scale-105">
               <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="70" cy="70" r="70" fill="#0d7b8a" fillOpacity="0.2"/>
-                <rect x="32" y="35" width="76" height="70" rx="4" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
-                <path d="M32 45L70 65L108 45" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <circle cx="70" cy="70" r="70" fill="#9FD7D9" fillOpacity="0.6"/>
+                {/* Envelope */}
+                <rect x="35" y="45" width="70" height="50" rx="3" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
+                {/* Envelope flap lines */}
+                <path d="M35 55L70 75L105 55" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
               </svg>
             </div>
             <h3 className="text-xl font-bold mb-3 text-[#0d7b8a]">
@@ -27,18 +29,23 @@ const HowItWorks = () => {
             </p>
           </div>
           
-          {/* Step 2 */}
+          {/* Step 2 - Plate with utensils */}
           <div className="flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300">
             <div className="mb-6 transform transition-transform duration-300 group-hover:scale-105">
               <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="70" cy="70" r="70" fill="#0d7b8a" fillOpacity="0.2"/>
-                <circle cx="70" cy="70" r="40" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
-                <line x1="35" y1="70" x2="105" y2="70" stroke="#272163" strokeWidth="4"/>
-                <line x1="70" y1="35" x2="70" y2="105" stroke="#272163" strokeWidth="4"/>
-                <path d="M105 70 A35 35 0 0 1 70 35" stroke="#272163" strokeWidth="4"/>
-                <path d="M35 70 A35 35 0 0 1 70 105" stroke="#272163" strokeWidth="4"/>
-                <line x1="40" y1="40" x2="55" y2="55" stroke="#272163" strokeWidth="4"/>
-                <line x1="85" y1="85" x2="100" y2="100" stroke="#272163" strokeWidth="4"/>
+                <circle cx="70" cy="70" r="70" fill="#9FD7D9" fillOpacity="0.6"/>
+                {/* Plate */}
+                <circle cx="70" cy="70" r="35" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
+                {/* Fork on the left */}
+                <path d="M50 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M46 50H54" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M46 55H54" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M46 60H54" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                {/* Knife on the right */}
+                <path d="M90 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M90 45L85 50" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M90 55L85 60" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M90 65L85 70" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
               </svg>
             </div>
             <h3 className="text-xl font-bold mb-3 text-[#0d7b8a]">
@@ -49,15 +56,20 @@ const HowItWorks = () => {
             </p>
           </div>
           
-          {/* Step 3 */}
+          {/* Step 3 - Happy face icon */}
           <div className="flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300">
             <div className="mb-6 transform transition-transform duration-300 group-hover:scale-105">
               <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="70" cy="70" r="70" fill="#0d7b8a" fillOpacity="0.2"/>
-                <circle cx="70" cy="60" r="38" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
-                <circle cx="55" cy="55" r="6" fill="#272163"/>
-                <circle cx="85" cy="55" r="6" fill="#272163"/>
-                <path d="M50 75 Q70 90 90 75" stroke="#272163" strokeWidth="4" fill="none" strokeLinecap="round"/>
+                <circle cx="70" cy="70" r="70" fill="#9FD7D9" fillOpacity="0.6"/>
+                {/* Face circle */}
+                <circle cx="70" cy="70" r="35" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
+                {/* Hair */}
+                <path d="M70 40C60 40 55 45 55 45C55 45 60 35 70 35C80 35 85 45 85 45C85 45 80 40 70 40Z" fill="#9FD7D9" stroke="#272163" strokeWidth="3"/>
+                {/* Eyes - smiling */}
+                <path d="M57 62C59 60 61 60 63 62" stroke="#272163" strokeWidth="3" strokeLinecap="round"/>
+                <path d="M77 62C79 60 81 60 83 62" stroke="#272163" strokeWidth="3" strokeLinecap="round"/>
+                {/* Smile */}
+                <path d="M55 75C55 75 60 85 70 85C80 85 85 75 85 75" stroke="#272163" strokeWidth="3" strokeLinecap="round"/>
               </svg>
             </div>
             <h3 className="text-xl font-bold mb-3 text-[#0d7b8a]">
@@ -72,7 +84,7 @@ const HowItWorks = () => {
         <div className="mt-16 text-center">
           <a 
             href="/signup" 
-            className="inline-block bg-[#f25c41] text-white hover:bg-[#e04e35] px-8 py-3 text-lg rounded-full transition-colors duration-300 font-semibold"
+            className="inline-block bg-[#f25c41] text-white hover:bg-[#e04e35] px-10 py-4 text-lg rounded-full transition-colors duration-300 font-semibold"
           >
             JOIN NOW
           </a>
