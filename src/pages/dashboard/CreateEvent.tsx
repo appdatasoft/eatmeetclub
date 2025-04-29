@@ -64,23 +64,28 @@ const CreateEvent = () => {
       // Store event details in localStorage for use after payment
       localStorage.setItem('eventDetails', JSON.stringify(eventDetails));
       
-      // Get session token for the API call
-      const { data: { session_token } } = await supabase.auth.getSession();
+      // Get session for the API call
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      
+      if (!token) {
+        throw new Error("Not authenticated");
+      }
       
       // Create a payment session with Stripe
-      const { data, error } = await supabase.functions.invoke('create-event-payment', {
+      const { data: responseData, error } = await supabase.functions.invoke('create-event-payment', {
         body: { eventDetails },
         headers: {
-          Authorization: `Bearer ${session_token}`
+          Authorization: `Bearer ${token}`
         }
       });
       
-      if (error || !data.url) {
+      if (error || !responseData?.url) {
         throw new Error(error?.message || "Failed to create payment session");
       }
       
       // Redirect to Stripe checkout
-      window.location.href = data.url;
+      window.location.href = responseData.url;
     } catch (error) {
       console.error('Error creating payment session:', error);
       toast({

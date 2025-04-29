@@ -48,19 +48,25 @@ const PaymentSuccessPage = () => {
         const eventDetails = JSON.parse(storedEventDetails);
         
         // Verify the payment and save the event
-        const { data: { session_token } } = await supabase.auth.getSession();
-        const { data, error } = await supabase.functions.invoke('verify-event-payment', {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        
+        if (!token) {
+          throw new Error("Not authenticated");
+        }
+        
+        const { data: responseData, error } = await supabase.functions.invoke('verify-event-payment', {
           body: { sessionId, eventDetails },
           headers: {
-            Authorization: `Bearer ${session_token}`
+            Authorization: `Bearer ${token}`
           }
         });
 
-        if (error || !data.success) {
-          throw new Error(error?.message || data.error || "Failed to verify payment");
+        if (error || !responseData?.success) {
+          throw new Error(error?.message || responseData?.error || "Failed to verify payment");
         }
 
-        setEventDetails(data.event);
+        setEventDetails(responseData.event);
         toast({
           title: "Success!",
           description: "Your event has been created successfully."
