@@ -29,7 +29,7 @@ const HowItWorks = () => {
             </p>
           </div>
           
-          {/* Step 2 - Plate with fork and knife on sides */}
+          {/* Step 2 - Plate with matching fork from logo */}
           <div className="flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300">
             <div className="mb-6 transform transition-transform duration-300 group-hover:scale-105">
               <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
@@ -38,11 +38,11 @@ const HowItWorks = () => {
                 <circle cx="70" cy="70" r="30" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
                 {/* Plate - inner circle */}
                 <circle cx="70" cy="70" r="22" fill="#fe5641" stroke="#272163" strokeWidth="2"/>
-                {/* Fork on the left */}
+                {/* Fork on the left - updated to match logo */}
                 <path d="M30 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M30 45L35 45" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M30 52L35 52" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M30 59L35 59" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M20 45L20 70" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M30 45L30 70" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M40 45L40 70" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
                 {/* Knife on the right */}
                 <path d="M110 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
                 <path d="M110 45L105 65" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
