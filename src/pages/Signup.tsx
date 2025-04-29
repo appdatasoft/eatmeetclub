@@ -57,7 +57,7 @@ const Signup = () => {
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900">Become a Member</h1>
             <p className="mt-2 text-gray-600">
-              Join Eat Meet Club and start discovering local food events
+              Join Eat Meet Club and start social dining
             </p>
           </div>
           
