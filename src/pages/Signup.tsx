@@ -83,8 +83,8 @@ const Signup = () => {
         <div className="max-w-md w-full">
           <Card className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-2xl font-bold">Become a Member</CardTitle>
-              <CardDescription>Join Eat Meet Club and start social dining</CardDescription>
+              <CardTitle className="text-2xl font-bold">Monthly Membership</CardTitle>
+              <CardDescription>Subscribe to Eat Meet Club for $25/month</CardDescription>
             </CardHeader>
             
             <CardContent>
