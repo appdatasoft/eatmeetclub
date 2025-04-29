@@ -7,14 +7,11 @@ const Hero = () => {
       <div className="container-custom">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           <div className="text-center md:text-left">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-              Discover Unique Dining
-              <span className="text-brand-500"> Experiences</span>
-            </h1>
-            <p className="text-lg md:text-xl text-gray-700 mb-8 max-w-lg">
-              Join local food events at your favorite restaurants. 
-              Connect with community over breakfast, lunch, or dinner.
-            </p>
+            <img 
+              src="/lovable-uploads/82113d9c-640f-41aa-a1ec-c74259bf348d.png" 
+              alt="Eat Meet Club - Link Up Over Food & Conversation" 
+              className="w-full max-w-md mx-auto md:mx-0 mb-8"
+            />
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
               <Button href="/events" size="lg">
                 Find Events
