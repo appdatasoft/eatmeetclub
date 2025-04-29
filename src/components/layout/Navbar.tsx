@@ -8,6 +8,7 @@ import NavLinks from './navigation/NavLinks';
 import AuthButtons from './navigation/AuthButtons';
 import MobileMenuButton from './navigation/MobileMenuButton';
 import MobileMenu from './navigation/MobileMenu';
+import { toast } from '@/hooks/use-toast';
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -15,7 +16,16 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error logging out:', error.message);
+      toast({
+        title: "Logout failed",
+        description: error.message || "An error occurred while logging out",
+        variant: "destructive"
+      });
+      throw error;
+    }
     navigate('/');
   };
 
