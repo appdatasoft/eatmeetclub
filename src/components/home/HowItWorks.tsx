@@ -29,7 +29,7 @@ const HowItWorks = () => {
             </p>
           </div>
           
-          {/* Step 2 - Plate with fork and knife */}
+          {/* Step 2 - Plate with fork and knife on sides */}
           <div className="flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300">
             <div className="mb-6 transform transition-transform duration-300 group-hover:scale-105">
               <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
@@ -37,13 +37,13 @@ const HowItWorks = () => {
                 {/* Plate */}
                 <circle cx="70" cy="70" r="30" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
                 {/* Fork on the left */}
-                <path d="M40 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M40 48L50 48" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M40 55L50 55" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M40 62L50 62" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M35 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M35 45L40 45" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M35 52L40 52" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M35 59L40 59" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
                 {/* Knife on the right */}
-                <path d="M100 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M100 50L95 60" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M105 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M105 45L100 65" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
               </svg>
             </div>
             <h3 className="text-xl font-bold mb-3 text-[#272163]">
