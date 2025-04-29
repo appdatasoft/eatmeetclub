@@ -1,34 +1,15 @@
 
-import { useState } from "react";
 import { Button } from "@/components/common/Button";
+import { FilterState } from "@/hooks/useEventFilters";
 
 interface EventFiltersProps {
-  onFilterChange: (filters: FilterState) => void;
+  filters: FilterState;
+  onFilterChange: (key: keyof FilterState, value: string) => void;
 }
 
-interface FilterState {
-  category: string;
-  date: string;
-  price: string;
-  location: string;
-}
-
-const EventFilters = ({ onFilterChange }: EventFiltersProps) => {
-  const [filters, setFilters] = useState<FilterState>({
-    category: "all",
-    date: "",
-    price: "",
-    location: "",
-  });
-
-  const handleFilterChange = (key: keyof FilterState, value: string) => {
-    const newFilters = { ...filters, [key]: value };
-    setFilters(newFilters);
-    onFilterChange(newFilters);
-  };
-
+const EventFilters = ({ filters, onFilterChange }: EventFiltersProps) => {
   const handleCategoryChange = (category: string) => {
-    handleFilterChange("category", category);
+    onFilterChange("category", category);
   };
 
   return (
@@ -77,7 +58,7 @@ const EventFilters = ({ onFilterChange }: EventFiltersProps) => {
             id="date"
             className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             value={filters.date}
-            onChange={(e) => handleFilterChange("date", e.target.value)}
+            onChange={(e) => onFilterChange("date", e.target.value)}
           />
         </div>
 
@@ -89,7 +70,7 @@ const EventFilters = ({ onFilterChange }: EventFiltersProps) => {
             id="price"
             className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             value={filters.price}
-            onChange={(e) => handleFilterChange("price", e.target.value)}
+            onChange={(e) => onFilterChange("price", e.target.value)}
           >
             <option value="">Any price</option>
             <option value="0-25">$0 - $25</option>
@@ -109,7 +90,7 @@ const EventFilters = ({ onFilterChange }: EventFiltersProps) => {
             placeholder="City or zip code"
             className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             value={filters.location}
-            onChange={(e) => handleFilterChange("location", e.target.value)}
+            onChange={(e) => onFilterChange("location", e.target.value)}
           />
         </div>
       </div>
