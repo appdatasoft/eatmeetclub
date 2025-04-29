@@ -21,7 +21,7 @@ const Hero = () => {
           </h1>
           
           <p className="text-white text-xl md:text-2xl mb-8 max-w-2xl">
-            Join us for fun group dinners where strangers become friends.
+            Join us for fun social dining where strangers become friends.
           </p>
           
           <Button 
