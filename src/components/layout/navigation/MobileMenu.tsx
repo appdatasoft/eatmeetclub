@@ -13,15 +13,9 @@ interface MobileMenuProps {
 const MobileMenu = ({ isOpen, onClose, user, handleLogout }: MobileMenuProps) => {
   if (!isOpen) return null;
   
-  const onLogout = async () => {
-    try {
-      await handleLogout();
-      onClose();
-      // Toast notification is handled in the Navbar component
-    } catch (error) {
-      console.error("Mobile logout error:", error);
-      // Error handling is done in the Navbar component
-    }
+  const onLogout = () => {
+    handleLogout();
+    onClose();
   };
 
   return (
