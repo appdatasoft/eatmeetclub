@@ -24,6 +24,12 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY") ?? ""
     );
 
+    // Create admin client to fetch config
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
     // Authenticate the user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -36,6 +42,20 @@ serve(async (req) => {
     if (authError || !userData.user) {
       throw new Error("Invalid token or user not found");
     }
+
+    // Get event creation fee from app_config
+    const { data: configData, error: configError } = await supabaseAdmin
+      .from("app_config")
+      .select("value")
+      .eq("key", "EVENT_CREATION_FEE")
+      .single();
+    
+    if (configError) {
+      console.error("Error fetching config:", configError);
+    }
+    
+    // Default to 50 if config value cannot be fetched
+    const EVENT_CREATION_FEE = configData ? parseFloat(configData.value) : 50;
 
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -75,7 +95,8 @@ serve(async (req) => {
     const responseData = {
       url: session.url,
       sessionId: session.id,
-      eventDetails: eventDetails
+      eventDetails: eventDetails,
+      fee: EVENT_CREATION_FEE
     };
 
     return new Response(
@@ -96,6 +117,3 @@ serve(async (req) => {
     );
   }
 });
-
-// Fixed admin fee for creating an event (in USD)
-const EVENT_CREATION_FEE = 50;

@@ -14,8 +14,27 @@ const PaymentSuccessPage = () => {
   const { toast } = useToast();
   const [isVerifying, setIsVerifying] = useState(true);
   const [eventDetails, setEventDetails] = useState<any>(null);
+  const [eventFee, setEventFee] = useState<number>(50);
 
   useEffect(() => {
+    const fetchEventFee = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('app_config')
+          .select('value')
+          .eq('key', 'EVENT_CREATION_FEE')
+          .single();
+        
+        if (!error && data) {
+          setEventFee(parseFloat(data.value) || 50);
+        }
+      } catch (error) {
+        console.error('Error fetching event fee:', error);
+      }
+    };
+
+    fetchEventFee();
+
     const verifyPayment = async () => {
       try {
         setIsVerifying(true);
@@ -104,7 +123,7 @@ const PaymentSuccessPage = () => {
             </div>
             <CardTitle className="text-xl font-bold">Payment Successful!</CardTitle>
             <CardDescription>
-              Your event has been created successfully.
+              Your payment of ${eventFee.toFixed(2)} has been processed and your event has been created successfully.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

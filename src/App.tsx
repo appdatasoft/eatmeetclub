@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,6 +18,9 @@ import CreateEvent from "./pages/dashboard/CreateEvent";
 import PaymentSuccessPage from "./pages/dashboard/PaymentSuccessPage";
 import AddRestaurant from "./pages/dashboard/AddRestaurant";
 import EventPayment from './pages/dashboard/EventPayment';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import ConfigPage from './pages/admin/ConfigPage';
+import UsersPage from './pages/admin/UsersPage';
 
 const queryClient = new QueryClient();
 
@@ -40,6 +44,9 @@ const App = () => (
           <Route path="/dashboard/payment/:eventId" element={<EventPayment />} />
           <Route path="/dashboard/payment-success" element={<PaymentSuccessPage />} />
           <Route path="/dashboard/add-restaurant" element={<AddRestaurant />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/config" element={<ConfigPage />} />
+          <Route path="/admin/users" element={<UsersPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

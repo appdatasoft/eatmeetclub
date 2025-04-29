@@ -7,24 +7,54 @@ import { Button } from '@/components/common/Button';
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getSession();
       setUser(data.session?.user || null);
+      
+      // Check if user is admin
+      if (data.session?.user) {
+        checkAdminStatus(data.session.user.id);
+      }
     };
     
     getUser();
     
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user || null);
+      
+      if (session?.user) {
+        checkAdminStatus(session.user.id);
+      } else {
+        setIsAdmin(false);
+      }
     });
     
     return () => {
       authListener.subscription.unsubscribe();
     };
   }, []);
+
+  const checkAdminStatus = async (userId: string) => {
+    try {
+      const { data, error } = await supabase.rpc(
+        'is_admin',
+        { user_id: userId }
+      );
+      
+      if (error) {
+        throw error;
+      }
+      
+      setIsAdmin(!!data);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -69,6 +99,11 @@ const Navbar = () => {
                 <Button href="/dashboard" variant="ghost" size="md">
                   Dashboard
                 </Button>
+                {isAdmin && (
+                  <Button href="/admin" variant="ghost" size="md" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                    Admin
+                  </Button>
+                )}
                 <Button onClick={handleLogout} variant="outline" size="md">
                   Log out
                 </Button>
@@ -159,6 +194,15 @@ const Navbar = () => {
                   <Button href="/dashboard" variant="ghost" className="justify-center">
                     Dashboard
                   </Button>
+                  {isAdmin && (
+                    <Button 
+                      href="/admin" 
+                      variant="ghost" 
+                      className="justify-center text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      Admin
+                    </Button>
+                  )}
                   <Button onClick={handleLogout} variant="outline" className="justify-center">
                     Log out
                   </Button>

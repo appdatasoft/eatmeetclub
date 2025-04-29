@@ -9,9 +9,6 @@ import EventForm from '@/components/events/EventForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from '@/components/common/Button';
 
-// Fixed admin fee for creating an event
-const EVENT_CREATION_FEE = 50;
-
 const CreateEvent = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -21,6 +18,7 @@ const CreateEvent = () => {
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [currentEventDetails, setCurrentEventDetails] = useState<any>(null);
+  const [eventFee, setEventFee] = useState<number>(50);
 
   // Extract restaurantId from URL query parameters
   useEffect(() => {
@@ -39,6 +37,7 @@ const CreateEvent = () => {
       } else {
         // Fetch user's restaurants
         fetchRestaurants();
+        fetchEventFee();
       }
     };
     
@@ -61,6 +60,22 @@ const CreateEvent = () => {
         description: "Failed to fetch restaurants. Please try again.",
         variant: "destructive"
       });
+    }
+  };
+
+  const fetchEventFee = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('app_config')
+        .select('value')
+        .eq('key', 'EVENT_CREATION_FEE')
+        .single();
+      
+      if (error) throw error;
+      
+      setEventFee(parseFloat(data.value) || 50);
+    } catch (error) {
+      console.error('Error fetching event fee:', error);
     }
   };
 
@@ -117,6 +132,12 @@ const CreateEvent = () => {
       <h1 className="text-2xl font-bold mb-6">Create New Event</h1>
       
       <Card className="p-6">
+        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
+          <p className="text-amber-800">
+            Creating an event requires a publication fee of ${eventFee.toFixed(2)}. You will be redirected to a secure payment page after submitting this form.
+          </p>
+        </div>
+
         <EventForm
           restaurants={restaurants}
           selectedRestaurantId={selectedRestaurantId}
@@ -133,7 +154,7 @@ const CreateEvent = () => {
             <DialogTitle>Payment for Event Creation</DialogTitle>
           </DialogHeader>
           <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
-            <p className="text-amber-800 text-sm">You will be redirected to Stripe to complete your payment of ${EVENT_CREATION_FEE}.00</p>
+            <p className="text-amber-800 text-sm">You will be redirected to Stripe to complete your payment of ${eventFee.toFixed(2)}</p>
           </div>
           <div className="flex space-x-2 mt-4">
             <Button 

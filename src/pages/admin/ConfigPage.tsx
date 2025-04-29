@@ -1,0 +1,173 @@
+
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { useToast } from '@/hooks/use-toast';
+import AdminLayout from '@/components/layout/AdminLayout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { supabase } from '@/integrations/supabase/client';
+
+interface ConfigFormValues {
+  EVENT_CREATION_FEE: string;
+}
+
+interface ConfigItem {
+  id: string;
+  key: string;
+  value: string;
+  description: string | null;
+}
+
+const ConfigPage = () => {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [configs, setConfigs] = useState<ConfigItem[]>([]);
+  
+  const form = useForm<ConfigFormValues>({
+    defaultValues: {
+      EVENT_CREATION_FEE: '50',
+    }
+  });
+
+  useEffect(() => {
+    const fetchConfigs = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('app_config')
+          .select('*');
+        
+        if (error) {
+          throw error;
+        }
+        
+        setConfigs(data as ConfigItem[]);
+        
+        // Set form values from fetched data
+        const configMap = data.reduce((acc: Record<string, string>, item: ConfigItem) => {
+          acc[item.key] = item.value;
+          return acc;
+        }, {});
+        
+        form.reset(configMap as ConfigFormValues);
+      } catch (error: any) {
+        console.error('Error fetching configs:', error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load configuration",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchConfigs();
+  }, [toast]);
+
+  const onSubmit = async (values: ConfigFormValues) => {
+    try {
+      setIsLoading(true);
+      
+      // Get current user session
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error("Authentication required");
+      }
+      
+      // Update event creation fee
+      const { error } = await supabase
+        .from('app_config')
+        .update({ 
+          value: values.EVENT_CREATION_FEE,
+          updated_by: sessionData.session.user.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('key', 'EVENT_CREATION_FEE');
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Configuration updated",
+        description: "The changes have been saved successfully"
+      });
+    } catch (error: any) {
+      console.error('Error updating config:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save configuration",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <AdminLayout>
+      <h1 className="text-2xl font-bold mb-6">System Configuration</h1>
+      
+      {isLoading && configs.length === 0 ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Application Settings</CardTitle>
+            <CardDescription>
+              Manage the core settings for your application
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="EVENT_CREATION_FEE"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Event Creation Fee (USD)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <span className="text-gray-500">$</span>
+                          </div>
+                          <Input 
+                            type="number" 
+                            placeholder="50.00"
+                            className="pl-8" 
+                            {...field}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        The amount charged to users when creating a new event
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="flex justify-end">
+                  <Button 
+                    type="submit" 
+                    disabled={isLoading || !form.formState.isDirty}
+                  >
+                    {isLoading ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      )}
+    </AdminLayout>
+  );
+};
+
+export default ConfigPage;

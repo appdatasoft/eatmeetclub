@@ -7,9 +7,6 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/common/Button';
 
-// Fixed admin fee for creating an event
-const EVENT_CREATION_FEE = 50;
-
 const EventPayment = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
@@ -17,67 +14,88 @@ const EventPayment = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [eventDetails, setEventDetails] = useState<any>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [eventFee, setEventFee] = useState<number>(50);
 
   useEffect(() => {
-    const fetchEventDetails = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       
       try {
-        // Get session to check authentication
-        const { data } = await supabase.auth.getSession();
-        if (!data.session) {
-          navigate('/login');
-          return;
+        // Fetch event fee from app_config
+        const { data: configData, error: configError } = await supabase
+          .from('app_config')
+          .select('value')
+          .eq('key', 'EVENT_CREATION_FEE')
+          .single();
+        
+        if (!configError && configData) {
+          setEventFee(parseFloat(configData.value) || 50);
         }
         
         // Fetch event details
-        const { data: eventData, error } = await supabase
-          .from('events')
-          .select('*, restaurant:restaurants(name)')
-          .eq('id', eventId)
-          .single();
-        
-        if (error) {
-          throw error;
-        }
-        
-        // Check if event belongs to current user
-        if (eventData.user_id !== data.session.user.id) {
-          toast({
-            title: "Unauthorized",
-            description: "You don't have permission to access this event",
-            variant: "destructive"
-          });
-          navigate('/dashboard');
-          return;
-        }
-        
-        // If payment already completed, redirect to dashboard
-        if (eventData.payment_status === 'completed') {
-          toast({
-            title: "Already Paid",
-            description: "Payment for this event has already been completed",
-          });
-          navigate('/dashboard');
-          return;
-        }
-        
-        setEventDetails(eventData);
+        await fetchEventDetails();
       } catch (error) {
-        console.error('Error fetching event details:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch event details. Please try again.",
-          variant: "destructive"
-        });
-        navigate('/dashboard');
+        console.error('Error fetching initial data:', error);
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchEventDetails();
-  }, [eventId, navigate, toast]);
+    fetchData();
+  }, []);
+
+  const fetchEventDetails = async () => {
+    try {
+      // Get session to check authentication
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        navigate('/login');
+        return;
+      }
+      
+      // Fetch event details
+      const { data: eventData, error } = await supabase
+        .from('events')
+        .select('*, restaurant:restaurants(name)')
+        .eq('id', eventId)
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Check if event belongs to current user
+      if (eventData.user_id !== data.session.user.id) {
+        toast({
+          title: "Unauthorized",
+          description: "You don't have permission to access this event",
+          variant: "destructive"
+        });
+        navigate('/dashboard');
+        return;
+      }
+      
+      // If payment already completed, redirect to dashboard
+      if (eventData.payment_status === 'completed') {
+        toast({
+          title: "Already Paid",
+          description: "Payment for this event has already been completed",
+        });
+        navigate('/dashboard');
+        return;
+      }
+      
+      setEventDetails(eventData);
+    } catch (error) {
+      console.error('Error fetching event details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch event details. Please try again.",
+        variant: "destructive"
+      });
+      navigate('/dashboard');
+    }
+  };
 
   const handlePayment = async () => {
     setIsProcessingPayment(true);
@@ -140,7 +158,7 @@ const EventPayment = () => {
           <CardHeader>
             <CardTitle>Complete Event Payment</CardTitle>
             <CardDescription>
-              Pay the $50 fee to publish your event
+              Pay the ${eventFee.toFixed(2)} fee to publish your event
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -173,7 +191,7 @@ const EventPayment = () => {
                 <div className="border-t pt-4 mt-4">
                   <div className="flex justify-between items-center font-medium">
                     <span>Event Creation Fee:</span>
-                    <span>${EVENT_CREATION_FEE.toFixed(2)}</span>
+                    <span>${eventFee.toFixed(2)}</span>
                   </div>
                 </div>
                 
@@ -189,7 +207,7 @@ const EventPayment = () => {
                 isLoading={isProcessingPayment}
                 className="flex-1"
               >
-                Pay ${EVENT_CREATION_FEE.toFixed(2)} Now
+                Pay ${eventFee.toFixed(2)} Now
               </Button>
               
               <Button
