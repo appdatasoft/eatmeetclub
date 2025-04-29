@@ -38,6 +38,8 @@ const EventsList = ({ events, isLoading, onPublishEvent }: EventsListProps) => {
     }
   };
   
+  console.log("Events in EventsList:", events); // Debug: Log events to console
+  
   return (
     <Card className="mt-6">
       <CardHeader>
@@ -49,7 +51,7 @@ const EventsList = ({ events, isLoading, onPublishEvent }: EventsListProps) => {
           <div className="flex justify-center py-4">
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
           </div>
-        ) : events.length > 0 ? (
+        ) : events && events.length > 0 ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -66,7 +68,7 @@ const EventsList = ({ events, isLoading, onPublishEvent }: EventsListProps) => {
                 {events.map((event) => (
                   <TableRow key={event.id}>
                     <TableCell className="font-medium">{event.title}</TableCell>
-                    <TableCell>{event.restaurant?.name}</TableCell>
+                    <TableCell>{event.restaurant?.name || 'Unknown'}</TableCell>
                     <TableCell>{formatEventDate(event.date)}</TableCell>
                     <TableCell>${event.price.toFixed(2)}</TableCell>
                     <TableCell>

@@ -45,6 +45,7 @@ const Dashboard = () => {
   // Function to fetch restaurants
   const fetchRestaurants = async () => {
     try {
+      console.log("Fetching restaurants...");
       const { data, error } = await supabase
         .from('restaurants')
         .select('id, name, cuisine_type, city, state, address, phone, website, zipcode')
@@ -54,6 +55,7 @@ const Dashboard = () => {
         throw error;
       }
       
+      console.log("Restaurants fetched:", data);
       setRestaurants(data || []);
     } catch (error) {
       console.error('Error fetching restaurants:', error);
@@ -68,6 +70,7 @@ const Dashboard = () => {
   // Function to fetch events
   const fetchEvents = async () => {
     try {
+      console.log("Fetching events...");
       const { data, error } = await supabase
         .from('events')
         .select('id, title, date, time, restaurant_id, capacity, price, payment_status, restaurant:restaurants(name)')
@@ -77,6 +80,7 @@ const Dashboard = () => {
         throw error;
       }
       
+      console.log("Events fetched:", data);
       setEvents(data || []);
     } catch (error) {
       console.error('Error fetching events:', error);
@@ -95,6 +99,7 @@ const Dashboard = () => {
         navigate('/login');
       } else {
         // Fetch user's restaurants and events
+        setIsLoading(true);
         await Promise.all([fetchRestaurants(), fetchEvents()]);
         setIsLoading(false);
       }
