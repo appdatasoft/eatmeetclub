@@ -11,6 +11,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogOverlay,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 
@@ -74,7 +75,8 @@ const DeleteRestaurantDialog = ({
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent>
+      <AlertDialogOverlay className="fixed inset-0 z-[999] bg-black/50" />
+      <AlertDialogContent className="fixed z-[1000] top-[50%] left-[50%] max-w-md translate-x-[-50%] translate-y-[-50%]">
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
