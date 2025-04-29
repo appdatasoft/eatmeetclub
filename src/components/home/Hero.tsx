@@ -6,13 +6,13 @@ const Hero = () => {
     <div 
       className="bg-cover bg-center py-12 md:py-24 relative"
       style={{ 
-        backgroundImage: "url('/lovable-uploads/bbd811cf-2ba6-4ab2-8511-a94f512f3fa3.png')",
+        backgroundImage: "url('/lovable-uploads/9b9b18e9-9c68-4ef7-aa55-cfedf65f9bba.png')",
         backgroundSize: "cover",
         backgroundPosition: "center"
       }}
     >
       {/* Dark overlay for better text readability */}
-      <div className="absolute inset-0 bg-black bg-opacity-30"></div>
+      <div className="absolute inset-0 bg-black bg-opacity-20"></div>
       
       <div className="container-custom relative z-10">
         <div className="flex flex-col items-center text-center">
@@ -27,7 +27,7 @@ const Hero = () => {
           <Button 
             href="/signup" 
             size="lg" 
-            className="bg-[#f25c41] text-white hover:bg-[#e04e35] px-10 py-4 text-xl rounded-full"
+            className="bg-[#FEC6A1] text-[#703E1E] hover:bg-[#FDE1D3] px-10 py-4 text-xl font-bold rounded-full"
           >
             BECOME A MEMBER
           </Button>
