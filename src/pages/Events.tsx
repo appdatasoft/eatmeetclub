@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
@@ -109,6 +108,8 @@ const Events = () => {
         setFilteredEvents(formattedEvents);
       } catch (error) {
         console.error("Error fetching published events:", error);
+        setEvents([]);
+        setFilteredEvents([]);
       } finally {
         setIsLoading(false);
       }

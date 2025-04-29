@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEventDetails } from "@/hooks/useEventDetails";
 import { useState, useEffect } from "react";
@@ -18,7 +17,7 @@ import EventDetailsContainer from "@/components/events/EventDetails/EventDetails
 import TicketPurchase from "@/components/events/EventDetails/TicketPurchase";
 import EventSkeleton from "@/components/events/EventDetails/EventSkeleton";
 import EventNotFound from "@/components/events/EventDetails/EventNotFound";
-import EventActions from "@/components/events/EventDetails/EventActions";
+import EventActionButtons from "@/components/events/EventDetails/EventActionButtons";
 import DeleteEventDialog from "@/components/events/EventDetails/DeleteEventDialog";
 import EditCoverDialog from "@/components/events/EventDetails/EditCoverDialog";
 
@@ -289,7 +288,7 @@ const EventDetails = () => {
 
         <div className="container-custom py-4 md:py-8">
           {canEditEvent && (
-            <EventActions
+            <EventActionButtons
               eventUrl={eventUrl}
               eventTitle={event.title}
               onEditEvent={handleEditEvent}
