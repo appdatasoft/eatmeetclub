@@ -24,7 +24,7 @@ serve(async (req) => {
 
     console.log("Creating checkout session for:", { email, name, phone });
 
-    const origin = req.headers.get('origin') || 'http://localhost:5173';
+    const origin = req.headers.get('origin') || 'https://75cdb42b-d2ca-4370-bb78-477876ee9d08.lovableproject.com';
 
     // Create a Stripe checkout session
     const session = await stripe.checkout.sessions.create({

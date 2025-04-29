@@ -11,6 +11,7 @@ import "./App.css";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import MembershipPayment from "./pages/MembershipPayment";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Events from "./pages/Events";
 import EventDetails from "./pages/EventDetails";
@@ -47,10 +48,12 @@ function App() {
         />
         <Route
           path="/become-member"
+          element={!session ? <MembershipPayment /> : <Navigate to="/dashboard" />}
+        />
+        <Route
+          path="/signup"
           element={!session ? <Signup /> : <Navigate to="/dashboard" />}
         />
-        {/* Redirect from old signup route to new become-member route */}
-        <Route path="/signup" element={<Navigate to="/become-member" />} />
         <Route
           path="/dashboard"
           element={session ? <Dashboard /> : <Navigate to="/login" />}

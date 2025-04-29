@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -80,6 +81,11 @@ const MembershipPayment = () => {
         }
       );
       
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create checkout session");
+      }
+      
       const data = await response.json();
       
       if (data.success && data.url) {
@@ -89,6 +95,7 @@ const MembershipPayment = () => {
         throw new Error(data.message || "Failed to create checkout session");
       }
     } catch (error: any) {
+      console.error("Payment error:", error);
       toast({
         title: "Error",
         description: error.message || "There was a problem initiating the checkout process",
