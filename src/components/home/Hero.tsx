@@ -5,55 +5,28 @@ const Hero = () => {
   return (
     <div className="bg-gradient-to-br from-amber-50 to-orange-50 py-12 md:py-24">
       <div className="container-custom">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-          <div className="text-center md:text-left">
-            <img 
-              src="/lovable-uploads/82113d9c-640f-41aa-a1ec-c74259bf348d.png" 
-              alt="Eat Meet Club - Link Up Over Food & Conversation" 
-              className="w-full max-w-md mx-auto md:mx-0 mb-8"
-            />
-            <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-              <Button href="/events" size="lg">
-                Find Events
-              </Button>
-              <Button href="/restaurants/join" variant="outline" size="lg">
-                Register Restaurant
-              </Button>
-            </div>
-          </div>
+        <div className="flex flex-col items-center text-center">
+          <img 
+            src="/lovable-uploads/e25949c9-5d4a-4ad3-b3dd-fb90924a6e1f.png" 
+            alt="Eat Meet Club Logo" 
+            className="w-full max-w-md mb-6"
+          />
           
-          <div className="relative">
-            <div className="relative h-[400px] md:h-[500px] overflow-hidden rounded-lg shadow-xl">
-              <img 
-                src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60" 
-                alt="People enjoying a meal together" 
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-              
-              <div className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-sm p-4 rounded-lg shadow-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="bg-brand-100 p-2 rounded-full">
-                    <svg className="w-5 h-5 text-brand-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500">Next Event</p>
-                    <h3 className="font-medium">Farm-to-Table Dinner</h3>
-                    <p className="text-sm text-gray-600">Tomorrow, 7:00 PM</p>
-                  </div>
-                  <Button href="/event/farm-to-table" size="sm">
-                    Join
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            <div className="absolute -top-4 -right-4 bg-teal-500 text-white p-3 rounded-lg shadow-lg transform rotate-6 hidden md:block">
-              <p className="text-sm font-medium">Over 200+ Events</p>
-            </div>
-          </div>
+          <h1 className="text-3xl md:text-5xl font-bold text-[#272163] mb-3">
+            Link Up Over Food <span className="text-[#272163]">&</span> Conversation
+          </h1>
+          
+          <p className="text-[#f25c41] text-xl md:text-2xl mb-8 max-w-2xl">
+            Join us for fun group dinners where strangers become friends.
+          </p>
+          
+          <Button 
+            href="/signup" 
+            size="lg" 
+            className="bg-[#f25c41] text-white hover:bg-[#e04e35] px-10 py-4 text-xl rounded-full"
+          >
+            BECOME A MEMBER
+          </Button>
         </div>
       </div>
     </div>
