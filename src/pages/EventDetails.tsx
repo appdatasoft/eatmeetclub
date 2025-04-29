@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 // Layout components
 import Navbar from "@/components/layout/Navbar";
@@ -257,12 +258,12 @@ const EventDetails = () => {
         <div className="container-custom py-8 text-center">
           <h1 className="text-2xl font-bold mb-4">Event Not Available</h1>
           <p className="mb-6">This event is not currently published.</p>
-          <button 
-            className="px-4 py-2 bg-primary text-white rounded-md"
+          <Button 
+            variant="default"
             onClick={() => navigate('/events')}
           >
             Back to Events
-          </button>
+          </Button>
         </div>
         <Footer />
       </>
@@ -271,7 +272,7 @@ const EventDetails = () => {
 
   const ticketsRemaining = event.capacity - (event.tickets_sold || 0);
   const ticketsPercentage = ((event.tickets_sold || 0) / event.capacity) * 100;
-  const location = `${event.restaurant.address}, ${event.restaurant.city}, ${event.restaurant.state} ${event.restaurant.zipcode}`;
+  const locationStr = `${event.restaurant.address}, ${event.restaurant.city}, ${event.restaurant.state} ${event.restaurant.zipcode}`;
   const coverImageUrl = event.cover_image || "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60";
 
   return (
@@ -303,7 +304,7 @@ const EventDetails = () => {
               event={event}
               ticketsRemaining={ticketsRemaining}
               ticketsPercentage={ticketsPercentage}
-              location={location}
+              location={locationStr}
               eventUrl={eventUrl}
               isCurrentUserOwner={isCurrentUserOwner}
             />

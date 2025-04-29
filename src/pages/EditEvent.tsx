@@ -17,6 +17,8 @@ const EditEvent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [event, setEvent] = useState<any>(null);
   const [canEdit, setCanEdit] = useState(false);
+  const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
   
   useEffect(() => {
     const fetchEventDetails = async () => {
@@ -33,6 +35,7 @@ const EditEvent = () => {
         if (error) throw error;
         
         setEvent(data);
+        setSelectedRestaurantId(data.restaurant_id);
         
         // Check if user is owner or admin
         const isOwner = user?.id === data.user_id;
@@ -62,8 +65,24 @@ const EditEvent = () => {
       }
     };
     
+    // Fetch restaurants for dropdown
+    const fetchRestaurants = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('restaurants')
+          .select('id, name')
+          .order('name', { ascending: true });
+        
+        if (error) throw error;
+        setRestaurants(data || []);
+      } catch (error) {
+        console.error('Error fetching restaurants:', error);
+      }
+    };
+    
     if (user) {
       fetchEventDetails();
+      fetchRestaurants();
     }
   }, [id, navigate, toast, user, isAdmin]);
   
@@ -136,17 +155,11 @@ const EditEvent = () => {
               </CardHeader>
               <CardContent>
                 <EventForm 
-                  onSubmit={handleUpdateEvent} 
+                  onSubmit={handleUpdateEvent}
                   isLoading={isLoading}
-                  initialData={{
-                    title: event.title,
-                    description: event.description,
-                    date: event.date,
-                    time: event.time,
-                    capacity: event.capacity,
-                    price: event.price,
-                    restaurantId: event.restaurant_id
-                  }}
+                  restaurants={restaurants}
+                  selectedRestaurantId={selectedRestaurantId}
+                  setSelectedRestaurantId={setSelectedRestaurantId}
                 />
               </CardContent>
             </Card>

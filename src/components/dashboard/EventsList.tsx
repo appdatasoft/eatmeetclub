@@ -47,9 +47,10 @@ interface EventsListProps {
   isLoading: boolean;
   onPublishEvent?: (eventId: string, paymentStatus: string) => void;
   onRefresh?: () => void;
+  isAdmin?: boolean;
 }
 
-const EventsList = ({ events, isLoading, onPublishEvent, onRefresh }: EventsListProps) => {
+const EventsList = ({ events, isLoading, onPublishEvent, onRefresh, isAdmin = false }: EventsListProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [publishingEventId, setPublishingEventId] = useState<string | null>(null);
