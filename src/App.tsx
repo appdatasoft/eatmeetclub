@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,6 +16,7 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import CreateEvent from "./pages/dashboard/CreateEvent";
 import PaymentSuccessPage from "./pages/dashboard/PaymentSuccessPage";
 import AddRestaurant from "./pages/dashboard/AddRestaurant";
+import EventPayment from './pages/dashboard/EventPayment';
 
 const queryClient = new QueryClient();
 
@@ -37,9 +37,9 @@ const App = () => (
           <Route path="/restaurants/join" element={<RestaurantJoin />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/create-event" element={<CreateEvent />} />
+          <Route path="/dashboard/payment/:eventId" element={<EventPayment />} />
           <Route path="/dashboard/payment-success" element={<PaymentSuccessPage />} />
           <Route path="/dashboard/add-restaurant" element={<AddRestaurant />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

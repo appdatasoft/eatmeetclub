@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, ExternalLinkIcon, CalendarPlus } from "lucide-react";
+import { PlusIcon, ExternalLinkIcon, CalendarPlus, CheckCircle, AlertCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -21,6 +21,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 interface Restaurant {
   id: string;
@@ -33,9 +36,25 @@ interface Restaurant {
   website: string | null;
 }
 
+interface Event {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  restaurant_id: string;
+  capacity: number;
+  price: number;
+  payment_status: 'pending' | 'completed';
+  restaurant: {
+    name: string;
+  };
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -44,8 +63,9 @@ const Dashboard = () => {
       if (!data.session) {
         navigate('/login');
       } else {
-        // Fetch user's restaurants
+        // Fetch user's restaurants and events
         fetchRestaurants();
+        fetchEvents();
       }
     };
     
@@ -68,11 +88,58 @@ const Dashboard = () => {
       }
     };
     
+    const fetchEvents = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('id, title, date, time, restaurant_id, capacity, price, payment_status, restaurant:restaurants(name)')
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          throw error;
+        }
+        
+        setEvents(data || []);
+      } catch (error) {
+        console.error('Error fetching events:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch events",
+          variant: "destructive"
+        });
+      }
+    };
+    
     checkAuth();
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleCreateEvent = (restaurantId: string) => {
     navigate(`/dashboard/create-event?restaurantId=${restaurantId}`);
+  };
+
+  const handlePublishEvent = async (eventId: string, paymentStatus: string) => {
+    if (paymentStatus !== 'completed') {
+      toast({
+        title: "Payment Required",
+        description: "You need to complete the payment before publishing this event",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // In a real app, this would send the event to be published
+    toast({
+      title: "Event Published",
+      description: "Your event has been published successfully"
+    });
+  };
+
+  const formatEventDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'MMM d, yyyy');
+    } catch (e) {
+      return dateString;
+    }
   };
 
   return (
@@ -107,14 +174,101 @@ const Dashboard = () => {
         
         <Card>
           <CardHeader>
-            <CardTitle>Upcoming Events</CardTitle>
-            <CardDescription>Your scheduled events</CardDescription>
+            <CardTitle>Event Stats</CardTitle>
+            <CardDescription>Overview of your events</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-500 text-sm">No upcoming events scheduled.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gray-50 p-4 rounded-lg text-center">
+                <p className="text-2xl font-bold">{events.length}</p>
+                <p className="text-sm text-gray-500">Total Events</p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg text-center">
+                <p className="text-2xl font-bold">
+                  {events.filter(event => event.payment_status === 'completed').length}
+                </p>
+                <p className="text-sm text-gray-500">Ready to Publish</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
+      
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Your Events</CardTitle>
+          <CardDescription>All events you've created</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-4">
+              <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+            </div>
+          ) : events.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Restaurant</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {events.map((event) => (
+                    <TableRow key={event.id}>
+                      <TableCell className="font-medium">{event.title}</TableCell>
+                      <TableCell>{event.restaurant?.name}</TableCell>
+                      <TableCell>{formatEventDate(event.date)}</TableCell>
+                      <TableCell>${event.price.toFixed(2)}</TableCell>
+                      <TableCell>
+                        {event.payment_status === 'completed' ? (
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-200">
+                            <CheckCircle className="h-3 w-3 mr-1" /> Paid
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
+                            <AlertCircle className="h-3 w-3 mr-1" /> Payment Required
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {event.payment_status === 'completed' ? (
+                          <Button
+                            size="sm"
+                            onClick={() => handlePublishEvent(event.id, event.payment_status)}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            Publish Event
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/dashboard/payment/${event.id}`)}
+                          >
+                            Complete Payment
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <p className="text-gray-500 mb-4">You haven't created any events yet.</p>
+              <Button onClick={() => navigate('/dashboard/create-event')}>
+                Create Your First Event
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
       
       <Card className="mt-6">
         <CardHeader>
