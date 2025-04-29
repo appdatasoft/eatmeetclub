@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,7 +55,7 @@ const Signup = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 pt-16">
         <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900">Create an Account</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Become a Member</h1>
             <p className="mt-2 text-gray-600">
               Join Eat Meet Club and start discovering local food events
             </p>
