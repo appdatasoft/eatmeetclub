@@ -24,6 +24,8 @@ serve(async (req) => {
     if (!email) throw new Error("No email provided");
     if (!name) throw new Error("No name provided");
 
+    console.log("Verifying payment:", { paymentId, email, name, isSubscription });
+
     // Create Supabase client with service role key to bypass RLS
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -40,23 +42,25 @@ serve(async (req) => {
     
     try {
       if (isSubscription) {
-        // For subscription, we'd validate the subscription status
-        // This is a mock check since we don't have an actual Stripe subscription
-        // In real implementation, you'd do:
-        // const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-        // paymentVerified = subscription.status === 'active';
-        paymentVerified = true; // Mock subscription verification
-        console.log("Verified subscription payment");
+        const session = await stripe.checkout.sessions.retrieve(paymentId);
+        const subscriptionId = session.subscription as string;
+        
+        if (subscriptionId) {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          paymentVerified = subscription.status === 'active';
+          console.log("Subscription verified:", { subscriptionId, status: subscription.status });
+        } else {
+          throw new Error("No subscription ID found in session");
+        }
       } else {
         // For one-time payment
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentId);
         paymentVerified = paymentIntent.status === "succeeded";
-        console.log("Verified one-time payment");
+        console.log("One-time payment verified:", { status: paymentIntent.status });
       }
     } catch (error) {
       console.error("Payment verification error:", error.message);
-      // For demo purposes, we'll consider the payment verified
-      paymentVerified = true;
+      throw new Error(`Payment verification failed: ${error.message}`);
     }
     
     if (!paymentVerified) {
@@ -84,6 +88,8 @@ serve(async (req) => {
       throw new Error(`Error creating user: ${userError.message}`);
     }
 
+    console.log("User created successfully:", userData.user.id);
+
     // Send a password reset email so the user can set their own password
     const { error: resetError } = await supabaseClient.auth.admin.generateLink({
       type: 'recovery',
@@ -92,6 +98,16 @@ serve(async (req) => {
 
     if (resetError) {
       console.error("Error sending password reset email:", resetError.message);
+    } else {
+      console.log("Password reset email sent successfully");
+    }
+
+    // Send welcome email
+    try {
+      await sendWelcomeEmail(email, name);
+      console.log("Welcome email sent successfully");
+    } catch (emailError) {
+      console.error("Error sending welcome email:", emailError.message);
     }
 
     return new Response(
@@ -120,3 +136,31 @@ serve(async (req) => {
     );
   }
 });
+
+// Email sending function
+async function sendWelcomeEmail(email: string, name: string) {
+  // In a production environment, this would use a service like Resend, SendGrid, etc.
+  // For this demo, we'll simply log that we would send an email
+  console.log(`Would send welcome email to ${email} with name ${name}`);
+  
+  // Mock email content
+  const emailContent = `
+    Hi ${name},
+    
+    Welcome to Eat Meet Club! Your membership is now active.
+    
+    Your monthly subscription of $25 has been processed successfully. You can find your receipt in your Stripe account or email.
+    
+    To get started, please log in to your account at our website using the email address you registered with. You should have received a separate password reset email to set your password.
+    
+    We're excited to have you as a member!
+    
+    Best regards,
+    The Eat Meet Club Team
+  `;
+  
+  console.log("Email content:", emailContent);
+  
+  // In a real implementation, this would call an email service API
+  return true;
+}

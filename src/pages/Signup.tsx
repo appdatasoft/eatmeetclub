@@ -80,6 +80,11 @@ const Signup = () => {
         }
       );
       
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create checkout session");
+      }
+      
       const data = await response.json();
       
       if (data.success && data.url) {

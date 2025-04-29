@@ -10,3 +10,9 @@ verify_jwt = true
 
 [functions.verify-event-payment]
 verify_jwt = true
+
+[functions.create-membership-checkout]
+verify_jwt = false
+
+[functions.verify-membership-payment]
+verify_jwt = false

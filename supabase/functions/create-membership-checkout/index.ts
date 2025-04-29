@@ -22,6 +22,8 @@ serve(async (req) => {
     const { email, name, phone } = await req.json();
     if (!email) throw new Error("No email provided");
 
+    console.log("Creating checkout session for:", { email, name, phone });
+
     const origin = req.headers.get('origin') || 'http://localhost:5173';
 
     // Create a Stripe checkout session
@@ -44,7 +46,7 @@ serve(async (req) => {
         },
       ],
       mode: 'subscription',
-      success_url: `${origin}/login?success=true`,
+      success_url: `${origin}/login?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/become-member?canceled=true`,
       customer_email: email,
       metadata: {
@@ -54,10 +56,13 @@ serve(async (req) => {
       },
     });
 
+    console.log("Checkout session created:", { id: session.id, url: session.url });
+
     return new Response(
       JSON.stringify({
         success: true,
         url: session.url,
+        session_id: session.id,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
