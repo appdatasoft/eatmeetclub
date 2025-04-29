@@ -10,15 +10,15 @@ const HowItWorks = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Step 1 - Envelope Icon */}
+          {/* Step 1 - Closed Envelope Icon */}
           <div className="flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300">
             <div className="mb-6 transform transition-transform duration-300 group-hover:scale-105">
               <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="70" cy="70" r="70" fill="#9FD7D9" fillOpacity="0.6"/>
-                {/* Envelope */}
+                {/* Envelope body */}
                 <rect x="40" y="45" width="60" height="45" rx="2" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
-                {/* Envelope flap */}
-                <path d="M40 50L70 70L100 50" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                {/* Envelope closed flap */}
+                <path d="M40 45L70 65L100 45" stroke="#272163" strokeWidth="4" fill="#FF5F50" strokeLinejoin="round"/>
               </svg>
             </div>
             <h3 className="text-xl font-bold mb-3 text-[#272163]">
