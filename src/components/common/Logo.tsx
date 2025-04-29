@@ -27,9 +27,9 @@ const Logo: React.FC<LogoProps> = ({ className = '' }) => {
         </svg>
         
         <div className="font-serif text-xl font-bold">
-          <span className="text-[#008080]">Eat</span>
-          <span className="text-[#ff5f50]">Meet</span>
-          <span className="text-[#272163]">Club</span>
+          <span className="text-[#008080]">eat</span>
+          <span className="text-[#ff5f50]">meet</span>
+          <span className="text-[#272163]">club</span>
         </div>
       </div>
     </Link>
