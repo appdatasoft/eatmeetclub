@@ -90,27 +90,25 @@ const CreateEvent = () => {
       console.log("Creating payment session for event:", eventDetails);
       
       // Create a Stripe checkout session
-      const { data: responseData, error } = await supabase.functions.invoke('create-event-payment', {
+      const response = await supabase.functions.invoke('create-event-payment', {
         body: { eventDetails },
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       
-      if (error || !responseData?.url) {
-        throw new Error(error?.message || "Failed to create payment session");
+      if (response.error || !response.data?.url) {
+        console.error("Error response:", response);
+        throw new Error(response.error?.message || "Failed to create payment session");
       }
-      
-      console.log("Payment session created, URL:", responseData.url);
       
       // Store event details in localStorage to be accessed after payment
       localStorage.setItem('eventDetails', JSON.stringify(eventDetails));
       
-      // Important fix: Ensure we properly redirect to the Stripe checkout URL
-      if (responseData.url) {
-        window.location.href = responseData.url;
-        return; // Early return to prevent state updates after redirect
-      }
+      console.log("Payment session created, redirecting to:", response.data.url);
+      
+      // Redirect to Stripe checkout
+      window.location.href = response.data.url;
     } catch (error) {
       console.error('Error creating payment session:', error);
       setIsLoading(false);

@@ -70,6 +70,8 @@ serve(async (req) => {
       throw new Error("STRIPE_SECRET_KEY not configured");
     }
     
+    console.log("Stripe key type:", stripeKey.startsWith('sk_test_') ? 'TEST MODE' : 'LIVE MODE');
+    
     const stripe = new Stripe(stripeKey, {
       apiVersion: "2023-10-16",
     });
@@ -106,6 +108,7 @@ serve(async (req) => {
     });
     
     console.log("Checkout session created:", session.id);
+    console.log("Checkout URL:", session.url);
 
     // Store event details in localStorage to be accessed after payment
     const responseData = {
