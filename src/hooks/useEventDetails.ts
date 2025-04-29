@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +24,7 @@ export interface EventDetails {
   restaurant: Restaurant;
   tickets_sold?: number;
   user_id: string;
+  cover_image?: string;
 }
 
 export const useEventDetails = (eventId?: string) => {
@@ -34,66 +35,72 @@ export const useEventDetails = (eventId?: string) => {
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [isCurrentUserOwner, setIsCurrentUserOwner] = useState(false);
 
-  useEffect(() => {
-    const fetchEventDetails = async () => {
-      if (!eventId) return;
-      
-      try {
-        setLoading(true);
-        
-        // First get the current user
-        const { data: { session } } = await supabase.auth.getSession();
-        const currentUserId = session?.user?.id;
-        
-        // Fetch event data with restaurant details
-        const { data, error } = await supabase
-          .from('events')
-          .select('*, restaurant:restaurants(*)')
-          .eq('id', eventId)
-          .single();
-        
-        if (error) {
-          throw error;
-        }
-        
-        // Format the event data
-        if (data) {
-          // Format the date to a more readable format
-          const formattedDate = new Date(data.date).toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          });
-          
-          // Calculate tickets sold (this is a placeholder - you'd need to implement actual ticket tracking)
-          const ticketsSold = 0; // Replace with actual query once you have tickets table
-          
-          setEvent({
-            ...data,
-            date: formattedDate,
-            tickets_sold: ticketsSold
-          });
-          
-          // Check if the current user is the owner of this event
-          if (currentUserId && data.user_id === currentUserId) {
-            setIsCurrentUserOwner(true);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching event details:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load event details",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchEventDetails = useCallback(async () => {
+    if (!eventId) return;
     
-    fetchEventDetails();
+    try {
+      setLoading(true);
+      
+      // First get the current user
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUserId = session?.user?.id;
+      
+      // Fetch event data with restaurant details
+      const { data, error } = await supabase
+        .from('events')
+        .select('*, restaurant:restaurants(*)')
+        .eq('id', eventId)
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Format the event data
+      if (data) {
+        // Format the date to a more readable format
+        const formattedDate = new Date(data.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        
+        // Calculate tickets sold (this is a placeholder - you'd need to implement actual ticket tracking)
+        const ticketsSold = 0; // Replace with actual query once you have tickets table
+        
+        setEvent({
+          ...data,
+          date: formattedDate,
+          tickets_sold: ticketsSold
+        });
+        
+        // Check if the current user is the owner of this event
+        if (currentUserId && data.user_id === currentUserId) {
+          setIsCurrentUserOwner(true);
+        } else {
+          setIsCurrentUserOwner(false);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching event details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load event details",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   }, [eventId, toast]);
+  
+  const refreshEventDetails = useCallback(async () => {
+    await fetchEventDetails();
+  }, [fetchEventDetails]);
+
+  useEffect(() => {
+    fetchEventDetails();
+  }, [fetchEventDetails]);
 
   const handleBuyTickets = async (ticketCount: number) => {
     if (!event) return;
@@ -164,6 +171,7 @@ export const useEventDetails = (eventId?: string) => {
     loading,
     isPaymentProcessing,
     isCurrentUserOwner,
-    handleBuyTickets
+    handleBuyTickets,
+    refreshEventDetails
   };
 };

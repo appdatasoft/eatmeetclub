@@ -8,18 +8,20 @@ interface EventHeaderProps {
   restaurantName: string;
   isOwner?: boolean;
   onEditCover?: () => void;
+  coverImage?: string;
 }
 
 const EventHeader: React.FC<EventHeaderProps> = ({ 
   title, 
   restaurantName, 
   isOwner = false,
-  onEditCover
+  onEditCover,
+  coverImage = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60"
 }) => {
   return (
     <div className="relative h-64 md:h-96 overflow-hidden">
       <img
-        src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60"
+        src={coverImage}
         alt={title}
         className="w-full h-full object-cover"
       />

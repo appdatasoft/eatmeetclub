@@ -10,21 +10,23 @@ import TicketPurchase from "@/components/events/EventDetails/TicketPurchase";
 import EventSkeleton from "@/components/events/EventDetails/EventSkeleton";
 import EventNotFound from "@/components/events/EventDetails/EventNotFound";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useState, ChangeEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const EventDetails = () => {
   const { id } = useParams<{ id: string }>();
-  const { event, loading, isPaymentProcessing, handleBuyTickets, isCurrentUserOwner } = useEventDetails(id);
+  const { event, loading, isPaymentProcessing, handleBuyTickets, isCurrentUserOwner, refreshEventDetails } = useEventDetails(id);
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditCoverDialogOpen, setIsEditCoverDialogOpen] = useState(false);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
   
   const handleEditEvent = () => {
     // Navigate to edit event page (to be implemented)
@@ -34,6 +36,70 @@ const EventDetails = () => {
   
   const handleEditCover = () => {
     setIsEditCoverDialogOpen(true);
+  };
+  
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setCoverFile(e.target.files[0]);
+    }
+  };
+  
+  const handleSaveCover = async () => {
+    if (!coverFile || !event) return;
+    
+    try {
+      setIsUploadingCover(true);
+      
+      // Generate a unique file path for the image
+      const fileExt = coverFile.name.split('.').pop();
+      const filePath = `${event.id}/${Date.now()}.${fileExt}`;
+      
+      // Upload the file to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('event-covers')
+        .upload(filePath, coverFile);
+      
+      if (uploadError) {
+        throw uploadError;
+      }
+      
+      // Get the public URL for the uploaded image
+      const { data: publicUrlData } = supabase.storage
+        .from('event-covers')
+        .getPublicUrl(filePath);
+      
+      const publicUrl = publicUrlData.publicUrl;
+      
+      // Update the event with the new cover image URL
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({ cover_image: publicUrl })
+        .eq('id', event.id);
+      
+      if (updateError) {
+        throw updateError;
+      }
+      
+      // Refresh the event details to show the updated image
+      await refreshEventDetails();
+      
+      toast({
+        title: "Cover Updated",
+        description: "Event cover image has been updated successfully",
+      });
+      
+      setIsEditCoverDialogOpen(false);
+    } catch (error: any) {
+      console.error("Error uploading cover image:", error);
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload cover image",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploadingCover(false);
+      setCoverFile(null);
+    }
   };
   
   const handleDeleteEvent = async () => {
@@ -93,6 +159,7 @@ const EventDetails = () => {
   const ticketsRemaining = event.capacity - (event.tickets_sold || 0);
   const ticketsPercentage = ((event.tickets_sold || 0) / event.capacity) * 100;
   const location = `${event.restaurant.address}, ${event.restaurant.city}, ${event.restaurant.state} ${event.restaurant.zipcode}`;
+  const coverImageUrl = event.cover_image || "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60";
 
   return (
     <>
@@ -103,6 +170,7 @@ const EventDetails = () => {
           restaurantName={event.restaurant.name} 
           isOwner={isCurrentUserOwner}
           onEditCover={handleEditCover}
+          coverImage={coverImageUrl}
         />
 
         <div className="container-custom py-8">
@@ -198,19 +266,38 @@ const EventDetails = () => {
                 type="file"
                 accept="image/*"
                 className="w-full"
-                // In a real implementation, this would handle the file upload
+                onChange={handleFileChange}
               />
+              {coverFile && (
+                <div className="relative mt-2 rounded-md overflow-hidden h-40">
+                  <img 
+                    src={URL.createObjectURL(coverFile)} 
+                    alt="Preview" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
               <p className="text-sm text-muted-foreground">
                 Recommended image size: 1200 x 600px. Max file size: 5MB
               </p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditCoverDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsEditCoverDialogOpen(false)} disabled={isUploadingCover}>
               Cancel
             </Button>
-            <Button type="submit">
-              Save Changes
+            <Button 
+              type="button" 
+              onClick={handleSaveCover} 
+              disabled={!coverFile || isUploadingCover}
+            >
+              {isUploadingCover ? (
+                <>Uploading...</>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-1" /> Save Changes
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
