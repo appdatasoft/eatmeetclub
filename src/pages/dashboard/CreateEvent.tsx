@@ -6,8 +6,6 @@ import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card } from '@/components/ui/card';
 import EventForm from '@/components/events/EventForm';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from '@/components/common/Button';
 
 const CreateEvent = () => {
   const navigate = useNavigate();
@@ -16,8 +14,6 @@ const CreateEvent = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [currentEventDetails, setCurrentEventDetails] = useState<any>(null);
   const [eventFee, setEventFee] = useState<number>(50);
 
   // Extract restaurantId from URL query parameters
@@ -81,7 +77,6 @@ const CreateEvent = () => {
 
   const handleEventSubmit = async (eventDetails: any) => {
     setIsLoading(true);
-    setCurrentEventDetails(eventDetails);
     
     try {
       // Get session for the API call
@@ -111,8 +106,11 @@ const CreateEvent = () => {
       // Store event details in localStorage to be accessed after payment
       localStorage.setItem('eventDetails', JSON.stringify(eventDetails));
       
-      // Redirect to Stripe checkout
-      window.location.href = responseData.url;
+      // Important fix: Ensure we properly redirect to the Stripe checkout URL
+      if (responseData.url) {
+        window.location.href = responseData.url;
+        return; // Early return to prevent state updates after redirect
+      }
     } catch (error) {
       console.error('Error creating payment session:', error);
       setIsLoading(false);
