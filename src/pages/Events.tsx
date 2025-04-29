@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
@@ -18,12 +19,14 @@ const Events = () => {
   const [events, setEvents] = useState<EventCardProps[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<EventCardProps[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const navigate = useNavigate();
   
   useEffect(() => {
     const fetchPublishedEvents = async () => {
       try {
         setIsLoading(true);
+        setFetchError(null);
         console.log("Fetching published events...");
         
         const { data, error } = await supabase
@@ -43,7 +46,10 @@ const Events = () => {
           
         if (error) {
           console.error("Error fetching events:", error);
-          throw error;
+          setFetchError("Failed to load events. Please try again later.");
+          setEvents([]);
+          setFilteredEvents([]);
+          return;
         }
         
         console.log("Events data received:", data);
@@ -108,6 +114,7 @@ const Events = () => {
         setFilteredEvents(formattedEvents);
       } catch (error) {
         console.error("Error fetching published events:", error);
+        setFetchError("An unexpected error occurred. Please try again later.");
         setEvents([]);
         setFilteredEvents([]);
       } finally {
@@ -180,6 +187,11 @@ const Events = () => {
           {isLoading ? (
             <div className="flex justify-center py-12">
               <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"></div>
+            </div>
+          ) : fetchError ? (
+            <div className="text-center py-12">
+              <h3 className="text-xl font-medium text-red-600 mb-2">Error</h3>
+              <p className="text-gray-700">{fetchError}</p>
             </div>
           ) : filteredEvents.length === 0 ? (
             <div className="text-center py-12">

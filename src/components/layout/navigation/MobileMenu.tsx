@@ -17,10 +17,10 @@ const MobileMenu = ({ isOpen, onClose, user, handleLogout }: MobileMenuProps) =>
     try {
       await handleLogout();
       onClose();
-      // Toast notification is now handled in the Navbar component
+      // Toast notification is handled in the Navbar component
     } catch (error) {
       console.error("Mobile logout error:", error);
-      // Error handling is now done in the Navbar component
+      // Error handling is done in the Navbar component
     }
   };
 

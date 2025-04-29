@@ -17,7 +17,9 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     try {
+      console.log('Logging out user...');
       const { error } = await supabase.auth.signOut();
+      
       if (error) {
         console.error('Error logging out:', error.message);
         toast({
@@ -26,12 +28,15 @@ const Navbar = () => {
           variant: "destructive"
         });
       } else {
-        // Only navigate and show success toast if there was no error
-        navigate('/');
+        console.log('Logout successful');
         toast({
           title: "Logged out successfully",
           description: "You have been logged out of your account"
         });
+        // Navigate after successful logout
+        setTimeout(() => {
+          navigate('/');
+        }, 100);
       }
     } catch (error: any) {
       console.error('Error during logout:', error);

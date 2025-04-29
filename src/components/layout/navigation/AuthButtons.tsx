@@ -1,7 +1,5 @@
 
 import { Button } from '@/components/common/Button';
-import { toast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 
 interface AuthButtonsProps {
@@ -10,18 +8,6 @@ interface AuthButtonsProps {
 }
 
 const AuthButtons = ({ user, handleLogout }: AuthButtonsProps) => {
-  const navigate = useNavigate();
-  
-  const onLogout = async () => {
-    try {
-      await handleLogout();
-      // Toast notification is now handled in the Navbar component
-    } catch (error) {
-      console.error("AuthButtons logout error:", error);
-      // Error handling is now done in the Navbar component
-    }
-  };
-
   return (
     <div className="hidden md:flex items-center space-x-3">
       {user ? (
@@ -29,7 +15,7 @@ const AuthButtons = ({ user, handleLogout }: AuthButtonsProps) => {
           <Button href="/dashboard" variant="ghost" size="md">
             Dashboard
           </Button>
-          <Button onClick={onLogout} variant="outline" size="md">
+          <Button onClick={handleLogout} variant="outline" size="md">
             <LogOut className="h-4 w-4 mr-2" />
             Log out
           </Button>
