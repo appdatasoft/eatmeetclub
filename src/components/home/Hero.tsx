@@ -4,15 +4,16 @@ import { Button } from "@/components/common/Button";
 const Hero = () => {
   return (
     <div 
-      className="bg-cover bg-center py-12 md:py-24 relative h-[500px]"
+      className="bg-gray-300 py-12 md:py-24 relative h-[500px] w-full"
       style={{ 
-        backgroundImage: "url('/lovable-uploads/efd1ce8c-19a4-4199-8205-408597d057eb.png')",
+        backgroundImage: `url('/lovable-uploads/2db24df8-eae3-4bee-9783-534552ad2fa2.png')`,
         backgroundSize: "cover",
-        backgroundPosition: "center"
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat"
       }}
     >
       {/* Dark overlay for better text readability */}
-      <div className="absolute inset-0 bg-black bg-opacity-30"></div>
+      <div className="absolute inset-0 bg-black bg-opacity-20"></div>
       
       <div className="container-custom relative z-10 h-full flex items-center">
         <div className="flex flex-col items-center text-center w-full">
