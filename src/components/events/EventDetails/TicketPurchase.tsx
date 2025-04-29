@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TicketPurchaseProps {
   price: number;
@@ -19,6 +20,7 @@ const TicketPurchase: React.FC<TicketPurchaseProps> = ({
   isLoggedIn = true
 }) => {
   const [ticketCount, setTicketCount] = useState(1);
+  const { user } = useAuth();
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm sticky top-24">
@@ -83,7 +85,7 @@ const TicketPurchase: React.FC<TicketPurchaseProps> = ({
         </div>
       </div>
       
-      {!isLoggedIn ? (
+      {!user ? (
         <div>
           <Button 
             onClick={() => onBuyTickets(ticketCount)} 

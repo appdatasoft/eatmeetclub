@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -15,6 +16,14 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const location = useLocation();
+  const { user } = useAuth();
+
+  // If user is already logged in, redirect to dashboard
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
 
   useEffect(() => {
     // Check if we have a redirect path from state
@@ -78,6 +87,9 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  // If already logged in, don't show the login form
+  if (user) return null;
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -144,14 +156,16 @@ const Login = () => {
           </Link>
         </div>
         
-        <div className="mt-4 text-center">
-          <Link 
-            to="/become-member" 
-            className="font-medium text-brand-600 hover:underline text-sm"
-          >
-            Become a Member
-          </Link>
-        </div>
+        {!user && (
+          <div className="mt-4 text-center">
+            <Link 
+              to="/become-member" 
+              className="font-medium text-brand-600 hover:underline text-sm"
+            >
+              Become a Member
+            </Link>
+          </div>
+        )}
         
         {redirectUrl && redirectUrl.includes('/event/') && (
           <div className="mt-6 p-3 bg-amber-50 border border-amber-200 rounded-md">

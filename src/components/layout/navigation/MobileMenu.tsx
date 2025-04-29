@@ -55,6 +55,15 @@ const MobileMenu = ({ isOpen, onClose, user, handleLogout }: MobileMenuProps) =>
         >
           About
         </Link>
+        {!user && (
+          <Link
+            to="/signup"
+            className="block px-3 py-2 rounded-md text-base font-medium text-brand-500 hover:bg-accent"
+            onClick={onClose}
+          >
+            Join Now
+          </Link>
+        )}
         <div className="pt-2 pb-3 border-t border-gray-100 flex flex-col space-y-2">
           {user ? (
             <>
