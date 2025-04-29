@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { EventCardProps } from "@/components/events/EventCard";
 
 export interface FilterState {
@@ -17,7 +17,7 @@ export const useEventFilters = (allEvents: EventCardProps[]) => {
     location: "",
   });
   
-  const [filteredEvents, setFilteredEvents] = useState<EventCardProps[]>(allEvents);
+  const [filteredEvents, setFilteredEvents] = useState<EventCardProps[]>([]);
 
   const handleFilterChange = (key: keyof FilterState, value: string) => {
     const newFilters = { ...filters, [key]: value };
@@ -66,11 +66,14 @@ export const useEventFilters = (allEvents: EventCardProps[]) => {
     setFilteredEvents(results);
   };
 
-  // Initialize filtered events when allEvents changes
-  if (allEvents !== filteredEvents && filters.category === "all" && 
-      !filters.date && !filters.price && !filters.location) {
-    setFilteredEvents(allEvents);
-  }
+  // Update filtered events when allEvents changes
+  useEffect(() => {
+    if (allEvents && allEvents.length > 0) {
+      applyFilters(filters, allEvents);
+    } else {
+      setFilteredEvents([]);
+    }
+  }, [allEvents]);
 
   return {
     filters,

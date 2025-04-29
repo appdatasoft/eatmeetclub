@@ -24,6 +24,8 @@ const Events = () => {
     }
   }, [fetchError, toast]);
 
+  console.log("Events page - loaded events:", events.length, "filtered events:", filteredEvents.length);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
