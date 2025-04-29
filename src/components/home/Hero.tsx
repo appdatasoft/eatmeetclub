@@ -6,7 +6,7 @@ const Hero = () => {
     <div 
       className="bg-cover bg-center py-12 md:py-24 relative"
       style={{ 
-        backgroundImage: "url('/lovable-uploads/9b9b18e9-9c68-4ef7-aa55-cfedf65f9bba.png')",
+        backgroundImage: `url('/lovable-uploads/9b9b18e9-9c68-4ef7-aa55-cfedf65f9bba.png')`,
         backgroundSize: "cover",
         backgroundPosition: "center"
       }}
