@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -79,9 +79,9 @@ const EditRestaurantDialog = ({
     },
   });
 
-  // Update form values when restaurant changes
-  useState(() => {
-    if (restaurant) {
+  // Fixed to use useEffect instead of useState for updating form values
+  useEffect(() => {
+    if (restaurant && isOpen) {
       form.reset({
         name: restaurant.name,
         cuisine_type: restaurant.cuisine_type,
@@ -93,7 +93,7 @@ const EditRestaurantDialog = ({
         website: restaurant.website || "",
       });
     }
-  });
+  }, [restaurant, isOpen, form]);
 
   const onSubmit = async (data: FormValues) => {
     if (!restaurant) return;

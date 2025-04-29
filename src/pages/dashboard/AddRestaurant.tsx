@@ -47,12 +47,19 @@ const AddRestaurant = () => {
 
     try {
       // Get the current user
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw new Error('Authentication error. Please try logging in again.');
+      }
       
       if (!session) {
         throw new Error('You must be logged in to add a restaurant');
       }
 
+      console.log('Submitting restaurant with user ID:', session.user.id);
+      
       // Insert the restaurant data into the database
       const { data, error } = await supabase
         .from('restaurants')
@@ -60,7 +67,7 @@ const AddRestaurant = () => {
           { 
             user_id: session.user.id,
             name: formData.restaurantName,
-            description: formData.restaurantDescription,
+            description: formData.restaurantDescription || '',
             cuisine_type: formData.cuisineType,
             address: formData.restaurantAddress,
             city: formData.city,
@@ -73,16 +80,19 @@ const AddRestaurant = () => {
         .select();
 
       if (error) {
+        console.error('Supabase error:', error);
         throw error;
       }
 
+      console.log('Restaurant added successfully:', data);
+      
       toast({
         title: "Restaurant added",
         description: "Your restaurant has been added successfully."
       });
       
       // Navigate to the dashboard or create event page
-      navigate('/dashboard/create-event');
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Error adding restaurant:', error);
       toast({

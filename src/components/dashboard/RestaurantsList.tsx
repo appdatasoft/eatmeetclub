@@ -35,7 +35,7 @@ const RestaurantsList = ({ restaurants, isLoading, onRestaurantUpdate }: Restaur
   const [deleteRestaurant, setDeleteRestaurant] = useState<{id: string, name: string} | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
-  console.log("Restaurants in RestaurantsList:", restaurants); // Debug log
+  console.log("Restaurants in RestaurantsList:", restaurants?.length, restaurants); // Enhanced debug log
   
   const handleCreateEvent = (restaurantId: string) => {
     navigate(`/dashboard/create-event?restaurantId=${restaurantId}`);

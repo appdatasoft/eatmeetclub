@@ -37,11 +37,12 @@ export const useAuth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.id);
-        setUser(session?.user || null);
         
         if (session?.user) {
+          setUser(session.user);
           await checkAdminStatus(session.user.id);
         } else {
+          setUser(null);
           setIsAdmin(false);
         }
         
@@ -52,15 +53,21 @@ export const useAuth = () => {
     // Then get the initial session
     const getInitialSession = async () => {
       try {
+        setIsLoading(true);
         const { data } = await supabase.auth.getSession();
-        console.log('Initial auth session:', data.session?.user?.id);
-        setUser(data.session?.user || null);
+        console.log('Initial auth session:', data?.session?.user?.id);
         
-        if (data.session?.user) {
+        if (data?.session?.user) {
+          setUser(data.session.user);
           await checkAdminStatus(data.session.user.id);
+        } else {
+          setUser(null);
+          setIsAdmin(false);
         }
       } catch (error) {
         console.error('Error fetching initial session:', error);
+        setUser(null);
+        setIsAdmin(false);
       } finally {
         setIsLoading(false);
       }
