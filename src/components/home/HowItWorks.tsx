@@ -60,7 +60,7 @@ const HowItWorks = () => {
               <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="70" cy="70" r="70" fill="#9FD7D9" fillOpacity="0.6"/>
                 {/* Face circle */}
-                <circle cx="70" cy="70" r="30" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
+                <circle cx="70" cy="70" r="30" fill="#F97316" stroke="#272163" strokeWidth="4"/>
                 {/* Hair */}
                 <path d="M50 50C50 50 55 40 70 40C85 40 90 50 90 50" fill="#9FD7D9" stroke="#272163" strokeWidth="4"/>
                 {/* Eyes - curved happy eyes */}
