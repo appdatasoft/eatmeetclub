@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { CheckCircle2, Calendar, MapPin, Clock, Users } from "lucide-react";
+import { CheckCircle2, Calendar, MapPin, Clock, Users, Mail } from "lucide-react";
 
 const TicketSuccess = () => {
   const [searchParams] = useSearchParams();
@@ -56,6 +56,14 @@ const TicketSuccess = () => {
         // Get ticket details from response
         const ticket = response.data.ticket;
         setTicketDetails(ticket);
+
+        // Notify about invoice email
+        if (response.data.emailSent) {
+          toast({
+            title: "Invoice Email Sent",
+            description: "Your ticket details have been emailed to you",
+          });
+        }
 
         // Get event details
         if (ticket) {
@@ -127,8 +135,12 @@ const TicketSuccess = () => {
               </div>
             </div>
             <h1 className="text-3xl font-bold mb-2">Thank You For Your Purchase!</h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-2">
               Your tickets have been purchased successfully.
+            </p>
+            <p className="text-gray-600 flex items-center justify-center">
+              <Mail className="h-4 w-4 mr-1 text-gray-500" />
+              An invoice has been sent to your email
             </p>
           </div>
 
@@ -172,16 +184,16 @@ const TicketSuccess = () => {
 
                   <div className="border-t px-6 py-4">
                     <div className="flex justify-between mb-2">
-                      <span>Tickets ({ticketDetails?.quantity} x ${ticketDetails?.unitPrice?.toFixed(2)})</span>
-                      <span>${(ticketDetails?.unitPrice * ticketDetails?.quantity).toFixed(2)}</span>
+                      <span>Tickets ({ticketDetails?.quantity} x ${ticketDetails?.price?.toFixed(2)})</span>
+                      <span>${(ticketDetails?.price * ticketDetails?.quantity).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between mb-2">
                       <span>Service Fee</span>
-                      <span>${ticketDetails?.serviceFee?.toFixed(2)}</span>
+                      <span>${ticketDetails?.service_fee?.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between font-bold mt-4 pt-2 border-t">
                       <span>Total</span>
-                      <span>${ticketDetails?.totalAmount?.toFixed(2)}</span>
+                      <span>${ticketDetails?.total_amount?.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>

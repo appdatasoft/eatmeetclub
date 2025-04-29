@@ -90,7 +90,7 @@ const TicketPurchase: React.FC<TicketPurchaseProps> = ({
       </Button>
       
       <p className="text-xs text-gray-500 text-center mt-4">
-        By purchasing tickets, you agree to our Terms of Service and Privacy Policy
+        By purchasing tickets, you agree to our Terms of Service and Privacy Policy. An invoice will be sent to your email.
       </p>
     </div>
   );
