@@ -13,6 +13,17 @@ const AddRestaurant = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    restaurantName: '',
+    restaurantDescription: '',
+    cuisineType: '',
+    restaurantAddress: '',
+    city: '',
+    state: '',
+    zipcode: '',
+    phone: '',
+    website: ''
+  });
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -25,19 +36,63 @@ const AddRestaurant = () => {
     checkAuth();
   }, [navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate form submission
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Get the current user
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('You must be logged in to add a restaurant');
+      }
+
+      // Insert the restaurant data into the database
+      const { data, error } = await supabase
+        .from('restaurants')
+        .insert([
+          { 
+            user_id: session.user.id,
+            name: formData.restaurantName,
+            description: formData.restaurantDescription,
+            cuisine_type: formData.cuisineType,
+            address: formData.restaurantAddress,
+            city: formData.city,
+            state: formData.state,
+            zipcode: formData.zipcode,
+            phone: formData.phone,
+            website: formData.website || null
+          }
+        ])
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
       toast({
         title: "Restaurant added",
         description: "Your restaurant has been added successfully."
       });
+      
+      // Navigate to the dashboard or create event page
       navigate('/dashboard/create-event');
-    }, 1500);
+    } catch (error: any) {
+      console.error('Error adding restaurant:', error);
+      toast({
+        title: "Error adding restaurant",
+        description: error.message || "There was an error adding your restaurant. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -50,7 +105,13 @@ const AddRestaurant = () => {
           
           <div className="space-y-2">
             <Label htmlFor="restaurantName">Restaurant Name*</Label>
-            <Input id="restaurantName" required placeholder="Your restaurant name" />
+            <Input 
+              id="restaurantName" 
+              required 
+              placeholder="Your restaurant name" 
+              value={formData.restaurantName}
+              onChange={handleChange}
+            />
           </div>
 
           <div className="space-y-2">
@@ -60,42 +121,83 @@ const AddRestaurant = () => {
               required 
               placeholder="Describe your restaurant, its atmosphere, and what makes it special..." 
               className="min-h-[120px]"
+              value={formData.restaurantDescription}
+              onChange={handleChange}
             />
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="cuisineType">Cuisine Type*</Label>
-            <Input id="cuisineType" required placeholder="e.g., Italian, Japanese, etc." />
+            <Input 
+              id="cuisineType" 
+              required 
+              placeholder="e.g., Italian, Japanese, etc." 
+              value={formData.cuisineType}
+              onChange={handleChange}
+            />
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="restaurantAddress">Address*</Label>
-            <Input id="restaurantAddress" required placeholder="Full restaurant address" />
+            <Input 
+              id="restaurantAddress" 
+              required 
+              placeholder="Full restaurant address" 
+              value={formData.restaurantAddress}
+              onChange={handleChange}
+            />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="city">City*</Label>
-              <Input id="city" required />
+              <Input 
+                id="city" 
+                required 
+                value={formData.city}
+                onChange={handleChange}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="state">State/Province*</Label>
-              <Input id="state" required />
+              <Input 
+                id="state" 
+                required 
+                value={formData.state}
+                onChange={handleChange}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="zipcode">Zip/Postal Code*</Label>
-              <Input id="zipcode" required />
+              <Input 
+                id="zipcode" 
+                required 
+                value={formData.zipcode}
+                onChange={handleChange}
+              />
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number*</Label>
-              <Input id="phone" type="tel" required />
+              <Input 
+                id="phone" 
+                type="tel" 
+                required 
+                value={formData.phone}
+                onChange={handleChange}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="website">Website</Label>
-              <Input id="website" type="url" placeholder="https://your-restaurant.com" />
+              <Input 
+                id="website" 
+                type="url" 
+                placeholder="https://your-restaurant.com" 
+                value={formData.website}
+                onChange={handleChange}
+              />
             </div>
           </div>
         </div>
