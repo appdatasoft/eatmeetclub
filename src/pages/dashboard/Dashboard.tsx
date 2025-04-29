@@ -44,7 +44,7 @@ interface Event {
   restaurant_id: string;
   capacity: number;
   price: number;
-  payment_status: 'pending' | 'completed';
+  payment_status: string; // Changed from "pending" | "completed" to string to match Supabase data
   restaurant: {
     name: string;
   };
@@ -99,6 +99,7 @@ const Dashboard = () => {
           throw error;
         }
         
+        // Now the type will match correctly
         setEvents(data || []);
       } catch (error) {
         console.error('Error fetching events:', error);
