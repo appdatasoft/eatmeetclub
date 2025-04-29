@@ -12,7 +12,7 @@ const Hero = () => {
       }}
     >
       {/* Dark overlay for better text readability */}
-      <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+      <div className="absolute inset-0 bg-black bg-opacity-50"></div>
       
       <div className="container-custom relative z-10">
         <div className="flex flex-col items-center text-center">
