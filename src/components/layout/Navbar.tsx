@@ -1,10 +1,35 @@
 
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/common/Button';
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data } = await supabase.auth.getSession();
+      setUser(data.session?.user || null);
+    };
+    
+    getUser();
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -39,12 +64,25 @@ const Navbar = () => {
 
           {/* Authentication/User Buttons */}
           <div className="hidden md:flex items-center space-x-3">
-            <Button href="/login" variant="ghost" size="md">
-              Log in
-            </Button>
-            <Button href="/signup" size="md">
-              Sign up
-            </Button>
+            {user ? (
+              <>
+                <Button href="/dashboard" variant="ghost" size="md">
+                  Dashboard
+                </Button>
+                <Button onClick={handleLogout} variant="outline" size="md">
+                  Log out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button href="/login" variant="ghost" size="md">
+                  Log in
+                </Button>
+                <Button href="/signup" size="md">
+                  Sign up
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -116,12 +154,25 @@ const Navbar = () => {
               About
             </Link>
             <div className="pt-2 pb-3 border-t border-gray-100 flex flex-col space-y-2">
-              <Button href="/login" variant="ghost" className="justify-center">
-                Log in
-              </Button>
-              <Button href="/signup" className="justify-center">
-                Sign up
-              </Button>
+              {user ? (
+                <>
+                  <Button href="/dashboard" variant="ghost" className="justify-center">
+                    Dashboard
+                  </Button>
+                  <Button onClick={handleLogout} variant="outline" className="justify-center">
+                    Log out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button href="/login" variant="ghost" className="justify-center">
+                    Log in
+                  </Button>
+                  <Button href="/signup" className="justify-center">
+                    Sign up
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

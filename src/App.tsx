@@ -13,6 +13,9 @@ import Login from "./pages/Login";
 import About from "./pages/About";
 import HowItWorks from "./pages/HowItWorks";
 import RestaurantJoin from "./pages/restaurants/RestaurantJoin";
+import Dashboard from "./pages/dashboard/Dashboard";
+import CreateEvent from "./pages/dashboard/CreateEvent";
+import AddRestaurant from "./pages/dashboard/AddRestaurant";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +34,9 @@ const App = () => (
           <Route path="/about" element={<About />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/restaurants/join" element={<RestaurantJoin />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/create-event" element={<CreateEvent />} />
+          <Route path="/dashboard/add-restaurant" element={<AddRestaurant />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
