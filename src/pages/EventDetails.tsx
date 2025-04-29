@@ -1,4 +1,3 @@
-
 import { useParams } from "react-router-dom";
 import { useEventDetails } from "@/hooks/useEventDetails";
 import Navbar from "@/components/layout/Navbar";
@@ -9,6 +8,7 @@ import RestaurantInfo from "@/components/events/EventDetails/RestaurantInfo";
 import TicketPurchase from "@/components/events/EventDetails/TicketPurchase";
 import EventSkeleton from "@/components/events/EventDetails/EventSkeleton";
 import EventNotFound from "@/components/events/EventDetails/EventNotFound";
+import QRCode from "@/components/events/EventDetails/QRCode";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -27,6 +27,9 @@ const EventDetails = () => {
   const [isEditCoverDialogOpen, setIsEditCoverDialogOpen] = useState(false);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+  
+  // Get current URL for QR code
+  const eventUrl = window.location.href;
   
   const handleEditEvent = () => {
     // Navigate to edit event page (to be implemented)
@@ -176,6 +179,7 @@ const EventDetails = () => {
         <div className="container-custom py-8">
           {isCurrentUserOwner && (
             <div className="flex justify-end mb-4 space-x-2">
+              <QRCode url={eventUrl} eventTitle={event.title} />
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -211,6 +215,11 @@ const EventDetails = () => {
                 name={event.restaurant.name} 
                 description={event.restaurant.description}
               />
+              {!isCurrentUserOwner && (
+                <div className="mt-6 flex justify-end">
+                  <QRCode url={eventUrl} eventTitle={event.title} />
+                </div>
+              )}
             </div>
 
             {/* Ticket purchase sidebar */}
