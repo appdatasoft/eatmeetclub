@@ -9,6 +9,9 @@ import EventForm from '@/components/events/EventForm';
 import PaymentForm from '@/components/payment/PaymentForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
+// Fixed admin fee for creating an event
+const EVENT_CREATION_FEE = 50;
+
 const CreateEvent = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -139,10 +142,10 @@ const CreateEvent = () => {
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Complete Payment</DialogTitle>
+            <DialogTitle>Payment for Event Creation</DialogTitle>
           </DialogHeader>
           <PaymentForm 
-            amount={50} 
+            amount={EVENT_CREATION_FEE} 
             onSuccess={handlePaymentSuccess} 
             onCancel={handlePaymentCancel} 
           />

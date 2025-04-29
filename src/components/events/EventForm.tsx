@@ -44,7 +44,7 @@ const EventForm: React.FC<EventFormProps> = ({
       time: formData.get('eventTime') as string,
       restaurant_id: selectedRestaurantId,
       capacity: parseInt(formData.get('capacity') as string),
-      price: 50, // Fixed price at $50
+      price: parseFloat(formData.get('price') as string),
     };
     
     onSubmit(eventDetails);
@@ -117,9 +117,21 @@ const EventForm: React.FC<EventFormProps> = ({
             <Input id="capacity" name="capacity" type="number" min="1" required placeholder="Number of seats available" />
           </div>
           <div className="space-y-2">
-            <Label>Price per Person</Label>
-            <p className="py-2 px-3 border border-input bg-background rounded-md text-base md:text-sm">$50.00</p>
+            <Label htmlFor="price">Price per Person*</Label>
+            <Input 
+              id="price" 
+              name="price" 
+              type="number" 
+              min="0" 
+              step="0.01" 
+              required 
+              placeholder="Ticket price per person" 
+            />
           </div>
+        </div>
+        
+        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
+          <p className="text-amber-800 text-sm font-medium">A $50.00 event creation fee will be charged when you add this event.</p>
         </div>
       </div>
       
