@@ -7,11 +7,13 @@ import EventsList from "@/components/events/EventsList";
 import useEvents from "@/hooks/useEvents";
 import useEventFilters from "@/hooks/useEventFilters";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const Events = () => {
   const { events, isLoading, fetchError, refreshEvents } = useEvents();
   const { filters, filteredEvents, handleFilterChange } = useEventFilters(events);
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // Show toast for errors
   useEffect(() => {
@@ -27,10 +29,11 @@ const Events = () => {
   // For debugging
   useEffect(() => {
     console.log("Events page - loaded events:", events.length, "filtered events:", filteredEvents.length);
+    console.log("Auth state:", user ? "Logged in" : "Not logged in");
     if (events.length > 0) {
       console.log("First event:", events[0]);
     }
-  }, [events, filteredEvents]);
+  }, [events, filteredEvents, user]);
 
   return (
     <div className="min-h-screen flex flex-col">

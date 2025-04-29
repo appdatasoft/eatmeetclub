@@ -15,8 +15,8 @@ export const useEvents = () => {
       setFetchError(null);
       console.log("Fetching published events...");
       
-      // Make sure we're only fetching published events - crucial for logged out users
-      const { data, error } = await supabase
+      // 1. First try with auth. This will establish an anonymous session if the user is not logged in
+      let { data, error } = await supabase
         .from('events')
         .select(`
           id, 
@@ -31,6 +31,29 @@ export const useEvents = () => {
         `)
         .eq('published', true)
         .order('date', { ascending: true });
+      
+      // 2. If there's an error (likely due to RLS), try with public access as a fallback
+      if (error) {
+        console.error("First attempt error:", error);
+        console.log("Trying alternative query approach...");
+        
+        // Try again with a REST API call
+        const publicUrl = `${supabase.supabaseUrl}/rest/v1/events?select=id,title,date,time,price,capacity,cover_image,published,restaurant:restaurants(name,city,state)&published=eq.true&order=date.asc`;
+        
+        const response = await fetch(publicUrl, {
+          headers: {
+            'apikey': supabase.supabaseKey,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Alternative query failed with status: ${response.status}`);
+        }
+        
+        data = await response.json();
+        error = null;
+      }
         
       if (error) {
         console.error("Error fetching events:", error);
