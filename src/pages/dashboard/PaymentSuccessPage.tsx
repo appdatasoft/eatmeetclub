@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/common/Button';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Mail } from 'lucide-react';
 
 const PaymentSuccessPage = () => {
   const navigate = useNavigate();
@@ -136,6 +136,15 @@ const PaymentSuccessPage = () => {
                 <p className="text-sm"><span className="font-medium">Date:</span> {new Date(eventDetails.date).toLocaleDateString()}</p>
               </div>
             ) : null}
+            
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-md my-4">
+              <div className="flex items-start">
+                <Mail className="h-5 w-5 text-gray-500 mr-2 mt-1" />
+                <p className="text-sm text-gray-600">
+                  We've sent you an email with your invoice and receipt details. Please check your inbox!
+                </p>
+              </div>
+            </div>
             
             <div className="pt-4 flex justify-center">
               <Button onClick={() => navigate('/dashboard')}>

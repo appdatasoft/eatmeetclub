@@ -39,6 +39,7 @@ serve(async (req) => {
     // In a real implementation, for a subscription we'd check the subscription status
     // rather than paymentIntent status
     let paymentVerified = false;
+    let sessionId = paymentId;
     
     try {
       if (isSubscription) {
@@ -110,6 +111,14 @@ serve(async (req) => {
       console.error("Error sending welcome email:", emailError.message);
     }
 
+    // Send invoice email
+    try {
+      await sendInvoiceEmail(sessionId, email, name);
+      console.log("Invoice email sent successfully");
+    } catch (invoiceError) {
+      console.error("Error sending invoice email:", invoiceError.message);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -163,4 +172,31 @@ async function sendWelcomeEmail(email: string, name: string) {
   
   // In a real implementation, this would call an email service API
   return true;
+}
+
+// Invoice email sending function
+async function sendInvoiceEmail(sessionId: string, email: string, name: string) {
+  try {
+    const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-invoice-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sessionId,
+        email,
+        name
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to send invoice email");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error sending invoice email:", error.message);
+    throw error;
+  }
 }

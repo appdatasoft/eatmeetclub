@@ -1,184 +1,163 @@
 
-import { useState, useEffect } from "react";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/common/Button";
-import { Input } from "@/components/ui/input";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from "@/components/layout/Navbar";
+import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/common/Button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle, Mail } from "lucide-react";
+
+const loginSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  password: z.string().min(1, { message: "Password is required" }),
+});
 
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
-  const isSuccess = searchParams.get('success') === 'true';
+  const success = searchParams.get('success') === 'true';
   const sessionId = searchParams.get('session_id');
 
+  const form = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  // Handle the success redirect from payment
   useEffect(() => {
-    // If there's a successful payment, verify it if we have a session ID
-    if (isSuccess && sessionId) {
-      verifyPayment(sessionId);
-    } else if (isSuccess) {
+    if (success && sessionId) {
       toast({
-        title: "Membership activated!",
-        description: "You can now log in to access your membership.",
+        title: "Payment Successful!",
+        description: "Your membership has been activated.",
       });
     }
-  }, [isSuccess, sessionId]);
+  }, [success, sessionId, toast]);
 
-  const verifyPayment = async (sessionId: string) => {
+  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
     try {
-      // Get session details to extract customer info
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-membership-payment`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            paymentId: sessionId,
-            isSubscription: true,
-            // We're sending email and name here, but in a real implementation
-            // these would come from the Stripe session metadata
-            // This is just to make the demo work
-            email: "member@example.com", 
-            name: "New Member",
-          }),
-        }
-      );
-
-      const data = await response.json();
-      if (data.success) {
-        toast({
-          title: "Membership activated!",
-          description: "Your account has been created and a welcome email has been sent. Please check your inbox.",
-        });
-      } else {
-        throw new Error(data.message);
-      }
-    } catch (error) {
-      console.error("Verification error:", error);
-      toast({
-        title: "Verification error",
-        description: "There was an issue verifying your payment. Please contact support.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: values.email,
+        password: values.password,
       });
 
-      if (error) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success!",
-          description: "You are now logged in.",
-        });
-        navigate("/");
-      }
-    } catch (error) {
-      console.error("Login error:", error);
+      if (error) throw error;
+
       toast({
-        title: "Error",
-        description: "An unexpected error occurred.",
+        title: "Login successful",
+        description: "You are now signed in.",
+      });
+
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Login failed",
+        description: error.message || "There was a problem signing you in",
         variant: "destructive",
       });
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <>
-      <Navbar />
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 pt-16">
-        <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
-            <p className="mt-2 text-gray-600">
-              Log in to your Eat Meet Club account
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="max-w-md w-full">
+        {success && sessionId && (
+          <Alert className="mb-6 bg-green-50 border-green-200">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-500" />
+              <AlertDescription className="text-green-800 font-medium">
+                Membership payment successful!
+              </AlertDescription>
+            </div>
+            <div className="mt-2 ml-6">
+              <div className="flex items-start mt-2">
+                <Mail className="h-4 w-4 text-gray-500 mr-2 mt-0.5" />
+                <p className="text-sm text-gray-600">
+                  We've sent you an email with your invoice and account details. Please check your inbox!
+                </p>
+              </div>
+            </div>
+          </Alert>
+        )}
+        
+        <div className="bg-white p-8 rounded-lg shadow-md">
+          <div className="text-center mb-6">
+            <Link to="/" className="inline-block">
+              <span className="font-serif text-2xl font-bold text-brand-500">Eat<span className="text-teal-500">Meet</span>Club</span>
+            </Link>
+            <h1 className="text-2xl font-bold mt-4">Log in to your account</h1>
+          </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="you@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button
+                type="submit"
+                className="w-full"
+                isLoading={isLoading}
+              >
+                Log in
+              </Button>
+
+              <div className="text-center text-sm mt-4">
+                <Link to="/reset-password" className="text-brand-500 hover:text-brand-600">
+                  Forgot your password?
+                </Link>
+              </div>
+            </form>
+          </Form>
+
+          <div className="mt-6 text-center text-sm text-gray-600">
+            <p>
+              Don't have an account?{" "}
+              <Link to="/become-member" className="text-brand-500 hover:text-brand-600 font-medium">
+                Join as a member
+              </Link>
             </p>
           </div>
-          
-          {isSuccess && (
-            <Alert className="border-green-100 bg-green-50 text-green-800 mb-4">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertDescription>
-                Your membership has been activated successfully! You can now log in to access your account.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email address
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="youremail@example.com"
-                  className="mt-1"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              isLoading={isLoading}
-              className="w-full"
-            >
-              Log In
-            </Button>
-
-            <div className="text-center text-sm">
-              <p className="text-gray-600">
-                Don't have an account?{" "}
-                <Link to="/become-member" className="font-medium text-brand-500 hover:text-brand-600">
-                  Become a member
-                </Link>
-              </p>
-            </div>
-          </form>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
