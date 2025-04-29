@@ -3,11 +3,28 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, AlertCircle, Globe, EyeOff, Check, X, Link } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, EyeOff, Check, X, Link, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger 
+} from "@/components/ui/accordion";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+interface Ticket {
+  id: string;
+  user_id: string;
+  quantity: number;
+  purchase_date: string;
+  payment_status: string;
+  total_amount: number;
+  user_email?: string;
+}
 
 interface Event {
   id: string;
@@ -36,6 +53,8 @@ const EventsList = ({ events, isLoading, onPublishEvent, onRefresh }: EventsList
   const navigate = useNavigate();
   const { toast } = useToast();
   const [publishingEventId, setPublishingEventId] = useState<string | null>(null);
+  const [ticketsLoading, setTicketsLoading] = useState<Record<string, boolean>>({});
+  const [eventTickets, setEventTickets] = useState<Record<string, Ticket[]>>({});
   
   const formatEventDate = (dateString: string) => {
     try {
@@ -96,6 +115,46 @@ const EventsList = ({ events, isLoading, onPublishEvent, onRefresh }: EventsList
     }
   };
   
+  const fetchTicketsForEvent = async (eventId: string) => {
+    if (eventTickets[eventId]?.length > 0) {
+      return; // Already fetched tickets for this event
+    }
+    
+    try {
+      setTicketsLoading((prev) => ({ ...prev, [eventId]: true }));
+      
+      // Fetch tickets for the event
+      const { data: ticketsData, error } = await supabase
+        .from('tickets')
+        .select('*, user:user_id(email)')
+        .eq('event_id', eventId)
+        .eq('payment_status', 'completed');
+      
+      if (error) throw error;
+      
+      // Format tickets data for display
+      const formattedTickets = ticketsData.map((ticket: any) => ({
+        ...ticket,
+        user_email: ticket.user?.email,
+        purchase_date: format(new Date(ticket.purchase_date), 'MMM d, yyyy h:mm a')
+      }));
+      
+      setEventTickets((prev) => ({
+        ...prev,
+        [eventId]: formattedTickets
+      }));
+    } catch (error: any) {
+      console.error('Error fetching tickets:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load ticket information",
+        variant: "destructive"
+      });
+    } finally {
+      setTicketsLoading((prev) => ({ ...prev, [eventId]: false }));
+    }
+  };
+  
   console.log("Events in EventsList:", events); // Debug: Log events to console
   
   return (
@@ -119,6 +178,7 @@ const EventsList = ({ events, isLoading, onPublishEvent, onRefresh }: EventsList
                   <TableHead>Date</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Tickets</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -151,6 +211,55 @@ const EventsList = ({ events, isLoading, onPublishEvent, onRefresh }: EventsList
                         <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100">
                           <AlertCircle className="h-3 w-3 mr-1" /> Payment Required
                         </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {event.published && (
+                        <Collapsible 
+                          className="w-full"
+                          onOpenChange={() => event.published && fetchTicketsForEvent(event.id)}
+                        >
+                          <CollapsibleTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="p-0 h-auto flex items-center text-primary font-medium"
+                            >
+                              <span className="font-bold">{event.tickets_sold || 0}</span>
+                              <span className="text-xs ml-1">/{event.capacity}</span>
+                              <ChevronDown className="h-4 w-4 ml-1" />
+                            </Button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="border rounded-md mt-2 p-2 bg-slate-50">
+                            {ticketsLoading[event.id] ? (
+                              <div className="py-3 text-center">
+                                <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                                <span className="ml-2 text-sm text-gray-500">Loading tickets...</span>
+                              </div>
+                            ) : eventTickets[event.id]?.length ? (
+                              <div className="text-sm">
+                                <div className="font-medium mb-1">Ticket Purchasers:</div>
+                                <ul className="space-y-1">
+                                  {eventTickets[event.id].map((ticket) => (
+                                    <li key={ticket.id} className="flex justify-between">
+                                      <span className="text-gray-700">{ticket.user_email || 'Anonymous'}</span>
+                                      <span className="text-gray-500">
+                                        {ticket.quantity} {ticket.quantity > 1 ? 'tickets' : 'ticket'} • {ticket.purchase_date}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : (
+                              <div className="py-2 text-sm text-gray-500 text-center">
+                                No tickets sold yet
+                              </div>
+                            )}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
+                      {!event.published && (
+                        <span className="text-gray-400 text-sm">Not published</span>
                       )}
                     </TableCell>
                     <TableCell>

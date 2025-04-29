@@ -31,6 +31,7 @@ interface Event {
   price: number;
   payment_status: string; 
   published: boolean;
+  tickets_sold?: number;
   restaurant: {
     name: string;
   };
@@ -74,7 +75,7 @@ const Dashboard = () => {
       console.log("Fetching events...");
       const { data, error } = await supabase
         .from('events')
-        .select('id, title, date, time, restaurant_id, capacity, price, payment_status, published, restaurant:restaurants(name)')
+        .select('id, title, date, time, restaurant_id, capacity, price, payment_status, published, tickets_sold, restaurant:restaurants(name)')
         .order('created_at', { ascending: false });
       
       if (error) {
