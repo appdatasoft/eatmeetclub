@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { EventCardProps } from "@/components/events/EventCard";
 
 export interface FilterState {
@@ -19,13 +19,13 @@ export const useEventFilters = (allEvents: EventCardProps[]) => {
   
   const [filteredEvents, setFilteredEvents] = useState<EventCardProps[]>([]);
 
-  const handleFilterChange = (key: keyof FilterState, value: string) => {
+  const handleFilterChange = useCallback((key: keyof FilterState, value: string) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
     applyFilters(newFilters, allEvents);
-  };
+  }, [filters, allEvents]);
 
-  const applyFilters = (currentFilters: FilterState, events: EventCardProps[]) => {
+  const applyFilters = useCallback((currentFilters: FilterState, events: EventCardProps[]) => {
     let results = [...events];
 
     // Apply category filter
@@ -63,8 +63,9 @@ export const useEventFilters = (allEvents: EventCardProps[]) => {
       );
     }
 
+    console.log(`Filtered events: ${results.length} of ${events.length} total events`);
     setFilteredEvents(results);
-  };
+  }, []);
 
   // Update filtered events when allEvents changes
   useEffect(() => {
@@ -73,7 +74,7 @@ export const useEventFilters = (allEvents: EventCardProps[]) => {
     } else {
       setFilteredEvents([]);
     }
-  }, [allEvents]);
+  }, [allEvents, filters, applyFilters]);
 
   return {
     filters,

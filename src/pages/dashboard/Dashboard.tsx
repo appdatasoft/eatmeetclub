@@ -41,33 +41,39 @@ interface Event {
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  console.log("Dashboard component rendering, auth state:", { user, isAdmin, authLoading });
+
   // Function to fetch restaurants
   const fetchRestaurants = async () => {
+    if (!user) return;
+    
     try {
-      console.log("Fetching restaurants...");
+      console.log("Fetching restaurants for user:", user.id);
       
       let query = supabase
         .from('restaurants')
-        .select('id, name, cuisine_type, city, state, address, phone, website, zipcode')
-        .order('created_at', { ascending: false });
+        .select('id, name, cuisine_type, city, state, address, phone, website, zipcode');
       
       // Only filter by user_id if not an admin
       if (!isAdmin && user) {
         query = query.eq('user_id', user.id);
       }
       
+      query = query.order('created_at', { ascending: false });
+      
       const { data, error } = await query;
       
       if (error) {
+        console.error('Error fetching restaurants:', error);
         throw error;
       }
       
-      console.log("Restaurants fetched:", data);
+      console.log("Restaurants fetched:", data?.length);
       setRestaurants(data || []);
     } catch (error) {
       console.error('Error fetching restaurants:', error);
@@ -81,26 +87,30 @@ const Dashboard = () => {
   
   // Function to fetch events
   const fetchEvents = async () => {
+    if (!user) return;
+    
     try {
-      console.log("Fetching events...");
+      console.log("Fetching events for user:", user.id);
       
       let query = supabase
         .from('events')
-        .select('id, title, date, time, restaurant_id, capacity, price, payment_status, published, tickets_sold, restaurant:restaurants(name), user_id')
-        .order('created_at', { ascending: false });
+        .select('id, title, date, time, restaurant_id, capacity, price, payment_status, published, tickets_sold, restaurant:restaurants(name), user_id');
       
       // Only filter by user_id if not an admin
       if (!isAdmin && user) {
         query = query.eq('user_id', user.id);
       }
       
+      query = query.order('date', { ascending: true });
+      
       const { data, error } = await query;
       
       if (error) {
+        console.error('Error fetching events:', error);
         throw error;
       }
       
-      console.log("Events fetched:", data);
+      console.log("Events fetched:", data?.length);
       setEvents(data || []);
     } catch (error) {
       console.error('Error fetching events:', error);
@@ -113,25 +123,33 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        navigate('/login');
-      } else {
-        // Fetch user's restaurants and events
-        setIsLoading(true);
-        try {
-          await Promise.all([fetchRestaurants(), fetchEvents()]);
-        } catch (error) {
+    // Only fetch data when we have a user and auth is not loading
+    if (user && !authLoading) {
+      console.log("Auth confirmed, fetching dashboard data");
+      setIsLoading(true);
+      Promise.all([fetchRestaurants(), fetchEvents()])
+        .catch((error) => {
           console.error("Error loading dashboard data:", error);
-        } finally {
+        })
+        .finally(() => {
           setIsLoading(false);
-        }
-      }
-    };
-    
-    checkAuth();
-  }, [navigate]);
+        });
+    } else if (!user && !authLoading) {
+      // Redirect to login if no user and auth has finished loading
+      console.log("No user found, redirecting to login");
+      navigate('/login');
+    }
+  }, [user, authLoading, navigate, isAdmin]);
+
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

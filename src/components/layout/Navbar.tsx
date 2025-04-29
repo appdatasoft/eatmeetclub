@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Logo from '@/components/common/Logo';
@@ -14,6 +14,11 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
+
+  // Log the authentication state to debug
+  useEffect(() => {
+    console.log('Navbar auth state:', { user, isLoggedIn: !!user });
+  }, [user]);
 
   const handleLogout = async () => {
     try {

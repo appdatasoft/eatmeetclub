@@ -53,6 +53,7 @@ export const useAuth = () => {
     const getInitialSession = async () => {
       try {
         const { data } = await supabase.auth.getSession();
+        console.log('Initial auth session:', data.session?.user?.id);
         setUser(data.session?.user || null);
         
         if (data.session?.user) {
