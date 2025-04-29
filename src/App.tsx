@@ -21,6 +21,7 @@ import EventPayment from './pages/dashboard/EventPayment';
 import Settings from './pages/dashboard/Settings';
 import AdminSettings from './pages/dashboard/AdminSettings';
 import Users from './pages/dashboard/Users';
+import TicketSuccess from "./pages/TicketSuccess";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/events" element={<Events />} />
           <Route path="/event/:id" element={<EventDetails />} />
+          <Route path="/ticket-success" element={<TicketSuccess />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
           <Route path="/about" element={<About />} />

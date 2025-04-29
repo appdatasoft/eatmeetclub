@@ -1,52 +1,154 @@
 
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/common/Button";
+import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { EventCardProps } from "@/components/events/EventCard";
 
-// Mock data for a single event
-const mockEvent: EventCardProps & { description: string; tickets: number; maxTickets: number } = {
-  id: "1",
-  title: "Farm-to-Table Dinner Experience",
-  restaurantName: "Harvest Table",
-  date: "April 30, 2025",
-  time: "7:00 PM",
-  price: 65,
-  image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60",
-  category: "dinner",
-  location: "123 Market St, San Francisco, CA",
-  description: "Join us for a unique farm-to-table dining experience featuring locally sourced ingredients and wines. Our executive chef will prepare a special 5-course menu highlighting seasonal produce from local farms. Throughout the evening, you'll have the opportunity to meet fellow food enthusiasts and learn about sustainable food practices. This event is perfect for foodies, sustainability advocates, or anyone looking to enjoy a delicious meal in good company.",
-  tickets: 24,
-  maxTickets: 40
-};
+interface EventDetails {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  price: number;
+  capacity: number;
+  restaurant: {
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    zipcode: string;
+    description: string;
+  };
+  tickets_sold?: number;
+}
 
 const EventDetails = () => {
   const { id } = useParams<{ id: string }>();
-  const [event, setEvent] = useState<typeof mockEvent | null>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [event, setEvent] = useState<EventDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [ticketCount, setTicketCount] = useState(1);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
 
   useEffect(() => {
-    // Simulate API call with a timeout
-    const timer = setTimeout(() => {
-      setEvent(mockEvent);
-      setLoading(false);
-    }, 300);
+    const fetchEventDetails = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        
+        // Fetch event data with restaurant details
+        const { data, error } = await supabase
+          .from('events')
+          .select('*, restaurant:restaurants(*)')
+          .eq('id', id)
+          .single();
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Format the event data
+        if (data) {
+          // Format the date to a more readable format
+          const formattedDate = new Date(data.date).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+          
+          // Calculate tickets sold (this is a placeholder - you'd need to implement actual ticket tracking)
+          const ticketsSold = 0; // Replace with actual query once you have tickets table
+          
+          setEvent({
+            ...data,
+            date: formattedDate,
+            tickets_sold: ticketsSold
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching event details:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load event details",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchEventDetails();
+  }, [id, toast]);
 
-    return () => clearTimeout(timer);
-  }, [id]);
-
-  const handleBuyTickets = () => {
+  const handleBuyTickets = async () => {
+    if (!event) return;
+    
     setIsPaymentProcessing(true);
     
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      // Get session for the API call
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      // Prepare ticket purchase data
+      const purchaseData = {
+        eventId: event.id,
+        quantity: ticketCount,
+        unitPrice: event.price
+      };
+      
+      if (token) {
+        // User is authenticated, create payment session with Stripe
+        const response = await supabase.functions.invoke('create-ticket-payment', {
+          body: { purchaseData },
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
+        if (response.error || !response.data?.url) {
+          throw new Error(response.error?.message || "Failed to create payment session");
+        }
+        
+        // Store ticket purchase details in localStorage for access after payment
+        localStorage.setItem('ticketDetails', JSON.stringify({
+          eventId: event.id,
+          eventTitle: event.title,
+          quantity: ticketCount,
+          totalAmount: (event.price * ticketCount * 1.05)
+        }));
+        
+        // Redirect to Stripe checkout
+        window.location.href = response.data.url;
+      } else {
+        // User is not authenticated, redirect to login
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to purchase tickets",
+          variant: "default"
+        });
+        
+        // Save the current page to redirect back after login
+        localStorage.setItem('redirectAfterLogin', `/event/${id}`);
+        navigate('/login');
+      }
+    } catch (error) {
+      console.error("Error creating payment session:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process ticket purchase. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
       setIsPaymentProcessing(false);
-      alert(`Payment successful! You've purchased ${ticketCount} ticket(s) to ${event?.title}.`);
-    }, 1500);
+    }
   };
 
   if (loading) {
@@ -82,8 +184,9 @@ const EventDetails = () => {
     );
   }
 
-  const ticketsRemaining = event.maxTickets - event.tickets;
-  const ticketsPercentage = (event.tickets / event.maxTickets) * 100;
+  const ticketsRemaining = event.capacity - (event.tickets_sold || 0);
+  const ticketsPercentage = ((event.tickets_sold || 0) / event.capacity) * 100;
+  const location = `${event.restaurant.address}, ${event.restaurant.city}, ${event.restaurant.state} ${event.restaurant.zipcode}`;
 
   return (
     <>
@@ -92,19 +195,14 @@ const EventDetails = () => {
         {/* Hero section with image */}
         <div className="relative h-64 md:h-96 overflow-hidden">
           <img
-            src={event.image}
+            src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60"
             alt={event.title}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
           <div className="absolute bottom-0 left-0 p-6 text-white">
-            <div className="mb-2">
-              <span className={`text-xs font-medium px-3 py-1 rounded-full capitalize bg-white/20 backdrop-blur-sm`}>
-                {event.category}
-              </span>
-            </div>
             <h1 className="text-3xl md:text-4xl font-bold mb-1">{event.title}</h1>
-            <p className="text-lg text-white/90">Hosted by {event.restaurantName}</p>
+            <p className="text-lg text-white/90">Hosted by {event.restaurant.name}</p>
           </div>
         </div>
 
@@ -115,7 +213,7 @@ const EventDetails = () => {
             <div className="lg:col-span-2">
               <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
                 <h2 className="text-xl font-semibold mb-4">Event Details</h2>
-                <p className="text-gray-700 mb-6">{event.description}</p>
+                <p className="text-gray-700 mb-6">{event.description || "Join us for this special culinary event!"}</p>
 
                 <div className="flex flex-wrap gap-6 mb-6">
                   <div className="flex items-center">
@@ -151,7 +249,7 @@ const EventDetails = () => {
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Location</p>
-                      <p className="font-medium">{event.location}</p>
+                      <p className="font-medium">{location}</p>
                     </div>
                   </div>
                 </div>
@@ -165,7 +263,7 @@ const EventDetails = () => {
                     ></div>
                   </div>
                   <p className="text-sm text-gray-600">
-                    {ticketsRemaining} of {event.maxTickets} tickets remaining
+                    {ticketsRemaining} of {event.capacity} tickets remaining
                   </p>
                 </div>
 
@@ -185,22 +283,20 @@ const EventDetails = () => {
                   <div className="w-12 h-12 rounded-full bg-gray-200 mr-4 overflow-hidden">
                     <img 
                       src="https://images.unsplash.com/photo-1581954548122-53a79ddb74f9?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&q=80" 
-                      alt={event.restaurantName} 
+                      alt={event.restaurant.name} 
                       className="w-full h-full object-cover"
                     />
                   </div>
                   <div>
-                    <h3 className="font-medium">{event.restaurantName}</h3>
-                    <p className="text-sm text-gray-500">4.8 ★ (120+ reviews)</p>
+                    <h3 className="font-medium">{event.restaurant.name}</h3>
+                    <p className="text-sm text-gray-500">Serving delicious meals</p>
                   </div>
                 </div>
                 <p className="text-gray-700 mb-4">
-                  {event.restaurantName} specializes in sustainable, locally-sourced cuisine with a focus on seasonal ingredients. 
-                  Our restaurant has been serving the community for over 10 years with a commitment to quality and hospitality.
+                  {event.restaurant.description || 
+                   `${event.restaurant.name} specializes in sustainable, locally-sourced cuisine with a focus on seasonal ingredients. 
+                  Our restaurant has been serving the community with a commitment to quality and hospitality.`}
                 </p>
-                <Button href="#" variant="ghost" size="sm">
-                  View Restaurant Profile
-                </Button>
               </div>
             </div>
 
