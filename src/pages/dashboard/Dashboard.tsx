@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -66,6 +65,47 @@ const Dashboard = () => {
   const [deleteRestaurant, setDeleteRestaurant] = useState<{id: string, name: string} | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  // Function to fetch restaurants
+  const fetchRestaurants = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('id, name, cuisine_type, city, state, address, phone, website, zipcode')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        throw error;
+      }
+      
+      setRestaurants(data || []);
+    } catch (error) {
+      console.error('Error fetching restaurants:', error);
+    }
+  };
+  
+  // Function to fetch events
+  const fetchEvents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, title, date, time, restaurant_id, capacity, price, payment_status, restaurant:restaurants(name)')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        throw error;
+      }
+      
+      setEvents(data || []);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch events",
+        variant: "destructive"
+      });
+    }
+  };
+
   useEffect(() => {
     const checkAuth = async () => {
       const { data } = await supabase.auth.getSession();
@@ -75,47 +115,7 @@ const Dashboard = () => {
         // Fetch user's restaurants and events
         fetchRestaurants();
         fetchEvents();
-      }
-    };
-    
-    const fetchRestaurants = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('restaurants')
-          .select('id, name, cuisine_type, city, state, address, phone, website, zipcode')
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          throw error;
-        }
-        
-        setRestaurants(data || []);
-      } catch (error) {
-        console.error('Error fetching restaurants:', error);
-      } finally {
         setIsLoading(false);
-      }
-    };
-    
-    const fetchEvents = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('events')
-          .select('id, title, date, time, restaurant_id, capacity, price, payment_status, restaurant:restaurants(name)')
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          throw error;
-        }
-        
-        setEvents(data || []);
-      } catch (error) {
-        console.error('Error fetching events:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch events",
-          variant: "destructive"
-        });
       }
     };
     
@@ -164,23 +164,6 @@ const Dashboard = () => {
 
   const handleRestaurantEdit = () => {
     // Refresh the restaurant list
-    const fetchRestaurants = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('restaurants')
-          .select('id, name, cuisine_type, city, state, address, phone, website, zipcode')
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          throw error;
-        }
-        
-        setRestaurants(data || []);
-      } catch (error) {
-        console.error('Error fetching restaurants:', error);
-      }
-    };
-    
     fetchRestaurants();
   };
 
