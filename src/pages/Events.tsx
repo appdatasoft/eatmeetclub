@@ -27,6 +27,9 @@ const Events = () => {
   // For debugging
   useEffect(() => {
     console.log("Events page - loaded events:", events.length, "filtered events:", filteredEvents.length);
+    if (events.length > 0) {
+      console.log("First event:", events[0]);
+    }
   }, [events, filteredEvents]);
 
   return (

@@ -26,6 +26,14 @@ export const useEventAccess = (event: EventDetails | null) => {
     const checkAccess = async () => {
       if (!event) return;
       
+      // Debug log
+      console.log("Checking event access:", { 
+        published: event.published, 
+        canEditEvent, 
+        userId: user?.id,
+        eventUserId: event.user_id
+      });
+      
       // If event exists but is not published and user is not owner/admin
       if (event && !event.published && !canEditEvent) {
         toast({
@@ -38,7 +46,7 @@ export const useEventAccess = (event: EventDetails | null) => {
     };
     
     checkAccess();
-  }, [event, canEditEvent, navigate, toast]);
+  }, [event, canEditEvent, navigate, toast, user]);
 
   return { canEditEvent };
 };

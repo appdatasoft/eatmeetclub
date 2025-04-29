@@ -26,6 +26,7 @@ export const useEvents = () => {
           price, 
           capacity,
           cover_image,
+          published,
           restaurant:restaurants(name, city, state)
         `)
         .eq('published', true)
@@ -114,6 +115,24 @@ export const useEvents = () => {
   
   useEffect(() => {
     fetchPublishedEvents();
+
+    // Add a subscription to listen for changes in the events table
+    // This ensures that the events list is updated when events are published
+    const channel = supabase
+      .channel('public:events')
+      .on('postgres_changes', {
+        event: '*', 
+        schema: 'public',
+        table: 'events'
+      }, (payload) => {
+        console.log('Events table changed:', payload);
+        fetchPublishedEvents();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchPublishedEvents]);
 
   return {
