@@ -11,6 +11,7 @@ interface PaymentFormProps {
   onBack: () => void;
   onSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
+  isSubscription?: boolean;
 }
 
 const PaymentForm = ({
@@ -18,7 +19,8 @@ const PaymentForm = ({
   membershipFee,
   onBack,
   onSubmit,
-  isLoading
+  isLoading,
+  isSubscription = false
 }: PaymentFormProps) => {
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
@@ -75,7 +77,10 @@ const PaymentForm = ({
       <form className="space-y-4" onSubmit={onSubmit}>
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-4">
           <p className="text-amber-800 text-sm">
-            You will be charged ${membershipFee.toFixed(2)} for your membership.
+            You will be charged ${membershipFee.toFixed(2)}{isSubscription ? "/month" : ""} for your membership.
+            {isSubscription && (
+              <span className="block mt-1">Your subscription will automatically renew monthly until canceled.</span>
+            )}
           </p>
         </div>
         
@@ -137,7 +142,7 @@ const PaymentForm = ({
             isLoading={isLoading}
             className="flex-1"
           >
-            Pay ${membershipFee.toFixed(2)}
+            Pay ${membershipFee.toFixed(2)}{isSubscription ? "/month" : ""}
           </Button>
         </div>
       </form>

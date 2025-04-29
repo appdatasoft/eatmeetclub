@@ -44,6 +44,7 @@ const Signup = () => {
             email: userDetails.email,
             name: userDetails.email.split('@')[0], // Just using part of email as name for demo
             phone: userDetails.phoneNumber,
+            isSubscription: true,
           }),
         }
       );
@@ -96,6 +97,7 @@ const Signup = () => {
                   onBack={handleBack}
                   onSubmit={handlePayment}
                   isLoading={isLoading}
+                  isSubscription={true}
                 />
               )}
             </CardContent>
