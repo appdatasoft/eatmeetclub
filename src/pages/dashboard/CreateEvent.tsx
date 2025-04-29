@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -86,6 +85,7 @@ const CreateEvent = () => {
       restaurant_id: selectedRestaurantId,
       capacity: parseInt(formData.get('capacity') as string),
       price: parseFloat(formData.get('price') as string),
+      user_id: supabase.auth.getUser().then(({ data }) => data.user?.id)
     };
 
     // Store event data for later submission after payment
@@ -96,11 +96,15 @@ const CreateEvent = () => {
 
   const handlePaymentSuccess = async (paymentDetails: any) => {
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('User not authenticated');
+      
       // Save event details to database
       const { data, error } = await supabase
         .from('events')
         .insert({
           ...eventData,
+          user_id: userData.user.id,
           payment_status: 'completed',
           payment_id: paymentDetails.id,
         })

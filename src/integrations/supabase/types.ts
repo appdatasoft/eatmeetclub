@@ -9,6 +9,62 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      events: {
+        Row: {
+          capacity: number
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          payment_id: string | null
+          payment_status: string | null
+          price: number
+          restaurant_id: string
+          time: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          capacity: number
+          created_at?: string
+          date: string
+          description?: string | null
+          id?: string
+          payment_id?: string | null
+          payment_status?: string | null
+          price: number
+          restaurant_id: string
+          time: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          payment_id?: string | null
+          payment_status?: string | null
+          price?: number
+          restaurant_id?: string
+          time?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           address: string
