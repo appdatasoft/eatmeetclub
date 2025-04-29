@@ -7,17 +7,39 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+
+const signupSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters long" }),
+  phoneNumber: z.string().optional(),
+});
+
+type SignupFormValues = z.infer<typeof signupSchema>;
 
 const Signup = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvc, setCardCvc] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [userDetails, setUserDetails] = useState<SignupFormValues | null>(null);
+  const [membershipFee, setMembershipFee] = useState(25);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const form = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      phoneNumber: "",
+    }
+  });
 
   const formatCardNumber = (value: string) => {
     // Remove any non-digit characters
@@ -73,37 +95,58 @@ const Signup = () => {
 
   const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formattedValue = formatPhoneNumber(e.target.value);
-    setPhoneNumber(formattedValue);
+    form.setValue("phoneNumber", formattedValue);
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const onSubmit = (values: SignupFormValues) => {
+    setUserDetails(values);
+    setShowPaymentForm(true);
+  };
+
+  const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userDetails) return;
+    
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) {
+      // Mock payment processing - in production this would call the Stripe API
+      // Generate a mock payment ID
+      const mockPaymentId = `payment_${Date.now()}`;
+      
+      // Call the Supabase Edge Function to verify membership payment
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-membership-payment`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paymentId: mockPaymentId,
+            email: userDetails.email,
+            name: userDetails.email.split('@')[0], // Just using part of email as name for demo
+            phone: userDetails.phoneNumber,
+          }),
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (data.success) {
         toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
+          title: "Welcome to Eat Meet Club!",
+          description: "Your membership has been activated. Please check your email to set your password.",
         });
+        navigate("/login");
       } else {
-        toast({
-          title: "Success!",
-          description: "Check your email for a confirmation link.",
-        });
-        navigate("/");
+        throw new Error(data.message || "Failed to activate membership");
       }
-    } catch (error) {
-      console.error("Signup error:", error);
+    } catch (error: any) {
+      console.error("Payment error:", error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred.",
+        description: error.message || "There was a problem activating your membership",
         variant: "destructive",
       });
     } finally {
@@ -111,142 +154,182 @@ const Signup = () => {
     }
   };
 
+  const handleBack = () => {
+    setShowPaymentForm(false);
+  };
+
   return (
     <>
       <Navbar />
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 pt-16">
-        <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900">Become a Member</h1>
-            <p className="mt-2 text-gray-600">
-              Join Eat Meet Club and start social dining
-            </p>
-          </div>
-          
-          <form className="mt-8 space-y-6" onSubmit={handleSignup}>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email address
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="youremail@example.com"
-                  className="mt-1"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="mt-1"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Password must be at least 6 characters
-                </p>
-              </div>
-
-              <div>
-                <Label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
-                  Phone Number
-                </Label>
-                <Input
-                  id="phoneNumber"
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={handlePhoneNumberChange}
-                  required
-                  placeholder="(123) 456-7890"
-                  className="mt-1"
-                />
-              </div>
-              
-              <div className="pt-4 border-t border-gray-200">
-                <h3 className="font-medium text-gray-900 mb-3">Payment Information</h3>
-                
-                <div className="space-y-3">
-                  <div>
-                    <Label htmlFor="cardNumber" className="block text-sm font-medium text-gray-700">
-                      Card Number
-                    </Label>
-                    <Input
-                      id="cardNumber"
-                      type="text"
-                      value={cardNumber}
-                      onChange={handleCardNumberChange}
-                      required
-                      placeholder="1234 5678 9012 3456"
-                      className="mt-1"
-                      maxLength={19}
+        <div className="max-w-md w-full">
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold">Become a Member</CardTitle>
+              <CardDescription>Join Eat Meet Club and start social dining</CardDescription>
+            </CardHeader>
+            
+            <CardContent>
+              {!showPaymentForm ? (
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email address</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="youremail@example.com"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
+                    
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="••••••••"
+                              {...field}
+                            />
+                          </FormControl>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Password must be at least 6 characters
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="phoneNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="tel"
+                              placeholder="(123) 456-7890"
+                              {...field}
+                              onChange={handlePhoneNumberChange}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button
+                      type="submit"
+                      className="w-full"
+                    >
+                      Continue
+                    </Button>
+
+                    <div className="text-center text-sm">
+                      <p className="text-gray-600">
+                        Already have an account?{" "}
+                        <Link to="/login" className="font-medium text-brand-500 hover:text-brand-600">
+                          Log in
+                        </Link>
+                      </p>
+                    </div>
+                  </form>
+                </Form>
+              ) : (
+                <>
+                  <div className="mb-6">
+                    <h3 className="font-medium mb-2">Membership Details</h3>
+                    <p className="text-sm text-gray-600">Email: {userDetails?.email}</p>
+                    {userDetails?.phoneNumber && (
+                      <p className="text-sm text-gray-600">Phone: {userDetails.phoneNumber}</p>
+                    )}
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="cardExpiry" className="block text-sm font-medium text-gray-700">
-                        Expiry Date
-                      </Label>
+                  <form className="space-y-4" onSubmit={handlePayment}>
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-4">
+                      <p className="text-amber-800 text-sm">
+                        You will be charged ${membershipFee.toFixed(2)} for your membership.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="cardNumber">Card Number</Label>
                       <Input
-                        id="cardExpiry"
+                        id="cardNumber"
                         type="text"
-                        value={cardExpiry}
-                        onChange={handleExpiryDateChange}
+                        value={cardNumber}
+                        onChange={handleCardNumberChange}
                         required
-                        placeholder="MM/YY"
+                        placeholder="1234 5678 9012 3456"
                         className="mt-1"
-                        maxLength={5}
+                        maxLength={19}
                       />
                     </div>
                     
-                    <div>
-                      <Label htmlFor="cardCvc" className="block text-sm font-medium text-gray-700">
-                        CVC
-                      </Label>
-                      <Input
-                        id="cardCvc"
-                        type="password"
-                        value={cardCvc}
-                        onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                        required
-                        placeholder="123"
-                        className="mt-1"
-                        maxLength={4}
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="cardExpiry">Expiry Date</Label>
+                        <Input
+                          id="cardExpiry"
+                          type="text"
+                          value={cardExpiry}
+                          onChange={handleExpiryDateChange}
+                          required
+                          placeholder="MM/YY"
+                          className="mt-1"
+                          maxLength={5}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="cardCvc">CVC</Label>
+                        <Input
+                          id="cardCvc"
+                          type="password"
+                          value={cardCvc}
+                          onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                          required
+                          placeholder="123"
+                          className="mt-1"
+                          maxLength={4}
+                        />
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            <Button
-              type="submit"
-              isLoading={isLoading}
-              className="w-full"
-            >
-              Sign Up
-            </Button>
-
-            <div className="text-center text-sm">
-              <p className="text-gray-600">
-                Already have an account?{" "}
-                <Link to="/login" className="font-medium text-brand-500 hover:text-brand-600">
-                  Log in
-                </Link>
-              </p>
-            </div>
-          </form>
+                    <div className="pt-4 flex space-x-2">
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={handleBack}
+                        disabled={isLoading}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        type="submit"
+                        isLoading={isLoading}
+                        className="flex-1"
+                      >
+                        Pay ${membershipFee.toFixed(2)}
+                      </Button>
+                    </div>
+                  </form>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </>
