@@ -1,4 +1,3 @@
-
 import {
   BrowserRouter as Router,
   Route,
@@ -49,7 +48,7 @@ function App() {
           element={!session ? <Login /> : <Navigate to="/dashboard" />}
         />
         <Route
-          path="/signup"
+          path="/become-member"
           element={!session ? <Signup /> : <Navigate to="/dashboard" />}
         />
         <Route
@@ -81,10 +80,6 @@ function App() {
         <Route
           path="/ticket-success"
           element={<TicketSuccess />}
-        />
-        <Route
-          path="/become-member"
-          element={<MembershipPayment />}
         />
         <Route
           path="/payment-success"
