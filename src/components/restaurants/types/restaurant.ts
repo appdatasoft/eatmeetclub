@@ -1,4 +1,5 @@
 
+// This is already defined and we want to make sure we're using it consistently
 export interface Restaurant {
   id: string;
   name: string;
