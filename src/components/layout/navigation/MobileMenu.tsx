@@ -65,14 +65,9 @@ const MobileMenu = ({ isOpen, onClose, user, handleLogout }: MobileMenuProps) =>
               </Button>
             </>
           ) : (
-            <>
-              <Button href="/login" variant="ghost" className="justify-center" onClick={onClose}>
-                Log in
-              </Button>
-              <Button href="/signup" className="justify-center" onClick={onClose}>
-                Sign up
-              </Button>
-            </>
+            <Button href="/login" variant="ghost" className="justify-center" onClick={onClose}>
+              Log in
+            </Button>
           )}
         </div>
       </div>

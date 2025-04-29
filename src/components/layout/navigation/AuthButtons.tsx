@@ -1,7 +1,6 @@
 
 import { Button } from '@/components/common/Button';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 
@@ -43,14 +42,9 @@ const AuthButtons = ({ user, handleLogout }: AuthButtonsProps) => {
           </Button>
         </>
       ) : (
-        <>
-          <Button href="/login" variant="ghost" size="md">
-            Log in
-          </Button>
-          <Button href="/signup" size="md">
-            Sign up
-          </Button>
-        </>
+        <Button href="/login" variant="ghost" size="md">
+          Log in
+        </Button>
       )}
     </div>
   );
