@@ -3,6 +3,24 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { PlusIcon, ExternalLinkIcon } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface Restaurant {
   id: string;
@@ -10,6 +28,9 @@ interface Restaurant {
   cuisine_type: string;
   city: string;
   state: string;
+  address: string;
+  phone: string;
+  website: string | null;
 }
 
 const Dashboard = () => {
@@ -32,7 +53,7 @@ const Dashboard = () => {
       try {
         const { data, error } = await supabase
           .from('restaurants')
-          .select('id, name, cuisine_type, city, state')
+          .select('id, name, cuisine_type, city, state, address, phone, website')
           .order('created_at', { ascending: false });
         
         if (error) {
@@ -55,50 +76,105 @@ const Dashboard = () => {
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="border border-gray-100 rounded-lg p-5 bg-gray-50">
-          <h3 className="text-lg font-medium mb-4">Quick Actions</h3>
-          <div className="space-y-2">
-            <button 
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Common tasks you can perform</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Button
               onClick={() => navigate('/dashboard/create-event')}
-              className="w-full py-2 px-4 bg-brand-50 text-brand-600 rounded-md text-sm font-medium text-left hover:bg-brand-100"
+              className="w-full justify-start"
+              variant="outline"
             >
+              <PlusIcon className="mr-2 h-4 w-4" />
               Create New Event
-            </button>
-            <button 
+            </Button>
+            <Button
               onClick={() => navigate('/dashboard/add-restaurant')}
-              className="w-full py-2 px-4 bg-brand-50 text-brand-600 rounded-md text-sm font-medium text-left hover:bg-brand-100"
+              className="w-full justify-start"
+              variant="outline"
             >
+              <PlusIcon className="mr-2 h-4 w-4" />
               Add New Restaurant
-            </button>
-          </div>
-        </div>
+            </Button>
+          </CardContent>
+        </Card>
         
-        <div className="border border-gray-100 rounded-lg p-5">
-          <h3 className="text-lg font-medium mb-4">Upcoming Events</h3>
-          <p className="text-gray-500 text-sm">No upcoming events scheduled.</p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Events</CardTitle>
+            <CardDescription>Your scheduled events</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-500 text-sm">No upcoming events scheduled.</p>
+          </CardContent>
+        </Card>
       </div>
       
-      <div className="mt-6 border border-gray-100 rounded-lg p-5">
-        <h3 className="text-lg font-medium mb-4">Your Restaurants</h3>
-        {isLoading ? (
-          <div className="flex justify-center py-4">
-            <div className="animate-spin h-6 w-6 border-2 border-brand-500 border-t-transparent rounded-full"></div>
-          </div>
-        ) : restaurants.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {restaurants.map((restaurant) => (
-              <div key={restaurant.id} className="bg-gray-50 border border-gray-100 p-4 rounded-lg">
-                <h4 className="font-medium text-lg">{restaurant.name}</h4>
-                <p className="text-sm text-gray-600 mt-1">{restaurant.cuisine_type}</p>
-                <p className="text-xs text-gray-500 mt-2">{restaurant.city}, {restaurant.state}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-sm">No restaurants added yet.</p>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Your Restaurants</CardTitle>
+          <CardDescription>Restaurants you've added to the platform</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-4">
+              <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+            </div>
+          ) : restaurants.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Cuisine</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {restaurants.map((restaurant) => (
+                    <TableRow key={restaurant.id}>
+                      <TableCell className="font-medium">{restaurant.name}</TableCell>
+                      <TableCell>{restaurant.cuisine_type}</TableCell>
+                      <TableCell>{restaurant.city}, {restaurant.state}</TableCell>
+                      <TableCell>{restaurant.phone}</TableCell>
+                      <TableCell>
+                        {restaurant.website && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(restaurant.website!, '_blank')}
+                            title="Visit Website"
+                          >
+                            <ExternalLinkIcon className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <p className="text-gray-500 mb-4">You haven't added any restaurants yet.</p>
+              <Button onClick={() => navigate('/dashboard/add-restaurant')}>
+                Add Your First Restaurant
+              </Button>
+            </div>
+          )}
+        </CardContent>
+        {restaurants.length > 0 && (
+          <CardFooter>
+            <Button onClick={() => navigate('/dashboard/add-restaurant')}>
+              Add Another Restaurant
+            </Button>
+          </CardFooter>
         )}
-      </div>
+      </Card>
     </DashboardLayout>
   );
 };
