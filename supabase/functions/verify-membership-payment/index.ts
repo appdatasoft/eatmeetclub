@@ -111,12 +111,14 @@ serve(async (req) => {
       console.error("Error sending welcome email:", emailError.message);
     }
 
-    // Send invoice email
+    // Send invoice email - add more detailed logging
     try {
-      await sendInvoiceEmail(sessionId, email, name);
-      console.log("Invoice email sent successfully");
+      console.log(`Attempting to send invoice email for session ${sessionId} to ${email}`);
+      const invoiceResult = await sendInvoiceEmail(sessionId, email, name);
+      console.log("Invoice email result:", invoiceResult);
     } catch (invoiceError) {
       console.error("Error sending invoice email:", invoiceError.message);
+      // Don't fail the whole process if the invoice email fails
     }
 
     return new Response(
@@ -174,13 +176,23 @@ async function sendWelcomeEmail(email: string, name: string) {
   return true;
 }
 
-// Invoice email sending function
+// Invoice email sending function with improved error handling
 async function sendInvoiceEmail(sessionId: string, email: string, name: string) {
   try {
-    const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-invoice-email`, {
+    console.log(`Sending invoice email request for session ${sessionId} to ${email}`);
+    
+    // Get the URL of the Supabase project
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    if (!supabaseUrl) {
+      throw new Error("SUPABASE_URL environment variable is not set");
+    }
+    
+    // Call the send-invoice-email function directly
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-invoice-email`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        // Add Authorization header if needed
       },
       body: JSON.stringify({
         sessionId,
@@ -189,14 +201,19 @@ async function sendInvoiceEmail(sessionId: string, email: string, name: string) 
       }),
     });
 
+    console.log(`Invoice email request response status: ${response.status}`);
+    
+    const responseData = await response.json();
+    console.log("Invoice email response data:", responseData);
+    
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to send invoice email");
+      throw new Error(responseData.message || "Failed to send invoice email");
     }
 
-    return await response.json();
+    return responseData;
   } catch (error) {
-    console.error("Error sending invoice email:", error.message);
+    console.error("Error sending invoice email:", error);
+    // Re-throw to be handled by the caller
     throw error;
   }
 }
