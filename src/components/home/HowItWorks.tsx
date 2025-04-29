@@ -34,16 +34,18 @@ const HowItWorks = () => {
             <div className="mb-6 transform transition-transform duration-300 group-hover:scale-105">
               <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="70" cy="70" r="70" fill="#9FD7D9" fillOpacity="0.6"/>
-                {/* Plate */}
+                {/* Plate - outer circle */}
                 <circle cx="70" cy="70" r="30" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
+                {/* Plate - inner circle */}
+                <circle cx="70" cy="70" r="22" fill="white" stroke="#272163" strokeWidth="2"/>
                 {/* Fork on the left */}
-                <path d="M35 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M35 45L40 45" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M35 52L40 52" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M35 59L40 59" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M30 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M30 45L35 45" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M30 52L35 52" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M30 59L35 59" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
                 {/* Knife on the right */}
-                <path d="M105 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M105 45L100 65" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M110 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M110 45L105 65" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
               </svg>
             </div>
             <h3 className="text-xl font-bold mb-3 text-[#272163]">
@@ -60,7 +62,7 @@ const HowItWorks = () => {
               <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="70" cy="70" r="70" fill="#9FD7D9" fillOpacity="0.6"/>
                 {/* Face circle */}
-                <circle cx="70" cy="70" r="30" fill="#F97316" stroke="#272163" strokeWidth="4"/>
+                <circle cx="70" cy="70" r="30" fill="#feb372" stroke="#272163" strokeWidth="4"/>
                 {/* Hair */}
                 <path d="M50 50C50 50 55 40 70 40C85 40 90 50 90 50" fill="#9FD7D9" stroke="#272163" strokeWidth="4"/>
                 {/* Eyes - curved happy eyes */}
