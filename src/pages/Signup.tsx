@@ -1,30 +1,13 @@
 
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/common/Button";
-import { Input } from "@/components/ui/input";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from "@/components/layout/Navbar";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-
-const signupSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters long" }),
-  phoneNumber: z.string().optional(),
-});
-
-type SignupFormValues = z.infer<typeof signupSchema>;
+import SignupForm, { SignupFormValues } from "@/components/signup/SignupForm";
+import PaymentForm from "@/components/signup/PaymentForm";
+import Navbar from "@/components/layout/Navbar";
 
 const Signup = () => {
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvc, setCardCvc] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [userDetails, setUserDetails] = useState<SignupFormValues | null>(null);
@@ -32,73 +15,7 @@ const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const form = useForm<SignupFormValues>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      phoneNumber: "",
-    }
-  });
-
-  const formatCardNumber = (value: string) => {
-    // Remove any non-digit characters
-    const digits = value.replace(/\D/g, '');
-    
-    // Format with spaces every 4 digits
-    let formatted = '';
-    for (let i = 0; i < digits.length; i++) {
-      if (i > 0 && i % 4 === 0) {
-        formatted += ' ';
-      }
-      formatted += digits[i];
-    }
-    
-    // Limit to 19 characters (16 digits + 3 spaces)
-    return formatted.slice(0, 19);
-  };
-
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedValue = formatCardNumber(e.target.value);
-    setCardNumber(formattedValue);
-  };
-
-  const formatExpiryDate = (value: string) => {
-    // Remove any non-digit characters
-    const digits = value.replace(/\D/g, '');
-    
-    // Format as MM/YY
-    if (digits.length > 2) {
-      return `${digits.slice(0, 2)}/${digits.slice(2, 4)}`;
-    }
-    return digits;
-  };
-
-  const handleExpiryDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedValue = formatExpiryDate(e.target.value);
-    setCardExpiry(formattedValue);
-  };
-
-  const formatPhoneNumber = (value: string) => {
-    // Remove any non-digit characters
-    const digits = value.replace(/\D/g, '');
-    
-    // Format as (XXX) XXX-XXXX for US phone numbers
-    if (digits.length <= 3) {
-      return digits;
-    } else if (digits.length <= 6) {
-      return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-    } else {
-      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
-    }
-  };
-
-  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedValue = formatPhoneNumber(e.target.value);
-    form.setValue("phoneNumber", formattedValue);
-  };
-
-  const onSubmit = (values: SignupFormValues) => {
+  const handleSignupSubmit = (values: SignupFormValues) => {
     setUserDetails(values);
     setShowPaymentForm(true);
   };
@@ -171,162 +88,15 @@ const Signup = () => {
             
             <CardContent>
               {!showPaymentForm ? (
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email address</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="youremail@example.com"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="password"
-                              placeholder="••••••••"
-                              {...field}
-                            />
-                          </FormControl>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Password must be at least 6 characters
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="phoneNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone Number</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="tel"
-                              placeholder="(123) 456-7890"
-                              {...field}
-                              onChange={handlePhoneNumberChange}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <Button
-                      type="submit"
-                      className="w-full"
-                    >
-                      Continue
-                    </Button>
-
-                    <div className="text-center text-sm">
-                      <p className="text-gray-600">
-                        Already have an account?{" "}
-                        <Link to="/login" className="font-medium text-brand-500 hover:text-brand-600">
-                          Log in
-                        </Link>
-                      </p>
-                    </div>
-                  </form>
-                </Form>
+                <SignupForm onSubmit={handleSignupSubmit} />
               ) : (
-                <>
-                  <div className="mb-6">
-                    <h3 className="font-medium mb-2">Membership Details</h3>
-                    <p className="text-sm text-gray-600">Email: {userDetails?.email}</p>
-                    {userDetails?.phoneNumber && (
-                      <p className="text-sm text-gray-600">Phone: {userDetails.phoneNumber}</p>
-                    )}
-                  </div>
-                  
-                  <form className="space-y-4" onSubmit={handlePayment}>
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-4">
-                      <p className="text-amber-800 text-sm">
-                        You will be charged ${membershipFee.toFixed(2)} for your membership.
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="cardNumber">Card Number</Label>
-                      <Input
-                        id="cardNumber"
-                        type="text"
-                        value={cardNumber}
-                        onChange={handleCardNumberChange}
-                        required
-                        placeholder="1234 5678 9012 3456"
-                        className="mt-1"
-                        maxLength={19}
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="cardExpiry">Expiry Date</Label>
-                        <Input
-                          id="cardExpiry"
-                          type="text"
-                          value={cardExpiry}
-                          onChange={handleExpiryDateChange}
-                          required
-                          placeholder="MM/YY"
-                          className="mt-1"
-                          maxLength={5}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="cardCvc">CVC</Label>
-                        <Input
-                          id="cardCvc"
-                          type="password"
-                          value={cardCvc}
-                          onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                          required
-                          placeholder="123"
-                          className="mt-1"
-                          maxLength={4}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="pt-4 flex space-x-2">
-                      <Button 
-                        type="button" 
-                        variant="outline"
-                        onClick={handleBack}
-                        disabled={isLoading}
-                      >
-                        Back
-                      </Button>
-                      <Button
-                        type="submit"
-                        isLoading={isLoading}
-                        className="flex-1"
-                      >
-                        Pay ${membershipFee.toFixed(2)}
-                      </Button>
-                    </div>
-                  </form>
-                </>
+                <PaymentForm 
+                  userDetails={userDetails!}
+                  membershipFee={membershipFee}
+                  onBack={handleBack}
+                  onSubmit={handlePayment}
+                  isLoading={isLoading}
+                />
               )}
             </CardContent>
           </Card>
