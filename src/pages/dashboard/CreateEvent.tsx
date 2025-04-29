@@ -80,8 +80,8 @@ const CreateEvent = () => {
   };
 
   const handleEventSubmit = async (eventDetails: any) => {
-    setCurrentEventDetails(eventDetails);
     setIsLoading(true);
+    setCurrentEventDetails(eventDetails);
     
     try {
       // Get session for the API call
@@ -91,6 +91,8 @@ const CreateEvent = () => {
       if (!token) {
         throw new Error("Not authenticated");
       }
+      
+      console.log("Creating payment session for event:", eventDetails);
       
       // Create a Stripe checkout session
       const { data: responseData, error } = await supabase.functions.invoke('create-event-payment', {
@@ -104,6 +106,8 @@ const CreateEvent = () => {
         throw new Error(error?.message || "Failed to create payment session");
       }
       
+      console.log("Payment session created, URL:", responseData.url);
+      
       // Store event details in localStorage to be accessed after payment
       localStorage.setItem('eventDetails', JSON.stringify(eventDetails));
       
@@ -111,20 +115,13 @@ const CreateEvent = () => {
       window.location.href = responseData.url;
     } catch (error) {
       console.error('Error creating payment session:', error);
-      setShowPaymentDialog(false);
+      setIsLoading(false);
       toast({
         title: "Error",
         description: "Failed to initiate payment. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
-  
-  const handleCancelPayment = () => {
-    setShowPaymentDialog(false);
-    setIsLoading(false);
   };
   
   return (
@@ -145,36 +142,9 @@ const CreateEvent = () => {
           onSubmit={handleEventSubmit}
           isLoading={isLoading}
           onAddRestaurant={() => navigate('/dashboard/add-restaurant')}
+          eventFee={eventFee}
         />
       </Card>
-
-      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Payment for Event Creation</DialogTitle>
-          </DialogHeader>
-          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
-            <p className="text-amber-800 text-sm">You will be redirected to Stripe to complete your payment of ${eventFee.toFixed(2)}</p>
-          </div>
-          <div className="flex space-x-2 mt-4">
-            <Button 
-              isLoading={isLoading} 
-              disabled={isLoading}
-              className="flex-1"
-            >
-              Processing...
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleCancelPayment}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </DashboardLayout>
   );
 };

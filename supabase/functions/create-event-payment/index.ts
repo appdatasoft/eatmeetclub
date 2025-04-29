@@ -15,8 +15,12 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Create event payment function invoked");
+    
     const body = await req.json();
     const { eventDetails } = body;
+    
+    console.log("Event details received:", JSON.stringify(eventDetails));
     
     // Create Supabase client for auth
     const supabaseClient = createClient(
@@ -42,6 +46,8 @@ serve(async (req) => {
     if (authError || !userData.user) {
       throw new Error("Invalid token or user not found");
     }
+    
+    console.log("User authenticated:", userData.user.id);
 
     // Get event creation fee from app_config
     const { data: configData, error: configError } = await supabaseAdmin
@@ -56,11 +62,19 @@ serve(async (req) => {
     
     // Default to 50 if config value cannot be fetched
     const EVENT_CREATION_FEE = configData ? parseFloat(configData.value) : 50;
+    console.log("Event creation fee:", EVENT_CREATION_FEE);
 
     // Initialize Stripe
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      throw new Error("STRIPE_SECRET_KEY not configured");
+    }
+    
+    const stripe = new Stripe(stripeKey, {
       apiVersion: "2023-10-16",
     });
+    
+    console.log("Stripe initialized, creating checkout session");
 
     // Calculate amount in cents (Stripe requires amount in smallest currency unit)
     const amount = Math.round(EVENT_CREATION_FEE * 100);
@@ -90,6 +104,8 @@ serve(async (req) => {
         user_id: userData.user.id,
       },
     });
+    
+    console.log("Checkout session created:", session.id);
 
     // Store event details in localStorage to be accessed after payment
     const responseData = {
@@ -99,6 +115,7 @@ serve(async (req) => {
       fee: EVENT_CREATION_FEE
     };
 
+    console.log("Returning response with checkout URL:", session.url);
     return new Response(
       JSON.stringify(responseData),
       {

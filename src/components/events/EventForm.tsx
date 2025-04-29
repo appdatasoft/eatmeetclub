@@ -19,6 +19,7 @@ interface EventFormProps {
   onSubmit: (eventDetails: any) => void;
   isLoading: boolean;
   onAddRestaurant: () => void;
+  eventFee?: number;
 }
 
 const EventForm: React.FC<EventFormProps> = ({
@@ -27,7 +28,8 @@ const EventForm: React.FC<EventFormProps> = ({
   setSelectedRestaurantId,
   onSubmit,
   isLoading,
-  onAddRestaurant
+  onAddRestaurant,
+  eventFee = 50
 }) => {
   
   const handleSubmit = (e: React.FormEvent) => {
@@ -131,7 +133,7 @@ const EventForm: React.FC<EventFormProps> = ({
         </div>
         
         <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
-          <p className="text-amber-800 text-sm font-medium">A $50.00 event creation fee will be charged when you add this event.</p>
+          <p className="text-amber-800 text-sm font-medium">A ${eventFee.toFixed(2)} event creation fee will be charged when you add this event.</p>
         </div>
       </div>
       
