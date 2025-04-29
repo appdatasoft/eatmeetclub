@@ -3,15 +3,13 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 interface DeleteRestaurantDialogProps {
@@ -73,22 +71,29 @@ const DeleteRestaurantDialog = ({
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <div className="fixed inset-0 z-[99] bg-black/50" />
-      <AlertDialogContent className="fixed z-[100] top-1/2 left-1/2 max-w-md -translate-x-1/2 -translate-y-1/2">
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-          <AlertDialogDescription>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Are you sure?</DialogTitle>
+          <DialogDescription>
             This will permanently delete <strong>{restaurantName}</strong> and cannot be undone.
             {isLoading && (
               <div className="mt-2 text-orange-600">
                 Please wait, deleting restaurant...
               </div>
             )}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+          </DialogDescription>
+        </DialogHeader>
+        
+        <DialogFooter className="sm:justify-start">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
           <Button 
             variant="destructive" 
             onClick={handleDelete} 
@@ -96,9 +101,9 @@ const DeleteRestaurantDialog = ({
           >
             {isLoading ? "Deleting..." : "Delete Restaurant"}
           </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
