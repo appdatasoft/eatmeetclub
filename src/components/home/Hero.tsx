@@ -4,9 +4,15 @@ import { Button } from "@/components/common/Button";
 const Hero = () => {
   return (
     <div 
-      className="w-full py-12 md:py-24 relative h-[500px] bg-gradient-to-r from-[#9FD7D9] to-[#FF5F50]"
+      className="w-full py-12 md:py-24 relative h-[500px] bg-[#B5642A]"
+      style={{ 
+        backgroundImage: `url('/src/assets/dining-scene.svg')`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat"
+      }}
     >
-      <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+      <div className="absolute inset-0 bg-black bg-opacity-30"></div>
       
       <div className="container-custom relative z-10 h-full flex items-center">
         <div className="flex flex-col items-center text-center w-full">

@@ -1,0 +1,129 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#B5642A" />
+  
+  <!-- Plants on left -->
+  <g>
+    <rect x="70" y="450" width="45" height="50" fill="#8B4513" rx="5" />
+    <path d="M85 450 C85 430 75 410 65 400 C85 405 95 415 95 430 C95 415 105 405 115 400 C105 410 95 430 95 450" fill="#6B8E23" stroke="#5F4D28" stroke-width="2" />
+    <path d="M95 430 C95 410 85 390 75 380 C95 385 105 395 105 410 C105 395 115 385 125 380 C115 390 105 410 105 430" fill="#6B8E23" stroke="#5F4D28" stroke-width="2" />
+    <path d="M105 410 C105 390 95 370 85 360 C105 365 115 375 115 390 C115 375 125 365 135 360 C125 370 115 390 115 410" fill="#6B8E23" stroke="#5F4D28" stroke-width="2" />
+  </g>
+  
+  <!-- Plants on right -->
+  <g>
+    <rect x="685" y="450" width="45" height="50" fill="#8B4513" rx="5" />
+    <path d="M700 450 C700 430 690 410 680 400 C700 405 710 415 710 430 C710 415 720 405 730 400 C720 410 710 430 710 450" fill="#6B8E23" stroke="#5F4D28" stroke-width="2" />
+    <path d="M710 430 C710 410 700 390 690 380 C710 385 720 395 720 410 C720 395 730 385 740 380 C730 390 720 410 720 430" fill="#6B8E23" stroke="#5F4D28" stroke-width="2" />
+    <path d="M720 410 C720 390 710 370 700 360 C720 365 730 375 730 390 C730 375 740 365 750 360 C740 370 730 390 730 410" fill="#6B8E23" stroke="#5F4D28" stroke-width="2" />
+  </g>
+  
+  <!-- Table -->
+  <polygon points="250,450 550,450 590,530 210,530" fill="#A0522D" stroke="#703E1E" stroke-width="2" />
+  
+  <!-- Table legs -->
+  <line x1="260" y1="530" x2="260" y2="580" stroke="#703E1E" stroke-width="6" />
+  <line x1="540" y1="530" x2="540" y2="580" stroke="#703E1E" stroke-width="6" />
+  
+  <!-- Chef -->
+  <g>
+    <!-- Chef body -->
+    <rect x="180" y="340" width="90" height="160" fill="#FEC6A1" stroke="#703E1E" stroke-width="2" />
+    <!-- Chef pants -->
+    <rect x="180" y="430" width="90" height="70" fill="#503000" stroke="#703E1E" stroke-width="2" />
+    <!-- Chef face -->
+    <circle cx="220" cy="310" r="30" fill="#D2AA7C" stroke="#703E1E" stroke-width="2" />
+    <path d="M210 310 C212 312 218 312 220 310" stroke="#703E1E" stroke-width="2" fill="none" />
+    <circle cx="210" cy="300" r="2" fill="#703E1E" />
+    <circle cx="230" cy="300" r="2" fill="#703E1E" />
+    <!-- Chef hat -->
+    <path d="M190 290 C190 260 250 260 250 290 L250 300 L190 300 Z" fill="#FDE1D3" stroke="#703E1E" stroke-width="2" />
+    <path d="M190 300 L250 300 L250 310 L190 310 Z" fill="#FDE1D3" stroke="#703E1E" stroke-width="2" />
+    <!-- Chef's plate -->
+    <ellipse cx="230" cy="380" rx="40" ry="15" fill="#FDE1D3" stroke="#703E1E" stroke-width="2" />
+    <ellipse cx="230" cy="380" rx="30" ry="10" fill="#8B4513" stroke="#703E1E" stroke-width="1" />
+  </g>
+  
+  <!-- People at table -->
+  <!-- Person 1 -->
+  <g>
+    <circle cx="280" cy="330" r="25" fill="#C87137" stroke="#703E1E" stroke-width="2" />
+    <rect x="255" y="355" width="50" height="90" rx="5" fill="#C87137" stroke="#703E1E" stroke-width="2" />
+    <path d="M265 330 Q280 345 295 330" stroke="#703E1E" stroke-width="2" fill="none" />
+    <circle cx="270" cy="320" r="2" fill="#703E1E" />
+    <circle cx="290" cy="320" r="2" fill="#703E1E" />
+  </g>
+  
+  <!-- Person 2 -->
+  <g>
+    <circle cx="355" cy="330" r="25" fill="#D2AA7C" stroke="#703E1E" stroke-width="2" />
+    <rect x="330" y="355" width="50" height="90" rx="5" fill="#C87137" stroke="#703E1E" stroke-width="2" />
+    <path d="M340 335 Q355 350 370 335" stroke="#703E1E" stroke-width="2" fill="none" />
+    <circle cx="345" cy="320" r="2" fill="#703E1E" />
+    <circle cx="365" cy="320" r="2" fill="#703E1E" />
+    <path d="M340 300 C355 280 370 300 370 320" fill="#4A2B00" stroke="#4A2B00" stroke-width="1" />
+  </g>
+  
+  <!-- Person 3 -->
+  <g>
+    <circle cx="445" cy="330" r="25" fill="#C87137" stroke="#703E1E" stroke-width="2" />
+    <rect x="420" y="355" width="50" height="90" rx="5" fill="#C87137" stroke="#703E1E" stroke-width="2" />
+    <path d="M430 335 Q445 350 460 335" stroke="#703E1E" stroke-width="2" fill="none" />
+    <circle cx="435" cy="320" r="2" fill="#703E1E" />
+    <circle cx="455" cy="320" r="2" fill="#703E1E" />
+    <path d="M425 300 C445 280 465 300 465 320" fill="#4A2B00" stroke="#4A2B00" stroke-width="1" />
+    <path d="M440 330 Q445 335 450 330" fill="none" stroke="#703E1E" stroke-width="2" />
+  </g>
+  
+  <!-- Person 4 -->
+  <g>
+    <circle cx="520" cy="330" r="25" fill="#D2AA7C" stroke="#703E1E" stroke-width="2" />
+    <rect x="495" y="355" width="50" height="90" rx="5" fill="#C87137" stroke="#703E1E" stroke-width="2" />
+    <path d="M505 335 Q520 350 535 335" stroke="#703E1E" stroke-width="2" fill="none" />
+    <circle cx="510" cy="320" r="2" fill="#703E1E" />
+    <circle cx="530" cy="320" r="2" fill="#703E1E" />
+    <path d="M500 300 C520 280 540 300 540 320" fill="#4A2B00" stroke="#4A2B00" stroke-width="1" />
+  </g>
+  
+  <!-- Plates on table -->
+  <ellipse cx="290" cy="470" rx="30" ry="10" fill="#FDE1D3" stroke="#703E1E" stroke-width="2" />
+  <ellipse cx="290" cy="470" rx="20" ry="5" fill="#8B4513" stroke="#703E1E" stroke-width="1" />
+  
+  <ellipse cx="510" cy="470" rx="30" ry="10" fill="#FDE1D3" stroke="#703E1E" stroke-width="2" />
+  <ellipse cx="510" cy="470" rx="20" ry="5" fill="#8B4513" stroke="#703E1E" stroke-width="1" />
+  
+  <!-- Wine glasses -->
+  <g>
+    <path d="M380 450 L390 470 L370 470 Z" fill="#FDE1D3" stroke="#703E1E" stroke-width="1" />
+    <rect x="378" y="470" width="4" height="15" fill="#FDE1D3" stroke="#703E1E" stroke-width="1" />
+    <path d="M374 450 C374 440 386 440 386 450" fill="#FEC6A1" fill-opacity="0.7" stroke="#703E1E" stroke-width="1" />
+  </g>
+  
+  <g>
+    <path d="M420 450 L430 470 L410 470 Z" fill="#FDE1D3" stroke="#703E1E" stroke-width="1" />
+    <rect x="418" y="470" width="4" height="15" fill="#FDE1D3" stroke="#703E1E" stroke-width="1" />
+    <path d="M414 450 C414 440 426 440 426 450" fill="#FEC6A1" fill-opacity="0.7" stroke="#703E1E" stroke-width="1" />
+  </g>
+  
+  <!-- Wall decorations -->
+  <!-- Lamp 1 -->
+  <line x1="320" y1="150" x2="320" y2="220" stroke="#703E1E" stroke-width="2" />
+  <path d="M300 220 L340 220 L330 240 L310 240 Z" fill="#FEC6A1" stroke="#703E1E" stroke-width="2" />
+  <circle cx="320" cy="240" r="5" fill="#FEC6A1" stroke="#703E1E" stroke-width="1" />
+  
+  <!-- Lamp 2 -->
+  <line x1="480" y1="150" x2="480" y2="220" stroke="#703E1E" stroke-width="2" />
+  <path d="M460 220 L500 220 L490 240 L470 240 Z" fill="#FEC6A1" stroke="#703E1E" stroke-width="2" />
+  <circle cx="480" cy="240" r="5" fill="#FEC6A1" stroke="#703E1E" stroke-width="1" />
+  
+  <!-- Picture frame 1 -->
+  <rect x="375" y="180" width="50" height="60" fill="none" stroke="#703E1E" stroke-width="3" />
+  <rect x="380" y="185" width="40" height="50" fill="none" stroke="#703E1E" stroke-width="2" />
+  <circle cx="395" cy="200" r="5" fill="#703E1E" stroke="#703E1E" stroke-width="1" />
+  <path d="M390 220 C390 210 400 205 405 215 C410 205 420 210 420 220" fill="none" stroke="#703E1E" stroke-width="2" />
+  
+  <!-- Picture frame 2 -->
+  <rect x="580" y="200" width="40" height="50" fill="none" stroke="#703E1E" stroke-width="3" />
+  <path d="M590 225 L600 215 L610 230 L620 210" fill="none" stroke="#703E1E" stroke-width="2" />
+</svg>
