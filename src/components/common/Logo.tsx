@@ -26,7 +26,7 @@ const Logo: React.FC<LogoProps> = ({ className = '' }) => {
           <path d="M140,60 L160,40" stroke="#272163" strokeWidth="15" strokeLinecap="round" />
         </svg>
         
-        <div className="font-bold text-xl">
+        <div className="font-serif text-xl font-bold">
           <span className="text-[#008080]">EAT</span>
           <span className="text-[#ff5f50]">MEET</span>
           <span className="text-[#272163]">CLUB</span>
