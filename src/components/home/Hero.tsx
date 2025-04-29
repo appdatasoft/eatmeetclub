@@ -29,7 +29,7 @@ const Hero = () => {
             size="lg" 
             className="bg-[#FEC6A1] text-[#703E1E] hover:bg-[#FDE1D3] px-10 py-4 text-xl font-bold rounded-full"
           >
-            JOIN FOR $25/MONTH
+            BECOME A MEMBER
           </Button>
         </div>
       </div>
