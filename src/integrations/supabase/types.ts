@@ -47,6 +47,7 @@ export type Database = {
           payment_id: string | null
           payment_status: string | null
           price: number
+          published: boolean | null
           restaurant_id: string
           tickets_sold: number | null
           time: string
@@ -64,6 +65,7 @@ export type Database = {
           payment_id?: string | null
           payment_status?: string | null
           price: number
+          published?: boolean | null
           restaurant_id: string
           tickets_sold?: number | null
           time: string
@@ -81,6 +83,7 @@ export type Database = {
           payment_id?: string | null
           payment_status?: string | null
           price?: number
+          published?: boolean | null
           restaurant_id?: string
           tickets_sold?: number | null
           time?: string

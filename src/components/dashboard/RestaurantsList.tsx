@@ -88,31 +88,31 @@ const RestaurantsList = ({ restaurants, isLoading, onRestaurantUpdate }: Restaur
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
                             onClick={() => handleCreateEvent(restaurant.id)}
                             title="Add Event"
                           >
-                            <CalendarPlus className="h-4 w-4" />
+                            <CalendarPlus className="h-4 w-4 text-primary" />
                             <span className="sr-only">Add Event</span>
                           </Button>
                           
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
                             onClick={() => openEditDialog(restaurant)}
                             title="Edit Restaurant"
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-4 w-4 text-gray-600" />
                             <span className="sr-only">Edit</span>
                           </Button>
                           
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
-                            className="text-destructive hover:bg-destructive/10"
                             onClick={() => openDeleteDialog(restaurant.id, restaurant.name)}
                             title="Delete Restaurant"
+                            className="text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
@@ -120,12 +120,12 @@ const RestaurantsList = ({ restaurants, isLoading, onRestaurantUpdate }: Restaur
                           
                           {restaurant.website && (
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="icon"
                               onClick={() => window.open(restaurant.website!, '_blank')}
                               title="Visit Website"
                             >
-                              <ExternalLink className="h-4 w-4" />
+                              <ExternalLink className="h-4 w-4 text-blue-600" />
                               <span className="sr-only">Visit Website</span>
                             </Button>
                           )}

@@ -30,6 +30,7 @@ interface Event {
   capacity: number;
   price: number;
   payment_status: string; 
+  published: boolean;
   restaurant: {
     name: string;
   };
@@ -73,7 +74,7 @@ const Dashboard = () => {
       console.log("Fetching events...");
       const { data, error } = await supabase
         .from('events')
-        .select('id, title, date, time, restaurant_id, capacity, price, payment_status, restaurant:restaurants(name)')
+        .select('id, title, date, time, restaurant_id, capacity, price, payment_status, published, restaurant:restaurants(name)')
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -113,23 +114,6 @@ const Dashboard = () => {
     checkAuth();
   }, [navigate]);
 
-  const handlePublishEvent = async (eventId: string, paymentStatus: string) => {
-    if (paymentStatus !== 'completed') {
-      toast({
-        title: "Payment Required",
-        description: "You need to complete the payment before publishing this event",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // In a real app, this would send the event to be published
-    toast({
-      title: "Event Published",
-      description: "Your event has been published successfully"
-    });
-  };
-
   return (
     <DashboardLayout>
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
@@ -142,7 +126,7 @@ const Dashboard = () => {
       <EventsList 
         events={events} 
         isLoading={isLoading} 
-        onPublishEvent={handlePublishEvent} 
+        onRefresh={fetchEvents} 
       />
       
       <RestaurantsList 

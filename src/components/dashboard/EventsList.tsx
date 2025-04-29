@@ -1,11 +1,14 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Event {
   id: string;
@@ -16,6 +19,8 @@ interface Event {
   capacity: number;
   price: number;
   payment_status: string;
+  published: boolean;
+  tickets_sold?: number;
   restaurant: {
     name: string;
   };
@@ -24,11 +29,14 @@ interface Event {
 interface EventsListProps {
   events: Event[];
   isLoading: boolean;
-  onPublishEvent: (eventId: string, paymentStatus: string) => void;
+  onPublishEvent?: (eventId: string, paymentStatus: string) => void;
+  onRefresh?: () => void;
 }
 
-const EventsList = ({ events, isLoading, onPublishEvent }: EventsListProps) => {
+const EventsList = ({ events, isLoading, onPublishEvent, onRefresh }: EventsListProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [publishingEventId, setPublishingEventId] = useState<string | null>(null);
   
   const formatEventDate = (dateString: string) => {
     try {
@@ -40,6 +48,53 @@ const EventsList = ({ events, isLoading, onPublishEvent }: EventsListProps) => {
   
   const handleEventClick = (eventId: string) => {
     navigate(`/event/${eventId}`);
+  };
+
+  const handlePublishToggle = async (event: Event) => {
+    if (event.payment_status !== 'completed' && !event.published) {
+      toast({
+        title: "Payment Required",
+        description: "You need to complete the payment before publishing this event",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setPublishingEventId(event.id);
+      
+      // Toggle the published state
+      const newPublishedState = !event.published;
+      
+      const { error } = await supabase
+        .from('events')
+        .update({ published: newPublishedState })
+        .eq('id', event.id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: newPublishedState ? "Event Published" : "Event Unpublished",
+        description: newPublishedState 
+          ? "Your event is now visible to the public" 
+          : "Your event has been hidden from the public"
+      });
+      
+      // Refresh the events list
+      if (onRefresh) {
+        onRefresh();
+      }
+      
+    } catch (error: any) {
+      console.error("Error toggling event publish state:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update event status",
+        variant: "destructive"
+      });
+    } finally {
+      setPublishingEventId(null);
+    }
   };
   
   console.log("Events in EventsList:", events); // Debug: Log events to console
@@ -78,6 +133,11 @@ const EventsList = ({ events, isLoading, onPublishEvent }: EventsListProps) => {
                       >
                         {event.title}
                       </span>
+                      {event.published && (
+                        <Badge className="ml-2 bg-green-100 text-green-800 hover:bg-green-200">
+                          <Globe className="h-3 w-3 mr-1" /> Published
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>{event.restaurant?.name || 'Unknown'}</TableCell>
                     <TableCell>{formatEventDate(event.date)}</TableCell>
@@ -97,10 +157,31 @@ const EventsList = ({ events, isLoading, onPublishEvent }: EventsListProps) => {
                       {event.payment_status === 'completed' ? (
                         <Button
                           size="sm"
-                          onClick={() => onPublishEvent(event.id, event.payment_status)}
-                          className="bg-green-600 hover:bg-green-700"
+                          variant={event.published ? "outline" : "default"}
+                          onClick={() => handlePublishToggle(event)}
+                          disabled={publishingEventId === event.id}
+                          className={event.published ? "border-orange-200 text-orange-700 hover:bg-orange-50" : "bg-green-600 hover:bg-green-700"}
                         >
-                          Publish Event
+                          {publishingEventId === event.id ? (
+                            <span className="flex items-center">
+                              <div className="h-3 w-3 mr-2 rounded-full border-2 border-current border-t-transparent animate-spin"></div>
+                              {event.published ? "Unpublishing..." : "Publishing..."}
+                            </span>
+                          ) : (
+                            <span className="flex items-center">
+                              {event.published ? (
+                                <>
+                                  <EyeOff className="h-4 w-4 mr-1" /> 
+                                  Unpublish
+                                </>
+                              ) : (
+                                <>
+                                  <Globe className="h-4 w-4 mr-1" /> 
+                                  Publish
+                                </>
+                              )}
+                            </span>
+                          )}
                         </Button>
                       ) : (
                         <Button
