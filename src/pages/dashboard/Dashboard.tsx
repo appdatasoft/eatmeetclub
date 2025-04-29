@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -80,6 +81,11 @@ const Dashboard = () => {
       setRestaurants(data || []);
     } catch (error) {
       console.error('Error fetching restaurants:', error);
+      toast({
+        title: "Error fetching restaurants",
+        description: "Could not load your restaurants",
+        variant: "destructive"
+      });
     }
   };
   
@@ -113,14 +119,13 @@ const Dashboard = () => {
         navigate('/login');
       } else {
         // Fetch user's restaurants and events
-        fetchRestaurants();
-        fetchEvents();
+        await Promise.all([fetchRestaurants(), fetchEvents()]);
         setIsLoading(false);
       }
     };
     
     checkAuth();
-  }, [navigate, toast]);
+  }, [navigate]);
 
   const handleCreateEvent = (restaurantId: string) => {
     navigate(`/dashboard/create-event?restaurantId=${restaurantId}`);
@@ -199,22 +204,30 @@ const Dashboard = () => {
         
         <Card>
           <CardHeader>
-            <CardTitle>Event Stats</CardTitle>
-            <CardDescription>Overview of your events</CardDescription>
+            <CardTitle>Upcoming Events</CardTitle>
+            <CardDescription>Your scheduled events</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 p-4 rounded-lg text-center">
-                <p className="text-2xl font-bold">{events.length}</p>
-                <p className="text-sm text-gray-500">Total Events</p>
+            {isLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg text-center">
-                <p className="text-2xl font-bold">
-                  {events.filter(event => event.payment_status === 'completed').length}
-                </p>
-                <p className="text-sm text-gray-500">Ready to Publish</p>
+            ) : events.length > 0 ? (
+              <div className="space-y-2">
+                {events.slice(0, 3).map(event => (
+                  <div key={event.id} className="p-2 border rounded-md">
+                    <div className="font-medium">{event.title}</div>
+                    <div className="text-sm text-gray-500">
+                      {formatEventDate(event.date)} at {event.time}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
+            ) : (
+              <div className="text-gray-500 text-center">
+                No upcoming events scheduled.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -332,7 +345,7 @@ const Dashboard = () => {
                           title="Add Event"
                         >
                           <CalendarPlus className="h-4 w-4" />
-                          <span className="ml-1 hidden md:inline">Add Event</span>
+                          <span className="sr-only md:not-sr-only md:ml-1 md:inline">Add Event</span>
                         </Button>
                         
                         <Button
@@ -342,7 +355,7 @@ const Dashboard = () => {
                           title="Edit Restaurant"
                         >
                           <Edit className="h-4 w-4" />
-                          <span className="ml-1 hidden md:inline">Edit</span>
+                          <span className="sr-only md:not-sr-only md:ml-1 md:inline">Edit</span>
                         </Button>
                         
                         <Button
@@ -353,7 +366,7 @@ const Dashboard = () => {
                           title="Delete Restaurant"
                         >
                           <Trash2 className="h-4 w-4" />
-                          <span className="ml-1 hidden md:inline">Delete</span>
+                          <span className="sr-only md:not-sr-only md:ml-1 md:inline">Delete</span>
                         </Button>
                         
                         {restaurant.website && (
