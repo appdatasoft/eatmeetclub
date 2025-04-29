@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -142,6 +141,10 @@ const EditEvent = () => {
     }
   };
 
+  const handleAddRestaurant = () => {
+    navigate('/dashboard/add-restaurant');
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -160,6 +163,7 @@ const EditEvent = () => {
                   restaurants={restaurants}
                   selectedRestaurantId={selectedRestaurantId}
                   setSelectedRestaurantId={setSelectedRestaurantId}
+                  onAddRestaurant={handleAddRestaurant}
                 />
               </CardContent>
             </Card>

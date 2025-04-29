@@ -1,79 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import EventFilters from "@/components/events/EventFilters";
 import EventCard, { EventCardProps } from "@/components/events/EventCard";
-
-// Sample event data
-const sampleEvents: EventCardProps[] = [
-  {
-    id: "1",
-    title: "Breakfast Networking at The Morning Roost",
-    restaurantName: "The Morning Roost",
-    date: "May 3, 2025",
-    time: "8:00 AM",
-    price: 25,
-    image: "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
-    category: "breakfast",
-    location: "San Francisco, CA"
-  },
-  {
-    id: "2",
-    title: "Business Lunch at Urban Kitchen",
-    restaurantName: "Urban Kitchen",
-    date: "May 5, 2025",
-    time: "12:30 PM",
-    price: 35,
-    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
-    category: "lunch",
-    location: "New York, NY"
-  },
-  {
-    id: "3",
-    title: "Wine & Dine Networking Evening",
-    restaurantName: "La Bella Trattoria",
-    date: "May 8, 2025",
-    time: "7:00 PM",
-    price: 60,
-    image: "https://images.unsplash.com/photo-1587574293340-e0011c4e8ecf?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
-    category: "dinner",
-    location: "Boston, MA"
-  },
-  {
-    id: "4",
-    title: "Sunrise Networking Breakfast",
-    restaurantName: "Sunrise Cafe",
-    date: "May 10, 2025",
-    time: "7:30 AM",
-    price: 22,
-    image: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
-    category: "breakfast",
-    location: "Seattle, WA"
-  },
-  {
-    id: "5",
-    title: "Tech Meetup & Lunch",
-    restaurantName: "Digital Bistro",
-    date: "May 12, 2025",
-    time: "1:00 PM",
-    price: 40,
-    image: "https://images.unsplash.com/photo-1525648199074-cee30ba79a4a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
-    category: "lunch",
-    location: "Austin, TX"
-  },
-  {
-    id: "6",
-    title: "Gourmet Networking Dinner",
-    restaurantName: "Gourmet Heights",
-    date: "May 15, 2025",
-    time: "7:30 PM",
-    price: 75,
-    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80",
-    category: "dinner",
-    location: "Chicago, IL"
-  }
-];
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
 
 interface FilterState {
   category: string;
@@ -83,10 +16,102 @@ interface FilterState {
 }
 
 const Events = () => {
-  const [filteredEvents, setFilteredEvents] = useState<EventCardProps[]>(sampleEvents);
+  const [events, setEvents] = useState<EventCardProps[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<EventCardProps[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    const fetchPublishedEvents = async () => {
+      try {
+        setIsLoading(true);
+        
+        const { data, error } = await supabase
+          .from('events')
+          .select(`
+            id, 
+            title, 
+            date, 
+            time, 
+            price, 
+            capacity,
+            cover_image,
+            restaurant:restaurants(name, city, state)
+          `)
+          .eq('published', true)
+          .order('date', { ascending: true });
+          
+        if (error) throw error;
+        
+        // Transform data to match EventCardProps format
+        const formattedEvents: EventCardProps[] = (data || []).map((event: any) => {
+          // Determine meal type based on time
+          const eventTime = event.time;
+          let category: "breakfast" | "lunch" | "dinner" = "dinner";
+          
+          if (eventTime) {
+            const hour = parseInt(eventTime.split(':')[0]);
+            if (hour < 11) {
+              category = "breakfast";
+            } else if (hour < 16) {
+              category = "lunch";
+            }
+          }
+          
+          // Format date from YYYY-MM-DD to Month Day, Year
+          let formattedDate = event.date;
+          try {
+            const dateObj = new Date(event.date);
+            formattedDate = format(dateObj, "MMMM d, yyyy");
+          } catch (e) {
+            console.error("Error formatting date:", e);
+          }
+          
+          // Format time from 24h to 12h format
+          let formattedTime = event.time;
+          try {
+            const timeParts = event.time.split(':');
+            let hours = parseInt(timeParts[0]);
+            const minutes = timeParts[1];
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // the hour '0' should be '12'
+            formattedTime = `${hours}:${minutes} ${ampm}`;
+          } catch (e) {
+            console.error("Error formatting time:", e);
+          }
+          
+          const location = event.restaurant 
+            ? `${event.restaurant.city}, ${event.restaurant.state}` 
+            : "";
+          
+          return {
+            id: event.id,
+            title: event.title,
+            restaurantName: event.restaurant ? event.restaurant.name : "Restaurant",
+            date: formattedDate,
+            time: formattedTime,
+            price: event.price,
+            image: event.cover_image || "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60",
+            category,
+            location
+          };
+        });
+        
+        setEvents(formattedEvents);
+        setFilteredEvents(formattedEvents);
+      } catch (error) {
+        console.error("Error fetching published events:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchPublishedEvents();
+  }, []);
 
   const handleFilterChange = (filters: FilterState) => {
-    let results = [...sampleEvents];
+    let results = [...events];
 
     // Apply category filter
     if (filters.category !== "all") {
@@ -100,7 +125,7 @@ const Events = () => {
       // This is a simple implementation. In a real app, you'd want to use a date library
       // to properly compare dates, taking into account formatting differences
       results = results.filter((event) =>
-        event.date.includes(filters.date)
+        event.date.toLowerCase().includes(filters.date.toLowerCase())
       );
     }
 
@@ -144,11 +169,15 @@ const Events = () => {
         <div className="container-custom py-8">
           <EventFilters onFilterChange={handleFilterChange} />
 
-          {filteredEvents.length === 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"></div>
+            </div>
+          ) : filteredEvents.length === 0 ? (
             <div className="text-center py-12">
               <h3 className="text-xl font-medium mb-2">No events found</h3>
               <p className="text-gray-500">
-                Try adjusting your filters to find more events.
+                Try adjusting your filters or check back later for upcoming events.
               </p>
             </div>
           ) : (
