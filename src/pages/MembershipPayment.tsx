@@ -66,13 +66,17 @@ const MembershipPayment = () => {
       setIsLoading(true);
       console.log("Initiating payment process with values:", values);
       
+      // Get the Supabase URL directly from the client
+      const supabaseUrl = supabase.supabaseUrl;
+      
       // Create a Stripe checkout session
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-membership-checkout`,
+        `${supabaseUrl}/functions/v1/create-membership-checkout`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabase.auth.session()?.access_token || ''}`,
           },
           body: JSON.stringify({
             email: values.email,
@@ -85,9 +89,15 @@ const MembershipPayment = () => {
       console.log("Response status:", response.status);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Error response:", errorData);
-        throw new Error(errorData.message || "Failed to create checkout session");
+        let errorMessage = "Failed to create checkout session";
+        try {
+          const errorData = await response.json();
+          console.error("Error response:", errorData);
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          console.error("Error parsing error response:", e);
+        }
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();

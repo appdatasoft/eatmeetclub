@@ -2,13 +2,13 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import SignupForm, { SignupFormValues } from "@/components/signup/SignupForm";
 import PaymentForm from "@/components/signup/PaymentForm";
 import Navbar from "@/components/layout/Navbar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -66,13 +66,17 @@ const Signup = () => {
     try {
       console.log("Initiating payment process with user details:", userDetails.email);
       
+      // Get the Supabase URL directly from the client
+      const supabaseUrl = supabase.supabaseUrl;
+      
       // Create a Stripe checkout session
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-membership-checkout`,
+        `${supabaseUrl}/functions/v1/create-membership-checkout`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabase.auth.session()?.access_token || ''}`,
           },
           body: JSON.stringify({
             email: userDetails.email,
@@ -85,9 +89,15 @@ const Signup = () => {
       console.log("Response status:", response.status);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Error response:", errorData);
-        throw new Error(errorData.message || "Failed to create checkout session");
+        let errorMessage = "Failed to create checkout session";
+        try {
+          const errorData = await response.json();
+          console.error("Error response:", errorData);
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          console.error("Error parsing error response:", e);
+        }
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();
