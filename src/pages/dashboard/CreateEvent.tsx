@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -18,22 +18,53 @@ import {
 
 const CreateEvent = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
+
+  // Extract restaurantId from URL query parameters
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const restaurantId = params.get('restaurantId');
+    if (restaurantId) {
+      setSelectedRestaurantId(restaurantId);
+    }
+  }, [location]);
 
   useEffect(() => {
     const checkAuth = async () => {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
         navigate('/login');
+      } else {
+        // Fetch user's restaurants
+        fetchRestaurants();
+      }
+    };
+    
+    const fetchRestaurants = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('restaurants')
+          .select('id, name')
+          .order('name', { ascending: true });
+        
+        if (error) throw error;
+        setRestaurants(data || []);
+      } catch (error) {
+        console.error('Error fetching restaurants:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch restaurants. Please try again.",
+          variant: "destructive"
+        });
       }
     };
     
     checkAuth();
-    // In a real application, this would fetch restaurants from Supabase
-    setRestaurants([]);
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +118,7 @@ const CreateEvent = () => {
           <div className="space-y-2">
             <Label htmlFor="restaurant">Select Restaurant*</Label>
             {restaurants.length > 0 ? (
-              <Select>
+              <Select value={selectedRestaurantId} onValueChange={setSelectedRestaurantId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a restaurant" />
                 </SelectTrigger>

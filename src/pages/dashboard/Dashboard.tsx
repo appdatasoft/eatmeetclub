@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, ExternalLinkIcon } from "lucide-react";
+import { PlusIcon, ExternalLinkIcon, CalendarPlus } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -70,6 +70,10 @@ const Dashboard = () => {
     
     checkAuth();
   }, [navigate]);
+
+  const handleCreateEvent = (restaurantId: string) => {
+    navigate(`/dashboard/create-event?restaurantId=${restaurantId}`);
+  };
 
   return (
     <DashboardLayout>
@@ -141,7 +145,17 @@ const Dashboard = () => {
                       <TableCell>{restaurant.cuisine_type}</TableCell>
                       <TableCell>{restaurant.city}, {restaurant.state}</TableCell>
                       <TableCell>{restaurant.phone}</TableCell>
-                      <TableCell>
+                      <TableCell className="space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCreateEvent(restaurant.id)}
+                          title="Add Event"
+                        >
+                          <CalendarPlus className="h-4 w-4" />
+                          <span className="ml-1 hidden md:inline">Add Event</span>
+                        </Button>
+                        
                         {restaurant.website && (
                           <Button
                             variant="ghost"
