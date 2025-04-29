@@ -8,6 +8,7 @@ import {
 import { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
 import "./App.css";
+import Index from "./pages/Index";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -19,6 +20,7 @@ import EditEvent from "./pages/EditEvent";
 import EventPayment from "./pages/dashboard/EventPayment";
 import TicketSuccess from "./pages/TicketSuccess";
 import AddRestaurant from "./pages/dashboard/AddRestaurant";
+import HowItWorks from "./pages/HowItWorks";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -36,7 +38,9 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<Index />} />
+        <Route path="/landing" element={<LandingPage />} />
+        <Route path="/how-it-works" element={<HowItWorks />} />
         <Route
           path="/login"
           element={!session ? <Login /> : <Navigate to="/dashboard" />}

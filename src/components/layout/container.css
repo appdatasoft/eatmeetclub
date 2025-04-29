@@ -1,32 +1,21 @@
 
 .container-custom {
   width: 100%;
+  max-width: 1280px;
   margin-left: auto;
   margin-right: auto;
   padding-left: 1rem;
   padding-right: 1rem;
 }
 
-@media (min-width: 640px) {
-  .container-custom {
-    max-width: 640px;
-  }
+.section-padding {
+  padding-top: 3rem;
+  padding-bottom: 3rem;
 }
 
 @media (min-width: 768px) {
-  .container-custom {
-    max-width: 768px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .container-custom {
-    max-width: 1024px;
-  }
-}
-
-@media (min-width: 1280px) {
-  .container-custom {
-    max-width: 1280px;
+  .section-padding {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
   }
 }
