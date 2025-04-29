@@ -1,18 +1,17 @@
-
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import PaymentForm from "@/components/payment/PaymentForm";
 import { Button } from "@/components/common/Button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const membershipSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -27,8 +26,8 @@ const MembershipPayment = () => {
   const navigate = useNavigate();
   const [membershipFee, setMembershipFee] = useState(25);
   const [isLoading, setIsLoading] = useState(true);
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [membershipDetails, setMembershipDetails] = useState<MembershipFormValues | null>(null);
+  const [searchParams] = useSearchParams();
+  const paymentCanceled = searchParams.get('canceled') === 'true';
 
   const form = useForm<MembershipFormValues>({
     resolver: zodResolver(membershipSchema),
@@ -61,49 +60,38 @@ const MembershipPayment = () => {
     fetchMembershipFee();
   }, []);
 
-  const onSubmit = (values: MembershipFormValues) => {
-    setMembershipDetails(values);
-    setShowPaymentForm(true);
-  };
-
-  const handlePaymentSuccess = async (paymentDetails: any) => {
-    if (!membershipDetails) return;
-    
+  const onSubmit = async (values: MembershipFormValues) => {
     try {
       setIsLoading(true);
       
-      // Send user details and payment ID to the membership verification function
+      // Create a Stripe checkout session
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-membership-payment`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-membership-checkout`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            paymentId: paymentDetails.id,
-            email: membershipDetails.email,
-            name: membershipDetails.name,
-            phone: membershipDetails.phone,
+            email: values.email,
+            name: values.name,
+            phone: values.phone,
           }),
         }
       );
       
       const data = await response.json();
       
-      if (data.success) {
-        toast({
-          title: "Welcome to Eat Meet Club!",
-          description: "Your membership has been activated. Please check your email to set your password.",
-        });
-        navigate("/login");
+      if (data.success && data.url) {
+        // Redirect to the Stripe checkout page
+        window.location.href = data.url;
       } else {
-        throw new Error(data.message || "Failed to activate membership");
+        throw new Error(data.message || "Failed to create checkout session");
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "There was a problem activating your membership",
+        description: error.message || "There was a problem initiating the checkout process",
         variant: "destructive",
       });
     } finally {
@@ -112,11 +100,7 @@ const MembershipPayment = () => {
   };
 
   const handleCancel = () => {
-    if (showPaymentForm) {
-      setShowPaymentForm(false);
-    } else {
-      navigate("/");
-    }
+    navigate("/");
   };
 
   if (isLoading) {
@@ -175,76 +159,67 @@ const MembershipPayment = () => {
                 </div>
                 
                 <div className="border-t border-gray-200 pt-6">
-                  {!showPaymentForm ? (
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Full Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter your full name" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email</FormLabel>
-                              <FormControl>
-                                <Input type="email" placeholder="Enter your email" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="phone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Phone Number (optional)</FormLabel>
-                              <FormControl>
-                                <Input type="tel" placeholder="Enter your phone number" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <div className="flex justify-between mt-6">
-                          <Button type="button" variant="outline" onClick={handleCancel}>
-                            Cancel
-                          </Button>
-                          <Button type="submit">
-                            Continue to Payment
-                          </Button>
-                        </div>
-                      </form>
-                    </Form>
-                  ) : (
-                    <>
-                      <div className="mb-6">
-                        <h3 className="font-medium mb-2">Membership Details</h3>
-                        <p className="text-sm text-gray-600">Name: {membershipDetails?.name}</p>
-                        <p className="text-sm text-gray-600">Email: {membershipDetails?.email}</p>
-                        {membershipDetails?.phone && (
-                          <p className="text-sm text-gray-600">Phone: {membershipDetails.phone}</p>
-                        )}
-                      </div>
-                      <PaymentForm 
-                        amount={membershipFee} 
-                        onSuccess={handlePaymentSuccess} 
-                        onCancel={handleCancel} 
-                      />
-                    </>
+                  {paymentCanceled && (
+                    <Alert variant="destructive" className="mb-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Payment was canceled. Please try again when you're ready.
+                      </AlertDescription>
+                    </Alert>
                   )}
+                  
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter your full name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="Enter your email" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone Number (optional)</FormLabel>
+                            <FormControl>
+                              <Input type="tel" placeholder="Enter your phone number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="flex justify-between mt-6">
+                        <Button type="button" variant="outline" onClick={handleCancel}>
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={isLoading}>
+                          {isLoading ? "Processing..." : "Subscribe Now"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
                 </div>
               </div>
             </div>

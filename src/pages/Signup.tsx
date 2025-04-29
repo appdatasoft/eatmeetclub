@@ -1,11 +1,13 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import SignupForm, { SignupFormValues } from "@/components/signup/SignupForm";
 import PaymentForm from "@/components/signup/PaymentForm";
 import Navbar from "@/components/layout/Navbar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +16,8 @@ const Signup = () => {
   const [membershipFee] = useState(25);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const paymentCanceled = searchParams.get('canceled') === 'true';
 
   const handleSignupSubmit = (values: SignupFormValues) => {
     setUserDetails(values);
@@ -27,47 +31,37 @@ const Signup = () => {
     setIsLoading(true);
 
     try {
-      // Mock payment processing - in production this would call the Stripe API
-      // Generate a mock payment ID
-      const mockPaymentId = `payment_${Date.now()}`;
-      
-      // Call the Supabase Edge Function to verify membership payment
+      // Create a Stripe checkout session
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-membership-payment`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-membership-checkout`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            paymentId: mockPaymentId,
             email: userDetails.email,
             name: userDetails.email.split('@')[0], // Just using part of email as name for demo
             phone: userDetails.phoneNumber,
-            isSubscription: true,
           }),
         }
       );
       
       const data = await response.json();
       
-      if (data.success) {
-        toast({
-          title: "Welcome to Eat Meet Club!",
-          description: "Your membership has been activated. Please check your email to set your password.",
-        });
-        navigate("/login");
+      if (data.success && data.url) {
+        // Redirect to the Stripe checkout page
+        window.location.href = data.url;
       } else {
-        throw new Error(data.message || "Failed to activate membership");
+        throw new Error(data.message || "Failed to create checkout session");
       }
     } catch (error: any) {
       console.error("Payment error:", error);
       toast({
         title: "Error",
-        description: error.message || "There was a problem activating your membership",
+        description: error.message || "There was a problem initiating the checkout process",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -88,6 +82,15 @@ const Signup = () => {
             </CardHeader>
             
             <CardContent>
+              {paymentCanceled && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Payment was canceled. Please try again when you're ready.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               {!showPaymentForm ? (
                 <SignupForm onSubmit={handleSignupSubmit} />
               ) : (
