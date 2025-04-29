@@ -16,6 +16,9 @@ const NavLinks = () => {
       <Link to="/about" className="px-3 py-2 rounded-md text-sm hover:bg-accent">
         About
       </Link>
+      <Link to="/become-member" className="px-3 py-2 rounded-md text-sm hover:bg-accent font-medium text-brand-500">
+        Become a Member
+      </Link>
     </div>
   );
 };

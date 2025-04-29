@@ -11,8 +11,8 @@ const CallToAction = () => {
           Eat Meet Club is the perfect platform to connect.
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-4">
-          <Button href="/signup" variant="primary" size="lg" className="bg-white text-brand-500 hover:bg-gray-100">
-            Sign Up Now
+          <Button href="/become-member" variant="primary" size="lg" className="bg-white text-brand-500 hover:bg-gray-100">
+            Become a Member
           </Button>
           <Button href="/events" variant="outline" size="lg" className="border-white text-white hover:bg-brand-600">
             Browse Events

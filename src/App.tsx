@@ -21,6 +21,7 @@ import EventPayment from "./pages/dashboard/EventPayment";
 import TicketSuccess from "./pages/TicketSuccess";
 import AddRestaurant from "./pages/dashboard/AddRestaurant";
 import HowItWorks from "./pages/HowItWorks";
+import MembershipPayment from "./pages/MembershipPayment";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -78,6 +79,10 @@ function App() {
         <Route
           path="/ticket-success"
           element={<TicketSuccess />}
+        />
+        <Route
+          path="/become-member"
+          element={<MembershipPayment />}
         />
       </Routes>
     </Router>
