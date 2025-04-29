@@ -33,10 +33,10 @@ export const useAuth = () => {
   }, []);
 
   useEffect(() => {
-    // Set up the auth state listener first
+    // Set up the auth state listener first to avoid missing events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        console.log('Auth state change:', _event, session?.user?.id);
+      async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.id);
         setUser(session?.user || null);
         
         if (session?.user) {

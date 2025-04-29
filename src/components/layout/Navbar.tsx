@@ -27,17 +27,19 @@ const Navbar = () => {
           description: error.message || "An error occurred while logging out",
           variant: "destructive"
         });
-      } else {
-        console.log('Logout successful');
-        toast({
-          title: "Logged out successfully",
-          description: "You have been logged out of your account"
-        });
-        // Navigate after successful logout
-        setTimeout(() => {
-          navigate('/');
-        }, 100);
+        return;
       }
+      
+      console.log('Logout successful');
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account"
+      });
+      
+      // Navigate after successful logout with a slight delay
+      setTimeout(() => {
+        navigate('/');
+      }, 300);
     } catch (error: any) {
       console.error('Error during logout:', error);
       toast({

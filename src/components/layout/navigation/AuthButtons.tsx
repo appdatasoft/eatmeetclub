@@ -15,7 +15,7 @@ const AuthButtons = ({ user, handleLogout }: AuthButtonsProps) => {
           <Button href="/dashboard" variant="ghost" size="md">
             Dashboard
           </Button>
-          <Button onClick={handleLogout} variant="outline" size="md">
+          <Button onClick={() => handleLogout()} variant="outline" size="md">
             <LogOut className="h-4 w-4 mr-2" />
             Log out
           </Button>

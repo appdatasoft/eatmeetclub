@@ -7,6 +7,7 @@ import EventFilters from "@/components/events/EventFilters";
 import EventCard, { EventCardProps } from "@/components/events/EventCard";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface FilterState {
   category: string;
@@ -21,6 +22,7 @@ const Events = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   useEffect(() => {
     const fetchPublishedEvents = async () => {
@@ -54,8 +56,15 @@ const Events = () => {
         
         console.log("Events data received:", data);
         
+        if (!data || data.length === 0) {
+          console.log("No events found");
+          setEvents([]);
+          setFilteredEvents([]);
+          return;
+        }
+        
         // Transform data to match EventCardProps format
-        const formattedEvents: EventCardProps[] = (data || []).map((event: any) => {
+        const formattedEvents: EventCardProps[] = data.map((event: any) => {
           // Determine meal type based on time
           const eventTime = event.time;
           let category: "breakfast" | "lunch" | "dinner" = "dinner";
