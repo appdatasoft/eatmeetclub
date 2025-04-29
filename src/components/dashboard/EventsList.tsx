@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, AlertCircle, Globe, EyeOff } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, EyeOff, Check, X, Link } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { supabase } from '@/integrations/supabase/client';
@@ -128,10 +127,11 @@ const EventsList = ({ events, isLoading, onPublishEvent, onRefresh }: EventsList
                   <TableRow key={event.id}>
                     <TableCell className="font-medium">
                       <span 
-                        className="cursor-pointer text-primary hover:underline"
+                        className="cursor-pointer text-primary hover:underline flex items-center"
                         onClick={() => handleEventClick(event.id)}
                       >
                         {event.title}
+                        <Link className="ml-1 h-3 w-3" />
                       </span>
                       {event.published && (
                         <Badge className="ml-2 bg-green-100 text-green-800 hover:bg-green-200">
@@ -155,34 +155,32 @@ const EventsList = ({ events, isLoading, onPublishEvent, onRefresh }: EventsList
                     </TableCell>
                     <TableCell>
                       {event.payment_status === 'completed' ? (
-                        <Button
-                          size="sm"
-                          variant={event.published ? "outline" : "default"}
-                          onClick={() => handlePublishToggle(event)}
-                          disabled={publishingEventId === event.id}
-                          className={event.published ? "border-orange-200 text-orange-700 hover:bg-orange-50" : "bg-green-600 hover:bg-green-700"}
-                        >
-                          {publishingEventId === event.id ? (
-                            <span className="flex items-center">
-                              <div className="h-3 w-3 mr-2 rounded-full border-2 border-current border-t-transparent animate-spin"></div>
-                              {event.published ? "Unpublishing..." : "Publishing..."}
-                            </span>
-                          ) : (
-                            <span className="flex items-center">
-                              {event.published ? (
-                                <>
-                                  <EyeOff className="h-4 w-4 mr-1" /> 
-                                  Unpublish
-                                </>
-                              ) : (
-                                <>
-                                  <Globe className="h-4 w-4 mr-1" /> 
-                                  Publish
-                                </>
-                              )}
-                            </span>
-                          )}
-                        </Button>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="icon"
+                            variant={event.published ? "outline" : "default"}
+                            onClick={() => handlePublishToggle(event)}
+                            disabled={publishingEventId === event.id}
+                            className={event.published ? "border-orange-200 text-orange-700 hover:bg-orange-50 h-8 w-8" : "bg-green-600 hover:bg-green-700 h-8 w-8"}
+                            title={event.published ? "Unpublish Event" : "Publish Event"}
+                          >
+                            {publishingEventId === event.id ? (
+                              <div className="h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin"></div>
+                            ) : event.published ? (
+                              <X className="h-4 w-4" />
+                            ) : (
+                              <Check className="h-4 w-4" />
+                            )}
+                          </Button>
+                          
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/edit-event/${event.id}`)}
+                          >
+                            Edit
+                          </Button>
+                        </div>
                       ) : (
                         <Button
                           size="sm"
