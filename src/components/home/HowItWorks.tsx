@@ -1,4 +1,3 @@
-
 import React from "react";
 
 const HowItWorks = () => {
@@ -37,7 +36,7 @@ const HowItWorks = () => {
                 {/* Plate - outer circle */}
                 <circle cx="70" cy="70" r="30" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
                 {/* Plate - inner circle */}
-                <circle cx="70" cy="70" r="22" fill="white" stroke="#272163" strokeWidth="2"/>
+                <circle cx="70" cy="70" r="22" fill="#fe5641" stroke="#272163" strokeWidth="2"/>
                 {/* Fork on the left */}
                 <path d="M30 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
                 <path d="M30 45L35 45" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
