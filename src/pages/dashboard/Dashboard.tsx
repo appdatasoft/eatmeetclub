@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, ExternalLinkIcon, CalendarPlus, CheckCircle, AlertCircle } from "lucide-react";
+import { PlusIcon, ExternalLinkIcon, CalendarPlus, CheckCircle, AlertCircle, Edit, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -24,6 +24,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import EditRestaurantDialog from '@/components/restaurants/EditRestaurantDialog';
+import DeleteRestaurantDialog from '@/components/restaurants/DeleteRestaurantDialog';
 
 interface Restaurant {
   id: string;
@@ -34,6 +36,7 @@ interface Restaurant {
   address: string;
   phone: string;
   website: string | null;
+  zipcode: string;
 }
 
 interface Event {
@@ -44,7 +47,7 @@ interface Event {
   restaurant_id: string;
   capacity: number;
   price: number;
-  payment_status: string; // Changed from "pending" | "completed" to string to match Supabase data
+  payment_status: string; 
   restaurant: {
     name: string;
   };
@@ -56,6 +59,12 @@ const Dashboard = () => {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // State for edit/delete restaurant dialogs
+  const [editRestaurant, setEditRestaurant] = useState<Restaurant | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [deleteRestaurant, setDeleteRestaurant] = useState<{id: string, name: string} | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -73,7 +82,7 @@ const Dashboard = () => {
       try {
         const { data, error } = await supabase
           .from('restaurants')
-          .select('id, name, cuisine_type, city, state, address, phone, website')
+          .select('id, name, cuisine_type, city, state, address, phone, website, zipcode')
           .order('created_at', { ascending: false });
         
         if (error) {
@@ -99,7 +108,6 @@ const Dashboard = () => {
           throw error;
         }
         
-        // Now the type will match correctly
         setEvents(data || []);
       } catch (error) {
         console.error('Error fetching events:', error);
@@ -141,6 +149,39 @@ const Dashboard = () => {
     } catch (e) {
       return dateString;
     }
+  };
+
+  // Restaurant editing functions
+  const openEditDialog = (restaurant: Restaurant) => {
+    setEditRestaurant(restaurant);
+    setIsEditDialogOpen(true);
+  };
+
+  const openDeleteDialog = (id: string, name: string) => {
+    setDeleteRestaurant({ id, name });
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleRestaurantEdit = () => {
+    // Refresh the restaurant list
+    const fetchRestaurants = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('restaurants')
+          .select('id, name, cuisine_type, city, state, address, phone, website, zipcode')
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          throw error;
+        }
+        
+        setRestaurants(data || []);
+      } catch (error) {
+        console.error('Error fetching restaurants:', error);
+      }
+    };
+    
+    fetchRestaurants();
   };
 
   return (
@@ -300,7 +341,7 @@ const Dashboard = () => {
                       <TableCell>{restaurant.cuisine_type}</TableCell>
                       <TableCell>{restaurant.city}, {restaurant.state}</TableCell>
                       <TableCell>{restaurant.phone}</TableCell>
-                      <TableCell className="space-x-2">
+                      <TableCell className="space-x-1">
                         <Button
                           variant="outline"
                           size="sm"
@@ -309,6 +350,27 @@ const Dashboard = () => {
                         >
                           <CalendarPlus className="h-4 w-4" />
                           <span className="ml-1 hidden md:inline">Add Event</span>
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditDialog(restaurant)}
+                          title="Edit Restaurant"
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span className="ml-1 hidden md:inline">Edit</span>
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => openDeleteDialog(restaurant.id, restaurant.name)}
+                          title="Delete Restaurant"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="ml-1 hidden md:inline">Delete</span>
                         </Button>
                         
                         {restaurant.website && (
@@ -344,6 +406,27 @@ const Dashboard = () => {
           </CardFooter>
         )}
       </Card>
+
+      {/* Edit Restaurant Dialog */}
+      {editRestaurant && (
+        <EditRestaurantDialog
+          restaurant={editRestaurant}
+          isOpen={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          onSave={handleRestaurantEdit}
+        />
+      )}
+
+      {/* Delete Restaurant Dialog */}
+      {deleteRestaurant && (
+        <DeleteRestaurantDialog
+          restaurantId={deleteRestaurant.id}
+          restaurantName={deleteRestaurant.name}
+          isOpen={isDeleteDialogOpen}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          onDelete={handleRestaurantEdit}
+        />
+      )}
     </DashboardLayout>
   );
 };
