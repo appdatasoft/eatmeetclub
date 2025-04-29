@@ -11,7 +11,7 @@ const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [userDetails, setUserDetails] = useState<SignupFormValues | null>(null);
-  const [membershipFee, setMembershipFee] = useState(25);
+  const [membershipFee] = useState(25);
   const navigate = useNavigate();
   const { toast } = useToast();
 
