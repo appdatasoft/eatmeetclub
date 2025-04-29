@@ -1,12 +1,21 @@
 
 import React from "react";
+import { Edit } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface EventHeaderProps {
   title: string;
   restaurantName: string;
+  isOwner?: boolean;
+  onEditCover?: () => void;
 }
 
-const EventHeader: React.FC<EventHeaderProps> = ({ title, restaurantName }) => {
+const EventHeader: React.FC<EventHeaderProps> = ({ 
+  title, 
+  restaurantName, 
+  isOwner = false,
+  onEditCover
+}) => {
   return (
     <div className="relative h-64 md:h-96 overflow-hidden">
       <img
@@ -15,6 +24,18 @@ const EventHeader: React.FC<EventHeaderProps> = ({ title, restaurantName }) => {
         className="w-full h-full object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+      
+      {isOwner && (
+        <Button 
+          variant="secondary" 
+          size="sm" 
+          className="absolute top-4 right-4 bg-white/80 hover:bg-white text-gray-800"
+          onClick={onEditCover}
+        >
+          <Edit className="h-4 w-4 mr-1" /> Edit Cover
+        </Button>
+      )}
+      
       <div className="absolute bottom-0 left-0 p-6 text-white">
         <h1 className="text-3xl md:text-4xl font-bold mb-1">{title}</h1>
         <p className="text-lg text-white/90">Hosted by {restaurantName}</p>

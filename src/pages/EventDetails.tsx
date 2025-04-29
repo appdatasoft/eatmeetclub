@@ -24,11 +24,16 @@ const EventDetails = () => {
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditCoverDialogOpen, setIsEditCoverDialogOpen] = useState(false);
   
   const handleEditEvent = () => {
     // Navigate to edit event page (to be implemented)
     // For now just go to dashboard
     navigate(`/dashboard`);
+  };
+  
+  const handleEditCover = () => {
+    setIsEditCoverDialogOpen(true);
   };
   
   const handleDeleteEvent = async () => {
@@ -93,7 +98,12 @@ const EventDetails = () => {
     <>
       <Navbar />
       <div className="bg-white">
-        <EventHeader title={event.title} restaurantName={event.restaurant.name} />
+        <EventHeader 
+          title={event.title} 
+          restaurantName={event.restaurant.name} 
+          isOwner={isCurrentUserOwner}
+          onEditCover={handleEditCover}
+        />
 
         <div className="container-custom py-8">
           {isCurrentUserOwner && (
@@ -168,6 +178,39 @@ const EventDetails = () => {
               disabled={isDeleting}
             >
               {isDeleting ? "Deleting..." : "Delete Event"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Cover Dialog */}
+      <Dialog open={isEditCoverDialogOpen} onOpenChange={setIsEditCoverDialogOpen}>
+        <DialogContent className="bg-background">
+          <DialogHeader>
+            <DialogTitle>Edit Cover Image</DialogTitle>
+            <DialogDescription>
+              Upload a new cover image for your event
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid items-center gap-4">
+              <input
+                type="file"
+                accept="image/*"
+                className="w-full"
+                // In a real implementation, this would handle the file upload
+              />
+              <p className="text-sm text-muted-foreground">
+                Recommended image size: 1200 x 600px. Max file size: 5MB
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditCoverDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
