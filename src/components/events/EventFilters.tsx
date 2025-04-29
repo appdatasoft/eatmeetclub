@@ -1,5 +1,5 @@
 
-import { Button } from "@/components/common/Button";
+import { Button } from "@/components/ui/button";
 import { FilterState } from "@/hooks/useEventFilters";
 
 interface EventFiltersProps {
@@ -19,28 +19,28 @@ const EventFilters = ({ filters, onFilterChange }: EventFiltersProps) => {
         <div className="flex flex-wrap gap-2">
           <Button
             size="sm"
-            variant={filters.category === "all" ? "primary" : "ghost"}
+            variant={filters.category === "all" ? "default" : "outline"}
             onClick={() => handleCategoryChange("all")}
           >
             All Events
           </Button>
           <Button
             size="sm"
-            variant={filters.category === "breakfast" ? "primary" : "ghost"}
+            variant={filters.category === "breakfast" ? "default" : "outline"}
             onClick={() => handleCategoryChange("breakfast")}
           >
             Breakfast
           </Button>
           <Button
             size="sm"
-            variant={filters.category === "lunch" ? "primary" : "ghost"}
+            variant={filters.category === "lunch" ? "default" : "outline"}
             onClick={() => handleCategoryChange("lunch")}
           >
             Lunch
           </Button>
           <Button
             size="sm"
-            variant={filters.category === "dinner" ? "primary" : "ghost"}
+            variant={filters.category === "dinner" ? "default" : "outline"}
             onClick={() => handleCategoryChange("dinner")}
           >
             Dinner

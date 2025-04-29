@@ -9,7 +9,7 @@ import useEventFilters from "@/hooks/useEventFilters";
 import { useToast } from "@/hooks/use-toast";
 
 const Events = () => {
-  const { events, isLoading, fetchError } = useEvents();
+  const { events, isLoading, fetchError, refreshEvents } = useEvents();
   const { filters, filteredEvents, handleFilterChange } = useEventFilters(events);
   const { toast } = useToast();
   
@@ -24,7 +24,10 @@ const Events = () => {
     }
   }, [fetchError, toast]);
 
-  console.log("Events page - loaded events:", events.length, "filtered events:", filteredEvents.length);
+  // For debugging
+  useEffect(() => {
+    console.log("Events page - loaded events:", events.length, "filtered events:", filteredEvents.length);
+  }, [events, filteredEvents]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -52,6 +55,20 @@ const Events = () => {
             isLoading={isLoading} 
             error={fetchError} 
           />
+          
+          {!isLoading && events.length === 0 && !fetchError && (
+            <div className="text-center mt-8">
+              <p className="text-lg text-gray-600">
+                There are currently no published events available.
+              </p>
+              <button 
+                className="mt-4 text-blue-600 hover:text-blue-800 underline"
+                onClick={() => refreshEvents()}
+              >
+                Refresh events
+              </button>
+            </div>
+          )}
         </div>
       </main>
 
