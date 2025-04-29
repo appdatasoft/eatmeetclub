@@ -1,4 +1,3 @@
-
 import React from "react";
 
 const HowItWorks = () => {
@@ -56,15 +55,17 @@ const HowItWorks = () => {
             </p>
           </div>
           
-          {/* Step 3 - Smiling face icon */}
+          {/* Step 3 - Smiling face icon with more hair */}
           <div className="flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300">
             <div className="mb-6 transform transition-transform duration-300 group-hover:scale-105">
               <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="70" cy="70" r="70" fill="#9FD7D9" fillOpacity="0.6"/>
                 {/* Face circle */}
                 <circle cx="70" cy="70" r="30" fill="#feb372" stroke="#272163" strokeWidth="4"/>
-                {/* Hair - updated color */}
-                <path d="M50 50C50 50 55 40 70 40C85 40 90 50 90 50" fill="#097a90" stroke="#272163" strokeWidth="4"/>
+                {/* Hair - enhanced with more volume and styling */}
+                <path d="M50 50C40 40 55 30 70 30C85 30 100 40 90 50" fill="#097a90" stroke="#272163" strokeWidth="4"/>
+                <path d="M45 48C45 48 50 38 60 42" stroke="#272163" strokeWidth="3" fill="none"/>
+                <path d="M95 48C95 48 90 38 80 42" stroke="#272163" strokeWidth="3" fill="none"/>
                 {/* Eyes - curved happy eyes */}
                 <path d="M57 60C57 60 60 65 63 60" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
                 <path d="M77 60C77 60 80 65 83 60" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
