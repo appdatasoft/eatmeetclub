@@ -20,10 +20,11 @@ const Logo: React.FC<LogoProps> = ({ className = '' }) => {
           {/* Heart */}
           <path d="M60,70 C60,50 80,50 90,60 C100,50 120,50 120,70 C120,90 90,110 90,110 C90,110 60,90 60,70Z" fill="#ff5f50" stroke="#008080" strokeWidth="5" />
           
-          {/* Fork */}
-          <path d="M140,40 L140,160" stroke="#272163" strokeWidth="15" strokeLinecap="round" />
-          <path d="M120,40 L140,60" stroke="#272163" strokeWidth="15" strokeLinecap="round" />
-          <path d="M140,60 L160,40" stroke="#272163" strokeWidth="15" strokeLinecap="round" />
+          {/* Fork - modified with longer teeth */}
+          <path d="M140,30 L140,160" stroke="#272163" strokeWidth="15" strokeLinecap="round" />
+          <path d="M120,30 L120,70" stroke="#272163" strokeWidth="15" strokeLinecap="round" />
+          <path d="M140,30 L140,70" stroke="#272163" strokeWidth="15" strokeLinecap="round" />
+          <path d="M160,30 L160,70" stroke="#272163" strokeWidth="15" strokeLinecap="round" />
         </svg>
         
         <div className="font-serif text-xl font-bold">
