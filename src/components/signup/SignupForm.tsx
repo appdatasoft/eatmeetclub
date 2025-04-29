@@ -24,10 +24,11 @@ const signupSchema = z.object({
 export type SignupFormValues = z.infer<typeof signupSchema>;
 
 interface SignupFormProps {
-  onSubmit: (values: SignupFormValues) => void;
+  onSubmit: (values: SignupFormValues) => Promise<void>;
+  isLoading: boolean;
 }
 
-const SignupForm = ({ onSubmit }: SignupFormProps) => {
+const SignupForm = ({ onSubmit, isLoading }: SignupFormProps) => {
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -56,8 +57,8 @@ const SignupForm = ({ onSubmit }: SignupFormProps) => {
     form.setValue("phoneNumber", formattedValue);
   };
 
-  const handleSubmit = form.handleSubmit((values) => {
-    onSubmit(values);
+  const handleSubmit = form.handleSubmit(async (values) => {
+    await onSubmit(values);
   });
 
   return (
@@ -123,6 +124,7 @@ const SignupForm = ({ onSubmit }: SignupFormProps) => {
         <Button
           type="submit"
           className="w-full"
+          isLoading={isLoading}
         >
           Continue
         </Button>

@@ -8,6 +8,7 @@ import PaymentForm from "@/components/signup/PaymentForm";
 import Navbar from "@/components/layout/Navbar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,9 +20,41 @@ const Signup = () => {
   const [searchParams] = useSearchParams();
   const paymentCanceled = searchParams.get('canceled') === 'true';
 
-  const handleSignupSubmit = (values: SignupFormValues) => {
-    setUserDetails(values);
-    setShowPaymentForm(true);
+  const handleSignupSubmit = async (values: SignupFormValues) => {
+    setIsLoading(true);
+
+    try {
+      // Register the user in Supabase Auth
+      const { error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            phone: values.phoneNumber || null,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Registration successful",
+        description: "Your account has been created successfully.",
+      });
+
+      // Proceed to payment form
+      setUserDetails(values);
+      setShowPaymentForm(true);
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      toast({
+        title: "Registration failed",
+        description: error.message || "There was a problem creating your account",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePayment = async (e: React.FormEvent) => {
@@ -92,7 +125,10 @@ const Signup = () => {
               )}
               
               {!showPaymentForm ? (
-                <SignupForm onSubmit={handleSignupSubmit} />
+                <SignupForm 
+                  onSubmit={handleSignupSubmit} 
+                  isLoading={isLoading}
+                />
               ) : (
                 <PaymentForm 
                   userDetails={userDetails!}
