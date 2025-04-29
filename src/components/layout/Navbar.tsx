@@ -16,17 +16,31 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Error logging out:', error.message);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error logging out:', error.message);
+        toast({
+          title: "Logout failed",
+          description: error.message || "An error occurred while logging out",
+          variant: "destructive"
+        });
+      } else {
+        // Only navigate and show success toast if there was no error
+        navigate('/');
+        toast({
+          title: "Logged out successfully",
+          description: "You have been logged out of your account"
+        });
+      }
+    } catch (error: any) {
+      console.error('Error during logout:', error);
       toast({
         title: "Logout failed",
-        description: error.message || "An error occurred while logging out",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
-      throw error;
     }
-    navigate('/');
   };
 
   const toggleMobileMenu = () => {

@@ -15,17 +15,10 @@ const AuthButtons = ({ user, handleLogout }: AuthButtonsProps) => {
   const onLogout = async () => {
     try {
       await handleLogout();
-      toast({
-        title: "Logged out successfully",
-        description: "You have been logged out of your account"
-      });
+      // Toast notification is now handled in the Navbar component
     } catch (error) {
-      console.error("Logout error:", error);
-      toast({
-        title: "Error logging out",
-        description: "There was a problem logging out. Please try again.",
-        variant: "destructive"
-      });
+      console.error("AuthButtons logout error:", error);
+      // Error handling is now done in the Navbar component
     }
   };
 
