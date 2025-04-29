@@ -25,6 +25,7 @@ const Events = () => {
     const fetchPublishedEvents = async () => {
       try {
         setIsLoading(true);
+        console.log("Fetching published events...");
         
         const { data, error } = await supabase
           .from('events')
@@ -41,7 +42,12 @@ const Events = () => {
           .eq('published', true)
           .order('date', { ascending: true });
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching events:", error);
+          throw error;
+        }
+        
+        console.log("Events data received:", data);
         
         // Transform data to match EventCardProps format
         const formattedEvents: EventCardProps[] = (data || []).map((event: any) => {
@@ -98,6 +104,7 @@ const Events = () => {
           };
         });
         
+        console.log("Formatted events:", formattedEvents);
         setEvents(formattedEvents);
         setFilteredEvents(formattedEvents);
       } catch (error) {
