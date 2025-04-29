@@ -46,12 +46,17 @@ const ConfigPage = () => {
         setConfigs(data as ConfigItem[]);
         
         // Set form values from fetched data
-        const configMap = data.reduce((acc: Record<string, string>, item: ConfigItem) => {
-          acc[item.key] = item.value;
-          return acc;
-        }, {});
+        const configMap: Record<string, string> = {};
         
-        form.reset(configMap as ConfigFormValues);
+        // Initialize with default values first
+        configMap['EVENT_CREATION_FEE'] = '50';
+        
+        // Then override with actual values from database
+        data.forEach((item: ConfigItem) => {
+          configMap[item.key] = item.value;
+        });
+        
+        form.reset(configMap as unknown as ConfigFormValues);
       } catch (error: any) {
         console.error('Error fetching configs:', error);
         toast({

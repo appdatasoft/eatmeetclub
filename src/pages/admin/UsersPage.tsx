@@ -58,7 +58,7 @@ const UsersPage = () => {
       const formattedUsers = userData.users.map((user: any) => ({
         id: user.id,
         email: user.email,
-        role: roleMap[user.id] || 'user',
+        role: (roleMap[user.id] || 'user') as 'admin' | 'user',
         created_at: user.created_at
       }));
       
