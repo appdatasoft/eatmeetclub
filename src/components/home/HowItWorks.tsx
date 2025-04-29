@@ -6,7 +6,7 @@ const HowItWorks = () => {
     <section className="section-padding bg-white">
       <div className="container-custom">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-10 text-[#0d7b8a]">HOW IT WORKS</h2>
+          <h2 className="text-4xl font-bold mb-10 text-[#007c89]">HOW IT WORKS</h2>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -16,12 +16,12 @@ const HowItWorks = () => {
               <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="70" cy="70" r="70" fill="#9FD7D9" fillOpacity="0.6"/>
                 {/* Envelope */}
-                <rect x="35" y="45" width="70" height="50" rx="3" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
-                {/* Envelope flap lines */}
-                <path d="M35 55L70 75L105 55" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <rect x="40" y="45" width="60" height="45" rx="2" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
+                {/* Envelope flap */}
+                <path d="M40 50L70 70L100 50" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
               </svg>
             </div>
-            <h3 className="text-xl font-bold mb-3 text-[#0d7b8a]">
+            <h3 className="text-xl font-bold mb-3 text-[#272163]">
               Sign up and get invites to upcoming dinners
             </h3>
             <p className="text-gray-600">
@@ -29,26 +29,24 @@ const HowItWorks = () => {
             </p>
           </div>
           
-          {/* Step 2 - Plate with utensils */}
+          {/* Step 2 - Plate with fork and knife */}
           <div className="flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300">
             <div className="mb-6 transform transition-transform duration-300 group-hover:scale-105">
               <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="70" cy="70" r="70" fill="#9FD7D9" fillOpacity="0.6"/>
                 {/* Plate */}
-                <circle cx="70" cy="70" r="35" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
+                <circle cx="70" cy="70" r="30" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
                 {/* Fork on the left */}
-                <path d="M50 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M46 50H54" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M46 55H54" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M46 60H54" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M40 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M40 48L50 48" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M40 55L50 55" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M40 62L50 62" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
                 {/* Knife on the right */}
-                <path d="M90 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M90 45L85 50" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M90 55L85 60" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M90 65L85 70" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M100 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M100 50L95 60" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
               </svg>
             </div>
-            <h3 className="text-xl font-bold mb-3 text-[#0d7b8a]">
+            <h3 className="text-xl font-bold mb-3 text-[#272163]">
               Share a meal at local spots with fellow members
             </h3>
             <p className="text-gray-600">
@@ -56,23 +54,23 @@ const HowItWorks = () => {
             </p>
           </div>
           
-          {/* Step 3 - Happy face icon */}
+          {/* Step 3 - Smiling face icon */}
           <div className="flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300">
             <div className="mb-6 transform transition-transform duration-300 group-hover:scale-105">
               <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="70" cy="70" r="70" fill="#9FD7D9" fillOpacity="0.6"/>
                 {/* Face circle */}
-                <circle cx="70" cy="70" r="35" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
+                <circle cx="70" cy="70" r="30" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
                 {/* Hair */}
-                <path d="M70 40C60 40 55 45 55 45C55 45 60 35 70 35C80 35 85 45 85 45C85 45 80 40 70 40Z" fill="#9FD7D9" stroke="#272163" strokeWidth="3"/>
-                {/* Eyes - smiling */}
-                <path d="M57 62C59 60 61 60 63 62" stroke="#272163" strokeWidth="3" strokeLinecap="round"/>
-                <path d="M77 62C79 60 81 60 83 62" stroke="#272163" strokeWidth="3" strokeLinecap="round"/>
+                <path d="M50 50C50 50 55 40 70 40C85 40 90 50 90 50" fill="#9FD7D9" stroke="#272163" strokeWidth="4"/>
+                {/* Eyes - curved happy eyes */}
+                <path d="M57 60C57 60 60 65 63 60" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M77 60C77 60 80 65 83 60" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
                 {/* Smile */}
-                <path d="M55 75C55 75 60 85 70 85C80 85 85 75 85 75" stroke="#272163" strokeWidth="3" strokeLinecap="round"/>
+                <path d="M60 80C60 80 65 85 80 80" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
               </svg>
             </div>
-            <h3 className="text-xl font-bold mb-3 text-[#0d7b8a]">
+            <h3 className="text-xl font-bold mb-3 text-[#272163]">
               Make connections and enjoy great company
             </h3>
             <p className="text-gray-600">
@@ -84,9 +82,9 @@ const HowItWorks = () => {
         <div className="mt-16 text-center">
           <a 
             href="/signup" 
-            className="inline-block bg-[#f25c41] text-white hover:bg-[#e04e35] px-10 py-4 text-lg rounded-full transition-colors duration-300 font-semibold"
+            className="inline-block bg-[#ff5f50] text-[#272163] hover:bg-[#ff4c3d] px-10 py-4 text-xl rounded-full transition-colors duration-300 font-bold"
           >
-            JOIN NOW
+            BECOME A MEMBER
           </a>
         </div>
       </div>
