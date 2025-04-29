@@ -37,12 +37,12 @@ export const useEvents = () => {
         console.error("First attempt error:", error);
         console.log("Trying alternative query approach...");
         
-        // Try again with a REST API call
-        const publicUrl = `${supabase.supabaseUrl}/rest/v1/events?select=id,title,date,time,price,capacity,cover_image,published,restaurant:restaurants(name,city,state)&published=eq.true&order=date.asc`;
+        // Try again with a REST API call using the correct way to access URL and key
+        const publicUrl = `https://wocfwpedauuhlrfugxuu.supabase.co/rest/v1/events?select=id,title,date,time,price,capacity,cover_image,published,restaurant:restaurants(name,city,state)&published=eq.true&order=date.asc`;
         
         const response = await fetch(publicUrl, {
           headers: {
-            'apikey': supabase.supabaseKey,
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvY2Z3cGVkYXV1aGxyZnVneHV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4MjIzNzAsImV4cCI6MjA2MTM5ODM3MH0.ddkNFmDcRtkPA6ubax7_GJxGQ6oNvbmsZ_FTY9DuzhM',
             'Content-Type': 'application/json'
           }
         });
