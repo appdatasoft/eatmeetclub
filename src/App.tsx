@@ -1,3 +1,4 @@
+
 import {
   BrowserRouter as Router,
   Route,
@@ -8,7 +9,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
 import "./App.css";
 import Index from "./pages/Index";
-import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/dashboard/Dashboard";
@@ -20,7 +20,6 @@ import EventPayment from "./pages/dashboard/EventPayment";
 import TicketSuccess from "./pages/TicketSuccess";
 import AddRestaurant from "./pages/dashboard/AddRestaurant";
 import HowItWorks from "./pages/HowItWorks";
-import MembershipPayment from "./pages/MembershipPayment";
 import PaymentSuccessPage from "./pages/dashboard/PaymentSuccessPage";
 import RestaurantJoin from "./pages/restaurants/RestaurantJoin";
 
@@ -41,7 +40,6 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Index />} />
-        <Route path="/landing" element={<LandingPage />} />
         <Route path="/how-it-works" element={<HowItWorks />} />
         <Route
           path="/login"
@@ -51,6 +49,8 @@ function App() {
           path="/become-member"
           element={!session ? <Signup /> : <Navigate to="/dashboard" />}
         />
+        {/* Redirect from old signup route to new become-member route */}
+        <Route path="/signup" element={<Navigate to="/become-member" />} />
         <Route
           path="/dashboard"
           element={session ? <Dashboard /> : <Navigate to="/login" />}
