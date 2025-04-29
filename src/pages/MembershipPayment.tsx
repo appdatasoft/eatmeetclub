@@ -64,6 +64,7 @@ const MembershipPayment = () => {
   const onSubmit = async (values: MembershipFormValues) => {
     try {
       setIsLoading(true);
+      console.log("Initiating payment process with values:", values);
       
       // Create a Stripe checkout session
       const response = await fetch(
@@ -81,15 +82,20 @@ const MembershipPayment = () => {
         }
       );
       
+      console.log("Response status:", response.status);
+      
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("Error response:", errorData);
         throw new Error(errorData.message || "Failed to create checkout session");
       }
       
       const data = await response.json();
+      console.log("Checkout session created:", data);
       
       if (data.success && data.url) {
         // Redirect to the Stripe checkout page
+        console.log("Redirecting to:", data.url);
         window.location.href = data.url;
       } else {
         throw new Error(data.message || "Failed to create checkout session");
@@ -221,7 +227,7 @@ const MembershipPayment = () => {
                         <Button type="button" variant="outline" onClick={handleCancel}>
                           Cancel
                         </Button>
-                        <Button type="submit" disabled={isLoading}>
+                        <Button type="submit" isLoading={isLoading}>
                           {isLoading ? "Processing..." : "Subscribe Now"}
                         </Button>
                       </div>

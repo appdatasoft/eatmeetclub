@@ -24,7 +24,9 @@ serve(async (req) => {
 
     console.log("Creating checkout session for:", { email, name, phone });
 
-    const origin = req.headers.get('origin') || 'https://75cdb42b-d2ca-4370-bb78-477876ee9d08.lovableproject.com';
+    // Get the origin from request headers or use default preview URL
+    const origin = req.headers.get('origin') || 'https://preview-398a5698--eatmeetclub.lovable.app';
+    console.log("Using origin:", origin);
 
     // Create a Stripe checkout session
     const session = await stripe.checkout.sessions.create({

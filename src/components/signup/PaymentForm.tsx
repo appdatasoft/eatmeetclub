@@ -64,6 +64,12 @@ const PaymentForm = ({
     setCardExpiry(formattedValue);
   };
 
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Payment form submitted");
+    onSubmit(e);
+  };
+
   return (
     <>
       <div className="mb-6">
@@ -74,7 +80,7 @@ const PaymentForm = ({
         )}
       </div>
       
-      <form className="space-y-4" onSubmit={onSubmit}>
+      <form className="space-y-4" onSubmit={handleFormSubmit}>
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-4">
           <p className="text-amber-800 text-sm">
             You will be charged ${membershipFee.toFixed(2)}{isSubscription ? "/month" : ""} for your membership.
