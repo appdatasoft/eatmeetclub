@@ -4,12 +4,12 @@ import { Button } from "@/components/common/Button";
 const Hero = () => {
   return (
     <div 
-      className="w-full py-12 md:py-24 relative h-[500px] bg-[#B5642A]"
+      className="w-full py-12 md:py-24 relative h-[500px]"
       style={{ 
-        backgroundImage: `url('/src/assets/dining-scene.svg')`,
+        backgroundImage: `url('/lovable-uploads/37ba24a5-e795-4364-9d0c-e41383e1dc60.png')`,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        backgroundRepeat: "no-repeat"
+        backgroundColor: "#B5642A" // Fallback color that matches the image
       }}
     >
       <div className="absolute inset-0 bg-black bg-opacity-30"></div>
