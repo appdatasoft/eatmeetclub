@@ -49,7 +49,7 @@ const DatePickerField = ({ form }: DatePickerFieldProps) => {
                   date > new Date() || date < new Date("1900-01-01")
                 }
                 initialFocus
-                className="pointer-events-auto"
+                className="p-3 pointer-events-auto"
               />
             </PopoverContent>
           </Popover>

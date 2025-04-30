@@ -87,7 +87,7 @@ const EditEvent = () => {
   }, [id, navigate, toast, user, isAdmin]);
   
   const handleUpdateEvent = async (eventData: any) => {
-    if (!canEdit) {
+    if (!canEdit || !id) {
       toast({
         title: "Permission Denied",
         description: "You don't have permission to edit this event",
@@ -107,6 +107,8 @@ const EditEvent = () => {
         });
         return;
       }
+      
+      console.log("Updating event with data:", eventData);
       
       const { error } = await supabase
         .from('events')

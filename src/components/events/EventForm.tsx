@@ -55,8 +55,12 @@ const EventForm: React.FC<EventFormProps> = ({
         capacity: existingEvent.capacity ? String(existingEvent.capacity) : '',
         price: existingEvent.price ? String(existingEvent.price) : ''
       });
+      
+      if (existingEvent.restaurant_id) {
+        setSelectedRestaurantId(existingEvent.restaurant_id);
+      }
     }
-  }, [existingEvent]);
+  }, [existingEvent, setSelectedRestaurantId]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -83,6 +87,7 @@ const EventForm: React.FC<EventFormProps> = ({
       price: parseFloat(formData.get('price') as string),
     };
     
+    console.log("Form submitted with data:", eventDetails);
     onSubmit(eventDetails);
   };
 
