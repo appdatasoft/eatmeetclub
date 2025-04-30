@@ -4,6 +4,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import { useAuth } from '@/hooks/useAuth';
+import { PlusCircle } from 'lucide-react'; 
+import { Button } from '@/components/ui/button';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -79,12 +81,22 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                       </Link>
                     </li>
                     <li>
-                      <Link 
-                        to="/dashboard/memories" 
-                        className={`block px-3 py-2 rounded-md ${isActive('/dashboard/memories')}`}
-                      >
-                        Memories
-                      </Link>
+                      <div className="flex justify-between items-center">
+                        <Link 
+                          to="/dashboard/memories" 
+                          className={`block flex-grow px-3 py-2 rounded-md ${isActive('/dashboard/memories')}`}
+                        >
+                          Memories
+                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="mr-2"
+                          onClick={() => navigate('/dashboard/create-memory')}
+                        >
+                          <PlusCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </li>
                     <li>
                       <Link 
