@@ -25,7 +25,7 @@ const EventDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { 
     event, 
-    loading, 
+    isLoading, 
     isPaymentProcessing, 
     handleBuyTickets, 
     isCurrentUserOwner, 
@@ -226,7 +226,7 @@ const EventDetails = () => {
     handleBuyTickets(ticketCount);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <>
         <Navbar />
