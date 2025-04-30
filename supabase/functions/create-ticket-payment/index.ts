@@ -97,6 +97,9 @@ serve(async (req) => {
 
     console.log("Creating Stripe checkout session");
 
+    const origin = req.headers.get('origin') || 'https://localhost:3000';
+    console.log("Origin for redirect URLs:", origin);
+    
     // Create a Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -125,8 +128,8 @@ serve(async (req) => {
         },
       ],
       mode: 'payment',
-      success_url: `${req.headers.get('origin')}/ticket-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get('origin')}/event/${eventId}`,
+      success_url: `${origin}/ticket-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/event/${eventId}`,
       client_reference_id: user.id,
       customer_email: user.email,
       metadata: {
@@ -160,8 +163,11 @@ serve(async (req) => {
     if (ticketError) {
       console.error('Error creating ticket record:', ticketError);
       // Continue anyway as the payment might still be processed
+    } else {
+      console.log('Ticket record created successfully:', ticketData);
     }
 
+    console.log('Returning checkout URL:', session.url);
     return new Response(
       JSON.stringify({ url: session.url }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

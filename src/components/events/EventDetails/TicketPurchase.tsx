@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { Loader2 } from "lucide-react";
 
 interface TicketPurchaseProps {
   price: number;
@@ -119,7 +120,14 @@ const TicketPurchase: React.FC<TicketPurchaseProps> = ({
           size="lg"
           disabled={isPaymentProcessing}
         >
-          {isPaymentProcessing ? "Processing..." : `Buy Ticket${ticketCount > 1 ? 's' : ''}`}
+          {isPaymentProcessing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            `Buy Ticket${ticketCount > 1 ? 's' : ''}`
+          )}
         </Button>
       )}
       

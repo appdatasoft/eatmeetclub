@@ -91,9 +91,11 @@ export const useEventPaymentHandler = (
         timestamp: Date.now() // Add timestamp for tracking
       }));
       
-      // Redirect to Stripe checkout - make sure this executes
+      // Force the redirect using setTimeout to ensure it happens after state updates
       console.log("Redirecting to Stripe checkout:", response.data.url);
-      window.location.href = response.data.url;
+      setTimeout(() => {
+        window.location.href = response.data.url;
+      }, 100);
     } catch (error: any) {
       console.error("Error creating payment session:", error);
       toast({
