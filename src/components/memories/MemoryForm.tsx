@@ -33,6 +33,8 @@ const MemoryForm = ({
   memory 
 }: MemoryFormProps) => {
   const [isUploading, setIsUploading] = useState(false);
+  const [initialPhotoUrl, setInitialPhotoUrl] = useState<string | undefined>(undefined);
+  
   const form = useForm<MemoryFormValues>({
     resolver: zodResolver(memoryFormSchema),
     defaultValues: memory ? {
@@ -103,7 +105,10 @@ const MemoryForm = ({
         
         <PrivacySelector form={form} />
         
-        <PhotoUpload form={form} />
+        <PhotoUpload 
+          form={form} 
+          initialPhotoUrl={initialPhotoUrl}
+        />
         
         <SubmitButton 
           isLoading={isLoading} 

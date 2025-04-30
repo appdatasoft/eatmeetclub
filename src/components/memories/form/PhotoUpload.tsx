@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FormLabel } from '@/components/ui/form';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,17 @@ import { MemoryFormValues } from '../schema/memoryFormSchema';
 
 interface PhotoUploadProps {
   form: UseFormReturn<MemoryFormValues>;
+  initialPhotoUrl?: string;
 }
 
-const PhotoUpload = ({ form }: PhotoUploadProps) => {
+const PhotoUpload = ({ form, initialPhotoUrl }: PhotoUploadProps) => {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialPhotoUrl) {
+      setPhotoPreview(initialPhotoUrl);
+    }
+  }, [initialPhotoUrl]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

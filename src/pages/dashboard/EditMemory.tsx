@@ -20,6 +20,7 @@ const EditMemory = () => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [memory, setMemory] = useState<Memory | null>(null);
+  const [memoryContent, setMemoryContent] = useState<any[]>([]);
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
 
@@ -30,16 +31,17 @@ const EditMemory = () => {
       try {
         setIsLoading(true);
         
-        const { data, error } = await supabase
+        // Fetch memory data
+        const { data: memoryData, error: memoryError } = await supabase
           .from('memories')
           .select('*')
           .eq('id', id)
           .single();
           
-        if (error) throw error;
+        if (memoryError) throw memoryError;
         
         // Check if user is memory owner
-        if (data.user_id !== user.id) {
+        if (memoryData.user_id !== user.id) {
           toast({
             title: "Permission denied",
             description: "You don't have permission to edit this memory",
@@ -49,7 +51,16 @@ const EditMemory = () => {
           return;
         }
         
-        setMemory(data);
+        setMemory(memoryData);
+        
+        // Fetch memory content (like photos)
+        const { data: contentData, error: contentError } = await supabase
+          .from('memory_content')
+          .select('*')
+          .eq('memory_id', id);
+          
+        if (contentError) throw contentError;
+        setMemoryContent(contentData || []);
         
         // Fetch restaurants and events for dropdowns
         const [restaurantsResponse, eventsResponse] = await Promise.all([
