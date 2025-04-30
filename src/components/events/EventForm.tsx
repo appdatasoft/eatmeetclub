@@ -149,7 +149,11 @@ const EventForm: React.FC<EventFormProps> = ({
         <div className="space-y-2">
           <Label htmlFor="restaurant">Select Restaurant*</Label>
           {restaurants.length > 0 ? (
-            <Select value={selectedRestaurantId} onValueChange={setSelectedRestaurantId}>
+            <Select 
+              value={selectedRestaurantId} 
+              onValueChange={setSelectedRestaurantId}
+              required
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Choose a restaurant" />
               </SelectTrigger>
@@ -213,7 +217,11 @@ const EventForm: React.FC<EventFormProps> = ({
       </div>
       
       <div>
-        <Button type="submit" isLoading={isLoading}>
+        <Button 
+          type="submit" 
+          isLoading={isLoading}
+          disabled={isLoading || !selectedRestaurantId}
+        >
           {submitLabel}
         </Button>
       </div>

@@ -117,8 +117,8 @@ const EditEvent = () => {
           description: eventData.description,
           date: eventData.date,
           time: eventData.time,
-          capacity: eventData.capacity,
-          price: eventData.price,
+          capacity: Number(eventData.capacity),
+          price: Number(eventData.price),
           restaurant_id: eventData.restaurant_id,
           updated_at: new Date().toISOString()
         })
