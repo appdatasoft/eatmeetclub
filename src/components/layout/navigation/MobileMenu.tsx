@@ -1,87 +1,69 @@
 
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/common/Button';
-import { LogOut } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
 
 interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  user: any | null;
-  handleLogout: () => Promise<void>;
+  user: any;
+  handleLogout: () => void;
 }
 
 const MobileMenu = ({ isOpen, onClose, user, handleLogout }: MobileMenuProps) => {
-  if (!isOpen) return null;
+  const { isAdmin } = useAuth();
   
-  const onLogout = () => {
-    handleLogout();
-    onClose();
-  };
+  if (!isOpen) return null;
 
   return (
-    <div className="md:hidden bg-white border-t animate-fade-in">
-      <div className="container-custom py-2 space-y-1">
-        <Link
-          to="/"
-          className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-          onClick={onClose}
-        >
-          Home
-        </Link>
-        <Link
-          to="/events"
-          className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-          onClick={onClose}
-        >
-          Events
-        </Link>
-        <Link
-          to="/venues"
-          className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-          onClick={onClose}
-        >
-          Venues
-        </Link>
-        <Link
-          to="/how-it-works"
-          className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-          onClick={onClose}
-        >
-          How It Works
-        </Link>
-        <Link
-          to="/about"
-          className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-          onClick={onClose}
-        >
-          About
-        </Link>
-        {!user && (
-          <Link
-            to="/signup"
-            className="block px-3 py-2 rounded-md text-base font-medium text-brand-500 hover:bg-accent"
+    <div className="md:hidden fixed inset-0 bg-white z-50">
+      <div className="flex flex-col h-full">
+        <div className="flex justify-end p-4">
+          <Button
+            variant="ghost"
             onClick={onClose}
+            className="p-2"
           >
-            Join Now
-          </Link>
-        )}
-        <div className="pt-2 pb-3 border-t border-gray-100 flex flex-col space-y-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </Button>
+        </div>
+        <nav className="flex flex-col p-4 space-y-4">
+          <Link to="/" onClick={onClose} className="text-lg py-2">Home</Link>
+          <Link to="/events" onClick={onClose} className="text-lg py-2">Events</Link>
+          <Link to="/venues" onClick={onClose} className="text-lg py-2">Venues</Link>
+          <Link to="/dashboard/memories" onClick={onClose} className="text-lg py-2">Memories</Link>
+          <Link to="/about" onClick={onClose} className="text-lg py-2">About</Link>
+          <Link to="/how-it-works" onClick={onClose} className="text-lg py-2">How it Works</Link>
+          
           {user ? (
             <>
-              <Button href="/dashboard" variant="ghost" className="justify-center" onClick={onClose}>
-                Dashboard
-              </Button>
-              <Button onClick={onLogout} variant="outline" className="justify-center">
-                <LogOut className="h-4 w-4 mr-2" />
-                Log out
-              </Button>
+              <div className="pt-4 border-t border-gray-200">
+                <Link to="/dashboard" onClick={onClose} className="text-lg py-2">Dashboard</Link>
+                {isAdmin && (
+                  <Link to="/admin" onClick={onClose} className="text-lg py-2">Admin</Link>
+                )}
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    handleLogout();
+                    onClose();
+                  }}
+                  className="w-full justify-start p-0 text-lg py-2"
+                >
+                  Logout
+                </Button>
+              </div>
             </>
           ) : (
-            <Button href="/login" variant="ghost" className="justify-center" onClick={onClose}>
-              Log in
-            </Button>
+            <div className="pt-4 border-t border-gray-200">
+              <Link to="/login" onClick={onClose} className="text-lg py-2">Login</Link>
+              <Link to="/signup" onClick={onClose} className="text-lg py-2">Sign Up</Link>
+            </div>
           )}
-        </div>
+        </nav>
       </div>
     </div>
   );
