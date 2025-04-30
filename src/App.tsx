@@ -30,6 +30,7 @@ import Users from "./pages/dashboard/Users";
 import CreateEvent from "./pages/dashboard/CreateEvent";
 import EventPayment from "./pages/dashboard/EventPayment";
 import PaymentSuccessPage from "./pages/dashboard/PaymentSuccessPage";
+import DashboardLayout from "./components/layout/DashboardLayout";
 import "./App.css";
 
 function App() {
@@ -51,19 +52,19 @@ function App() {
       <Route path="/venues/:id" element={<RestaurantDetailsPage />} />
       <Route path="/profile/:id" element={<UserProfilePage />} />
 
-      {/* Dashboard routes */}
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/dashboard/memories" element={<Memories />} />
-      <Route path="/dashboard/create-memory" element={<CreateMemory />} />
-      <Route path="/dashboard/memories/:id" element={<MemoryDetail />} />
-      <Route path="/dashboard/memories/:id/edit" element={<EditMemory />} />
-      <Route path="/dashboard/settings" element={<Settings />} />
-      <Route path="/dashboard/add-restaurant" element={<AddRestaurant />} />
-      <Route path="/dashboard/create-event" element={<CreateEvent />} />
-      <Route path="/dashboard/event-payment" element={<EventPayment />} />
-      <Route path="/dashboard/payment/success" element={<PaymentSuccessPage />} />
-      <Route path="/dashboard/admin-settings" element={<AdminSettings />} />
-      <Route path="/dashboard/users" element={<Users />} />
+      {/* Dashboard routes with DashboardLayout wrapper */}
+      <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
+      <Route path="/dashboard/memories" element={<DashboardLayout><Memories /></DashboardLayout>} />
+      <Route path="/dashboard/create-memory" element={<DashboardLayout><CreateMemory /></DashboardLayout>} />
+      <Route path="/dashboard/memories/:id" element={<DashboardLayout><MemoryDetail /></DashboardLayout>} />
+      <Route path="/dashboard/memories/:id/edit" element={<DashboardLayout><EditMemory /></DashboardLayout>} />
+      <Route path="/dashboard/settings" element={<DashboardLayout><Settings /></DashboardLayout>} />
+      <Route path="/dashboard/add-restaurant" element={<DashboardLayout><AddRestaurant /></DashboardLayout>} />
+      <Route path="/dashboard/create-event" element={<DashboardLayout><CreateEvent /></DashboardLayout>} />
+      <Route path="/dashboard/event-payment" element={<DashboardLayout><EventPayment /></DashboardLayout>} />
+      <Route path="/dashboard/payment/success" element={<DashboardLayout><PaymentSuccessPage /></DashboardLayout>} />
+      <Route path="/dashboard/admin-settings" element={<DashboardLayout><AdminSettings /></DashboardLayout>} />
+      <Route path="/dashboard/users" element={<DashboardLayout><Users /></DashboardLayout>} />
 
       {/* Admin routes */}
       <Route path="/admin" element={<AdminDashboard />} />
