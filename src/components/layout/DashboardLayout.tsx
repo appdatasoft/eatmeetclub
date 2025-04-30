@@ -69,7 +69,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                         to="/dashboard/create-event" 
                         className={`block px-3 py-2 rounded-md ${isActive('/dashboard/create-event')}`}
                       >
-                        Create Event
+                        Events
                       </Link>
                     </li>
                     <li>
@@ -77,7 +77,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                         to="/dashboard/add-restaurant" 
                         className={`block px-3 py-2 rounded-md ${isActive('/dashboard/add-restaurant')}`}
                       >
-                        Add Restaurant
+                        Restaurants
                       </Link>
                     </li>
                     <li>
