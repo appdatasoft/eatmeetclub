@@ -1,7 +1,8 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { EventDetails, EventDetailsResponse } from "./types/eventTypes";
+import { toast } from "@/hooks/use-toast";
 
 export const useEventFetch = (eventId: string | undefined): EventDetailsResponse => {
   const [event, setEvent] = useState<EventDetails | null>(null);
@@ -10,22 +11,29 @@ export const useEventFetch = (eventId: string | undefined): EventDetailsResponse
   const [isCurrentUserOwner, setIsCurrentUserOwner] = useState(false);
   
   // Function to refresh event details
-  const refreshEventDetails = async () => {
-    if (!eventId) return;
+  const refreshEventDetails = useCallback(async () => {
+    if (!eventId) {
+      setError("No event ID provided");
+      setIsLoading(false);
+      return;
+    }
     
     try {
       setIsLoading(true);
       setError(null);
       
+      console.log("Fetching event details for ID:", eventId);
+      
       // First get the current user (if logged in)
       const { data: { session } } = await supabase.auth.getSession();
       const currentUserId = session?.user?.id;
+      console.log("Current user ID:", currentUserId);
       
       const { data, error: fetchError } = await supabase
         .from("events")
         .select(`
           *,
-          restaurants (
+          restaurant:restaurants (
             id,
             name,
             address,
@@ -40,7 +48,7 @@ export const useEventFetch = (eventId: string | undefined): EventDetailsResponse
 
       if (fetchError) {
         console.error("Error fetching event details:", fetchError);
-        setError("Failed to load event details");
+        setError(fetchError.message || "Failed to load event details");
         return;
       }
 
@@ -48,6 +56,8 @@ export const useEventFetch = (eventId: string | undefined): EventDetailsResponse
         setError("Event not found");
         return;
       }
+      
+      console.log("Event data received:", data);
 
       // Transform the data to match the EventDetails interface
       const eventDetails: EventDetails = {
@@ -59,13 +69,13 @@ export const useEventFetch = (eventId: string | undefined): EventDetailsResponse
         price: data.price,
         capacity: data.capacity,
         restaurant: {
-          id: data.restaurants?.id,
-          name: data.restaurants?.name || "Unknown Restaurant",
-          address: data.restaurants?.address || "",
-          city: data.restaurants?.city || "",
-          state: data.restaurants?.state || "",
-          zipcode: data.restaurants?.zipcode || "",
-          description: data.restaurants?.description || "",
+          id: data.restaurant?.id,
+          name: data.restaurant?.name || "Unknown Restaurant",
+          address: data.restaurant?.address || "",
+          city: data.restaurant?.city || "",
+          state: data.restaurant?.state || "",
+          zipcode: data.restaurant?.zipcode || "",
+          description: data.restaurant?.description || "",
         },
         tickets_sold: data.tickets_sold || 0,
         user_id: data.user_id,
@@ -84,14 +94,20 @@ export const useEventFetch = (eventId: string | undefined): EventDetailsResponse
     } catch (err: any) {
       console.error("Error in useEventFetch:", err);
       setError(err.message || "An unexpected error occurred");
+      
+      toast({
+        title: "Error loading event",
+        description: err.message || "Failed to load event details",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [eventId]);
 
   useEffect(() => {
     refreshEventDetails();
-  }, [eventId]);
+  }, [refreshEventDetails]);
 
   return {
     event,

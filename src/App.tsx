@@ -27,9 +27,18 @@ import AddRestaurant from "./pages/dashboard/AddRestaurant";
 import HowItWorks from "./pages/HowItWorks";
 import PaymentSuccessPage from "./pages/dashboard/PaymentSuccessPage";
 import RestaurantJoin from "./pages/restaurants/RestaurantJoin";
+import NotFound from "./pages/NotFound";
 
-// Create a client
-const queryClient = new QueryClient();
+// Create a client with default options
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 30000,
+    },
+  },
+});
 
 function App() {
   const [session, setSession] = useState(null);
@@ -127,6 +136,8 @@ function App() {
             path="/restaurants/join"
             element={<RestaurantJoin />}
           />
+          {/* Catch-all route for 404 errors */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
     </QueryClientProvider>

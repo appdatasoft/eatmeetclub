@@ -4,6 +4,8 @@ import { useEventDetails } from "@/hooks/useEventDetails";
 import { useAuth } from "@/hooks/useAuth";
 import { useEventAccess } from "@/hooks/useEventAccess";
 import { useEventActions } from "@/hooks/useEventActions";
+import { useEffect } from "react";
+import { toast } from "@/hooks/use-toast";
 
 // Layout components
 import Navbar from "@/components/layout/Navbar";
@@ -26,11 +28,28 @@ const EventDetailsPage = () => {
   const { 
     event, 
     isLoading, 
+    error,
     isPaymentProcessing, 
     handleBuyTickets, 
     isCurrentUserOwner, 
     refreshEventDetails 
   } = useEventDetails(id);
+  
+  // Log the event details for debugging
+  useEffect(() => {
+    console.log("Event details loaded:", { event, isLoading, error });
+  }, [event, isLoading, error]);
+  
+  // Show error toast if there's an error
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error loading event",
+        description: error,
+        variant: "destructive"
+      });
+    }
+  }, [error]);
   
   const { canEditEvent } = useEventAccess(event);
   
@@ -71,11 +90,11 @@ const EventDetailsPage = () => {
     );
   }
 
-  if (!event) {
+  if (error || !event) {
     return (
       <>
         <Navbar />
-        <EventNotFound />
+        <EventNotFound error={error} />
         <Footer />
       </>
     );
