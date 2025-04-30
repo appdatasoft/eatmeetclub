@@ -15,29 +15,46 @@ export const useEvents = () => {
       setFetchError(null);
       console.log("Fetching published events...");
       
-      // First try with supabase client query
-      let { data, error } = await supabase
-        .from('events')
-        .select(`
-          id, 
-          title, 
-          date, 
-          time, 
-          price, 
-          capacity,
-          cover_image,
-          published,
-          restaurant:restaurants(name, city, state)
-        `)
-        .eq('published', true)
-        .order('date', { ascending: true });
+      let data = null;
+      let error = null;
       
-      if (error) {
-        console.error("First attempt error:", error);
-        console.log("Trying alternative query approach...");
+      try {
+        // First attempt with supabase client query
+        console.log("Attempting to fetch events with Supabase client...");
+        const response = await supabase
+          .from('events')
+          .select(`
+            id, 
+            title, 
+            date, 
+            time, 
+            price, 
+            capacity,
+            cover_image,
+            published,
+            restaurant:restaurants(name, city, state)
+          `)
+          .eq('published', true)
+          .order('date', { ascending: true });
+          
+        if (response.error) {
+          console.error("Supabase client query error:", response.error);
+          error = response.error;
+        } else {
+          data = response.data;
+          console.log("Events fetched successfully with Supabase client:", data?.length || 0, "events");
+        }
+      } catch (clientError) {
+        console.error("Error in Supabase client approach:", clientError);
+        error = clientError;
+      }
+      
+      // If first attempt failed, try direct fetch approach
+      if (!data && error) {
+        console.log("First attempt failed. Trying direct REST API approach...");
         
         try {
-          // Use a direct public fetch with no auth required
+          // Use a direct REST API call as fallback
           const publicUrl = `https://wocfwpedauuhlrfugxuu.supabase.co/rest/v1/events?select=id,title,date,time,price,capacity,cover_image,published,restaurant:restaurants(name,city,state)&published=eq.true&order=date.asc`;
           
           console.log("Fetching from public URL:", publicUrl);
@@ -51,34 +68,40 @@ export const useEvents = () => {
           });
           
           if (!response.ok) {
-            console.error("Public API response status:", response.status);
-            throw new Error(`Public API request failed with status: ${response.status}`);
+            console.error("REST API response status:", response.status);
+            throw new Error(`REST API request failed with status: ${response.status}`);
           }
           
           const responseData = await response.json();
-          console.log("Public API response data:", responseData);
-          data = responseData;
-          error = null;
+          console.log("REST API response data:", responseData);
+          
+          if (Array.isArray(responseData)) {
+            data = responseData;
+            error = null;
+          } else {
+            console.error("Unexpected response format:", responseData);
+            throw new Error("Unexpected response format from REST API");
+          }
         } catch (fetchError: any) {
-          console.error("Error in public fetch attempt:", fetchError);
-          throw new Error(`Failed to fetch events: ${fetchError.message}`);
+          console.error("Error in REST API fetch attempt:", fetchError);
+          error = fetchError;
         }
       }
         
       if (error) {
-        console.error("Error fetching events:", error);
+        console.error("All attempts to fetch events failed:", error);
         setFetchError("Failed to load events. Please try again later.");
         setEvents([]);
         return;
       }
       
-      console.log("Events data received:", data);
-      
       if (!data || data.length === 0) {
-        console.log("No events found");
+        console.log("No events found in database");
         setEvents([]);
         return;
       }
+      
+      console.log("Raw events data:", data);
       
       // Transform data to match EventCardProps format
       const formattedEvents: EventCardProps[] = data.map((event: any) => {
@@ -101,7 +124,7 @@ export const useEvents = () => {
           const dateObj = new Date(event.date);
           formattedDate = format(dateObj, "MMMM d, yyyy");
         } catch (e) {
-          console.error("Error formatting date:", e);
+          console.error("Error formatting date:", e, "for date:", event.date);
         }
         
         // Format time from 24h to 12h format
@@ -115,30 +138,33 @@ export const useEvents = () => {
           hours = hours ? hours : 12; // the hour '0' should be '12'
           formattedTime = `${hours}:${minutes} ${ampm}`;
         } catch (e) {
-          console.error("Error formatting time:", e);
+          console.error("Error formatting time:", e, "for time:", event.time);
         }
         
         const location = event.restaurant 
           ? `${event.restaurant.city}, ${event.restaurant.state}` 
           : "";
-        
-        return {
+          
+        const eventProps = {
           id: event.id,
-          title: event.title,
+          title: event.title || "Untitled Event",
           restaurantName: event.restaurant ? event.restaurant.name : "Restaurant",
           date: formattedDate,
           time: formattedTime,
-          price: Number(event.price), // Ensure price is a number
+          price: Number(event.price) || 0, // Ensure price is a number
           image: event.cover_image || "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60",
           category,
           location
         };
+        
+        console.log("Formatted event:", eventProps);
+        return eventProps;
       });
       
-      console.log("Formatted events:", formattedEvents);
+      console.log("Final formatted events:", formattedEvents);
       setEvents(formattedEvents);
     } catch (error: any) {
-      console.error("Error fetching published events:", error);
+      console.error("Unexpected error fetching published events:", error);
       setFetchError(`An unexpected error occurred: ${error.message}`);
       setEvents([]);
     } finally {
