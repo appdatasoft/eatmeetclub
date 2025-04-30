@@ -97,7 +97,25 @@ serve(async (req) => {
 
     console.log("Creating Stripe checkout session");
 
-    const origin = req.headers.get('origin') || 'https://localhost:3000';
+    // Get origin URL safely
+    let origin = req.headers.get('origin');
+    if (!origin) {
+      // Fallback to referrer if origin is not available
+      const referrer = req.headers.get('referer');
+      if (referrer) {
+        try {
+          const url = new URL(referrer);
+          origin = `${url.protocol}//${url.host}`;
+        } catch (e) {
+          console.error("Failed to parse referrer:", e);
+          origin = 'https://fallback-url.com';
+        }
+      } else {
+        // Last resort fallback
+        origin = 'https://fallback-url.com';
+      }
+    }
+    
     console.log("Origin for redirect URLs:", origin);
     
     // Create a Stripe Checkout Session
@@ -143,6 +161,7 @@ serve(async (req) => {
     });
 
     console.log("Checkout session created:", session.id);
+    console.log("Checkout URL:", session.url);
 
     // Create a pending ticket record in the database
     const { data: ticketData, error: ticketError } = await supabaseClient
@@ -167,16 +186,36 @@ serve(async (req) => {
       console.log('Ticket record created successfully:', ticketData);
     }
 
+    // Return the checkout URL with explicit content type header
     console.log('Returning checkout URL:', session.url);
     return new Response(
-      JSON.stringify({ url: session.url }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        url: session.url,
+        sessionId: session.id 
+      }),
+      { 
+        status: 200, 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        } 
+      }
     );
   } catch (error) {
     console.error('Error in create-ticket-payment function:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        status: 500, 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, no-cache, must-revalidate'
+        } 
+      }
     );
   }
 });

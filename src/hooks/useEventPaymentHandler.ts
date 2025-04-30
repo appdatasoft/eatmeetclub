@@ -91,11 +91,15 @@ export const useEventPaymentHandler = (
         timestamp: Date.now() // Add timestamp for tracking
       }));
       
-      // Force the redirect using setTimeout to ensure it happens after state updates
+      // Hard redirect with complete URL replacement - most reliable way to redirect
       console.log("Redirecting to Stripe checkout:", response.data.url);
+      window.location.replace(response.data.url);
+      
+      // Fallback in case the above doesn't trigger immediately
       setTimeout(() => {
-        window.location.href = response.data.url;
-      }, 100);
+        console.log("Fallback redirect executing");
+        window.open(response.data.url, '_self');
+      }, 500);
     } catch (error: any) {
       console.error("Error creating payment session:", error);
       toast({

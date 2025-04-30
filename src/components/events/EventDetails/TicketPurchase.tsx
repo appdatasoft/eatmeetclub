@@ -31,6 +31,9 @@ const TicketPurchase: React.FC<TicketPurchaseProps> = ({
   };
 
   const handlePurchase = () => {
+    // Clear any previous attempts from localStorage to prevent duplicates
+    localStorage.removeItem('pendingTicketPurchase');
+    
     console.log("Purchase button clicked, calling onBuyTickets with count:", ticketCount);
     onBuyTickets(ticketCount);
   };
