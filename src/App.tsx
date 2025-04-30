@@ -8,6 +8,7 @@ import {
 import { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
 import "./App.css";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -26,6 +27,9 @@ import AddRestaurant from "./pages/dashboard/AddRestaurant";
 import HowItWorks from "./pages/HowItWorks";
 import PaymentSuccessPage from "./pages/dashboard/PaymentSuccessPage";
 import RestaurantJoin from "./pages/restaurants/RestaurantJoin";
+
+// Create a client
+const queryClient = new QueryClient();
 
 function App() {
   const [session, setSession] = useState(null);
@@ -58,72 +62,74 @@ function App() {
   }, [session]);
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route
-          path="/login"
-          element={!session ? <Login /> : <Navigate to="/dashboard" />}
-        />
-        <Route
-          path="/become-member"
-          element={!session ? <MembershipPayment /> : <Navigate to="/dashboard" />}
-        />
-        <Route
-          path="/signup"
-          element={!session ? <Signup /> : <Navigate to="/dashboard" />}
-        />
-        <Route
-          path="/dashboard"
-          element={session ? <Dashboard /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/dashboard/add-restaurant"
-          element={session ? <AddRestaurant /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/dashboard/create-event"
-          element={session ? <CreateEvent /> : <Navigate to="/login" />}
-        />
-        <Route path="/events" element={<Events />} />
-        <Route path="/venues" element={<VenuesPage />} />
-        {/* Public event details page - no auth required */}
-        <Route path="/event/:id" element={<EventDetailsPage />} />
-        {/* New restaurant details page - no auth required */}
-        <Route path="/restaurant/:id" element={<RestaurantDetailsPage />} />
-        {/* New user profile page - no auth required */}
-        <Route path="/user/:id" element={<UserProfilePage />} />
-        <Route
-          path="/create-event"
-          element={session ? <CreateEvent /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/edit-event/:id"
-          element={session ? <EditEvent /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/dashboard/payment/:eventId"
-          element={session ? <EventPayment /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/event-payment/:eventId"
-          element={session ? <EventPayment /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/ticket-success"
-          element={<TicketSuccess />}
-        />
-        <Route
-          path="/payment-success"
-          element={<PaymentSuccessPage />}
-        />
-        <Route
-          path="/restaurants/join"
-          element={<RestaurantJoin />}
-        />
-      </Routes>
-    </Router>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route
+            path="/login"
+            element={!session ? <Login /> : <Navigate to="/dashboard" />}
+          />
+          <Route
+            path="/become-member"
+            element={!session ? <MembershipPayment /> : <Navigate to="/dashboard" />}
+          />
+          <Route
+            path="/signup"
+            element={!session ? <Signup /> : <Navigate to="/dashboard" />}
+          />
+          <Route
+            path="/dashboard"
+            element={session ? <Dashboard /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/dashboard/add-restaurant"
+            element={session ? <AddRestaurant /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/dashboard/create-event"
+            element={session ? <CreateEvent /> : <Navigate to="/login" />}
+          />
+          <Route path="/events" element={<Events />} />
+          <Route path="/venues" element={<VenuesPage />} />
+          {/* Public event details page - no auth required */}
+          <Route path="/event/:id" element={<EventDetailsPage />} />
+          {/* New restaurant details page - no auth required */}
+          <Route path="/restaurant/:id" element={<RestaurantDetailsPage />} />
+          {/* New user profile page - no auth required */}
+          <Route path="/user/:id" element={<UserProfilePage />} />
+          <Route
+            path="/create-event"
+            element={session ? <CreateEvent /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/edit-event/:id"
+            element={session ? <EditEvent /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/dashboard/payment/:eventId"
+            element={session ? <EventPayment /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/event-payment/:eventId"
+            element={session ? <EventPayment /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/ticket-success"
+            element={<TicketSuccess />}
+          />
+          <Route
+            path="/payment-success"
+            element={<PaymentSuccessPage />}
+          />
+          <Route
+            path="/restaurants/join"
+            element={<RestaurantJoin />}
+          />
+        </Routes>
+      </Router>
+    </QueryClientProvider>
   );
 }
 
