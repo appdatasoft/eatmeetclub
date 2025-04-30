@@ -86,6 +86,15 @@ const EventForm: React.FC<EventFormProps> = ({
     onSubmit(eventDetails);
   };
 
+  const isFormValid = 
+    formValues.eventTitle && 
+    formValues.eventDescription && 
+    formValues.eventDate && 
+    formValues.eventTime && 
+    selectedRestaurantId && 
+    formValues.capacity && 
+    formValues.price;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
@@ -126,7 +135,7 @@ const EventForm: React.FC<EventFormProps> = ({
         <Button 
           type="submit" 
           isLoading={isLoading}
-          disabled={isLoading || !selectedRestaurantId}
+          disabled={isLoading || !isFormValid}
         >
           {submitLabel}
         </Button>

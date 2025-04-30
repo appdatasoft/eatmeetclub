@@ -2,6 +2,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { format } from 'date-fns';
 
 interface EventDateTimeInputsProps {
   eventDate: string;
@@ -14,6 +15,9 @@ const EventDateTimeInputs = ({
   eventTime, 
   handleChange 
 }: EventDateTimeInputsProps) => {
+  // Format the date display if needed
+  const formattedDate = eventDate || '';
+  
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="space-y-2">
@@ -23,7 +27,7 @@ const EventDateTimeInputs = ({
           name="eventDate" 
           type="date" 
           required 
-          value={eventDate}
+          value={formattedDate}
           onChange={handleChange}
         />
       </div>

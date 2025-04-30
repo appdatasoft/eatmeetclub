@@ -99,10 +99,10 @@ const EditEvent = () => {
     try {
       setIsLoading(true);
       
-      if (event.published) {
+      if (event.published && !isAdmin) {
         toast({
           title: "Cannot Update",
-          description: "Published events cannot be modified.",
+          description: "Published events cannot be modified except by admins.",
           variant: "destructive"
         });
         return;
