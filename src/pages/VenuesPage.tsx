@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -11,22 +12,30 @@ import { MapPin, Utensils as RestaurantIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/hooks/use-toast";
 
 const VenuesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   
-  const { data: restaurants, isLoading } = useQuery({
+  const { data: restaurants, isLoading, error } = useQuery({
     queryKey: ["restaurants"],
     queryFn: async () => {
+      console.log("Fetching restaurants data...");
       const { data, error } = await supabase
         .from("restaurants")
         .select("*");
       
       if (error) {
         console.error("Error fetching restaurants:", error);
+        toast({
+          title: "Error fetching venues",
+          description: error.message,
+          variant: "destructive",
+        });
         throw error;
       }
       
+      console.log("Restaurants data received:", data);
       return data as Restaurant[];
     },
   });
@@ -36,6 +45,15 @@ const VenuesPage = () => {
     restaurant.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
     restaurant.cuisine_type.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  // Log to debug
+  React.useEffect(() => {
+    console.log("VenuesPage rendered");
+    console.log("isLoading:", isLoading);
+    console.log("restaurants:", restaurants);
+    console.log("filteredRestaurants:", filteredRestaurants);
+    console.log("error:", error);
+  }, [isLoading, restaurants, filteredRestaurants, error]);
 
   return (
     <>
@@ -58,6 +76,16 @@ const VenuesPage = () => {
               />
             </div>
           </div>
+
+          {error && (
+            <div className="text-center py-12">
+              <RestaurantIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-lg font-medium">Error loading venues</h3>
+              <p className="mt-1 text-gray-500">
+                {error.message || "An unexpected error occurred. Please try again later."}
+              </p>
+            </div>
+          )}
 
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
