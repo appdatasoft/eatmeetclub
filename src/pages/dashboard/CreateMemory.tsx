@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import MemoryForm from '@/components/memories/MemoryForm';
@@ -10,11 +10,27 @@ import { useAuth } from '@/hooks/useAuth';
 
 const CreateMemory = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { createMemory, addMemoryContent } = useMemories();
   const [isLoading, setIsLoading] = useState(false);
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
+  const [initialValues, setInitialValues] = useState<any>(null);
   const { user } = useAuth();
+  
+  // Get event and restaurant IDs from query params
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const eventId = queryParams.get('event');
+    const restaurantId = queryParams.get('restaurant');
+    
+    if (eventId || restaurantId) {
+      setInitialValues({
+        event_id: eventId || undefined,
+        restaurant_id: restaurantId || undefined
+      });
+    }
+  }, [location.search]);
 
   useEffect(() => {
     if (!user) {
@@ -93,6 +109,7 @@ const CreateMemory = () => {
               isLoading={isLoading}
               restaurants={restaurants}
               events={events}
+              initialValues={initialValues}
             />
           </CardContent>
         </Card>

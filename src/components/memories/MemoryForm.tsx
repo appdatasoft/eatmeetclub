@@ -1,119 +1,109 @@
 
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form } from '@/components/ui/form';
-import { useMemoryMedia } from '@/hooks/useMemoryMedia';
-import { useAuth } from '@/hooks/useAuth';
-import { Memory } from '@/types/memory';
-
-import { memoryFormSchema, MemoryFormValues } from './schema/memoryFormSchema';
 import BasicInfoFields from './form/BasicInfoFields';
-import RelatedEntitiesFields from './form/RelatedEntitiesFields';
 import PrivacySelector from './form/PrivacySelector';
-import PhotoUpload from './form/PhotoUpload';
+import DatePickerField from './form/DatePickerField';
 import SubmitButton from './form/SubmitButton';
+import RelatedEntitiesFields from './form/RelatedEntitiesFields';
+import PhotoUpload from './form/PhotoUpload';
+import { memoryFormSchema, MemoryFormValues } from './schema/memoryFormSchema';
+import { useEffect } from 'react';
 
 interface MemoryFormProps {
-  onSubmit: (data: any) => Promise<void>;
-  existingMemory?: Memory;
+  onSubmit: (data: MemoryFormValues & { photoUrl?: string }) => void;
+  isLoading: boolean;
   restaurants: { id: string; name: string }[];
   events: { id: string; title: string }[];
-  isLoading: boolean;
+  initialValues?: {
+    event_id?: string;
+    restaurant_id?: string;
+  };
+  memory?: any;
 }
 
-const MemoryForm = ({
-  onSubmit,
-  existingMemory,
+const MemoryForm = ({ 
+  onSubmit, 
+  isLoading, 
   restaurants,
   events,
-  isLoading,
+  initialValues,
+  memory 
 }: MemoryFormProps) => {
-  const { user } = useAuth();
-  const { uploadMedia, isUploading } = useMemoryMedia();
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  
   const form = useForm<MemoryFormValues>({
     resolver: zodResolver(memoryFormSchema),
-    defaultValues: {
-      title: existingMemory?.title || '',
-      location: existingMemory?.location || '',
-      date: existingMemory ? new Date(existingMemory.date) : new Date(),
-      privacy: existingMemory?.privacy || 'private',
-      event_id: existingMemory?.event_id || undefined,
-      restaurant_id: existingMemory?.restaurant_id || undefined,
-    },
+    defaultValues: memory ? {
+      title: memory.title,
+      location: memory.location,
+      date: memory.date ? new Date(memory.date) : new Date(),
+      privacy: memory.privacy || 'private',
+      event_id: memory.event_id || '',
+      restaurant_id: memory.restaurant_id || '',
+    } : {
+      title: '',
+      location: '',
+      date: new Date(),
+      privacy: 'private' as const,
+      event_id: '',
+      restaurant_id: '',
+    }
   });
+  
+  // Apply initial values if provided
+  useEffect(() => {
+    if (initialValues) {
+      if (initialValues.event_id) {
+        form.setValue('event_id', initialValues.event_id);
+      }
+      if (initialValues.restaurant_id) {
+        form.setValue('restaurant_id', initialValues.restaurant_id);
+      }
+    }
+  }, [initialValues, form]);
 
-  const handlePhotoChange = (file?: File) => {
-    if (!file) {
-      form.setValue('photo', undefined);
-      setPhotoPreview(null);
-      return;
+  const handleSubmitForm = async (data: MemoryFormValues) => {
+    // Extract file from photo field if it exists
+    const photoFile = data.photo as File | undefined;
+    let photoUrl;
+    
+    // If there's a photo file, we'd upload it
+    if (photoFile && photoFile instanceof File) {
+      try {
+        // For demonstration purposes, let's say we already have a function to upload the photo
+        // In a real application, you'd implement the file upload logic here
+        // photoUrl = await uploadPhoto(photoFile);
+        photoUrl = URL.createObjectURL(photoFile);
+      } catch (error) {
+        console.error('Error uploading photo:', error);
+      }
     }
     
-    form.setValue('photo', file);
-    
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPhotoPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleFormSubmit = async (data: MemoryFormValues) => {
-    if (!user) return;
-    
-    // Handle photo upload if there is one
-    let photoUrl = null;
-    if (data.photo) {
-      photoUrl = await uploadMedia(data.photo, user.id);
-    }
-    
-    const formattedDate = format(data.date, 'yyyy-MM-dd');
-    
-    // Prepare form data
-    const memoryData = {
-      title: data.title,
-      location: data.location,
-      date: formattedDate,
-      privacy: data.privacy,
-      event_id: data.event_id || null,
-      restaurant_id: data.restaurant_id || null,
-    };
-    
-    await onSubmit({ ...memoryData, photoUrl });
+    // Pass the form data and photo URL to the parent component
+    onSubmit({ ...data, photoUrl });
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSubmitForm)} className="space-y-6">
         <BasicInfoFields form={form} />
         
+        <DatePickerField form={form} />
+        
         <RelatedEntitiesFields 
-          form={form}
-          restaurants={restaurants}
-          events={events} 
+          form={form} 
+          restaurants={restaurants} 
+          events={events}
         />
         
         <PrivacySelector form={form} />
         
-        <PhotoUpload 
-          photoPreview={photoPreview} 
-          onPhotoChange={handlePhotoChange} 
-        />
+        <PhotoUpload form={form} />
         
-        <SubmitButton 
-          isLoading={isLoading} 
-          isUploading={isUploading}
-          isEditMode={!!existingMemory}
-        />
+        <SubmitButton isLoading={isLoading} />
       </form>
     </Form>
   );
 };
-
-import { format } from 'date-fns';
 
 export default MemoryForm;

@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import EventDetailsContainer from "./EventDetailsContainer";
 import TicketPurchase from "./TicketPurchase";
 import EventActionButtons from "./EventActionButtons";
@@ -8,8 +8,9 @@ import UnpublishedEventNotice from "./UnpublishedEventNotice";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { EventDetails } from "@/hooks/useEventDetails";
 import RestaurantInfo from "./RestaurantInfo";
-import { Users } from "lucide-react";
+import { BookPlus, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface EventDetailsContentProps {
   event: EventDetails;
@@ -39,8 +40,17 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
   user
 }) => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   
   const locationStr = `${event.restaurant.address}, ${event.restaurant.city}, ${event.restaurant.state} ${event.restaurant.zipcode}`;
+
+  const handleCreateMemory = () => {
+    if (user) {
+      navigate(`/dashboard/create-memory?event=${event.id}&restaurant=${event.restaurant.id}`);
+    } else {
+      navigate('/login', { state: { from: location.pathname } });
+    }
+  };
 
   return (
     <div className="container-custom py-4 md:py-8">
@@ -80,6 +90,19 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
                   {event.tickets_sold || 0} / {event.capacity}
                 </Badge>
               </div>
+              
+              {/* Create Memory button */}
+              {user && (
+                <Button 
+                  onClick={handleCreateMemory}
+                  variant="outline" 
+                  className="mb-4 w-full flex items-center gap-2"
+                >
+                  <BookPlus className="h-4 w-4" />
+                  <span>Create Memory for this Event</span>
+                </Button>
+              )}
+              
               <TicketPurchase 
                 price={event.price}
                 ticketsRemaining={ticketsRemaining}

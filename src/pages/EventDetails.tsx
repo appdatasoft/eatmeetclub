@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { BookPlus } from "lucide-react";
 
 // Layout components
 import Navbar from "@/components/layout/Navbar";
