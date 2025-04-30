@@ -33,15 +33,17 @@ export const useAuth = () => {
   }, []);
 
   useEffect(() => {
-    // Set up the auth state listener first to avoid missing events
+    // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.id);
         
-        if (session?.user) {
-          setUser(session.user);
-          await checkAdminStatus(session.user.id);
-        } else {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session?.user) {
+            setUser(session.user);
+            await checkAdminStatus(session.user.id);
+          }
+        } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setIsAdmin(false);
         }

@@ -23,16 +23,13 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       console.log('Logging out user...');
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) throw error;
       
       console.log('Logout successful');
-      toast({
-        title: "Logged out successfully",
-        description: "You have been logged out of your account"
-      });
       
-      // Navigate after successful logout
-      navigate('/');
+      // Navigate after successful logout - this will be handled by the auth state change
     } catch (error: any) {
       console.error('Error during logout:', error);
       toast({

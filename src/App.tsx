@@ -5,7 +5,7 @@ import {
   Routes,
   Navigate,
 } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { supabase } from "./integrations/supabase/client";
 import "./App.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -32,6 +32,7 @@ import Memories from "./pages/dashboard/Memories";
 import CreateMemory from "./pages/dashboard/CreateMemory";
 import MemoryDetail from "./pages/dashboard/MemoryDetail";
 import EditMemory from "./pages/dashboard/EditMemory";
+import { useAuth } from "./hooks/useAuth";
 
 // Create a client with default options
 const queryClient = new QueryClient({
@@ -45,34 +46,30 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  const [session, setSession] = useState(null);
-
+  const { user } = useAuth();
+  
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-    
     // Check for pending redirect after login
     const checkPendingRedirect = async () => {
       const pendingPurchase = localStorage.getItem('pendingTicketPurchase');
-      if (pendingPurchase && session) {
-        const { redirectPath } = JSON.parse(pendingPurchase);
-        if (redirectPath) {
-          // Clear the pending purchase
-          localStorage.removeItem('pendingTicketPurchase');
-          window.location.href = redirectPath;
+      if (pendingPurchase && user) {
+        try {
+          const { redirectPath } = JSON.parse(pendingPurchase);
+          if (redirectPath) {
+            // Clear the pending purchase
+            localStorage.removeItem('pendingTicketPurchase');
+            window.location.href = redirectPath;
+          }
+        } catch (e) {
+          console.error("Error parsing pending purchase:", e);
         }
       }
     };
     
-    if (session) {
+    if (user) {
       checkPendingRedirect();
     }
-  }, [session]);
+  }, [user]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -82,44 +79,44 @@ function App() {
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route
             path="/login"
-            element={!session ? <Login /> : <Navigate to="/dashboard" />}
+            element={!user ? <Login /> : <Navigate to="/dashboard" />}
           />
           <Route
             path="/become-member"
-            element={!session ? <MembershipPayment /> : <Navigate to="/dashboard" />}
+            element={!user ? <MembershipPayment /> : <Navigate to="/dashboard" />}
           />
           <Route
             path="/signup"
-            element={!session ? <Signup /> : <Navigate to="/dashboard" />}
+            element={!user ? <Signup /> : <Navigate to="/dashboard" />}
           />
           <Route
             path="/dashboard"
-            element={session ? <Dashboard /> : <Navigate to="/login" />}
+            element={user ? <Dashboard /> : <Navigate to="/login" />}
           />
           <Route
             path="/dashboard/add-restaurant"
-            element={session ? <AddRestaurant /> : <Navigate to="/login" />}
+            element={user ? <AddRestaurant /> : <Navigate to="/login" />}
           />
           <Route
             path="/dashboard/create-event"
-            element={session ? <CreateEvent /> : <Navigate to="/login" />}
+            element={user ? <CreateEvent /> : <Navigate to="/login" />}
           />
           {/* Memories Routes */}
           <Route
             path="/dashboard/memories"
-            element={session ? <Memories /> : <Navigate to="/login" />}
+            element={user ? <Memories /> : <Navigate to="/login" />}
           />
           <Route
             path="/dashboard/create-memory"
-            element={session ? <CreateMemory /> : <Navigate to="/login" />}
+            element={user ? <CreateMemory /> : <Navigate to="/login" />}
           />
           <Route
             path="/dashboard/memories/:id"
-            element={session ? <MemoryDetail /> : <Navigate to="/login" />}
+            element={user ? <MemoryDetail /> : <Navigate to="/login" />}
           />
           <Route
             path="/dashboard/memories/edit/:id"
-            element={session ? <EditMemory /> : <Navigate to="/login" />}
+            element={user ? <EditMemory /> : <Navigate to="/login" />}
           />
           <Route path="/events" element={<Events />} />
           <Route path="/venues" element={<VenuesPage />} />
@@ -131,19 +128,19 @@ function App() {
           <Route path="/user/:id" element={<UserProfilePage />} />
           <Route
             path="/create-event"
-            element={session ? <CreateEvent /> : <Navigate to="/login" />}
+            element={user ? <CreateEvent /> : <Navigate to="/login" />}
           />
           <Route
             path="/edit-event/:id"
-            element={session ? <EditEvent /> : <Navigate to="/login" />}
+            element={user ? <EditEvent /> : <Navigate to="/login" />}
           />
           <Route
             path="/dashboard/payment/:eventId"
-            element={session ? <EventPayment /> : <Navigate to="/login" />}
+            element={user ? <EventPayment /> : <Navigate to="/login" />}
           />
           <Route
             path="/event-payment/:eventId"
-            element={session ? <EventPayment /> : <Navigate to="/login" />}
+            element={user ? <EventPayment /> : <Navigate to="/login" />}
           />
           <Route
             path="/ticket-success"

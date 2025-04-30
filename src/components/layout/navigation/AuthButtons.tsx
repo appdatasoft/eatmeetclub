@@ -1,6 +1,9 @@
 
 import { Button } from '@/components/common/Button';
 import { LogOut } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthButtonsProps {
   user: any | null;
@@ -8,6 +11,27 @@ interface AuthButtonsProps {
 }
 
 const AuthButtons = ({ user, handleLogout }: AuthButtonsProps) => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const onLogout = async () => {
+    try {
+      await handleLogout();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account"
+      });
+      navigate('/');
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast({
+        title: "Error logging out",
+        description: "An error occurred while logging out",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="hidden md:flex items-center space-x-3">
       {user ? (
@@ -15,7 +39,7 @@ const AuthButtons = ({ user, handleLogout }: AuthButtonsProps) => {
           <Button href="/dashboard" variant="ghost" size="md">
             Dashboard
           </Button>
-          <Button onClick={() => handleLogout()} variant="outline" size="md">
+          <Button onClick={onLogout} variant="outline" size="md">
             <LogOut className="h-4 w-4 mr-2" />
             Log out
           </Button>

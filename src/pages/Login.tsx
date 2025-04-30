@@ -36,9 +36,13 @@ const Login = () => {
       // Check for pending ticket purchase stored in localStorage
       const pendingPurchase = localStorage.getItem('pendingTicketPurchase');
       if (pendingPurchase) {
-        const { redirectPath } = JSON.parse(pendingPurchase);
-        if (redirectPath) {
-          setRedirectUrl(redirectPath);
+        try {
+          const { redirectPath } = JSON.parse(pendingPurchase);
+          if (redirectPath) {
+            setRedirectUrl(redirectPath);
+          }
+        } catch (e) {
+          console.error("Error parsing pending purchase:", e);
         }
       } else {
         // Check general redirect after login
