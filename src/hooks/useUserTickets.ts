@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { UserTicket } from '@/components/dashboard/tickets/types';
 
 const fetchUserTickets = async (userId: string): Promise<UserTicket[]> => {
+  console.log("Fetching tickets for user:", userId);
+  
   const { data, error } = await supabase
     .from('tickets')
     .select(`
@@ -12,6 +14,7 @@ const fetchUserTickets = async (userId: string): Promise<UserTicket[]> => {
       quantity,
       price,
       purchase_date,
+      payment_status,
       events!inner (
         title,
         date,
@@ -21,10 +24,14 @@ const fetchUserTickets = async (userId: string): Promise<UserTicket[]> => {
       )
     `)
     .eq('user_id', userId)
-    .eq('payment_status', 'completed')
-    .order('purchase_date', { ascending: false });
+    .eq('payment_status', 'completed');
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error fetching tickets:", error);
+    throw error;
+  }
+
+  console.log("Tickets fetched:", data);
 
   // Format the data for display
   return data.map((ticket) => ({
@@ -44,5 +51,7 @@ export const useUserTickets = (userId: string) => {
     queryKey: ['userTickets', userId],
     queryFn: () => fetchUserTickets(userId),
     enabled: !!userId,
+    staleTime: 60000, // 1 minute
+    refetchOnWindowFocus: true,
   });
 };
