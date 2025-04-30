@@ -29,6 +29,11 @@ const TicketPurchase: React.FC<TicketPurchaseProps> = ({
     navigate('/login');
   };
 
+  const handlePurchase = () => {
+    console.log("Purchase button clicked, calling onBuyTickets with count:", ticketCount);
+    onBuyTickets(ticketCount);
+  };
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm sticky top-24">
       <h3 className="text-lg font-semibold mb-4">Purchase Tickets</h3>
@@ -109,7 +114,7 @@ const TicketPurchase: React.FC<TicketPurchaseProps> = ({
         </div>
       ) : (
         <Button 
-          onClick={() => onBuyTickets(ticketCount)} 
+          onClick={handlePurchase}
           className="w-full" 
           size="lg"
           disabled={isPaymentProcessing}

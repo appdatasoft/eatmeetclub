@@ -87,10 +87,12 @@ export const useEventPaymentHandler = (
         quantity: ticketCount,
         unitPrice: event.price,
         serviceFee: serviceFee,
-        totalAmount: totalAmount
+        totalAmount: totalAmount,
+        timestamp: Date.now() // Add timestamp for tracking
       }));
       
-      // Redirect to Stripe checkout
+      // Redirect to Stripe checkout - make sure this executes
+      console.log("Redirecting to Stripe checkout:", response.data.url);
       window.location.href = response.data.url;
     } catch (error: any) {
       console.error("Error creating payment session:", error);

@@ -43,6 +43,7 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (userError || !user) {
+      console.error("Authentication error:", userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -87,6 +88,30 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'User mismatch' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Check if there's already a completed ticket record to avoid duplication
+    const { data: existingTickets, error: existingError } = await supabaseClient
+      .from('tickets')
+      .select('id, payment_status')
+      .eq('payment_id', sessionId)
+      .eq('user_id', userId);
+      
+    if (existingError) {
+      console.error("Error checking existing tickets:", existingError);
+    }
+    
+    // If we already have a completed ticket, return success without duplicating
+    if (existingTickets && existingTickets.length > 0 && existingTickets[0].payment_status === 'completed') {
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          ticket: existingTickets[0],
+          status: 'already_processed',
+          message: 'Ticket payment was already processed'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
