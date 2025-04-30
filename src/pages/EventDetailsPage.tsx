@@ -25,7 +25,7 @@ const EventDetailsPage = () => {
   
   const { 
     event, 
-    loading, 
+    isLoading, 
     isPaymentProcessing, 
     handleBuyTickets, 
     isCurrentUserOwner, 
@@ -59,7 +59,7 @@ const EventDetailsPage = () => {
   // Get current URL for QR code
   const eventUrl = window.location.href;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <>
         <Navbar />

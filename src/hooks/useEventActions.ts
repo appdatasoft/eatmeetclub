@@ -100,8 +100,6 @@ export const useEventActions = (
       return;
     }
     
-    // Check if user is admin (this check is now in the canEditEvent in useEventAccess hook)
-    
     setIsDeleting(true);
     try {
       const { error } = await supabase

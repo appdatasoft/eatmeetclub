@@ -7,6 +7,7 @@ import EventActionButtons from "./EventActionButtons";
 import UnpublishedEventNotice from "./UnpublishedEventNotice";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { EventDetails } from "@/hooks/useEventDetails";
+import RestaurantInfo from "./RestaurantInfo";
 
 interface EventDetailsContentProps {
   event: EventDetails;
@@ -80,7 +81,7 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
             <UnpublishedEventNotice />
           )}
 
-          {/* Add restaurant link */}
+          {/* Restaurant info */}
           <div className="mt-4 bg-accent p-4 rounded-lg shadow-sm">
             <h3 className="font-medium mb-2">Hosted at</h3>
             <Link 
@@ -92,7 +93,7 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
             <p className="text-sm mt-1">{locationStr}</p>
           </div>
 
-          {/* Add event creator link */}
+          {/* Event creator link */}
           {event.user_id && (
             <div className="mt-4 bg-accent p-4 rounded-lg shadow-sm">
               <h3 className="font-medium mb-2">Event Creator</h3>

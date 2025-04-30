@@ -1,16 +1,17 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { EventDetails } from "@/hooks/useEventDetails";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { EventDetails } from "@/hooks/useEventDetails";
 
 export const useEventAccess = (event: EventDetails | null) => {
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, isAdmin } = useAuth();
   const [canEditEvent, setCanEditEvent] = useState(false);
-  
+
+  // Check if user can edit this event
   useEffect(() => {
     if (event && user) {
       // Check if user is owner or admin
@@ -20,33 +21,35 @@ export const useEventAccess = (event: EventDetails | null) => {
       setCanEditEvent(false);
     }
   }, [event, user, isAdmin]);
-  
+
   // Check if this event is published, if not, only owners and admins can view
   useEffect(() => {
     const checkAccess = async () => {
       if (!event) return;
+      if (!user) return; // Public users can only see published events
       
-      // Debug log
-      console.log("Checking event access:", { 
-        published: event.published, 
-        canEditEvent, 
-        userId: user?.id,
-        eventUserId: event.user_id
-      });
-      
-      // If event exists but is not published and user is not owner/admin
-      if (event && !event.published && !canEditEvent) {
-        toast({
-          title: "Access Denied",
-          description: "This event is not currently published.",
-          variant: "destructive"
-        });
-        navigate('/events');
+      try {
+        // For unpublished events, check if user is owner or admin
+        if (!event.published) {
+          const isOwner = event.user_id === user.id;
+          if (!isOwner && !isAdmin) {
+            toast({
+              title: "Access Denied",
+              description: "This event is not currently published.",
+              variant: "destructive"
+            });
+            navigate('/events');
+          }
+        }
+      } catch (error) {
+        console.error("Error checking event access:", error);
       }
     };
     
     checkAccess();
-  }, [event, canEditEvent, navigate, toast, user]);
+  }, [event, user, navigate, toast, isAdmin]);
 
   return { canEditEvent };
 };
+
+export default useEventAccess;
