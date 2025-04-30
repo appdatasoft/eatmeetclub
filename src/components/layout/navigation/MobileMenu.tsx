@@ -36,6 +36,13 @@ const MobileMenu = ({ isOpen, onClose, user, handleLogout }: MobileMenuProps) =>
           Events
         </Link>
         <Link
+          to="/venues"
+          className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
+          onClick={onClose}
+        >
+          Venues
+        </Link>
+        <Link
           to="/how-it-works"
           className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
           onClick={onClose}

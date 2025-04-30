@@ -16,6 +16,7 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import Events from "./pages/Events";
 import EventDetailsPage from "./pages/EventDetailsPage";
 import RestaurantDetailsPage from "./pages/RestaurantDetailsPage";
+import VenuesPage from "./pages/VenuesPage";
 import UserProfilePage from "./pages/UserProfilePage";
 import CreateEvent from "./pages/CreateEvent";
 import EditEvent from "./pages/EditEvent";
@@ -86,6 +87,7 @@ function App() {
           element={session ? <CreateEvent /> : <Navigate to="/login" />}
         />
         <Route path="/events" element={<Events />} />
+        <Route path="/venues" element={<VenuesPage />} />
         {/* Public event details page - no auth required */}
         <Route path="/event/:id" element={<EventDetailsPage />} />
         {/* New restaurant details page - no auth required */}

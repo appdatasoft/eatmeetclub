@@ -13,6 +13,9 @@ const NavLinks = () => {
       <Link to="/events" className="px-3 py-2 rounded-md text-sm hover:bg-accent">
         Events
       </Link>
+      <Link to="/venues" className="px-3 py-2 rounded-md text-sm hover:bg-accent">
+        Venues
+      </Link>
       <Link to="/how-it-works" className="px-3 py-2 rounded-md text-sm hover:bg-accent">
         How It Works
       </Link>
