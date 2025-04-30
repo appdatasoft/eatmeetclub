@@ -21,6 +21,7 @@ const Login = () => {
   // If user is already logged in, redirect to dashboard
   useEffect(() => {
     if (user) {
+      console.log("User already logged in, redirecting to dashboard");
       navigate("/dashboard");
     }
   }, [user, navigate]);
@@ -59,6 +60,7 @@ const Login = () => {
     setLoading(true);
 
     try {
+      console.log("Attempting to login with email:", email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -68,6 +70,7 @@ const Login = () => {
         throw error;
       }
 
+      console.log("Login successful:", data);
       toast({
         title: "Login successful!",
         description: "Welcome back!",
@@ -81,12 +84,12 @@ const Login = () => {
         navigate("/dashboard");
       }
     } catch (error: any) {
+      console.error("Error logging in:", error);
       toast({
         title: "Login failed",
         description: error.message || "Invalid login credentials",
         variant: "destructive",
       });
-      console.error("Error logging in:", error);
     } finally {
       setLoading(false);
     }

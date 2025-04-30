@@ -6,7 +6,6 @@ import {
   Navigate,
 } from "react-router-dom";
 import { useEffect } from "react";
-import { supabase } from "./integrations/supabase/client";
 import "./App.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Index from "./pages/Index";
@@ -46,7 +45,7 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   
   useEffect(() => {
     // Check for pending redirect after login
@@ -70,6 +69,15 @@ function App() {
       checkPendingRedirect();
     }
   }, [user]);
+
+  // Return loading indicator while checking auth status
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

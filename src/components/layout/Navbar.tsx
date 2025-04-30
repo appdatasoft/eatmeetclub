@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import Logo from '@/components/common/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import NavLinks from './navigation/NavLinks';
@@ -12,33 +11,13 @@ import { toast } from '@/hooks/use-toast';
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, handleLogout } = useAuth();
   const navigate = useNavigate();
 
   // Log the authentication state to debug
   useEffect(() => {
     console.log('Navbar auth state:', { user, isLoggedIn: !!user });
   }, [user]);
-
-  const handleLogout = async () => {
-    try {
-      console.log('Logging out user...');
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) throw error;
-      
-      console.log('Logout successful');
-      
-      // Navigate after successful logout - this will be handled by the auth state change
-    } catch (error: any) {
-      console.error('Error during logout:', error);
-      toast({
-        title: "Logout failed",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);

@@ -12,14 +12,15 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isLoading } = useAuth();
   
   useEffect(() => {
-    // Redirect to login if not authenticated
-    if (!user) {
+    // Redirect to login if not authenticated and not loading
+    if (!isLoading && !user) {
+      console.log("Not authenticated, redirecting to login");
       navigate('/login');
     }
-  }, [user, navigate]);
+  }, [user, navigate, isLoading]);
   
   const isActive = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + '/') 
@@ -27,12 +28,16 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       : 'text-gray-600 hover:bg-gray-50';
   };
 
-  if (!user) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null; // Return null to avoid rendering the layout before redirect happens
   }
 
   return (

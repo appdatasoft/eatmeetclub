@@ -33,17 +33,17 @@ export const useAuth = () => {
   }, []);
 
   useEffect(() => {
+    console.log('Setting up auth state listener...');
+    
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.id);
         
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          if (session?.user) {
-            setUser(session.user);
-            await checkAdminStatus(session.user.id);
-          }
-        } else if (event === 'SIGNED_OUT') {
+        if (session?.user) {
+          setUser(session.user);
+          await checkAdminStatus(session.user.id);
+        } else {
           setUser(null);
           setIsAdmin(false);
         }
@@ -82,7 +82,23 @@ export const useAuth = () => {
     };
   }, [checkAdminStatus]);
 
-  return { user, isAdmin, isLoading };
+  const handleLogout = async () => {
+    try {
+      console.log('Logging out user...');
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) throw error;
+      
+      console.log('Logout successful');
+      setUser(null);
+      setIsAdmin(false);
+    } catch (error: any) {
+      console.error('Error during logout:', error);
+      throw error;
+    }
+  };
+
+  return { user, isAdmin, isLoading, handleLogout };
 };
 
 export default useAuth;
