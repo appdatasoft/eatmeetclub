@@ -19,6 +19,7 @@ import EventNotFound from "@/components/events/EventDetails/EventNotFound";
 import EventAccessControl from "@/components/events/EventDetails/EventAccessControl";
 import DeleteEventDialog from "@/components/events/EventDetails/DeleteEventDialog";
 import EditCoverDialog from "@/components/events/EventDetails/EditCoverDialog";
+import EventAttendees from "@/components/events/EventDetails/EventAttendees";
 
 const EventDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -145,6 +146,13 @@ const EventDetailsPage = () => {
           isPaymentProcessing={isPaymentProcessing}
           user={user}
         />
+        
+        {/* Show Event Attendees */}
+        {id && (
+          <div className="container-custom py-4 md:pb-8">
+            <EventAttendees eventId={id} />
+          </div>
+        )}
       </div>
       <Footer />
       

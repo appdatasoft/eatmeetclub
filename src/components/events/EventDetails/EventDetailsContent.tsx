@@ -8,6 +8,8 @@ import UnpublishedEventNotice from "./UnpublishedEventNotice";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { EventDetails } from "@/hooks/useEventDetails";
 import RestaurantInfo from "./RestaurantInfo";
+import { Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface EventDetailsContentProps {
   event: EventDetails;
@@ -68,13 +70,24 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
         {/* Ticket purchase sidebar */}
         <div className="lg:col-span-1">
           {event.published && (
-            <TicketPurchase 
-              price={event.price}
-              ticketsRemaining={ticketsRemaining}
-              onBuyTickets={handleTicketPurchase}
-              isPaymentProcessing={isPaymentProcessing}
-              isLoggedIn={!!user}
-            />
+            <>
+              <div className="mb-4 flex justify-between items-center">
+                <div className="flex items-center gap-1">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Attendees</span>
+                </div>
+                <Badge variant="outline" className="bg-primary/10 text-primary">
+                  {event.tickets_sold || 0} / {event.capacity}
+                </Badge>
+              </div>
+              <TicketPurchase 
+                price={event.price}
+                ticketsRemaining={ticketsRemaining}
+                onBuyTickets={handleTicketPurchase}
+                isPaymentProcessing={isPaymentProcessing}
+                isLoggedIn={!!user}
+              />
+            </>
           )}
           
           {!event.published && canEditEvent && (

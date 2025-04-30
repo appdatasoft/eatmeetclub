@@ -106,11 +106,11 @@ serve(async (req) => {
       );
     }
     
-    // Update the tickets_sold count in the events table
-    // Modified approach to avoid issues with the function
+    // Update the tickets_sold count in the events table directly
+    const parsedQuantity = parseInt(quantity || '0');
     const { error: eventError } = await supabaseClient
       .from('events')
-      .update({ tickets_sold: supabaseClient.rpc('increment_count', { row_id: eventId, count: parseInt(quantity || '0') }) })
+      .update({ tickets_sold: supabaseClient.rpc('increment_tickets_sold', { p_event_id: eventId, p_quantity: parsedQuantity }) })
       .eq('id', eventId);
     
     if (eventError) {
@@ -147,6 +147,7 @@ serve(async (req) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": authHeader // Pass the auth header to the invoice function
           },
           body: JSON.stringify({
             sessionId,
