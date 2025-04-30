@@ -16,6 +16,9 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [restaurants, setRestaurants] = useState([]);
   const [isLoadingRestaurants, setIsLoadingRestaurants] = useState(true);
+  const [events, setEvents] = useState([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [error, setError] = useState(null);
   
   // Fetch restaurants if the user is an admin
   useEffect(() => {
@@ -41,6 +44,38 @@ const Dashboard = () => {
     
     fetchRestaurants();
   }, [user, isAdmin]);
+  
+  // Fetch user's events
+  useEffect(() => {
+    const fetchEvents = async () => {
+      if (!user) {
+        setIsLoadingEvents(false);
+        return;
+      }
+      
+      try {
+        setIsLoadingEvents(true);
+        setError(null);
+        
+        const { data, error } = await supabase
+          .from('events')
+          .select('*, restaurant:restaurants(name)')
+          .eq('user_id', user.id);
+        
+        if (error) throw error;
+        setEvents(data || []);
+      } catch (error) {
+        console.error('Error fetching events:', error);
+        setError('Failed to load events. Please try again later.');
+      } finally {
+        setIsLoadingEvents(false);
+      }
+    };
+    
+    if (activeTab === 'my-events') {
+      fetchEvents();
+    }
+  }, [user, activeTab]);
   
   // Function to refresh restaurants after updates
   const refreshRestaurants = async () => {
@@ -101,7 +136,11 @@ const Dashboard = () => {
           </TabsContent>
           
           <TabsContent value="my-events">
-            <EventsList />
+            <EventsList 
+              events={events}
+              isLoading={isLoadingEvents}
+              error={error}
+            />
           </TabsContent>
           
           {isAdmin && (
