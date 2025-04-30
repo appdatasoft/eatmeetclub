@@ -2,10 +2,12 @@
 import React from "react";
 import { Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 interface EventHeaderProps {
   title: string;
   restaurantName: string;
+  restaurantId?: string;
   isOwner?: boolean;
   onEditCover?: () => void;
   coverImage?: string;
@@ -13,7 +15,8 @@ interface EventHeaderProps {
 
 const EventHeader: React.FC<EventHeaderProps> = ({ 
   title, 
-  restaurantName, 
+  restaurantName,
+  restaurantId,
   isOwner = false,
   onEditCover,
   coverImage = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60"
@@ -40,7 +43,16 @@ const EventHeader: React.FC<EventHeaderProps> = ({
       
       <div className="absolute bottom-0 left-0 p-6 text-white">
         <h1 className="text-3xl md:text-4xl font-bold mb-1">{title}</h1>
-        <p className="text-lg text-white/90">Hosted by {restaurantName}</p>
+        {restaurantId ? (
+          <Link 
+            to={`/restaurant/${restaurantId}`}
+            className="text-lg text-white/90 hover:text-white hover:underline"
+          >
+            Hosted by {restaurantName}
+          </Link>
+        ) : (
+          <p className="text-lg text-white/90">Hosted by {restaurantName}</p>
+        )}
       </div>
     </div>
   );
