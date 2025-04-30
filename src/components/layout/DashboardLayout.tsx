@@ -1,9 +1,8 @@
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 interface DashboardLayoutProps {
@@ -78,10 +77,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                       <Link 
                         to="/dashboard/memories" 
                         className={`block px-3 py-2 rounded-md ${isActive('/dashboard/memories')}`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          navigate('/dashboard/memories');
-                        }}
                       >
                         Memories
                       </Link>

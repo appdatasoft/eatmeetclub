@@ -15,27 +15,28 @@ const Memories = () => {
   
   useEffect(() => {
     if (!user) {
-      navigate('/login');
       return;
     }
 
     // Fetch memories when component mounts
     const loadMemories = async () => {
-      try {
-        await fetchMemories();
-        setIsInitialized(true);
-      } catch (err) {
-        console.error("Failed to load memories:", err);
-        toast({
-          title: "Error loading memories",
-          description: "Please try again later",
-          variant: "destructive"
-        });
+      if (!isInitialized) {
+        try {
+          await fetchMemories();
+          setIsInitialized(true);
+        } catch (err) {
+          console.error("Failed to load memories:", err);
+          toast({
+            title: "Error loading memories",
+            description: "Please try again later",
+            variant: "destructive"
+          });
+        }
       }
     };
     
     loadMemories();
-  }, [user, navigate, fetchMemories]);
+  }, [user, isInitialized, fetchMemories]);
 
   // Show error if there was a problem loading memories
   if (error) {
