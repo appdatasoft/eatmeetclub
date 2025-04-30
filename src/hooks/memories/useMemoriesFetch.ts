@@ -31,7 +31,7 @@ export const useMemoriesFetch = () => {
 
       if (memoriesError) throw memoriesError;
 
-      if (memoriesData.length === 0) {
+      if (!memoriesData || memoriesData.length === 0) {
         // No memories found, return empty array
         setMemories([]);
         setIsLoading(false);
@@ -41,7 +41,7 @@ export const useMemoriesFetch = () => {
       // Get memory IDs to use in subsequent queries
       const memoryIds = memoriesData.map(memory => memory.id);
       
-      // Fetch related data separately to avoid recursion issues
+      // Fetch related data separately (avoiding attendees completely)
       const [
         contentResult, 
         restaurantsResult, 
@@ -54,11 +54,11 @@ export const useMemoriesFetch = () => {
           .order('created_at', { ascending: true }),
         supabase
           .from('restaurants')
-          .select('*')
+          .select('id, name')
           .in('id', memoriesData.filter(m => m.restaurant_id).map(m => m.restaurant_id)),
         supabase
           .from('events')
-          .select('*')
+          .select('id, title')
           .in('id', memoriesData.filter(m => m.event_id).map(m => m.event_id))
       ]);
 
@@ -69,7 +69,7 @@ export const useMemoriesFetch = () => {
           content: contentResult.data?.filter(c => c.memory_id === memory.id) || [],
           restaurant: restaurantsResult.data?.find(r => r.id === memory.restaurant_id),
           event: eventsResult.data?.find(e => e.id === memory.event_id),
-          // Avoid fetching attendees for now as it causes the recursion
+          // Don't try to fetch attendees at all - just set to empty array
           attendees: []
         };
       });
