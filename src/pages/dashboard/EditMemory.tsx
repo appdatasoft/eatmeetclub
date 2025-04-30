@@ -128,7 +128,7 @@ const EditMemory = () => {
             <CardContent>
               <MemoryForm
                 onSubmit={handleUpdateMemory}
-                existingMemory={memory}
+                memory={memory}
                 isLoading={isLoading}
                 restaurants={restaurants}
                 events={events}

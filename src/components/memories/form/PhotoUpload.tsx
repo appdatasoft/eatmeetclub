@@ -4,18 +4,27 @@ import { FormLabel } from '@/components/ui/form';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
+import { UseFormReturn } from 'react-hook-form';
+import { MemoryFormValues } from '../schema/memoryFormSchema';
 
 interface PhotoUploadProps {
-  photoPreview: string | null;
-  onPhotoChange: (file?: File) => void;
+  form: UseFormReturn<MemoryFormValues>;
 }
 
-const PhotoUpload = ({ photoPreview, onPhotoChange }: PhotoUploadProps) => {
+const PhotoUpload = ({ form }: PhotoUploadProps) => {
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      onPhotoChange(file);
+      form.setValue('photo', file);
+      setPhotoPreview(URL.createObjectURL(file));
     }
+  };
+
+  const handleRemovePhoto = () => {
+    form.setValue('photo', undefined);
+    setPhotoPreview(null);
   };
 
   return (
@@ -36,7 +45,7 @@ const PhotoUpload = ({ photoPreview, onPhotoChange }: PhotoUploadProps) => {
                   variant="outline"
                   size="sm"
                   className="absolute bottom-2 right-2"
-                  onClick={() => onPhotoChange(undefined)}
+                  onClick={handleRemovePhoto}
                 >
                   Change Photo
                 </Button>

@@ -9,7 +9,8 @@ import SubmitButton from './form/SubmitButton';
 import RelatedEntitiesFields from './form/RelatedEntitiesFields';
 import PhotoUpload from './form/PhotoUpload';
 import { memoryFormSchema, MemoryFormValues } from './schema/memoryFormSchema';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Memory } from '@/types/memory';
 
 interface MemoryFormProps {
   onSubmit: (data: MemoryFormValues & { photoUrl?: string }) => void;
@@ -20,7 +21,7 @@ interface MemoryFormProps {
     event_id?: string;
     restaurant_id?: string;
   };
-  memory?: any;
+  memory?: Memory;
 }
 
 const MemoryForm = ({ 
@@ -31,6 +32,7 @@ const MemoryForm = ({
   initialValues,
   memory 
 }: MemoryFormProps) => {
+  const [isUploading, setIsUploading] = useState(false);
   const form = useForm<MemoryFormValues>({
     resolver: zodResolver(memoryFormSchema),
     defaultValues: memory ? {
@@ -67,15 +69,18 @@ const MemoryForm = ({
     const photoFile = data.photo as File | undefined;
     let photoUrl;
     
-    // If there's a photo file, we'd upload it
+    // If there's a photo file, set uploading state and create object URL
     if (photoFile && photoFile instanceof File) {
       try {
+        setIsUploading(true);
         // For demonstration purposes, let's say we already have a function to upload the photo
         // In a real application, you'd implement the file upload logic here
         // photoUrl = await uploadPhoto(photoFile);
         photoUrl = URL.createObjectURL(photoFile);
       } catch (error) {
         console.error('Error uploading photo:', error);
+      } finally {
+        setIsUploading(false);
       }
     }
     
@@ -100,7 +105,11 @@ const MemoryForm = ({
         
         <PhotoUpload form={form} />
         
-        <SubmitButton isLoading={isLoading} />
+        <SubmitButton 
+          isLoading={isLoading} 
+          isUploading={isUploading} 
+          isEditMode={!!memory}
+        />
       </form>
     </Form>
   );

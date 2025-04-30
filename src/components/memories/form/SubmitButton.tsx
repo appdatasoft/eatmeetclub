@@ -3,11 +3,11 @@ import { Button } from '@/components/ui/button';
 
 interface SubmitButtonProps {
   isLoading: boolean;
-  isUploading: boolean;
-  isEditMode: boolean;
+  isUploading?: boolean;
+  isEditMode?: boolean;
 }
 
-const SubmitButton = ({ isLoading, isUploading, isEditMode }: SubmitButtonProps) => {
+const SubmitButton = ({ isLoading, isUploading = false, isEditMode = false }: SubmitButtonProps) => {
   const isDisabled = isLoading || isUploading;
   const buttonText = isEditMode ? 'Update Memory' : 'Create Memory';
   const loadingText = isEditMode ? 'Updating Memory...' : 'Creating Memory...';
