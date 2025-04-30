@@ -1,0 +1,48 @@
+
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from "@/integrations/supabase/client";
+import { UserTicket } from '@/components/dashboard/tickets/types';
+
+const fetchUserTickets = async (userId: string): Promise<UserTicket[]> => {
+  const { data, error } = await supabase
+    .from('tickets')
+    .select(`
+      id,
+      event_id,
+      quantity,
+      price,
+      purchase_date,
+      events!inner (
+        title,
+        date,
+        restaurants (
+          name
+        )
+      )
+    `)
+    .eq('user_id', userId)
+    .eq('payment_status', 'completed')
+    .order('purchase_date', { ascending: false });
+
+  if (error) throw error;
+
+  // Format the data for display
+  return data.map((ticket) => ({
+    id: ticket.id,
+    event_id: ticket.event_id,
+    event_title: ticket.events.title,
+    event_date: new Date(ticket.events.date).toLocaleDateString(),
+    restaurant_name: ticket.events.restaurants?.name || 'Unknown venue',
+    quantity: ticket.quantity,
+    price: ticket.price,
+    purchase_date: new Date(ticket.purchase_date).toLocaleDateString(),
+  }));
+};
+
+export const useUserTickets = (userId: string) => {
+  return useQuery({
+    queryKey: ['userTickets', userId],
+    queryFn: () => fetchUserTickets(userId),
+    enabled: !!userId,
+  });
+};
