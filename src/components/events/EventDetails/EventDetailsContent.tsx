@@ -1,5 +1,6 @@
 
 import React from "react";
+import { Link } from "react-router-dom";
 import EventDetailsContainer from "./EventDetailsContainer";
 import TicketPurchase from "./TicketPurchase";
 import EventActionButtons from "./EventActionButtons";
@@ -77,6 +78,31 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
           
           {!event.published && canEditEvent && (
             <UnpublishedEventNotice />
+          )}
+
+          {/* Add restaurant link */}
+          <div className="mt-4 bg-accent p-4 rounded-lg shadow-sm">
+            <h3 className="font-medium mb-2">Hosted at</h3>
+            <Link 
+              to={`/restaurant/${event.restaurant.id}`} 
+              className="text-primary hover:underline font-medium block"
+            >
+              {event.restaurant.name}
+            </Link>
+            <p className="text-sm mt-1">{locationStr}</p>
+          </div>
+
+          {/* Add event creator link */}
+          {event.user_id && (
+            <div className="mt-4 bg-accent p-4 rounded-lg shadow-sm">
+              <h3 className="font-medium mb-2">Event Creator</h3>
+              <Link 
+                to={`/user/${event.user_id}`} 
+                className="text-primary hover:underline font-medium"
+              >
+                View Creator Profile
+              </Link>
+            </div>
           )}
         </div>
       </div>

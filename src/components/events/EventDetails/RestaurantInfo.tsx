@@ -1,12 +1,14 @@
 
 import React from "react";
+import { Link } from "react-router-dom";
 
 interface RestaurantInfoProps {
+  id?: string;
   name: string;
   description?: string;
 }
 
-const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ name, description }) => {
+const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }) => {
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <h2 className="text-xl font-semibold mb-4">About the Restaurant</h2>
@@ -28,6 +30,15 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ name, description }) =>
           `${name} specializes in sustainable, locally-sourced cuisine with a focus on seasonal ingredients. 
           Our restaurant has been serving the community with a commitment to quality and hospitality.`}
       </p>
+      
+      {id && (
+        <Link 
+          to={`/restaurant/${id}`}
+          className="text-primary hover:underline font-medium"
+        >
+          View Restaurant Profile
+        </Link>
+      )}
     </div>
   );
 };

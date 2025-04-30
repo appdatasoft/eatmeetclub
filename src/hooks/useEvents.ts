@@ -32,6 +32,8 @@ export const useEvents = () => {
             capacity,
             cover_image,
             published,
+            user_id,
+            restaurant_id,
             restaurant:restaurants(name, city, state)
           `)
           .eq('published', true)
@@ -55,7 +57,7 @@ export const useEvents = () => {
         
         try {
           // Use a direct REST API call as fallback
-          const publicUrl = `https://wocfwpedauuhlrfugxuu.supabase.co/rest/v1/events?select=id,title,date,time,price,capacity,cover_image,published,restaurant:restaurants(name,city,state)&published=eq.true&order=date.asc`;
+          const publicUrl = `https://wocfwpedauuhlrfugxuu.supabase.co/rest/v1/events?select=id,title,date,time,price,capacity,cover_image,published,user_id,restaurant_id,restaurant:restaurants(name,city,state)&published=eq.true&order=date.asc`;
           
           console.log("Fetching from public URL:", publicUrl);
           
@@ -149,12 +151,14 @@ export const useEvents = () => {
           id: event.id,
           title: event.title || "Untitled Event",
           restaurantName: event.restaurant ? event.restaurant.name : "Restaurant",
+          restaurantId: event.restaurant_id,
           date: formattedDate,
           time: formattedTime,
-          price: Number(event.price) || 0, // Ensure price is a number
+          price: Number(event.price) || 0,
           image: event.cover_image || "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60",
           category,
-          location
+          location,
+          userId: event.user_id
         };
         
         console.log("Formatted event:", eventProps);
