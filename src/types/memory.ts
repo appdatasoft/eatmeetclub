@@ -1,6 +1,4 @@
 
-import { memory_privacy_type, memory_mood_type } from '@/integrations/supabase/types';
-
 export interface Memory {
   id: string;
   title: string;
@@ -9,7 +7,7 @@ export interface Memory {
   user_id: string;
   date: string;
   location: string;
-  privacy: memory_privacy_type;
+  privacy: 'public' | 'private' | 'unlisted';
   created_at: string;
   updated_at: string;
   is_auto_generated?: boolean;

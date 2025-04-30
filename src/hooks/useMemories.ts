@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Memory, MemoryWithRelations } from '@/types/memory';
+import { Memory, MemoryContent, MemoryWithRelations } from '@/types/memory';
 import { useAuth } from '@/hooks/useAuth';
 
 export const useMemories = () => {
@@ -80,10 +80,20 @@ export const useMemories = () => {
     if (!user) return null;
 
     try {
+      // Make sure required fields are present
+      if (!memoryData.title || !memoryData.date || !memoryData.location) {
+        throw new Error("Title, date, and location are required");
+      }
+
       const { data, error } = await supabase
         .from('memories')
         .insert({
-          ...memoryData,
+          title: memoryData.title,
+          date: memoryData.date,
+          location: memoryData.location,
+          privacy: memoryData.privacy || 'private',
+          event_id: memoryData.event_id,
+          restaurant_id: memoryData.restaurant_id,
           user_id: user.id,
         })
         .select()
