@@ -1,9 +1,10 @@
 
 import { ReactNode, useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -11,41 +12,29 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const location = useLocation();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
   
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      try {
-        // Check if user is logged in
-        const { data: sessionData } = await supabase.auth.getSession();
-        
-        if (sessionData.session?.user) {
-          // Check if user is an admin
-          const { data, error } = await supabase.rpc(
-            'is_admin',
-            { user_id: sessionData.session.user.id }
-          );
-          
-          if (error) {
-            throw error;
-          }
-          
-          setIsAdmin(!!data);
-        }
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
-      }
-    };
-    
-    checkAdminStatus();
-  }, []);
+    // Redirect to login if not authenticated
+    if (!user) {
+      navigate('/login');
+    }
+  }, [user, navigate]);
   
   const isActive = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + '/') 
       ? 'bg-brand-50 text-brand-600 font-medium' 
       : 'text-gray-600 hover:bg-gray-50';
   };
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -89,6 +78,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                       <Link 
                         to="/dashboard/memories" 
                         className={`block px-3 py-2 rounded-md ${isActive('/dashboard/memories')}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigate('/dashboard/memories');
+                        }}
                       >
                         Memories
                       </Link>
