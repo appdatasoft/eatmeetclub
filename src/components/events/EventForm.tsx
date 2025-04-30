@@ -1,16 +1,11 @@
 
 import { useState, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/common/Button';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue 
-} from '@/components/ui/select';
+import EventBasicInfo from './form/EventBasicInfo';
+import EventDateTimeInputs from './form/EventDateTimeInputs';
+import EventCapacityPriceInputs from './form/EventCapacityPriceInputs';
+import RestaurantSelector from './form/RestaurantSelector';
+import EventCreationFeeNotice from './form/EventCreationFeeNotice';
 
 interface EventFormProps {
   restaurants: any[];
@@ -96,124 +91,35 @@ const EventForm: React.FC<EventFormProps> = ({
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Event Information</h2>
         
-        <div className="space-y-2">
-          <Label htmlFor="eventTitle">Event Title*</Label>
-          <Input 
-            id="eventTitle" 
-            name="eventTitle" 
-            required 
-            placeholder="Give your event a catchy title" 
-            value={formValues.eventTitle}
-            onChange={handleChange}
-          />
-        </div>
+        <EventBasicInfo 
+          eventTitle={formValues.eventTitle}
+          eventDescription={formValues.eventDescription}
+          handleChange={handleChange}
+        />
         
-        <div className="space-y-2">
-          <Label htmlFor="eventDescription">Description*</Label>
-          <Textarea 
-            id="eventDescription"
-            name="eventDescription" 
-            required 
-            placeholder="Describe what makes this event special..." 
-            className="min-h-[120px]"
-            value={formValues.eventDescription}
-            onChange={handleChange}
-          />
-        </div>
+        <EventDateTimeInputs 
+          eventDate={formValues.eventDate}
+          eventTime={formValues.eventTime}
+          handleChange={handleChange}
+        />
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="eventDate">Event Date*</Label>
-            <Input 
-              id="eventDate" 
-              name="eventDate" 
-              type="date" 
-              required 
-              value={formValues.eventDate}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="eventTime">Event Time*</Label>
-            <Input 
-              id="eventTime" 
-              name="eventTime" 
-              type="time" 
-              required 
-              value={formValues.eventTime}
-              onChange={handleChange}
-            />
-          </div>
-        </div>
+        <RestaurantSelector 
+          restaurants={restaurants}
+          selectedRestaurantId={selectedRestaurantId}
+          setSelectedRestaurantId={setSelectedRestaurantId}
+          onAddRestaurant={onAddRestaurant}
+        />
         
-        <div className="space-y-2">
-          <Label htmlFor="restaurant">Select Restaurant*</Label>
-          {restaurants.length > 0 ? (
-            <Select 
-              value={selectedRestaurantId} 
-              onValueChange={setSelectedRestaurantId}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a restaurant" />
-              </SelectTrigger>
-              <SelectContent>
-                {restaurants.map((restaurant) => (
-                  <SelectItem key={restaurant.id} value={restaurant.id}>
-                    {restaurant.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <div className="flex flex-col space-y-2">
-              <p className="text-sm text-amber-600">You don't have any restaurants yet.</p>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onAddRestaurant}
-              >
-                Add a Restaurant First
-              </Button>
-            </div>
-          )}
-        </div>
+        <EventCapacityPriceInputs 
+          capacity={formValues.capacity}
+          price={formValues.price}
+          handleChange={handleChange}
+        />
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="capacity">Capacity*</Label>
-            <Input 
-              id="capacity" 
-              name="capacity" 
-              type="number" 
-              min="1" 
-              required 
-              placeholder="Number of seats available"
-              value={formValues.capacity}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="price">Price per Person*</Label>
-            <Input 
-              id="price" 
-              name="price" 
-              type="number" 
-              min="0" 
-              step="0.01" 
-              required 
-              placeholder="Ticket price per person"
-              value={formValues.price}
-              onChange={handleChange}
-            />
-          </div>
-        </div>
-        
-        {!existingEvent && (
-          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
-            <p className="text-amber-800 text-sm font-medium">A ${eventFee.toFixed(2)} event creation fee will be charged when you add this event.</p>
-          </div>
-        )}
+        <EventCreationFeeNotice 
+          eventFee={eventFee} 
+          isNewEvent={!existingEvent}
+        />
       </div>
       
       <div>
