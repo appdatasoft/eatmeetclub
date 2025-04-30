@@ -37,32 +37,19 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({ eventId }) => {
         
       if (error) throw error;
       
-      // If admin, fetch more details about users
+      // If admin, enrich with user info
       if (isAdmin && ticketsData.length > 0) {
-        const userIds = ticketsData.map(ticket => ticket.user_id);
+        // We can't directly query auth.users, so we'll use a simpler approach
+        // Just use the first part of the user_id as a display name
+        const enrichedTickets: Attendee[] = ticketsData.map(ticket => ({
+          ...ticket,
+          name: ticket.user_id.substring(0, 8) // Use first 8 chars of user ID as name
+        }));
         
-        const { data: usersData, error: usersError } = await supabase
-          .from('auth.users')
-          .select('id, email')
-          .in('id', userIds);
-          
-        if (usersError) {
-          console.error('Error fetching user details:', usersError);
-          return ticketsData;
-        }
-        
-        // Merge user data with ticket data
-        return ticketsData.map(ticket => {
-          const userData = usersData.find(user => user.id === ticket.user_id);
-          return {
-            ...ticket,
-            email: userData?.email,
-            name: userData?.email?.split('@')[0] || 'Anonymous'
-          };
-        });
+        return enrichedTickets;
       }
       
-      return ticketsData;
+      return ticketsData as Attendee[];
     },
     enabled: !!eventId
   });
@@ -105,10 +92,10 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({ eventId }) => {
                   <div className="flex items-center">
                     <Avatar className="h-8 w-8 mr-2">
                       <AvatarFallback>
-                        {attendee.name?.charAt(0).toUpperCase() || 'U'}
+                        {attendee.name ? attendee.name.charAt(0).toUpperCase() : attendee.user_id.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm">{attendee.name || 'Anonymous'}</span>
+                    <span className="text-sm">{attendee.name || attendee.user_id.substring(0, 8)}</span>
                   </div>
                   <span className="text-xs bg-secondary px-2 py-1 rounded-full">
                     {attendee.quantity} {attendee.quantity === 1 ? 'ticket' : 'tickets'}

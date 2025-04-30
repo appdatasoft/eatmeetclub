@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import QuickActions from "@/components/dashboard/QuickActions";
 import EventsList from "@/components/dashboard/EventsList";
@@ -9,10 +9,57 @@ import { useAuth } from "@/hooks/useAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserTickets from "@/components/dashboard/UserTickets";
 import { Ticket } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const { user, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+  const [restaurants, setRestaurants] = useState([]);
+  const [isLoadingRestaurants, setIsLoadingRestaurants] = useState(true);
+  
+  // Fetch restaurants if the user is an admin
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      if (!user || !isAdmin) {
+        setIsLoadingRestaurants(false);
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from('restaurants')
+          .select('*');
+          
+        if (error) throw error;
+        setRestaurants(data || []);
+      } catch (error) {
+        console.error('Error fetching restaurants:', error);
+      } finally {
+        setIsLoadingRestaurants(false);
+      }
+    };
+    
+    fetchRestaurants();
+  }, [user, isAdmin]);
+  
+  // Function to refresh restaurants after updates
+  const refreshRestaurants = async () => {
+    if (!user || !isAdmin) return;
+    
+    try {
+      setIsLoadingRestaurants(true);
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('*');
+        
+      if (error) throw error;
+      setRestaurants(data || []);
+    } catch (error) {
+      console.error('Error refreshing restaurants:', error);
+    } finally {
+      setIsLoadingRestaurants(false);
+    }
+  };
   
   if (!user) {
     return (
@@ -59,7 +106,11 @@ const Dashboard = () => {
           
           {isAdmin && (
             <TabsContent value="restaurants">
-              <RestaurantsList />
+              <RestaurantsList 
+                restaurants={restaurants} 
+                isLoading={isLoadingRestaurants} 
+                onRestaurantUpdate={refreshRestaurants} 
+              />
             </TabsContent>
           )}
         </Tabs>
