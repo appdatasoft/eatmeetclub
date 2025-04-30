@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -116,7 +117,7 @@ const EditEvent = () => {
           time: eventData.time,
           capacity: eventData.capacity,
           price: eventData.price,
-          restaurant_id: eventData.restaurantId,
+          restaurant_id: eventData.restaurant_id,
           updated_at: new Date().toISOString()
         })
         .eq('id', id);
@@ -164,6 +165,8 @@ const EditEvent = () => {
                   selectedRestaurantId={selectedRestaurantId}
                   setSelectedRestaurantId={setSelectedRestaurantId}
                   onAddRestaurant={handleAddRestaurant}
+                  existingEvent={event}
+                  submitLabel="Update Event"
                 />
               </CardContent>
             </Card>

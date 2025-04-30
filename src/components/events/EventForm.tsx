@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,6 +20,8 @@ interface EventFormProps {
   isLoading: boolean;
   onAddRestaurant: () => void;
   eventFee?: number;
+  existingEvent?: any;
+  submitLabel?: string;
 }
 
 const EventForm: React.FC<EventFormProps> = ({
@@ -29,8 +31,40 @@ const EventForm: React.FC<EventFormProps> = ({
   onSubmit,
   isLoading,
   onAddRestaurant,
-  eventFee = 50
+  eventFee = 50,
+  existingEvent,
+  submitLabel = "Add Event"
 }) => {
+  const [formValues, setFormValues] = useState({
+    eventTitle: '',
+    eventDescription: '',
+    eventDate: '',
+    eventTime: '',
+    capacity: '',
+    price: ''
+  });
+  
+  // Populate form with existing event data if available
+  useEffect(() => {
+    if (existingEvent) {
+      setFormValues({
+        eventTitle: existingEvent.title || '',
+        eventDescription: existingEvent.description || '',
+        eventDate: existingEvent.date || '',
+        eventTime: existingEvent.time || '',
+        capacity: existingEvent.capacity ? String(existingEvent.capacity) : '',
+        price: existingEvent.price ? String(existingEvent.price) : ''
+      });
+    }
+  }, [existingEvent]);
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormValues(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +93,14 @@ const EventForm: React.FC<EventFormProps> = ({
         
         <div className="space-y-2">
           <Label htmlFor="eventTitle">Event Title*</Label>
-          <Input id="eventTitle" name="eventTitle" required placeholder="Give your event a catchy title" />
+          <Input 
+            id="eventTitle" 
+            name="eventTitle" 
+            required 
+            placeholder="Give your event a catchy title" 
+            value={formValues.eventTitle}
+            onChange={handleChange}
+          />
         </div>
         
         <div className="space-y-2">
@@ -70,17 +111,33 @@ const EventForm: React.FC<EventFormProps> = ({
             required 
             placeholder="Describe what makes this event special..." 
             className="min-h-[120px]"
+            value={formValues.eventDescription}
+            onChange={handleChange}
           />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="eventDate">Event Date*</Label>
-            <Input id="eventDate" name="eventDate" type="date" required />
+            <Input 
+              id="eventDate" 
+              name="eventDate" 
+              type="date" 
+              required 
+              value={formValues.eventDate}
+              onChange={handleChange}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="eventTime">Event Time*</Label>
-            <Input id="eventTime" name="eventTime" type="time" required />
+            <Input 
+              id="eventTime" 
+              name="eventTime" 
+              type="time" 
+              required 
+              value={formValues.eventTime}
+              onChange={handleChange}
+            />
           </div>
         </div>
         
@@ -116,7 +173,16 @@ const EventForm: React.FC<EventFormProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="capacity">Capacity*</Label>
-            <Input id="capacity" name="capacity" type="number" min="1" required placeholder="Number of seats available" />
+            <Input 
+              id="capacity" 
+              name="capacity" 
+              type="number" 
+              min="1" 
+              required 
+              placeholder="Number of seats available"
+              value={formValues.capacity}
+              onChange={handleChange}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="price">Price per Person*</Label>
@@ -127,19 +193,23 @@ const EventForm: React.FC<EventFormProps> = ({
               min="0" 
               step="0.01" 
               required 
-              placeholder="Ticket price per person" 
+              placeholder="Ticket price per person"
+              value={formValues.price}
+              onChange={handleChange}
             />
           </div>
         </div>
         
-        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
-          <p className="text-amber-800 text-sm font-medium">A ${eventFee.toFixed(2)} event creation fee will be charged when you add this event.</p>
-        </div>
+        {!existingEvent && (
+          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
+            <p className="text-amber-800 text-sm font-medium">A ${eventFee.toFixed(2)} event creation fee will be charged when you add this event.</p>
+          </div>
+        )}
       </div>
       
       <div>
         <Button type="submit" isLoading={isLoading}>
-          Add Event
+          {submitLabel}
         </Button>
       </div>
     </form>
