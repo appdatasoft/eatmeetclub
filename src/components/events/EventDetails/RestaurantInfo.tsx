@@ -21,7 +21,13 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }
           />
         </div>
         <div>
-          <h3 className="font-medium">{name}</h3>
+          {id ? (
+            <Link to={`/restaurant/${id}`} className="font-medium hover:text-primary hover:underline">
+              {name}
+            </Link>
+          ) : (
+            <h3 className="font-medium">{name}</h3>
+          )}
           <p className="text-sm text-gray-500">Serving delicious meals</p>
         </div>
       </div>

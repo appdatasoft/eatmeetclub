@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { CalendarPlus, Edit, Trash2, ExternalLink } from "lucide-react";
+import { CalendarPlus, Edit, Trash2, ExternalLink, Eye } from "lucide-react";
 import { Restaurant } from "@/components/restaurants/types/restaurant";
 
 interface RestaurantActionsProps {
@@ -27,6 +27,16 @@ const RestaurantActions = ({ restaurant, onEdit, onDelete }: RestaurantActionsPr
       >
         <CalendarPlus className="h-4 w-4 text-primary" />
         <span className="sr-only">Add Event</span>
+      </Button>
+      
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => navigate(`/restaurant/${restaurant.id}`)}
+        title="View Restaurant"
+      >
+        <Eye className="h-4 w-4 text-blue-600" />
+        <span className="sr-only">View Restaurant</span>
       </Button>
       
       <Button
