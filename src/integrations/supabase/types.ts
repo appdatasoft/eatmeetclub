@@ -101,6 +101,165 @@ export type Database = {
           },
         ]
       }
+      memories: {
+        Row: {
+          created_at: string
+          date: string
+          event_id: string | null
+          id: string
+          is_auto_generated: boolean | null
+          location: string
+          privacy: Database["public"]["Enums"]["memory_privacy_type"]
+          restaurant_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          event_id?: string | null
+          id?: string
+          is_auto_generated?: boolean | null
+          location: string
+          privacy?: Database["public"]["Enums"]["memory_privacy_type"]
+          restaurant_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          event_id?: string | null
+          id?: string
+          is_auto_generated?: boolean | null
+          location?: string
+          privacy?: Database["public"]["Enums"]["memory_privacy_type"]
+          restaurant_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memories_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memories_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      memory_attendees: {
+        Row: {
+          created_at: string
+          id: string
+          is_tagged: boolean | null
+          memory_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_tagged?: boolean | null
+          memory_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_tagged?: boolean | null
+          memory_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_attendees_memory_id_fkey"
+            columns: ["memory_id"]
+            isOneToOne: false
+            referencedRelation: "memories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      memory_content: {
+        Row: {
+          content_text: string | null
+          content_type: string
+          content_url: string | null
+          created_at: string
+          id: string
+          memory_id: string
+          updated_at: string
+        }
+        Insert: {
+          content_text?: string | null
+          content_type: string
+          content_url?: string | null
+          created_at?: string
+          id?: string
+          memory_id: string
+          updated_at?: string
+        }
+        Update: {
+          content_text?: string | null
+          content_type?: string
+          content_url?: string | null
+          created_at?: string
+          id?: string
+          memory_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_content_memory_id_fkey"
+            columns: ["memory_id"]
+            isOneToOne: false
+            referencedRelation: "memories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      memory_dishes: {
+        Row: {
+          created_at: string
+          dish_name: string
+          id: string
+          memory_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dish_name: string
+          id?: string
+          memory_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dish_name?: string
+          id?: string
+          memory_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_dishes_memory_id_fkey"
+            columns: ["memory_id"]
+            isOneToOne: false
+            referencedRelation: "memories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           address: string
@@ -236,6 +395,15 @@ export type Database = {
       }
     }
     Enums: {
+      memory_mood_type:
+        | "cozy"
+        | "romantic"
+        | "fun"
+        | "deep_talk"
+        | "loud"
+        | "chill"
+        | "other"
+      memory_privacy_type: "public" | "private" | "unlisted"
       user_role: "user" | "admin"
     }
     CompositeTypes: {
@@ -352,6 +520,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      memory_mood_type: [
+        "cozy",
+        "romantic",
+        "fun",
+        "deep_talk",
+        "loud",
+        "chill",
+        "other",
+      ],
+      memory_privacy_type: ["public", "private", "unlisted"],
       user_role: ["user", "admin"],
     },
   },

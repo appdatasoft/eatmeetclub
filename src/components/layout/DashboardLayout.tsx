@@ -42,7 +42,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   }, []);
   
   const isActive = (path: string) => {
-    return location.pathname === path ? 'bg-brand-50 text-brand-600 font-medium' : 'text-gray-600 hover:bg-gray-50';
+    return location.pathname === path || location.pathname.startsWith(path + '/') 
+      ? 'bg-brand-50 text-brand-600 font-medium' 
+      : 'text-gray-600 hover:bg-gray-50';
   };
 
   return (
@@ -81,6 +83,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                         className={`block px-3 py-2 rounded-md ${isActive('/dashboard/add-restaurant')}`}
                       >
                         Add Restaurant
+                      </Link>
+                    </li>
+                    <li>
+                      <Link 
+                        to="/dashboard/memories" 
+                        className={`block px-3 py-2 rounded-md ${isActive('/dashboard/memories')}`}
+                      >
+                        Memories
                       </Link>
                     </li>
                     <li>

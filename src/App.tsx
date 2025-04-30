@@ -28,6 +28,10 @@ import HowItWorks from "./pages/HowItWorks";
 import PaymentSuccessPage from "./pages/dashboard/PaymentSuccessPage";
 import RestaurantJoin from "./pages/restaurants/RestaurantJoin";
 import NotFound from "./pages/NotFound";
+import Memories from "./pages/dashboard/Memories";
+import CreateMemory from "./pages/dashboard/CreateMemory";
+import MemoryDetail from "./pages/dashboard/MemoryDetail";
+import EditMemory from "./pages/dashboard/EditMemory";
 
 // Create a client with default options
 const queryClient = new QueryClient({
@@ -99,6 +103,23 @@ function App() {
           <Route
             path="/dashboard/create-event"
             element={session ? <CreateEvent /> : <Navigate to="/login" />}
+          />
+          {/* Memories Routes */}
+          <Route
+            path="/dashboard/memories"
+            element={session ? <Memories /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/dashboard/create-memory"
+            element={session ? <CreateMemory /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/dashboard/memories/:id"
+            element={session ? <MemoryDetail /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/dashboard/memories/edit/:id"
+            element={session ? <EditMemory /> : <Navigate to="/login" />}
           />
           <Route path="/events" element={<Events />} />
           <Route path="/venues" element={<VenuesPage />} />
