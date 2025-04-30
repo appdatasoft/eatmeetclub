@@ -22,49 +22,55 @@ export const useMemoriesFetch = () => {
       setIsLoading(true);
       setError(null);
 
-      // Fetch memories and related data
-      const { data, error } = await supabase
+      // First fetch just the memories without any nested relations
+      const { data: memoriesData, error: memoriesError } = await supabase
         .from('memories')
-        .select(`
-          *,
-          restaurant:restaurants(*),
-          event:events(*)
-        `)
+        .select('*')
         .eq('user_id', user.id)
         .order('date', { ascending: false });
 
-      if (error) throw error;
+      if (memoriesError) throw memoriesError;
 
-      // Get memory IDs to use in subsequent queries
-      const memoryIds = data.map(memory => memory.id);
-      
-      if (memoryIds.length === 0) {
+      if (memoriesData.length === 0) {
         // No memories found, return empty array
         setMemories([]);
         setIsLoading(false);
         return;
       }
+
+      // Get memory IDs to use in subsequent queries
+      const memoryIds = memoriesData.map(memory => memory.id);
       
-      // Fetch all related content for these memories in separate queries to avoid recursion
-      const [contentResult, dishesResult] = await Promise.all([
+      // Fetch related data separately to avoid recursion issues
+      const [
+        contentResult, 
+        restaurantsResult, 
+        eventsResult
+      ] = await Promise.all([
         supabase
           .from('memory_content')
           .select('*')
           .in('memory_id', memoryIds)
           .order('created_at', { ascending: true }),
         supabase
-          .from('memory_dishes')
+          .from('restaurants')
           .select('*')
-          .in('memory_id', memoryIds)
+          .in('id', memoriesData.filter(m => m.restaurant_id).map(m => m.restaurant_id)),
+        supabase
+          .from('events')
+          .select('*')
+          .in('id', memoriesData.filter(m => m.event_id).map(m => m.event_id))
       ]);
 
       // Map the related data to each memory
-      const memoriesWithRelations = data.map(memory => {
+      const memoriesWithRelations = memoriesData.map(memory => {
         return {
           ...memory,
           content: contentResult.data?.filter(c => c.memory_id === memory.id) || [],
-          dishes: dishesResult.data?.filter(d => d.memory_id === memory.id) || [],
-          attendees: [] // Skip attendees for now to avoid recursion issue
+          restaurant: restaurantsResult.data?.find(r => r.id === memory.restaurant_id),
+          event: eventsResult.data?.find(e => e.id === memory.event_id),
+          // Avoid fetching attendees for now as it causes the recursion
+          attendees: []
         };
       });
 
