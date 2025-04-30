@@ -15,7 +15,7 @@ export const useEvents = () => {
       setFetchError(null);
       console.log("Fetching published events...");
       
-      // 1. First try with auth. This will establish an anonymous session if the user is not logged in
+      // First try with supabase client query
       let { data, error } = await supabase
         .from('events')
         .select(`
@@ -32,27 +32,37 @@ export const useEvents = () => {
         .eq('published', true)
         .order('date', { ascending: true });
       
-      // 2. If there's an error (likely due to RLS), try with public access as a fallback
       if (error) {
         console.error("First attempt error:", error);
         console.log("Trying alternative query approach...");
         
-        // Try again with a REST API call using the correct way to access URL and key
-        const publicUrl = `https://wocfwpedauuhlrfugxuu.supabase.co/rest/v1/events?select=id,title,date,time,price,capacity,cover_image,published,restaurant:restaurants(name,city,state)&published=eq.true&order=date.asc`;
-        
-        const response = await fetch(publicUrl, {
-          headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvY2Z3cGVkYXV1aGxyZnVneHV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4MjIzNzAsImV4cCI6MjA2MTM5ODM3MH0.ddkNFmDcRtkPA6ubax7_GJxGQ6oNvbmsZ_FTY9DuzhM',
-            'Content-Type': 'application/json'
+        try {
+          // Use a direct public fetch with no auth required
+          const publicUrl = `https://wocfwpedauuhlrfugxuu.supabase.co/rest/v1/events?select=id,title,date,time,price,capacity,cover_image,published,restaurant:restaurants(name,city,state)&published=eq.true&order=date.asc`;
+          
+          console.log("Fetching from public URL:", publicUrl);
+          
+          const response = await fetch(publicUrl, {
+            headers: {
+              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvY2Z3cGVkYXV1aGxyZnVneHV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4MjIzNzAsImV4cCI6MjA2MTM5ODM3MH0.ddkNFmDcRtkPA6ubax7_GJxGQ6oNvbmsZ_FTY9DuzhM',
+              'Content-Type': 'application/json'
+            },
+            method: 'GET'
+          });
+          
+          if (!response.ok) {
+            console.error("Public API response status:", response.status);
+            throw new Error(`Public API request failed with status: ${response.status}`);
           }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Alternative query failed with status: ${response.status}`);
+          
+          const responseData = await response.json();
+          console.log("Public API response data:", responseData);
+          data = responseData;
+          error = null;
+        } catch (fetchError: any) {
+          console.error("Error in public fetch attempt:", fetchError);
+          throw new Error(`Failed to fetch events: ${fetchError.message}`);
         }
-        
-        data = await response.json();
-        error = null;
       }
         
       if (error) {
@@ -127,9 +137,9 @@ export const useEvents = () => {
       
       console.log("Formatted events:", formattedEvents);
       setEvents(formattedEvents);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching published events:", error);
-      setFetchError("An unexpected error occurred. Please try again later.");
+      setFetchError(`An unexpected error occurred: ${error.message}`);
       setEvents([]);
     } finally {
       setIsLoading(false);
@@ -140,7 +150,6 @@ export const useEvents = () => {
     fetchPublishedEvents();
 
     // Add a subscription to listen for changes in the events table
-    // This ensures that the events list is updated when events are published
     const channel = supabase
       .channel('public:events')
       .on('postgres_changes', {

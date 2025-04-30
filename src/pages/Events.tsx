@@ -8,6 +8,7 @@ import useEvents from "@/hooks/useEvents";
 import useEventFilters from "@/hooks/useEventFilters";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 const Events = () => {
   const { events, isLoading, fetchError, refreshEvents } = useEvents();
@@ -23,6 +24,7 @@ const Events = () => {
         description: fetchError,
         variant: "destructive"
       });
+      console.error("Events page error:", fetchError);
     }
   }, [fetchError, toast]);
 
@@ -34,6 +36,15 @@ const Events = () => {
       console.log("First event:", events[0]);
     }
   }, [events, filteredEvents, user]);
+
+  const handleRefresh = () => {
+    console.log("Manual refresh triggered");
+    refreshEvents();
+    toast({
+      title: "Refreshing events",
+      description: "Looking for new events..."
+    });
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -67,12 +78,16 @@ const Events = () => {
               <p className="text-lg text-gray-600">
                 There are currently no published events available.
               </p>
-              <button 
-                className="mt-4 text-blue-600 hover:text-blue-800 underline"
-                onClick={() => refreshEvents()}
+              <Button 
+                className="mt-4" 
+                variant="outline"
+                onClick={handleRefresh}
               >
                 Refresh events
-              </button>
+              </Button>
+              <div className="mt-4 text-sm text-gray-500">
+                Debug info: {user ? `User logged in (${user.id.slice(0,6)}...)` : "No user logged in"}
+              </div>
             </div>
           )}
         </div>
