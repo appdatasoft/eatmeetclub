@@ -10,4 +10,5 @@ export interface Restaurant {
   zipcode: string;
   phone: string;
   website: string | null;
+  description?: string;  // Added description field
 }
