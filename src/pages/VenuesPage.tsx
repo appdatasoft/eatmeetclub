@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -8,7 +7,7 @@ import Footer from "@/components/layout/Footer";
 import { Restaurant } from "@/components/restaurants/types/restaurant";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MapPin, Restaurant as RestaurantIcon } from "lucide-react";
+import { MapPin, Utensils as RestaurantIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
