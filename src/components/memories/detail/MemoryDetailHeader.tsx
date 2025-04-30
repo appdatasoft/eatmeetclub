@@ -23,7 +23,7 @@ const MemoryDetailHeader = ({ id, isOwner, onDeleteClick }: MemoryDetailHeaderPr
         <div className="flex space-x-2">
           <Button 
             variant="outline" 
-            onClick={() => navigate(`/dashboard/memories/edit/${id}`)}
+            onClick={() => navigate(`/dashboard/memories/${id}/edit`)}
           >
             <Edit className="mr-2 h-4 w-4" />
             Edit
