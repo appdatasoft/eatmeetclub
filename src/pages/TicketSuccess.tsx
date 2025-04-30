@@ -53,6 +53,8 @@ const TicketSuccess = () => {
           throw new Error(response.error.message || "Failed to verify payment");
         }
 
+        console.log("Verification response:", response.data);
+
         // Get ticket details from response
         const ticket = response.data.ticket;
         setTicketDetails(ticket);
