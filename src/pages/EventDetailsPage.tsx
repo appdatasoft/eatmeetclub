@@ -69,9 +69,13 @@ const EventDetailsPage = () => {
   
   // Process ticket purchase when user is logged in
   const processTicketPurchase = (ticketCount: number) => {
-    const count = handleTicketPurchase(ticketCount);
-    if (count && user) {
-      handleBuyTickets(count);
+    console.log("Process ticket purchase called:", ticketCount);
+    if (user) {
+      console.log("User is logged in, processing purchase");
+      handleBuyTickets(ticketCount);
+    } else {
+      console.log("User is not logged in, redirecting to login");
+      // This should be handled by the TicketPurchase component now
     }
   };
   

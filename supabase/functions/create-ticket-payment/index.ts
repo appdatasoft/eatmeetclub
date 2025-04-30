@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { stripe } from "../_shared/stripe.ts";
+import Stripe from "https://esm.sh/stripe@12.0.0?target=deno";
 
 // CORS headers for browser requests
 const corsHeaders = {
@@ -16,6 +16,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Ticket payment function called");
+    
     // Create Supabase client with auth context from request
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -43,6 +45,7 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (userError || !user) {
+      console.error("Authentication error:", userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -52,6 +55,8 @@ serve(async (req) => {
     // Parse request body
     const { purchaseData } = await req.json();
     const { eventId, quantity, unitPrice, serviceFee, totalAmount } = purchaseData;
+
+    console.log("Processing purchase data:", purchaseData);
 
     if (!eventId || !quantity || !unitPrice) {
       return new Response(
@@ -68,6 +73,7 @@ serve(async (req) => {
       .single();
 
     if (eventError || !event) {
+      console.error("Event not found:", eventError);
       return new Response(
         JSON.stringify({ error: 'Event not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -83,8 +89,13 @@ serve(async (req) => {
       );
     }
 
-    // Log information for debugging
-    console.log(`Creating payment session for user ${user.id}, event ${eventId}, quantity ${quantity}`);
+    // Initialize Stripe with the secret key from environment variable
+    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+      apiVersion: "2023-10-16", // Use the latest Stripe API version
+      httpClient: Stripe.createFetchHttpClient(),
+    });
+
+    console.log("Creating Stripe checkout session");
 
     // Create a Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
@@ -128,6 +139,8 @@ serve(async (req) => {
       },
     });
 
+    console.log("Checkout session created:", session.id);
+
     // Create a pending ticket record in the database
     const { data: ticketData, error: ticketError } = await supabaseClient
       .from('tickets')
@@ -154,9 +167,9 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in create-ticket-payment function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

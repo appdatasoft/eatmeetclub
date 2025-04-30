@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 interface TicketPurchaseProps {
@@ -21,6 +21,13 @@ const TicketPurchase: React.FC<TicketPurchaseProps> = ({
 }) => {
   const [ticketCount, setTicketCount] = useState(1);
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLoginToBuy = () => {
+    // Save intended action in localStorage
+    localStorage.setItem('redirectAfterLogin', window.location.pathname);
+    navigate('/login');
+  };
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm sticky top-24">
@@ -88,7 +95,7 @@ const TicketPurchase: React.FC<TicketPurchaseProps> = ({
       {!user ? (
         <div>
           <Button 
-            onClick={() => onBuyTickets(ticketCount)} 
+            onClick={handleLoginToBuy}
             className="w-full mb-2" 
             size="lg"
           >

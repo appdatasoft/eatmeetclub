@@ -6,7 +6,7 @@ import { EventDetails } from "./types/eventTypes";
 
 export interface EventPaymentHandlerResponse {
   isPaymentProcessing: boolean;
-  handleBuyTickets: (ticketCount: number) => void;
+  handleBuyTickets: (ticketCount: number) => Promise<void>;
 }
 
 export const useEventPaymentHandler = (
@@ -17,7 +17,14 @@ export const useEventPaymentHandler = (
 
   // Handle buying tickets
   const handleBuyTickets = async (ticketCount: number) => {
-    if (!event) return;
+    if (!event) {
+      toast({
+        title: "Error",
+        description: "Event details not available",
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
       setIsPaymentProcessing(true);
@@ -35,6 +42,8 @@ export const useEventPaymentHandler = (
         });
         return;
       }
+      
+      console.log("Starting ticket purchase process for event:", event.id);
       
       // Calculate service fee (5% of total)
       const unitPrice = event.price;
