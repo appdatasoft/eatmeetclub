@@ -280,7 +280,8 @@ const EventDetails = () => {
       <div className="bg-white">
         <EventHeader 
           title={event.title} 
-          restaurantName={event.restaurant.name} 
+          restaurantName={event.restaurant.name}
+          restaurantId={event.restaurant.id} 
           isOwner={canEditEvent}
           onEditCover={handleEditCover}
           coverImage={coverImageUrl}
