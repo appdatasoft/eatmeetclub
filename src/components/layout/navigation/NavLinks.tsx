@@ -14,35 +14,35 @@ const NavLinks = () => {
       <NavigationMenu>
         <NavigationMenuList>
           <NavigationMenuItem>
-            <Link to="/" legacyBehavior passHref>
+            <Link to="/">
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                 Home
               </NavigationMenuLink>
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link to="/events" legacyBehavior passHref>
+            <Link to="/events">
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                 Events
               </NavigationMenuLink>
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link to="/venues" legacyBehavior passHref>
+            <Link to="/venues">
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                 Venues
               </NavigationMenuLink>
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link to="/dashboard/memories" legacyBehavior passHref>
+            <Link to="/dashboard/memories">
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                 Memories
               </NavigationMenuLink>
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link to="/about" legacyBehavior passHref>
+            <Link to="/about">
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                 About
               </NavigationMenuLink>
