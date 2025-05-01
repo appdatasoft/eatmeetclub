@@ -98,7 +98,11 @@ export const useEventPaymentHandler = (
       }
       
       // Store ticket purchase details in localStorage for access after payment
+      // Ensure restaurant data has all required properties before using them
       const restaurantData = event.restaurant || { name: "Unknown Venue" };
+      const restaurantAddress = 'address' in restaurantData ? restaurantData.address : '';
+      const restaurantCity = 'city' in restaurantData ? restaurantData.city : '';
+      
       localStorage.setItem('ticketDetails', JSON.stringify({
         eventId: event.id,
         eventTitle: event.title,
@@ -108,8 +112,8 @@ export const useEventPaymentHandler = (
         total_amount: totalAmount,
         restaurant: {
           name: restaurantData.name,
-          address: restaurantData.address,
-          city: restaurantData.city
+          address: restaurantAddress,
+          city: restaurantCity
         },
         date: event.date,
         time: event.time,
