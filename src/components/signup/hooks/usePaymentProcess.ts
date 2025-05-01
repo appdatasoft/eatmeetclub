@@ -25,6 +25,12 @@ export const usePaymentProcess = ({ setIsLoading }: UsePaymentProcessProps) => {
       return;
     }
     
+    // Store user details in localStorage for later use
+    localStorage.setItem('signup_email', email);
+    localStorage.setItem('signup_name', name || '');
+    localStorage.setItem('signup_phone', phone || '');
+    localStorage.setItem('signup_address', address || '');
+    
     setIsLoading(true);
     
     try {

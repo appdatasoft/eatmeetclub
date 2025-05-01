@@ -1,53 +1,78 @@
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
-import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-
-interface AuthButtonsProps {
-  user: any | null;
-  handleLogout: () => Promise<void>;
-}
-
-const AuthButtons = ({ user, handleLogout }: AuthButtonsProps) => {
-  const navigate = useNavigate();
+const AuthButtons = () => {
+  const { user, handleLogout, isLoading } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const onLogout = async () => {
+  const isLoggedIn = !!user;
+
+  const handleLogoutClick = async () => {
     try {
       await handleLogout();
       toast({
-        title: "Logged out successfully",
-        description: "You have been logged out of your account"
+        title: "Logged out",
+        description: "You have been successfully logged out.",
       });
-      navigate('/');
-    } catch (error) {
-      console.error("Logout error:", error);
+      navigate("/login");
+    } catch (error: any) {
       toast({
-        title: "Error logging out",
-        description: "An error occurred while logging out",
-        variant: "destructive"
+        title: "Error",
+        description: error.message || "Failed to logout.",
+        variant: "destructive",
       });
     }
   };
 
   return (
-    <div className="hidden md:flex items-center space-x-3">
-      {user ? (
+    <div className="flex items-center gap-4">
+      {isLoggedIn ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
+                <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to="/profile">Profile</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/dashboard">Dashboard</Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogoutClick} disabled={isLoading}>
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
         <>
-          <Button variant="ghost" size="default" asChild>
-            <Link to="/dashboard">Dashboard</Link>
+          <Button variant="ghost" asChild>
+            <Link to="/login">Login</Link>
           </Button>
-          <Button onClick={onLogout} variant="outline" size="default">
-            <LogOut className="h-4 w-4 mr-2" />
-            Log out
+          <Button asChild>
+            <Link to="/membership-payment">Join Now</Link>
           </Button>
         </>
-      ) : (
-        <Button variant="ghost" size="default" asChild>
-          <Link to="/login">Log in</Link>
-        </Button>
       )}
     </div>
   );

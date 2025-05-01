@@ -1,85 +1,77 @@
-import { Routes, Route, BrowserRouter } from "react-router-dom";
-import Index from './pages/Index';
-import Events from './pages/Events';
-import NotFound from './pages/NotFound';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import About from './pages/About';
-import HowItWorks from './pages/HowItWorks';
-import EventDetailsPage from './pages/EventDetailsPage';
-import EventDetails from './pages/EventDetails';
-import Signup from './pages/Signup';
-import MembershipPayment from './pages/MembershipPayment';
-import Dashboard from './pages/dashboard/Dashboard';
-import EventsManagement from './pages/dashboard/EventsManagement';
-import CreateEvent from './pages/dashboard/CreateEvent';
-import EventPayment from './pages/dashboard/EventPayment';
-import PaymentSuccessPage from './pages/dashboard/PaymentSuccessPage';
-import AddRestaurant from './pages/dashboard/AddRestaurant';
-import Settings from './pages/dashboard/Settings';
-import AdminSettings from './pages/dashboard/AdminSettings';
-import Users from './pages/dashboard/Users';
-import CreateMemory from './pages/dashboard/CreateMemory';
-import Memories from './pages/dashboard/Memories';
-import MemoryDetail from './pages/dashboard/MemoryDetail';
-import EditMemory from './pages/dashboard/EditMemory';
-import VenuesPage from './pages/VenuesPage';
-import RestaurantDetailsPage from './pages/RestaurantDetailsPage';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import ConfigPage from './pages/admin/ConfigPage';
-import UsersPage from './pages/admin/UsersPage';
-import UserProfilePage from './pages/UserProfilePage';
-import TicketSuccess from './pages/TicketSuccess';
-import CreateEventPage from './pages/CreateEvent';
-import EditEvent from './pages/EditEvent';
-import BecomeMember from './pages/BecomeMember';
-import SetPassword from './pages/SetPassword';
-
-import './App.css'
-import { Toaster } from '@/components/ui/toaster';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "@/components/ui/toaster";
+import Home from "@/pages/Home";
+import Login from "@/pages/Login";
+import SignupContainer from "@/components/signup/SignupContainer";
+import Dashboard from "@/pages/Dashboard";
+import EventDetails from "@/pages/EventDetails";
+import CreateEvent from "@/pages/CreateEvent";
+import EditEvent from "@/pages/EditEvent";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import AdminRoute from "@/components/auth/AdminRoute";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminEvents from "@/pages/admin/AdminEvents";
+import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminSettings from "@/pages/admin/AdminSettings";
+import NotFound from "@/pages/NotFound";
+import BecomeMember from "@/pages/BecomeMember";
+import MembershipPayment from "@/pages/MembershipPayment";
+import SetPassword from "@/pages/SetPassword";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
+import AboutUs from "@/pages/AboutUs";
+import ContactUs from "@/pages/ContactUs";
+import EventCheckout from "@/pages/EventCheckout";
+import EventSuccess from "@/pages/EventSuccess";
+import UserProfile from "@/pages/UserProfile";
+import EditProfile from "@/pages/EditProfile";
+import MyEvents from "@/pages/MyEvents";
+import MyTickets from "@/pages/MyTickets";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/events" element={<Events />} />
-        <Route path="/event/:id" element={<EventDetailsPage />} />
-        <Route path="/venues" element={<VenuesPage />} />
-        <Route path="/venue/:id" element={<RestaurantDetailsPage />} />
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route path="/become-member" element={<BecomeMember />} />
+        
+        {/* Direct access to membership checkout */}
         <Route path="/membership-payment" element={<MembershipPayment />} />
-        <Route path="/ticket-success" element={<TicketSuccess />} />
-        <Route path="/profile/:id" element={<UserProfilePage />} />
-        <Route path="/create-event" element={<CreateEventPage />} />
-        <Route path="/edit-event/:id" element={<EditEvent />} />
         
-        {/* Dashboard routes */}
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/dashboard/events" element={<EventsManagement />} />
-        <Route path="/dashboard/create-event" element={<CreateEvent />} />
-        <Route path="/dashboard/payment/:id" element={<EventPayment />} />
-        <Route path="/dashboard/payment-success" element={<PaymentSuccessPage />} />
-        <Route path="/dashboard/add-restaurant" element={<AddRestaurant />} />
-        <Route path="/dashboard/settings" element={<Settings />} />
-        <Route path="/dashboard/admin-settings" element={<AdminSettings />} />
-        <Route path="/dashboard/users" element={<Users />} />
-        <Route path="/dashboard/create-memory" element={<CreateMemory />} />
-        <Route path="/dashboard/memories" element={<Memories />} />
-        <Route path="/dashboard/memory/:id" element={<MemoryDetail />} />
-        <Route path="/dashboard/edit-memory/:id" element={<EditMemory />} />
+        {/* Use the membership route directly, skipping the two-step process */}
+        <Route path="/become-member" element={<Navigate to="/membership-payment" />} />
         
-        {/* Admin routes */}
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/config" element={<ConfigPage />} />
-        <Route path="/admin/users" element={<UsersPage />} />
+        {/* Keep the old signup route for backward compatibility */}
+        <Route path="/signup" element={<SignupContainer />} />
         
         <Route path="/set-password" element={<SetPassword />} />
+        <Route path="/events/:eventId" element={<EventDetails />} />
+        <Route path="/events/:eventId/checkout" element={<EventCheckout />} />
+        <Route path="/events/:eventId/success" element={<EventSuccess />} />
+        
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/contact" element={<ContactUs />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        
+        {/* Protected routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<UserProfile />} />
+          <Route path="/profile/edit" element={<EditProfile />} />
+          <Route path="/my-events" element={<MyEvents />} />
+          <Route path="/my-tickets" element={<MyTickets />} />
+          <Route path="/events/create" element={<CreateEvent />} />
+          <Route path="/events/:eventId/edit" element={<EditEvent />} />
+        </Route>
+        
+        {/* Admin routes */}
+        <Route element={<AdminRoute />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/events" element={<AdminEvents />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+        </Route>
         
         <Route path="*" element={<NotFound />} />
       </Routes>

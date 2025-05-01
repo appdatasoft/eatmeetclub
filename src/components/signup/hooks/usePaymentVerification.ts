@@ -22,33 +22,22 @@ export const usePaymentVerification = ({
     setIsLoading(true);
     
     try {
-      // Try to get session data if we have an authenticated user
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // Get user details from localStorage or session
+      // Get user details from localStorage
       const storedEmail = localStorage.getItem('signup_email');
       const storedName = localStorage.getItem('signup_name');
       const storedPhone = localStorage.getItem('signup_phone');
+      const storedAddress = localStorage.getItem('signup_address');
       
-      const email = session?.user?.email || storedEmail;
-      const name = (session?.user?.user_metadata?.name || storedName || email?.split('@')[0]) as string;
-      const phone = session?.user?.user_metadata?.phone || storedPhone;
-      
-      if (!email) {
+      if (!storedEmail) {
         throw new Error("Missing email for payment verification");
       }
       
       console.log("Verifying payment with session ID:", paymentId);
-      console.log("User details:", { email, name, phone });
+      console.log("User details:", { email: storedEmail, name: storedName, phone: storedPhone });
       
       const headers: Record<string, string> = {
         "Content-Type": "application/json"
       };
-      
-      // Add authorization header if we have a session
-      if (session?.access_token) {
-        headers["Authorization"] = `Bearer ${session.access_token}`;
-      }
       
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
@@ -57,9 +46,10 @@ export const usePaymentVerification = ({
           headers,
           body: JSON.stringify({
             paymentId,
-            email,
-            name,
-            phone: phone || null,
+            email: storedEmail,
+            name: storedName,
+            phone: storedPhone || null,
+            address: storedAddress || null,
             isSubscription: true
           }),
         }
@@ -84,6 +74,7 @@ export const usePaymentVerification = ({
         localStorage.removeItem('signup_email');
         localStorage.removeItem('signup_name');
         localStorage.removeItem('signup_phone');
+        localStorage.removeItem('signup_address');
         
         // Redirect to login or dashboard based on user status
         setTimeout(() => {

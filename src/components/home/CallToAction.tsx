@@ -1,28 +1,25 @@
-
 import { Button } from "@/components/common/Button";
 import { useAuth } from '@/hooks/useAuth';
+import { Link } from 'react-router-dom';
 
 const CallToAction = () => {
   const { user } = useAuth();
   
   return (
-    <section className="bg-brand-500 py-16">
+    <section className="py-16 bg-gradient-to-r from-brand-500 to-brand-600 text-white">
       <div className="container-custom text-center">
-        <h2 className="text-3xl font-bold text-white mb-4">Ready to Join the Community?</h2>
-        <p className="text-white/90 max-w-2xl mx-auto mb-8">
-          Whether you're a restaurant owner looking to host events or a food enthusiast seeking unique dining experiences, 
-          Eat Meet Club is the perfect platform to connect.
+        <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          Ready to join our food adventure?
+        </h2>
+        <p className="text-lg mb-8 max-w-2xl mx-auto">
+          Become a member today and start connecting with fellow food enthusiasts
+          at unique dining experiences.
         </p>
-        <div className="flex flex-col sm:flex-row justify-center gap-4">
-          {!user ? (
-            <Button href="/become-member" variant="primary" size="lg" className="bg-white text-brand-500 hover:bg-gray-100">
-              Join Now
-            </Button>
-          ) : null}
-          <Button href="/events" variant="outline" size="lg" className="border-white text-white hover:bg-brand-600">
-            Browse Events
-          </Button>
-        </div>
+        <Button asChild size="lg" variant="secondary">
+          <Link to="/membership-payment" className="font-semibold">
+            Join Membership Now
+          </Link>
+        </Button>
       </div>
     </section>
   );
