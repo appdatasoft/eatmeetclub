@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import AuthHeader from "@/components/signup/AuthHeader";
 import PaymentCanceledAlert from "@/components/signup/PaymentCanceledAlert";
 import PaymentSuccessAlert from "@/components/signup/PaymentSuccessAlert";
 import SignupFormContainer from "@/components/signup/SignupFormContainer";
+import useAuth from "@/hooks/useAuth";
 
 const SignupContainer = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -22,6 +23,9 @@ const SignupContainer = () => {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const paymentCanceled = searchParams.get('canceled') === 'true';
+  const directToPayment = searchParams.get('payment') === 'true';
+  
+  const { user } = useAuth();
   
   const { 
     isPaymentVerified, 
@@ -36,6 +40,21 @@ const SignupContainer = () => {
     toast,
     navigate
   });
+
+  // If logged in user accesses this page directly with payment=true parameter,
+  // skip to payment step
+  useEffect(() => {
+    if (user && directToPayment && !showPaymentForm && !isVerifyingPayment && !isPaymentVerified) {
+      console.log("Logged-in user accessing signup - skip to payment form");
+      // Create minimal user details from auth user
+      setUserDetails({
+        email: user.email || '',
+        password: '', // Not needed since user is already logged in
+        phoneNumber: user.user_metadata?.phone || ''
+      });
+      setShowPaymentForm(true);
+    }
+  }, [user, directToPayment, showPaymentForm, isVerifyingPayment, isPaymentVerified]);
 
   const handleBack = () => {
     setShowPaymentForm(false);

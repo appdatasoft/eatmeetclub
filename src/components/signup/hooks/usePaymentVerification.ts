@@ -21,20 +21,25 @@ export const usePaymentVerification = ({
     setIsVerifyingPayment(true);
     setIsLoading(true);
     try {
-      const email = localStorage.getItem('signup_email');
-      const name = localStorage.getItem('signup_name');
-      const phone = localStorage.getItem('signup_phone');
+      // Get the current session to include the auth token
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (!email || !name) {
-        throw new Error("Missing user details for payment verification");
+      if (!session?.user) {
+        throw new Error("Authentication required to verify payment");
+      }
+      
+      const email = session.user.email;
+      const name = session.user.user_metadata.name || email?.split('@')[0];
+      const phone = session.user.user_metadata.phone;
+      
+      if (!email) {
+        throw new Error("Missing email for payment verification");
       }
       
       console.log("Verifying payment with session ID:", paymentId);
       console.log("User details:", { email, name, phone });
       
-      // Get the current session to include the auth token
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token || '';
+      const accessToken = session.access_token;
       
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
@@ -42,7 +47,7 @@ export const usePaymentVerification = ({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`, // Include the auth token
+            "Authorization": `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             paymentId,
@@ -70,13 +75,13 @@ export const usePaymentVerification = ({
         });
         
         // Clean up localStorage
+        localStorage.removeItem('signup_email');
+        localStorage.removeItem('signup_name');
+        localStorage.removeItem('signup_phone');
+        
+        // Redirect to login or dashboard based on user status
         setTimeout(() => {
-          localStorage.removeItem('signup_email');
-          localStorage.removeItem('signup_name');
-          localStorage.removeItem('signup_phone');
-          
-          // Redirect to login
-          navigate("/login?verified=true");
+          navigate("/dashboard");
         }, 3000);
       } else {
         throw new Error(data.message || "Payment verification failed");

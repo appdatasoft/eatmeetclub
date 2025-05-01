@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +35,8 @@ const BecomeMember = () => {
     
     // Short delay to show the toast before redirecting
     setTimeout(() => {
-      navigate("/signup");
+      // For logged-in users, proceed directly to payment - skip the signup form
+      navigate("/signup?payment=true");
     }, 1000);
   };
 

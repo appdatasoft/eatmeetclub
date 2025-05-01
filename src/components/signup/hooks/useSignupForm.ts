@@ -21,9 +21,24 @@ export const useSignupForm = ({
     setIsLoading(true);
 
     try {
-      // Store the user details for later use in payment verification
+      // Check if the user is already logged in
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        console.log("User is already logged in, proceeding to payment");
+        // Store minimal details
+        values.email = session.user.email || values.email;
+        
+        // Skip registration step and go directly to payment
+        setUserDetails(values);
+        setShowPaymentForm(true);
+        setIsLoading(false);
+        return;
+      }
+      
+      // For new users, continue with signup process
       localStorage.setItem('signup_email', values.email);
-      localStorage.setItem('signup_name', values.email.split('@')[0]); // Using part of email as name since we don't collect full name
+      localStorage.setItem('signup_name', values.email.split('@')[0]); // Using part of email as name
       if (values.phoneNumber) {
         localStorage.setItem('signup_phone', values.phoneNumber);
       }

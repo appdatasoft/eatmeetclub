@@ -9,20 +9,24 @@ interface UsePaymentProcessProps {
 export const usePaymentProcess = ({ setIsLoading }: UsePaymentProcessProps) => {
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    const storedEmail = localStorage.getItem('signup_email');
-    const storedName = localStorage.getItem('signup_name');
-    const storedPhone = localStorage.getItem('signup_phone');
-    
-    if (!storedEmail) return;
     
     setIsLoading(true);
-
+    
     try {
-      console.log("Initiating payment process with user details:", storedEmail);
-      
-      // Get the current session to include the auth token
+      // Get the current authenticated user's email
       const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token || '';
+      
+      if (!session?.user) {
+        throw new Error("You must be logged in to complete this process");
+      }
+      
+      const userEmail = session.user.email;
+      const userName = session.user.user_metadata.name || userEmail?.split('@')[0];
+      const userPhone = session.user.user_metadata.phone;
+      
+      console.log("Initiating payment process with user details from auth:", userEmail);
+      
+      const accessToken = session.access_token;
       
       // Create a Stripe checkout session
       const response = await fetch(
@@ -34,9 +38,9 @@ export const usePaymentProcess = ({ setIsLoading }: UsePaymentProcessProps) => {
             "Authorization": `Bearer ${accessToken}`, // Include the auth token
           },
           body: JSON.stringify({
-            email: storedEmail,
-            name: storedName || storedEmail.split('@')[0],
-            phone: storedPhone,
+            email: userEmail,
+            name: userName,
+            phone: userPhone
           }),
         }
       );
