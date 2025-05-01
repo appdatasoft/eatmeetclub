@@ -15,15 +15,16 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const location = useLocation();
-  const { user, handleLogin } = useAuth();
+  const { user, handleLogin, isLoading } = useAuth();
 
   // If user is already logged in, redirect to dashboard
   useEffect(() => {
-    if (user) {
-      console.log("User already logged in, redirecting to dashboard");
-      navigate("/dashboard");
+    if (user && !isLoading) {
+      console.log("User already logged in, redirecting to dashboard or saved redirect");
+      const savedRedirect = redirectUrl || '/dashboard';
+      navigate(savedRedirect);
     }
-  }, [user, navigate]);
+  }, [user, navigate, isLoading, redirectUrl]);
 
   useEffect(() => {
     // Check if we have a redirect path from state
@@ -70,13 +71,16 @@ const Login = () => {
         description: "Welcome back!",
       });
 
-      // Handle redirects after login
-      if (redirectUrl) {
-        localStorage.removeItem('redirectAfterLogin');
-        navigate(redirectUrl);
-      } else {
-        navigate("/dashboard");
-      }
+      // Allow the auth state to update before attempting navigation
+      setTimeout(() => {
+        // Handle redirects after login
+        if (redirectUrl) {
+          localStorage.removeItem('redirectAfterLogin');
+          navigate(redirectUrl);
+        } else {
+          navigate("/dashboard");
+        }
+      }, 100);
     } catch (error: any) {
       console.error("Error logging in:", error);
       toast({
@@ -88,6 +92,18 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  // If already logged in and still loading, show a spinner
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-500">Verifying your credentials...</p>
+        </div>
+      </div>
+    );
+  }
 
   // If already logged in, don't show the login form
   if (user) return null;

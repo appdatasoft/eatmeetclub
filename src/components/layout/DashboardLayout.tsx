@@ -1,11 +1,12 @@
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import { useAuth } from '@/hooks/useAuth';
 import { PlusCircle } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -14,15 +15,28 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { user, isAdmin, isLoading } = useAuth();
+  const [redirectAttempted, setRedirectAttempted] = useState(false);
   
   useEffect(() => {
-    // Redirect to login if not authenticated and not loading
-    if (!isLoading && !user) {
+    // Only redirect if not loading and no user, and we haven't tried redirecting yet
+    if (!isLoading && !user && !redirectAttempted) {
       console.log("Not authenticated, redirecting to login");
-      navigate('/login');
+      setRedirectAttempted(true);
+      
+      // Store the current path for redirect after login
+      localStorage.setItem('redirectAfterLogin', location.pathname);
+      
+      // Show toast notification
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to access the dashboard",
+      });
+      
+      navigate('/login', { state: { from: location.pathname } });
     }
-  }, [user, navigate, isLoading]);
+  }, [user, navigate, isLoading, location.pathname, redirectAttempted, toast]);
   
   const isActive = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + '/') 
@@ -30,10 +44,23 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       : 'text-gray-600 hover:bg-gray-50';
   };
 
+  // Prevent infinite loading if auth takes too long
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (isLoading) {
+        console.log("Auth check taking too long, forcing refresh");
+        window.location.reload();
+      }
+    }, 10000); // 10 seconds timeout
+    
+    return () => clearTimeout(timeoutId);
+  }, [isLoading]);
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
+        <p className="text-gray-500">Loading your dashboard...</p>
       </div>
     );
   }
