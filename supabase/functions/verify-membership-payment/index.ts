@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { stripe } from "../_shared/stripe.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
@@ -18,7 +19,7 @@ serve(async (req) => {
 
   try {
     // Parse the request body to get the payment ID and user details
-    const { paymentId, email, name, phone, isSubscription = false } = await req.json();
+    const { paymentId, email, name, phone, address, isSubscription = false } = await req.json();
     if (!paymentId) throw new Error("No payment ID provided");
     if (!email) throw new Error("No email provided");
     if (!name) throw new Error("No name provided");
@@ -38,7 +39,7 @@ serve(async (req) => {
       authToken = authHeader.substring(7);
       console.log("Auth token received for verification");
     } else {
-      console.log("No auth token provided in verification headers");
+      console.log("No auth token provided in verification headers - this is normal for new flow");
     }
     
     // Try to get user from token first
@@ -77,29 +78,28 @@ serve(async (req) => {
       }
     }
     
-    // If still no user ID, create a new user
-    let password;
+    // If still no user ID, create a temporary user (without password)
     if (!userId) {
-      console.log("No existing user found, creating new user");
-      // Generate a random password for the new user
-      password = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      console.log("No existing user found, creating new temporary user");
       
-      const { data: userData, error: userError } = await supabaseClient.auth.admin.createUser({
+      const { data: newUserData, error: newUserError } = await supabaseClient.auth.admin.createUser({
         email,
-        password,
         email_confirm: true,
         user_metadata: { 
           full_name: name,
           phone: phone || null,
-        }
+          address: address || null,
+          needs_password: true
+        },
+        password: null // No password yet - will be set later
       });
 
-      if (userError) {
-        throw new Error(`Error creating user: ${userError.message}`);
+      if (newUserError) {
+        throw new Error(`Error creating user: ${newUserError.message}`);
       }
 
-      userId = userData.user.id;
-      console.log("User created successfully:", userId);
+      userId = newUserData.user.id;
+      console.log("Temporary user created successfully:", userId);
     }
 
     // Verify the payment with Stripe
@@ -249,19 +249,20 @@ serve(async (req) => {
     
     console.log("Payment recorded:", paymentRecord.id);
 
-    // If we created a new user, send a password reset email
-    if (password) {
-      const { error: resetError } = await supabaseClient.auth.admin.generateLink({
-        type: 'recovery',
-        email,
-      });
-
-      if (resetError) {
-        console.error("Error sending password reset email:", resetError.message);
-        // Don't fail the process for this error
-      } else {
-        console.log("Password reset email sent successfully");
+    // Send verification email for password setup
+    const { data: verificationData, error: verificationError } = await supabaseClient.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: {
+        redirectTo: 'https://www.eatmeetclub.com/set-password',
       }
+    });
+
+    if (verificationError) {
+      console.error("Error sending password setup email:", verificationError.message);
+      // Don't fail the process for this error
+    } else {
+      console.log("Password setup email sent successfully");
     }
 
     // Send welcome email
@@ -316,6 +317,7 @@ serve(async (req) => {
         message: "Membership activated successfully",
         userId,
         membershipId: membership.id,
+        needsPassword: true
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -355,7 +357,7 @@ async function sendWelcomeEmail(email: string, name: string) {
     <p>Hi ${name},</p>
     <p>Your membership is now active.</p>
     <p>Your monthly subscription of $25 has been processed successfully. You can find your receipt in your email.</p>
-    <p>To get started, please log in to your account at our website using the email address you registered with.</p>
+    <p>We've sent you a separate email to set up your password. Please complete that process to access your account.</p>
     <p>We're excited to have you as a member!</p>
     <p>Best regards,<br>The Eat Meet Club Team</p>
   `;

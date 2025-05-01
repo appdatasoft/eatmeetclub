@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,26 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Check, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MainLayout from "@/components/layout/MainLayout";
-import useAuth from "@/hooks/useAuth";
 
 const BecomeMember = () => {
-  const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   const handleProceedToPayment = () => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to continue with membership registration",
-      });
-      // Store current location to redirect back after login
-      localStorage.setItem("redirectAfterLogin", "/become-member");
-      navigate("/login");
-      return;
-    }
-
     setIsRedirecting(true);
     toast({
       title: "Redirecting to payment",
@@ -35,8 +21,7 @@ const BecomeMember = () => {
     
     // Short delay to show the toast before redirecting
     setTimeout(() => {
-      // For logged-in users, proceed directly to payment - skip the signup form
-      navigate("/signup?payment=true");
+      navigate("/membership-payment");
     }, 1000);
   };
 
@@ -82,7 +67,7 @@ const BecomeMember = () => {
               <Button 
                 className="w-full" 
                 onClick={handleProceedToPayment}
-                disabled={isRedirecting || isLoading}
+                disabled={isRedirecting}
               >
                 {isRedirecting ? "Redirecting..." : "Subscribe Now"}
               </Button>

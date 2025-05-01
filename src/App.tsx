@@ -1,4 +1,3 @@
-
 import { Routes, Route, BrowserRouter } from "react-router-dom";
 import Index from './pages/Index';
 import Events from './pages/Events';
@@ -34,6 +33,7 @@ import TicketSuccess from './pages/TicketSuccess';
 import CreateEventPage from './pages/CreateEvent';
 import EditEvent from './pages/EditEvent';
 import BecomeMember from './pages/BecomeMember';
+import SetPassword from './pages/SetPassword';
 
 import './App.css'
 import { Toaster } from '@/components/ui/toaster';
@@ -78,6 +78,8 @@ function App() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/config" element={<ConfigPage />} />
         <Route path="/admin/users" element={<UsersPage />} />
+        
+        <Route path="/set-password" element={<SetPassword />} />
         
         <Route path="*" element={<NotFound />} />
       </Routes>

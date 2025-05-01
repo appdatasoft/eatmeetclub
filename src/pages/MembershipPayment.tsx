@@ -5,7 +5,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Button } from "@/components/common/Button";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
@@ -13,11 +12,16 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const membershipSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
-  phone: z.string().optional(),
+  phone: z.string().min(10, { message: "Please enter a valid phone number" }).optional(),
+  address: z.string().min(5, { message: "Please enter your address" }),
+  cardNumber: z.string().min(16, { message: "Please enter a valid card number" }),
+  cardExpiry: z.string().min(5, { message: "Please enter a valid expiry date" }),
+  cardCvc: z.string().min(3, { message: "Please enter a valid CVC" }),
 });
 
 type MembershipFormValues = z.infer<typeof membershipSchema>;
@@ -27,7 +31,7 @@ const MembershipPayment = () => {
   const navigate = useNavigate();
   const [membershipFee, setMembershipFee] = useState(25);
   const [isLoading, setIsLoading] = useState(true);
-  const [isNotificationSent, setIsNotificationSent] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [searchParams] = useSearchParams();
   const paymentCanceled = searchParams.get('canceled') === 'true';
 
@@ -37,6 +41,10 @@ const MembershipPayment = () => {
       name: "",
       email: "",
       phone: "",
+      address: "",
+      cardNumber: "",
+      cardExpiry: "",
+      cardCvc: "",
     },
   });
 
@@ -62,68 +70,30 @@ const MembershipPayment = () => {
     fetchMembershipFee();
   }, []);
 
-  const sendNotification = async (values: MembershipFormValues) => {
-    try {
-      // Send notification via the edge function
-      const notificationResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-member-notification`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: values.email,
-            name: values.name,
-            phone: values.phone,
-          }),
-        }
-      );
-
-      const notificationData = await notificationResponse.json();
-      
-      if (!notificationResponse.ok) {
-        throw new Error(notificationData.message || "Failed to send notification");
+  const formatCardNumber = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    let formatted = '';
+    for (let i = 0; i < digits.length; i++) {
+      if (i > 0 && i % 4 === 0) {
+        formatted += ' ';
       }
-      
-      console.log("Notification sent:", notificationData);
-      
-      // Show success toast
-      toast({
-        title: "Confirmation sent!",
-        description: "We've sent you an email and text confirmation.",
-      });
-      
-      setIsNotificationSent(true);
-      return true;
-      
-    } catch (error: any) {
-      console.error("Notification error:", error);
-      toast({
-        title: "Notification failed",
-        description: error.message || "Could not send confirmation",
-        variant: "destructive",
-      });
-      return false;
+      formatted += digits[i];
     }
+    return formatted.slice(0, 19);
+  };
+
+  const formatExpiryDate = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length > 2) {
+      return `${digits.slice(0, 2)}/${digits.slice(2, 4)}`;
+    }
+    return digits;
   };
 
   const onSubmit = async (values: MembershipFormValues) => {
     try {
-      setIsLoading(true);
+      setIsProcessing(true);
       console.log("Processing membership signup with values:", values);
-      
-      // First, send the notification
-      const notificationSent = await sendNotification(values);
-      
-      if (!notificationSent) {
-        // Continue anyway - the notification is nice to have but shouldn't block payment
-        console.warn("Notification failed but continuing with payment process");
-      }
-      
-      // Get the Supabase session
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token || '';
       
       // Create a Stripe checkout session
       const response = await fetch(
@@ -132,23 +102,20 @@ const MembershipPayment = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             email: values.email,
             name: values.name,
             phone: values.phone,
+            address: values.address,
           }),
         }
       );
-      
-      console.log("Response status:", response.status);
       
       if (!response.ok) {
         let errorMessage = "Failed to create checkout session";
         try {
           const errorData = await response.json();
-          console.error("Error response:", errorData);
           errorMessage = errorData.message || errorMessage;
         } catch (e) {
           console.error("Error parsing error response:", e);
@@ -159,10 +126,51 @@ const MembershipPayment = () => {
       const data = await response.json();
       console.log("Checkout session created:", data);
       
-      if (data.success && data.url) {
-        // Redirect to the Stripe checkout page
-        console.log("Redirecting to:", data.url);
-        window.location.href = data.url;
+      if (data.success) {
+        // Verify the payment (assuming the session is immediately successful in our mockup)
+        const verifyResponse = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              paymentId: data.session_id,
+              email: values.email,
+              name: values.name,
+              phone: values.phone,
+              address: values.address,
+              isSubscription: true
+            }),
+          }
+        );
+        
+        if (!verifyResponse.ok) {
+          let errorMessage = "Failed to verify payment";
+          try {
+            const errorData = await verifyResponse.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            console.error("Error parsing verify response:", e);
+          }
+          throw new Error(errorMessage);
+        }
+        
+        const verifyData = await verifyResponse.json();
+        console.log("Payment verification response:", verifyData);
+        
+        if (verifyData.success) {
+          toast({
+            title: "Payment successful!",
+            description: "We've sent you verification and invoice emails. Please check your inbox to set up your password.",
+          });
+          
+          // Redirect to a thank you page
+          navigate("/signup?success=true");
+        } else {
+          throw new Error("Payment verification failed");
+        }
       } else {
         throw new Error(data.message || "Failed to create checkout session");
       }
@@ -170,11 +178,11 @@ const MembershipPayment = () => {
       console.error("Payment error:", error);
       toast({
         title: "Error",
-        description: error.message || "There was a problem initiating the checkout process",
+        description: error.message || "There was a problem processing your payment",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -207,7 +215,7 @@ const MembershipPayment = () => {
               </div>
               
               <div className="p-6">
-                <div className="mb-8">
+                <div className="mb-6">
                   <h2 className="text-lg font-medium mb-4">Membership Benefits</h2>
                   <ul className="space-y-2">
                     <li className="flex items-start">
@@ -246,14 +254,6 @@ const MembershipPayment = () => {
                       </AlertDescription>
                     </Alert>
                   )}
-
-                  {isNotificationSent && (
-                    <Alert className="mb-4 bg-green-50 border-green-200">
-                      <AlertDescription className="text-green-800">
-                        We've sent you a confirmation email and text message! Please proceed to payment to complete your membership.
-                      </AlertDescription>
-                    </Alert>
-                  )}
                   
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -288,7 +288,7 @@ const MembershipPayment = () => {
                         name="phone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Phone Number (optional)</FormLabel>
+                            <FormLabel>Phone Number</FormLabel>
                             <FormControl>
                               <Input type="tel" placeholder="Enter your phone number" {...field} />
                             </FormControl>
@@ -296,13 +296,99 @@ const MembershipPayment = () => {
                           </FormItem>
                         )}
                       />
+                      <FormField
+                        control={form.control}
+                        name="address"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Address</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter your address" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="pt-4 border-t border-gray-200">
+                        <h3 className="text-lg font-medium mb-4">Payment Details</h3>
+                        
+                        <FormField
+                          control={form.control}
+                          name="cardNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Card Number</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="1234 5678 9012 3456" 
+                                  {...field}
+                                  onChange={(e) => {
+                                    const formatted = formatCardNumber(e.target.value);
+                                    field.onChange(formatted);
+                                  }}
+                                  maxLength={19}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                          <FormField
+                            control={form.control}
+                            name="cardExpiry"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Expiry Date</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="MM/YY" 
+                                    {...field}
+                                    onChange={(e) => {
+                                      const formatted = formatExpiryDate(e.target.value);
+                                      field.onChange(formatted);
+                                    }}
+                                    maxLength={5}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="cardCvc"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>CVC</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="password" 
+                                    placeholder="123" 
+                                    {...field}
+                                    onChange={(e) => {
+                                      const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                      field.onChange(value);
+                                    }}
+                                    maxLength={4}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
                       
                       <div className="flex justify-between mt-6">
                         <Button type="button" variant="outline" onClick={handleCancel}>
                           Cancel
                         </Button>
-                        <Button type="submit" isLoading={isLoading}>
-                          {isLoading ? "Processing..." : "Subscribe Now"}
+                        <Button type="submit" disabled={isProcessing}>
+                          {isProcessing ? "Processing..." : `Subscribe Now - $${membershipFee.toFixed(2)}/month`}
                         </Button>
                       </div>
                     </form>

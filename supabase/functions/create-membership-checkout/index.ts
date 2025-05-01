@@ -19,10 +19,10 @@ serve(async (req) => {
 
   try {
     // Parse the request body to get user details
-    const { email, name, phone } = await req.json();
+    const { email, name, phone, address } = await req.json();
     if (!email) throw new Error("No email provided");
 
-    console.log("Creating checkout session for:", { email, name, phone });
+    console.log("Creating checkout session for:", { email, name, phone, address });
 
     // Create Supabase client with service role key to bypass RLS
     const supabaseClient = createClient(
@@ -30,19 +30,15 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
     
-    // Extract the user's authToken if present
+    // Extract the user's authToken if present (optional in new flow)
     let authToken = null;
+    let userId = null;
     const authHeader = req.headers.get('Authorization');
+    
     if (authHeader && authHeader.startsWith('Bearer ')) {
       authToken = authHeader.substring(7);
       console.log("Auth token received");
-    } else {
-      console.log("No auth token provided in headers");
-    }
-    
-    // Try to validate the token and get the user
-    let userId = null;
-    if (authToken) {
+      
       try {
         const { data: userData, error: userError } = await supabaseClient.auth.getUser(authToken);
         if (!userError && userData?.user) {
@@ -54,11 +50,9 @@ serve(async (req) => {
       } catch (error) {
         console.error("Error validating token:", error.message);
       }
+    } else {
+      console.log("No auth token provided in headers - this is normal for the new flow");
     }
-
-    // Get the origin from request headers or use default production URL
-    const origin = req.headers.get('origin') || 'https://www.eatmeetclub.com';
-    console.log("Using origin:", origin);
 
     // Create a Stripe checkout session
     const session = await stripe.checkout.sessions.create({
@@ -86,6 +80,7 @@ serve(async (req) => {
       metadata: {
         name: name || '',
         phone: phone || '',
+        address: address || '',
         is_subscription: 'true',
         user_id: userId || '', // Include the user ID in metadata
       },
