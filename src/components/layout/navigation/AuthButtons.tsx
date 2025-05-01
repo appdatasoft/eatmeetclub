@@ -35,16 +35,16 @@ const AuthButtons = ({ user, handleLogout }: AuthButtonsProps) => {
     <div className="hidden md:flex items-center space-x-3">
       {user ? (
         <>
-          <Button href="/dashboard" variant="ghost" size="md">
+          <Button href="/dashboard" variant="ghost" size="default">
             Dashboard
           </Button>
-          <Button onClick={onLogout} variant="outline" size="md">
+          <Button onClick={onLogout} variant="outline" size="default">
             <LogOut className="h-4 w-4 mr-2" />
             Log out
           </Button>
         </>
       ) : (
-        <Button href="/login" variant="ghost" size="md">
+        <Button href="/login" variant="ghost" size="default">
           Log in
         </Button>
       )}
