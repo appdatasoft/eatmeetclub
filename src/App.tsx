@@ -33,6 +33,7 @@ import UserProfilePage from './pages/UserProfilePage';
 import TicketSuccess from './pages/TicketSuccess';
 import CreateEventPage from './pages/CreateEvent';
 import EditEvent from './pages/EditEvent';
+import BecomeMember from './pages/BecomeMember';
 
 import './App.css'
 import { Toaster } from '@/components/ui/toaster';
@@ -51,6 +52,7 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/about" element={<About />} />
         <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/become-member" element={<BecomeMember />} />
         <Route path="/membership-payment" element={<MembershipPayment />} />
         <Route path="/ticket-success" element={<TicketSuccess />} />
         <Route path="/profile/:id" element={<UserProfilePage />} />
