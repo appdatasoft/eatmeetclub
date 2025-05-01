@@ -1,5 +1,4 @@
 
-import { supabase } from "@/integrations/supabase/client";
 import { toast as showToast } from "@/hooks/use-toast";
 
 interface UsePaymentProcessProps {
@@ -29,19 +28,15 @@ export const usePaymentProcess = ({ setIsLoading }: UsePaymentProcessProps) => {
     setIsLoading(true);
     
     try {
-      // Get the current authenticated user (if any)
-      const { data: { session } } = await supabase.auth.getSession();
-      
       console.log("Creating checkout session with details:", { email, name, phone, address });
       
-      // Create a Stripe checkout session
+      // Create a Stripe checkout session - without requiring auth
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(session?.access_token ? { "Authorization": `Bearer ${session.access_token}` } : {}),
           },
           body: JSON.stringify({
             email,

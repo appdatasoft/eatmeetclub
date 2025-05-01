@@ -20,17 +20,19 @@ export const usePaymentVerification = ({
   const verifyPayment = async (paymentId: string) => {
     setIsVerifyingPayment(true);
     setIsLoading(true);
+    
     try {
-      // Get the current session to include the auth token
+      // Try to get session data if we have an authenticated user
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session?.user) {
-        throw new Error("Authentication required to verify payment");
-      }
+      // Get user details from localStorage or session
+      const storedEmail = localStorage.getItem('signup_email');
+      const storedName = localStorage.getItem('signup_name');
+      const storedPhone = localStorage.getItem('signup_phone');
       
-      const email = session.user.email;
-      const name = session.user.user_metadata.name || email?.split('@')[0];
-      const phone = session.user.user_metadata.phone;
+      const email = session?.user?.email || storedEmail;
+      const name = (session?.user?.user_metadata?.name || storedName || email?.split('@')[0]) as string;
+      const phone = session?.user?.user_metadata?.phone || storedPhone;
       
       if (!email) {
         throw new Error("Missing email for payment verification");
@@ -39,16 +41,20 @@ export const usePaymentVerification = ({
       console.log("Verifying payment with session ID:", paymentId);
       console.log("User details:", { email, name, phone });
       
-      const accessToken = session.access_token;
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+      };
+      
+      // Add authorization header if we have a session
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
       
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
-          },
+          headers,
           body: JSON.stringify({
             paymentId,
             email,
@@ -81,7 +87,7 @@ export const usePaymentVerification = ({
         
         // Redirect to login or dashboard based on user status
         setTimeout(() => {
-          navigate("/dashboard");
+          navigate("/login");
         }, 3000);
       } else {
         throw new Error(data.message || "Payment verification failed");

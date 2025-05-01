@@ -1,5 +1,5 @@
 
-import SignupForm, { SignupFormValues } from "@/components/signup/SignupForm";
+import { SignupFormValues } from "@/components/signup/SignupForm";
 import PaymentForm from "@/components/signup/PaymentForm";
 
 interface SignupFormContainerProps {
@@ -37,12 +37,7 @@ const SignupFormContainer = ({
     );
   }
   
-  return (
-    <SignupForm 
-      onSubmit={handleSignupSubmit} 
-      isLoading={isLoading}
-    />
-  );
+  return null; // We don't need the signup form anymore since we skip auth
 };
 
 export default SignupFormContainer;
