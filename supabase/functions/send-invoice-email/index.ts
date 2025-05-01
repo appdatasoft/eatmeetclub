@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { stripe } from "../_shared/stripe.ts";
 import { Resend } from "npm:resend@1.0.0";
@@ -166,7 +165,7 @@ async function sendTicketInvoiceEmail({ sessionId, email, name, eventDetails }) 
       
       console.log("Email content prepared, sending now...");
       const emailResponse = await resend.emails.send({
-        from: "Eat Meet Club <hello@resend.dev>", // Update to your verified domain when available
+        from: "Eat Meet Club <sumi@eatmeetclub.com>", // Updated from email address
         to: email,
         subject: "Your Eat Meet Club Event Tickets",
         html: invoiceHtml,
@@ -256,7 +255,7 @@ async function sendMembershipInvoiceEmail({ sessionId, email, name }) {
     }
     
     const emailResponse = await resend.emails.send({
-      from: "Eat Meet Club <hello@resend.dev>", // Update to your verified domain when available
+      from: "Eat Meet Club <sumi@eatmeetclub.com>", // Updated from email address
       to: email,
       subject: "Your Eat Meet Club Membership Invoice",
       html: invoiceHtml,
