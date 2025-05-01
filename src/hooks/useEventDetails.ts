@@ -1,5 +1,5 @@
 
-import { useEventFetch } from "./useEventFetch";
+import { useEventFetch } from "./eventDetails";
 import { useEventPaymentHandler } from "./useEventPaymentHandler";
 import { EventDetails } from "./types/eventTypes";
 
