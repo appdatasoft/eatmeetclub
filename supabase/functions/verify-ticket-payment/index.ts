@@ -154,30 +154,27 @@ serve(async (req) => {
       console.error('Error fetching event details for invoice:', eventFetchError);
     }
     
+    let emailSent = false;
     // Send invoice email - but don't fail if email sending fails
     if (eventData && ticketData && ticketData.length > 0) {
       try {
         console.log(`Sending ticket invoice email for session ${sessionId} to ${user.email}`);
         
-        const supabaseUrl = Deno.env.get("SUPABASE_URL");
-        if (!supabaseUrl) {
-          throw new Error("SUPABASE_URL environment variable is not set");
-        }
+        // Get user's name from metadata
+        const userName = user.user_metadata?.name || user.user_metadata?.full_name || 'Member';
+        console.log(`User name for email: ${userName}`);
         
-        // Full URL construction for the edge function call
-        const invoiceEmailUrl = `${supabaseUrl}/functions/v1/send-invoice-email`;
-        console.log("Calling invoice email function at:", invoiceEmailUrl);
-        
-        const response = await fetch(invoiceEmailUrl, {
+        // Direct call to the send-invoice-email function
+        const emailResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-invoice-email`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": authHeader // Pass the auth header to the invoice function
+            "Authorization": authHeader
           },
           body: JSON.stringify({
             sessionId,
             email: user.email,
-            name: user.user_metadata?.name || 'Member',
+            name: userName,
             eventDetails: {
               ...eventData,
               ...ticketData[0]
@@ -185,14 +182,16 @@ serve(async (req) => {
           }),
         });
         
-        console.log("Ticket invoice email API response status:", response.status);
+        console.log("Email API response status:", emailResponse.status);
         
-        if (!response.ok) {
-          const responseText = await response.text();
+        if (!emailResponse.ok) {
+          const responseText = await emailResponse.text();
           console.error("Error response from invoice email function:", responseText);
           throw new Error(`Invoice email API returned error: ${responseText}`);
         } else {
-          console.log("Ticket invoice email sent successfully");
+          const responseData = await emailResponse.json();
+          console.log("Email API response data:", responseData);
+          emailSent = true;
         }
       } catch (invoiceError) {
         console.error("Error sending ticket invoice email:", invoiceError);
@@ -205,7 +204,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         ticket: ticketData && ticketData.length > 0 ? ticketData[0] : null,
-        emailSent: true
+        emailSent
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

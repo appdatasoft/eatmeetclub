@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { stripe } from "../_shared/stripe.ts";
 import { Resend } from "npm:resend@1.0.0";
@@ -82,9 +83,16 @@ async function sendTicketInvoiceEmail({ sessionId, email, name, eventDetails }) 
     let paymentDate = new Date().toISOString();
     
     if (session.payment_intent) {
-      const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent as string);
-      receiptUrl = paymentIntent.charges.data[0]?.receipt_url || "";
-      paymentDate = new Date(paymentIntent.created * 1000).toISOString();
+      try {
+        const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent as string);
+        if (paymentIntent && paymentIntent.charges && paymentIntent.charges.data && paymentIntent.charges.data[0]) {
+          receiptUrl = paymentIntent.charges.data[0].receipt_url || "";
+        }
+        paymentDate = new Date(paymentIntent.created * 1000).toISOString();
+      } catch (err) {
+        console.error("Error retrieving payment intent:", err);
+        // Continue without receipt URL if there's an error
+      }
     }
     
     // Format the event date
@@ -103,6 +111,11 @@ async function sendTicketInvoiceEmail({ sessionId, email, name, eventDetails }) 
       year: 'numeric'
     });
     
+    // Get price values, ensuring they are numbers
+    const unitPrice = parseFloat(typeof eventDetails.price === 'string' ? eventDetails.price : eventDetails.price.toString());
+    const serviceFee = parseFloat(typeof eventDetails.service_fee === 'string' ? eventDetails.service_fee : eventDetails.service_fee.toString());
+    const totalAmount = parseFloat(typeof eventDetails.total_amount === 'string' ? eventDetails.total_amount : eventDetails.total_amount.toString());
+    
     // Generate the ticket invoice email HTML
     const invoiceHtml = generateTicketInvoiceEmail({
       name: name || "Member",
@@ -111,9 +124,9 @@ async function sendTicketInvoiceEmail({ sessionId, email, name, eventDetails }) 
       eventTime: eventDetails.time,
       eventLocation: `${eventDetails.restaurant?.name}, ${eventDetails.restaurant?.address}, ${eventDetails.restaurant?.city}`,
       quantity: eventDetails.quantity,
-      unitPrice: parseFloat(eventDetails.price),
-      serviceFee: parseFloat(eventDetails.service_fee),
-      total: parseFloat(eventDetails.total_amount),
+      unitPrice: unitPrice,
+      serviceFee: serviceFee,
+      total: totalAmount,
       purchaseDate: paymentDateFormatted,
       receiptUrl
     });
@@ -125,6 +138,7 @@ async function sendTicketInvoiceEmail({ sessionId, email, name, eventDetails }) 
         throw new Error("RESEND_API_KEY is not configured");
       }
       
+      console.log("Email content prepared, sending now...");
       const emailResponse = await resend.emails.send({
         from: "Eat Meet Club <hello@resend.dev>", // Update to your verified domain when available
         to: email,
