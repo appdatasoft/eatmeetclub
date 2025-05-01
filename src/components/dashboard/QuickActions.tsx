@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusIcon } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const QuickActions = () => {
@@ -19,7 +19,7 @@ const QuickActions = () => {
           className="w-full justify-start"
           variant="outline"
         >
-          <PlusIcon className="mr-2 h-4 w-4" />
+          <PlusCircle className="mr-2 h-4 w-4" />
           Create New Event
         </Button>
         <Button
@@ -27,7 +27,7 @@ const QuickActions = () => {
           className="w-full justify-start"
           variant="outline"
         >
-          <PlusIcon className="mr-2 h-4 w-4" />
+          <PlusCircle className="mr-2 h-4 w-4" />
           Add New Restaurant
         </Button>
       </CardContent>

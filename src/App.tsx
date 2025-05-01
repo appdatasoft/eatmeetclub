@@ -31,7 +31,7 @@ import ConfigPage from './pages/admin/ConfigPage';
 import UsersPage from './pages/admin/UsersPage';
 import UserProfilePage from './pages/UserProfilePage';
 import TicketSuccess from './pages/TicketSuccess';
-import CreateEvent from './pages/CreateEvent';
+import CreateEventPage from './pages/CreateEvent';
 import EditEvent from './pages/EditEvent';
 
 import './App.css'
@@ -54,7 +54,7 @@ function App() {
         <Route path="/membership-payment" element={<MembershipPayment />} />
         <Route path="/ticket-success" element={<TicketSuccess />} />
         <Route path="/profile/:id" element={<UserProfilePage />} />
-        <Route path="/create-event" element={<CreateEvent />} />
+        <Route path="/create-event" element={<CreateEventPage />} />
         <Route path="/edit-event/:id" element={<EditEvent />} />
         
         {/* Dashboard routes */}
