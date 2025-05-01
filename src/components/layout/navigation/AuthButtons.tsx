@@ -1,6 +1,7 @@
 
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
@@ -35,8 +36,8 @@ const AuthButtons = ({ user, handleLogout }: AuthButtonsProps) => {
     <div className="hidden md:flex items-center space-x-3">
       {user ? (
         <>
-          <Button href="/dashboard" variant="ghost" size="default">
-            Dashboard
+          <Button variant="ghost" size="default" asChild>
+            <Link to="/dashboard">Dashboard</Link>
           </Button>
           <Button onClick={onLogout} variant="outline" size="default">
             <LogOut className="h-4 w-4 mr-2" />
@@ -44,8 +45,8 @@ const AuthButtons = ({ user, handleLogout }: AuthButtonsProps) => {
           </Button>
         </>
       ) : (
-        <Button href="/login" variant="ghost" size="default">
-          Log in
+        <Button variant="ghost" size="default" asChild>
+          <Link to="/login">Log in</Link>
         </Button>
       )}
     </div>
