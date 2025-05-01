@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { EventDetails } from "./types/eventTypes";
 
 export interface EventPaymentHandlerResponse {
@@ -14,6 +15,7 @@ export const useEventPaymentHandler = (
 ): EventPaymentHandlerResponse => {
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Handle buying tickets
   const handleBuyTickets = async (ticketCount: number) => {
@@ -40,6 +42,21 @@ export const useEventPaymentHandler = (
           description: "Please log in to purchase tickets",
           variant: "default"
         });
+        
+        // Save the current path to localStorage for redirect after login
+        localStorage.setItem('redirectAfterLogin', `/event/${event.id}`);
+        
+        // Create a pending purchase object
+        const pendingPurchase = {
+          eventId: event.id,
+          quantity: ticketCount,
+          redirectPath: `/event/${event.id}`,
+          timestamp: Date.now()
+        };
+        
+        localStorage.setItem('pendingTicketPurchase', JSON.stringify(pendingPurchase));
+        
+        navigate('/login');
         return;
       }
       
@@ -85,21 +102,15 @@ export const useEventPaymentHandler = (
         eventId: event.id,
         eventTitle: event.title,
         quantity: ticketCount,
-        unitPrice: event.price,
-        serviceFee: serviceFee,
-        totalAmount: totalAmount,
+        price: event.price,
+        service_fee: serviceFee,
+        total_amount: totalAmount,
         timestamp: Date.now() // Add timestamp for tracking
       }));
       
       // Hard redirect with complete URL replacement - most reliable way to redirect
       console.log("Redirecting to Stripe checkout:", response.data.url);
-      window.location.replace(response.data.url);
-      
-      // Fallback in case the above doesn't trigger immediately
-      setTimeout(() => {
-        console.log("Fallback redirect executing");
-        window.open(response.data.url, '_self');
-      }, 500);
+      window.location.href = response.data.url;
     } catch (error: any) {
       console.error("Error creating payment session:", error);
       toast({
