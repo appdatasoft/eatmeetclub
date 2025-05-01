@@ -122,8 +122,8 @@ async function sendTicketInvoiceEmail({ sessionId, email, name, eventDetails }) 
     });
     
     // Get price values, ensuring they are numbers
-    const unitPrice = parseFloat(typeof eventDetails.price === 'string' ? eventDetails.price : eventDetails.price.toString());
-    const quantity = parseInt(typeof eventDetails.quantity === 'string' ? eventDetails.quantity : eventDetails.quantity.toString());
+    const unitPrice = parseFloat(typeof eventDetails.price === 'string' ? eventDetails.price : eventDetails.price?.toString() || "0");
+    const quantity = parseInt(typeof eventDetails.quantity === 'string' ? eventDetails.quantity : eventDetails.quantity?.toString() || "1");
     const serviceFee = parseFloat(typeof eventDetails.service_fee === 'string' ? eventDetails.service_fee : (eventDetails.service_fee || 0).toString());
     const totalAmount = parseFloat(typeof eventDetails.total_amount === 'string' ? eventDetails.total_amount : (eventDetails.total_amount || (unitPrice * quantity + serviceFee)).toString());
     
@@ -136,18 +136,18 @@ async function sendTicketInvoiceEmail({ sessionId, email, name, eventDetails }) 
       paymentDateFormatted
     });
     
-    // Extract restaurant information
+    // Extract restaurant information safely
     const restaurantName = eventDetails.restaurant?.name || "Venue";
     const restaurantAddress = eventDetails.restaurant?.address || "";
     const restaurantCity = eventDetails.restaurant?.city || "";
-    const eventLocation = `${restaurantName}, ${restaurantAddress}, ${restaurantCity}`;
+    const eventLocation = `${restaurantName}${restaurantAddress ? ', ' + restaurantAddress : ''}${restaurantCity ? ', ' + restaurantCity : ''}`;
     
     // Generate the ticket invoice email HTML
     const invoiceHtml = generateTicketInvoiceEmail({
       name: name || "Member",
-      eventTitle: eventDetails.title,
+      eventTitle: eventDetails.title || "Event",
       eventDate: formattedEventDate,
-      eventTime: eventDetails.time,
+      eventTime: eventDetails.time || "",
       eventLocation,
       quantity,
       unitPrice,

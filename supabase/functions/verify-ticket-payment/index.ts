@@ -131,12 +131,17 @@ serve(async (req) => {
       );
     }
     
-    // Update the tickets_sold count in the events table directly
+    // Update the tickets_sold count in the events table
     const parsedQuantity = parseInt(quantity || '0');
-    const { error: eventError } = await supabaseClient
-      .from('events')
-      .update({ tickets_sold: supabaseClient.rpc('increment_tickets_sold', { p_event_id: eventId, p_quantity: parsedQuantity }) })
-      .eq('id', eventId);
+    
+    // Fixed: Call the RPC function directly with parameters as separate arguments
+    const { error: eventError } = await supabaseClient.rpc(
+      'increment_tickets_sold', 
+      { 
+        p_event_id: eventId,
+        p_quantity: parsedQuantity
+      }
+    );
     
     if (eventError) {
       console.error('Error updating event tickets sold:', eventError);
