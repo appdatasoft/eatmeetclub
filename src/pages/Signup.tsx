@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,7 @@ import SignupForm, { SignupFormValues } from "@/components/signup/SignupForm";
 import PaymentForm from "@/components/signup/PaymentForm";
 import Navbar from "@/components/layout/Navbar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, CheckCircle } from "lucide-react";
 
 const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -16,6 +16,8 @@ const Signup = () => {
   const [userDetails, setUserDetails] = useState<SignupFormValues | null>(null);
   const [membershipFee] = useState(25);
   const [isNotificationSent, setIsNotificationSent] = useState(false);
+  const [isPaymentVerified, setIsPaymentVerified] = useState(false);
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -24,14 +26,15 @@ const Signup = () => {
   const sessionId = searchParams.get('session_id');
 
   // Check if we need to verify a successful payment
-  useState(() => {
+  useEffect(() => {
     if (success && sessionId) {
       verifyPayment(sessionId);
     }
-  });
+  }, [success, sessionId]);
 
   // Function to verify payment with the backend
   const verifyPayment = async (paymentId: string) => {
+    setIsVerifyingPayment(true);
     setIsLoading(true);
     try {
       const email = localStorage.getItem('signup_email');
@@ -62,26 +65,30 @@ const Signup = () => {
         }
       );
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Payment verification failed");
-      }
-      
       const data = await response.json();
       
+      if (!response.ok) {
+        throw new Error(data.message || "Payment verification failed");
+      }
+      
+      console.log("Payment verification response:", data);
+      
       if (data.success) {
+        setIsPaymentVerified(true);
         toast({
           title: "Payment successful!",
           description: "Your membership has been activated.",
         });
         
         // Clean up localStorage
-        localStorage.removeItem('signup_email');
-        localStorage.removeItem('signup_name');
-        localStorage.removeItem('signup_phone');
-        
-        // Redirect to login
-        navigate("/login?verified=true");
+        setTimeout(() => {
+          localStorage.removeItem('signup_email');
+          localStorage.removeItem('signup_name');
+          localStorage.removeItem('signup_phone');
+          
+          // Redirect to login
+          navigate("/login?verified=true");
+        }, 3000);
       } else {
         throw new Error(data.message || "Payment verification failed");
       }
@@ -94,6 +101,7 @@ const Signup = () => {
       });
     } finally {
       setIsLoading(false);
+      setIsVerifyingPayment(false);
     }
   };
 
@@ -250,7 +258,23 @@ const Signup = () => {
                 </Alert>
               )}
 
-              {isNotificationSent && (
+              {isPaymentVerified && (
+                <Alert className="mb-4 bg-green-50 border-green-200">
+                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                  <AlertDescription className="text-green-800">
+                    Payment successful! Your membership has been activated. You'll be redirected to login shortly.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {isVerifyingPayment && (
+                <div className="text-center py-6">
+                  <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-gray-600">Verifying your payment...</p>
+                </div>
+              )}
+
+              {isNotificationSent && !isVerifyingPayment && !isPaymentVerified && (
                 <Alert className="mb-4 bg-green-50 border-green-200">
                   <AlertDescription className="text-green-800">
                     We've sent you a confirmation email and text message! Please proceed to payment to complete your membership.
@@ -258,20 +282,22 @@ const Signup = () => {
                 </Alert>
               )}
               
-              {!showPaymentForm ? (
-                <SignupForm 
-                  onSubmit={handleSignupSubmit} 
-                  isLoading={isLoading}
-                />
-              ) : (
-                <PaymentForm 
-                  userDetails={userDetails!}
-                  membershipFee={membershipFee}
-                  onBack={handleBack}
-                  onSubmit={handlePayment}
-                  isLoading={isLoading}
-                  isSubscription={true}
-                />
+              {!isVerifyingPayment && !isPaymentVerified && (
+                !showPaymentForm ? (
+                  <SignupForm 
+                    onSubmit={handleSignupSubmit} 
+                    isLoading={isLoading}
+                  />
+                ) : (
+                  <PaymentForm 
+                    userDetails={userDetails!}
+                    membershipFee={membershipFee}
+                    onBack={handleBack}
+                    onSubmit={handlePayment}
+                    isLoading={isLoading}
+                    isSubscription={true}
+                  />
+                )
               )}
             </CardContent>
           </Card>
