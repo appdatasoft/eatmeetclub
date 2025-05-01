@@ -1,19 +1,20 @@
 
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export const useAuthCheck = () => {
   const navigate = useNavigate();
+  const { user, isLoading } = useAuth();
   
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        navigate('/login');
-      }
-    };
-    
-    checkAuth();
-  }, [navigate]);
+    if (!isLoading && !user) {
+      // Store current path for redirect after login
+      const currentPath = window.location.pathname;
+      localStorage.setItem('redirectAfterLogin', currentPath);
+      navigate('/login', { state: { from: currentPath } });
+    }
+  }, [user, navigate, isLoading]);
+  
+  return { user, isLoading };
 };

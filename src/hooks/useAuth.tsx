@@ -98,7 +98,27 @@ export const useAuth = () => {
     }
   };
 
-  return { user, isAdmin, isLoading, handleLogout };
+  const handleLogin = async (email: string, password: string) => {
+    try {
+      console.log('Attempting to login with email:', email);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('Login successful:', data);
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('Error logging in:', error);
+      return { success: false, error };
+    }
+  };
+
+  return { user, isAdmin, isLoading, handleLogout, handleLogin };
 };
 
 export default useAuth;

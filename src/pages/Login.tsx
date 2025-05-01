@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react";
-import { supabase } from "../integrations/supabase/client";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +15,7 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, handleLogin } = useAuth();
 
   // If user is already logged in, redirect to dashboard
   useEffect(() => {
@@ -55,22 +54,17 @@ const Login = () => {
     }
   }, [location]);
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      console.log("Attempting to login with email:", email);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const result = await handleLogin(email, password);
 
-      if (error) {
-        throw error;
+      if (!result.success) {
+        throw result.error;
       }
 
-      console.log("Login successful:", data);
       toast({
         title: "Login successful!",
         description: "Welcome back!",
@@ -106,7 +100,7 @@ const Login = () => {
           <p className="text-gray-600 mt-2">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleLoginSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
