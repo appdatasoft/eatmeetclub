@@ -29,7 +29,7 @@ export const useSignupForm = ({
       }
 
       // Register the user in Supabase Auth
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
@@ -40,6 +40,21 @@ export const useSignupForm = ({
       });
 
       if (error) throw error;
+      
+      // Verify that we have a session before proceeding
+      if (!data.session) {
+        console.log("No session returned from signup, attempting to sign in");
+        // Try to sign in to get a session
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: values.email,
+          password: values.password,
+        });
+        
+        if (signInError) {
+          console.error("Error signing in after signup:", signInError);
+          throw new Error("Account created but could not sign in automatically. Please try logging in separately.");
+        }
+      }
 
       // Send notification via the edge function
       const notificationResponse = await fetch(

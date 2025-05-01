@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast as showToast } from "@/hooks/use-toast";
 import { NavigateFunction } from "react-router-dom";
 
@@ -31,12 +32,17 @@ export const usePaymentVerification = ({
       console.log("Verifying payment with session ID:", paymentId);
       console.log("User details:", { email, name, phone });
       
+      // Get the current session to include the auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || '';
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`, // Include the auth token
           },
           body: JSON.stringify({
             paymentId,

@@ -1,4 +1,5 @@
 
+import { supabase } from "@/integrations/supabase/client";
 import { toast as showToast } from "@/hooks/use-toast";
 
 interface UsePaymentProcessProps {
@@ -19,6 +20,10 @@ export const usePaymentProcess = ({ setIsLoading }: UsePaymentProcessProps) => {
     try {
       console.log("Initiating payment process with user details:", storedEmail);
       
+      // Get the current session to include the auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || '';
+      
       // Create a Stripe checkout session
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
@@ -26,10 +31,11 @@ export const usePaymentProcess = ({ setIsLoading }: UsePaymentProcessProps) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`, // Include the auth token
           },
           body: JSON.stringify({
             email: storedEmail,
-            name: storedName || storedEmail.split('@')[0], // Using stored name or part of email
+            name: storedName || storedEmail.split('@')[0],
             phone: storedPhone,
           }),
         }

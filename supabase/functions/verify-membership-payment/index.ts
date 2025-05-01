@@ -32,24 +32,56 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Check if user already exists
-    const { data: existingUser, error: checkUserError } = await supabaseClient.auth.admin.listUsers({
-      filter: `email eq "${email}"`,
-    });
-
-    let userId;
-    let password;
-    
-    if (checkUserError) {
-      console.error("Error checking if user exists:", checkUserError.message);
-      throw new Error(`Error checking if user exists: ${checkUserError.message}`);
+    // Extract the user's authToken if present
+    let authToken = null;
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      authToken = authHeader.substring(7);
+      console.log("Auth token received for verification");
+    } else {
+      console.log("No auth token provided in verification headers");
     }
     
-    console.log("Existing user check result:", existingUser);
+    // Try to get user from token first
+    let userId = null;
+    if (authToken) {
+      try {
+        const { data: userData, error: userError } = await supabaseClient.auth.getUser(authToken);
+        if (!userError && userData?.user) {
+          userId = userData.user.id;
+          console.log("User authenticated from token:", userId);
+        } else {
+          console.log("Token validation failed:", userError?.message);
+        }
+      } catch (error) {
+        console.error("Error validating token:", error.message);
+      }
+    }
     
-    // If user doesn't exist in auth.users, create them
-    if (!existingUser.users || existingUser.users.length === 0) {
-      console.log("User does not exist, creating new user");
+    // If no valid token, check if user exists by email
+    if (!userId) {
+      const { data: existingUser, error: checkUserError } = await supabaseClient.auth.admin.listUsers({
+        filter: `email eq "${email}"`,
+      });
+
+      if (checkUserError) {
+        console.error("Error checking if user exists:", checkUserError.message);
+        throw new Error(`Error checking if user exists: ${checkUserError.message}`);
+      }
+      
+      console.log("Existing user check result:", existingUser);
+      
+      // If user found by email, use that ID
+      if (existingUser.users && existingUser.users.length > 0) {
+        userId = existingUser.users[0].id;
+        console.log("User found by email:", userId);
+      }
+    }
+    
+    // If still no user ID, create a new user
+    let password;
+    if (!userId) {
+      console.log("No existing user found, creating new user");
       // Generate a random password for the new user
       password = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       
@@ -69,9 +101,6 @@ serve(async (req) => {
 
       userId = userData.user.id;
       console.log("User created successfully:", userId);
-    } else {
-      userId = existingUser.users[0].id;
-      console.log("User already exists, using existing user ID:", userId);
     }
 
     // Verify the payment with Stripe
@@ -86,6 +115,15 @@ serve(async (req) => {
         console.log("Retrieved checkout session:", session);
         
         subscriptionId = session.subscription as string;
+        
+        // Check if user ID is in metadata and matches our userId
+        if (session.metadata && session.metadata.user_id && userId !== session.metadata.user_id) {
+          console.log("User ID in metadata doesn't match:", { 
+            metadataId: session.metadata.user_id, 
+            userId 
+          });
+          // This is a warning but we'll still proceed
+        }
         
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);

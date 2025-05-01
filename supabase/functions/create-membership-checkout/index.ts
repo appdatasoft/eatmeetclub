@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { stripe } from "../_shared/stripe.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,8 +24,40 @@ serve(async (req) => {
 
     console.log("Creating checkout session for:", { email, name, phone });
 
+    // Create Supabase client with service role key to bypass RLS
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+    
+    // Extract the user's authToken if present
+    let authToken = null;
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      authToken = authHeader.substring(7);
+      console.log("Auth token received");
+    } else {
+      console.log("No auth token provided in headers");
+    }
+    
+    // Try to validate the token and get the user
+    let userId = null;
+    if (authToken) {
+      try {
+        const { data: userData, error: userError } = await supabaseClient.auth.getUser(authToken);
+        if (!userError && userData?.user) {
+          userId = userData.user.id;
+          console.log("User authenticated:", userId);
+        } else {
+          console.log("Token validation failed:", userError?.message);
+        }
+      } catch (error) {
+        console.error("Error validating token:", error.message);
+      }
+    }
+
     // Get the origin from request headers or use default preview URL
-    const origin = req.headers.get('origin') || 'https://preview--eatmeetclub.lovable.app';
+    const origin = req.headers.get('origin') || 'https://www.eatmeetclub.com';
     console.log("Using origin:", origin);
 
     // Create a Stripe checkout session
@@ -54,6 +87,7 @@ serve(async (req) => {
         name: name || '',
         phone: phone || '',
         is_subscription: 'true',
+        user_id: userId || '', // Include the user ID in metadata
       },
     });
 
