@@ -223,7 +223,15 @@ export const useMembershipPayment = () => {
       
       if (data.success && data.url) {
         // Redirect to Stripe checkout page
+        console.log("Redirecting to Stripe checkout URL:", data.url);
+        
+        // Use a direct window.location.href to ensure the redirect happens
         window.location.href = data.url;
+        
+        // Add a fallback timeout in case the redirect doesn't happen immediately
+        setTimeout(() => {
+          window.location.href = data.url;
+        }, 1000);
       } else {
         throw new Error(data.message || "Failed to create checkout session");
       }
