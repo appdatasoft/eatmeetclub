@@ -33,8 +33,10 @@ serve(async (req) => {
     if (!sessionId) throw new Error("No session ID provided");
     if (!email) throw new Error("No email provided");
     
-    console.log("Sending invoice email for session:", { sessionId, email, name });
-    console.log("Event details received:", eventDetails);
+    console.log("Sending invoice email for session:", sessionId);
+    console.log("Email recipient:", email);
+    console.log("User name:", name);
+    console.log("Event details received:", JSON.stringify(eventDetails, null, 2));
 
     // Determine the type of invoice to generate based on whether eventDetails is provided
     // If eventDetails is provided, it's a ticket purchase invoice
@@ -66,7 +68,7 @@ serve(async (req) => {
 async function sendTicketInvoiceEmail({ sessionId, email, name, eventDetails }) {
   try {
     console.log("Generating ticket invoice for:", { sessionId, email, name });
-    console.log("Event details:", eventDetails);
+    console.log("Event details:", JSON.stringify(eventDetails, null, 2));
     
     // Retrieve the session from Stripe to get payment details
     console.log("Retrieving Stripe session:", sessionId);
@@ -96,7 +98,15 @@ async function sendTicketInvoiceEmail({ sessionId, email, name, eventDetails }) 
     }
     
     // Format the event date
-    const eventDate = new Date(eventDetails.date);
+    let eventDate;
+    try {
+      eventDate = new Date(eventDetails.date);
+      console.log("Parsed event date:", eventDate);
+    } catch (err) {
+      console.error("Error parsing event date:", err);
+      eventDate = new Date();
+    }
+    
     const formattedEventDate = eventDate.toLocaleDateString('en-US', { 
       weekday: 'long',
       year: 'numeric', 
@@ -113,8 +123,24 @@ async function sendTicketInvoiceEmail({ sessionId, email, name, eventDetails }) 
     
     // Get price values, ensuring they are numbers
     const unitPrice = parseFloat(typeof eventDetails.price === 'string' ? eventDetails.price : eventDetails.price.toString());
-    const serviceFee = parseFloat(typeof eventDetails.service_fee === 'string' ? eventDetails.service_fee : eventDetails.service_fee.toString());
-    const totalAmount = parseFloat(typeof eventDetails.total_amount === 'string' ? eventDetails.total_amount : eventDetails.total_amount.toString());
+    const quantity = parseInt(typeof eventDetails.quantity === 'string' ? eventDetails.quantity : eventDetails.quantity.toString());
+    const serviceFee = parseFloat(typeof eventDetails.service_fee === 'string' ? eventDetails.service_fee : (eventDetails.service_fee || 0).toString());
+    const totalAmount = parseFloat(typeof eventDetails.total_amount === 'string' ? eventDetails.total_amount : (eventDetails.total_amount || (unitPrice * quantity + serviceFee)).toString());
+    
+    console.log("Invoice values:", {
+      unitPrice,
+      quantity,
+      serviceFee,
+      totalAmount,
+      formattedEventDate,
+      paymentDateFormatted
+    });
+    
+    // Extract restaurant information
+    const restaurantName = eventDetails.restaurant?.name || "Venue";
+    const restaurantAddress = eventDetails.restaurant?.address || "";
+    const restaurantCity = eventDetails.restaurant?.city || "";
+    const eventLocation = `${restaurantName}, ${restaurantAddress}, ${restaurantCity}`;
     
     // Generate the ticket invoice email HTML
     const invoiceHtml = generateTicketInvoiceEmail({
@@ -122,10 +148,10 @@ async function sendTicketInvoiceEmail({ sessionId, email, name, eventDetails }) 
       eventTitle: eventDetails.title,
       eventDate: formattedEventDate,
       eventTime: eventDetails.time,
-      eventLocation: `${eventDetails.restaurant?.name}, ${eventDetails.restaurant?.address}, ${eventDetails.restaurant?.city}`,
-      quantity: eventDetails.quantity,
-      unitPrice: unitPrice,
-      serviceFee: serviceFee,
+      eventLocation,
+      quantity,
+      unitPrice,
+      serviceFee,
       total: totalAmount,
       purchaseDate: paymentDateFormatted,
       receiptUrl

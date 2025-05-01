@@ -164,7 +164,7 @@ serve(async (req) => {
         const userName = user.user_metadata?.name || user.user_metadata?.full_name || 'Member';
         console.log(`User name for email: ${userName}`);
         
-        // Direct call to the send-invoice-email function
+        // Use direct fetch to send email to avoid cross-function issues
         const emailResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-invoice-email`, {
           method: "POST",
           headers: {
@@ -177,7 +177,8 @@ serve(async (req) => {
             name: userName,
             eventDetails: {
               ...eventData,
-              ...ticketData[0]
+              ...ticketData[0],
+              restaurant: eventData.restaurant
             }
           }),
         });
