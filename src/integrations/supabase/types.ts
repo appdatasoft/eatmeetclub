@@ -101,6 +101,83 @@ export type Database = {
           },
         ]
       }
+      membership_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          membership_id: string
+          payment_id: string | null
+          payment_method: string | null
+          payment_status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          membership_id: string
+          payment_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          membership_id?: string
+          payment_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_payments_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      memberships: {
+        Row: {
+          created_at: string
+          id: string
+          is_subscription: boolean
+          last_payment_id: string | null
+          renewal_at: string | null
+          started_at: string
+          status: string
+          subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_subscription?: boolean
+          last_payment_id?: string | null
+          renewal_at?: string | null
+          started_at?: string
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_subscription?: boolean
+          last_payment_id?: string | null
+          renewal_at?: string | null
+          started_at?: string
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       memories: {
         Row: {
           created_at: string
@@ -388,6 +465,10 @@ export type Database = {
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      has_active_membership: {
+        Args: { user_id: string }
+        Returns: boolean
       }
       is_admin: {
         Args: { user_id: string }

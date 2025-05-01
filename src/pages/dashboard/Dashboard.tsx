@@ -1,158 +1,35 @@
 
-import React, { useState, useEffect } from "react";
+import { MembershipStatus } from "@/components/dashboard/MembershipStatus";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import QuickActions from "@/components/dashboard/QuickActions";
-import EventsList from "@/components/dashboard/EventsList";
 import UpcomingEvents from "@/components/dashboard/UpcomingEvents";
-import RestaurantsList from "@/components/dashboard/RestaurantsList";
-import { useAuth } from "@/hooks/useAuth";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserTickets from "@/components/dashboard/UserTickets";
-import { Ticket } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useMembershipStatus } from "@/hooks/useMembershipStatus";
 
 const Dashboard = () => {
-  const { user, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
-  const [restaurants, setRestaurants] = useState([]);
-  const [isLoadingRestaurants, setIsLoadingRestaurants] = useState(true);
-  const [events, setEvents] = useState([]);
-  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
-  const [error, setError] = useState(null);
-  
-  // Fetch restaurants if the user is an admin
-  useEffect(() => {
-    const fetchRestaurants = async () => {
-      if (!user || !isAdmin) {
-        setIsLoadingRestaurants(false);
-        return;
-      }
-      
-      try {
-        const { data, error } = await supabase
-          .from('restaurants')
-          .select('*');
-          
-        if (error) throw error;
-        setRestaurants(data || []);
-      } catch (error) {
-        console.error('Error fetching restaurants:', error);
-      } finally {
-        setIsLoadingRestaurants(false);
-      }
-    };
-    
-    fetchRestaurants();
-  }, [user, isAdmin]);
-  
-  // Fetch user's events
-  useEffect(() => {
-    const fetchEvents = async () => {
-      if (!user) {
-        setIsLoadingEvents(false);
-        return;
-      }
-      
-      try {
-        setIsLoadingEvents(true);
-        setError(null);
-        
-        const { data, error } = await supabase
-          .from('events')
-          .select('*, restaurant:restaurants(name)')
-          .eq('user_id', user.id);
-        
-        if (error) throw error;
-        setEvents(data || []);
-      } catch (error) {
-        console.error('Error fetching events:', error);
-        setError('Failed to load events. Please try again later.');
-      } finally {
-        setIsLoadingEvents(false);
-      }
-    };
-    
-    if (activeTab === 'my-events') {
-      fetchEvents();
-    }
-  }, [user, activeTab]);
-  
-  // Function to refresh restaurants after updates
-  const refreshRestaurants = async () => {
-    if (!user || !isAdmin) return;
-    
-    try {
-      setIsLoadingRestaurants(true);
-      const { data, error } = await supabase
-        .from('restaurants')
-        .select('*');
-        
-      if (error) throw error;
-      setRestaurants(data || []);
-    } catch (error) {
-      console.error('Error refreshing restaurants:', error);
-    } finally {
-      setIsLoadingRestaurants(false);
-    }
-  };
-  
-  if (!user) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-[80vh]">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-2">Loading...</h2>
-            <p className="text-gray-500">Please wait while we load your dashboard</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-  
+  const { isActive } = useMembershipStatus();
+
   return (
     <DashboardLayout>
-      <div className="container-custom py-6">
-        <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="tickets" className="flex items-center gap-1">
-              <Ticket className="h-4 w-4" /> My Tickets
-            </TabsTrigger>
-            <TabsTrigger value="my-events">My Events</TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="restaurants">Restaurants</TabsTrigger>
-            )}
-          </TabsList>
-          
-          <TabsContent value="overview" className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Left column */}
+          <div className="flex flex-col space-y-6">
+            <MembershipStatus />
             <QuickActions />
+          </div>
+          
+          {/* Middle column */}
+          <div className="md:col-span-2 space-y-6">
             <UpcomingEvents />
-          </TabsContent>
-          
-          <TabsContent value="tickets">
-            <UserTickets userId={user.id} />
-          </TabsContent>
-          
-          <TabsContent value="my-events">
-            <EventsList 
-              events={events}
-              isLoading={isLoadingEvents}
-              error={error}
-            />
-          </TabsContent>
-          
-          {isAdmin && (
-            <TabsContent value="restaurants">
-              <RestaurantsList 
-                restaurants={restaurants} 
-                isLoading={isLoadingRestaurants} 
-                onRestaurantUpdate={refreshRestaurants} 
-              />
-            </TabsContent>
-          )}
-        </Tabs>
+            
+            {isActive && (
+              <UserTickets />
+            )}
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );

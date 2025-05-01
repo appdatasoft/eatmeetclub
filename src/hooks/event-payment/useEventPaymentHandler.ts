@@ -57,6 +57,29 @@ export const useEventPaymentHandler = (
         navigate('/login');
         return;
       }
+
+      // Check membership status
+      const { data: membershipData } = await supabase
+        .from('memberships')
+        .select('status, renewal_at')
+        .eq('user_id', sessionData.session.user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      const isMember = membershipData && 
+        membershipData.status === 'active' && 
+        (!membershipData.renewal_at || new Date(membershipData.renewal_at) > new Date());
+
+      if (!isMember) {
+        toast({
+          title: "Membership Required",
+          description: "You need an active membership to purchase tickets",
+          variant: "default"
+        });
+        
+        navigate('/become-member');
+        return;
+      }
       
       console.log("Starting ticket purchase process for event:", event.id);
       

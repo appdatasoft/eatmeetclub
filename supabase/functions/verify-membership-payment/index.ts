@@ -36,20 +36,25 @@ serve(async (req) => {
     const password = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
     // Verify the payment with Stripe
-    // In a real implementation, for a subscription we'd check the subscription status
-    // rather than paymentIntent status
     let paymentVerified = false;
     let sessionId = paymentId;
+    let subscriptionId = null;
+    let amountPaid = 2500; // Default $25 in cents
     
     try {
       if (isSubscription) {
         const session = await stripe.checkout.sessions.retrieve(paymentId);
-        const subscriptionId = session.subscription as string;
+        subscriptionId = session.subscription as string;
         
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
           paymentVerified = subscription.status === 'active';
           console.log("Subscription verified:", { subscriptionId, status: subscription.status });
+          
+          // Get the price from the subscription
+          if (subscription.items.data.length > 0) {
+            amountPaid = subscription.items.data[0].price.unit_amount || 2500;
+          }
         } else {
           throw new Error("No subscription ID found in session");
         }
@@ -57,7 +62,8 @@ serve(async (req) => {
         // For one-time payment
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentId);
         paymentVerified = paymentIntent.status === "succeeded";
-        console.log("One-time payment verified:", { status: paymentIntent.status });
+        amountPaid = paymentIntent.amount;
+        console.log("One-time payment verified:", { status: paymentIntent.status, amount: paymentIntent.amount });
       }
     } catch (error) {
       console.error("Payment verification error:", error.message);
@@ -76,12 +82,6 @@ serve(async (req) => {
       user_metadata: { 
         full_name: name,
         phone: phone || null,
-        is_member: true,
-        membership_started: new Date().toISOString(),
-        is_subscription: isSubscription,
-        subscription_renewal: isSubscription ? 
-          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : 
-          null
       }
     });
 
@@ -90,6 +90,47 @@ serve(async (req) => {
     }
 
     console.log("User created successfully:", userData.user.id);
+
+    // Create a new membership record
+    const renewalDate = isSubscription ? 
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : // 30 days from now for subscriptions
+      null;
+
+    const { data: membership, error: membershipError } = await supabaseClient
+      .from('memberships')
+      .insert({
+        user_id: userData.user.id,
+        status: 'active',
+        is_subscription: isSubscription,
+        started_at: new Date().toISOString(),
+        renewal_at: renewalDate?.toISOString() || null,
+        subscription_id: subscriptionId,
+        last_payment_id: paymentId,
+      })
+      .select()
+      .single();
+      
+    if (membershipError) {
+      console.error("Error creating membership:", membershipError);
+      throw new Error(`Error creating membership: ${membershipError.message}`);
+    }
+    
+    console.log("Membership created:", membership.id);
+    
+    // Create a membership payment record
+    const { error: paymentError } = await supabaseClient
+      .from('membership_payments')
+      .insert({
+        membership_id: membership.id,
+        amount: amountPaid / 100, // Convert cents to dollars
+        payment_id: paymentId,
+        payment_status: 'succeeded',
+      });
+      
+    if (paymentError) {
+      console.error("Error recording payment:", paymentError);
+      // Don't fail the whole process if payment record fails
+    }
 
     // Send a password reset email so the user can set their own password
     const { error: resetError } = await supabaseClient.auth.admin.generateLink({
@@ -202,46 +243,3 @@ async function sendWelcomeEmail(email: string, name: string) {
   // In a real implementation, this would call an email service API
   return true;
 }
-
-// Invoice email sending function with improved error handling
-async function sendInvoiceEmail(sessionId: string, email: string, name: string) {
-  try {
-    console.log(`Sending invoice email request for session ${sessionId} to ${email}`);
-    
-    // Get the URL of the Supabase project
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    if (!supabaseUrl) {
-      throw new Error("SUPABASE_URL environment variable is not set");
-    }
-    
-    // Call the send-invoice-email function directly
-    const response = await fetch(`${supabaseUrl}/functions/v1/send-invoice-email`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // Add Authorization header if needed
-      },
-      body: JSON.stringify({
-        sessionId,
-        email,
-        name
-      }),
-    });
-
-    console.log(`Invoice email request response status: ${response.status}`);
-    
-    const responseData = await response.json();
-    console.log("Invoice email response data:", responseData);
-    
-    if (!response.ok) {
-      throw new Error(responseData.message || "Failed to send invoice email");
-    }
-
-    return responseData;
-  } catch (error) {
-    console.error("Error sending invoice email:", error);
-    // Re-throw to be handled by the caller
-    throw error;
-  }
-}
-
