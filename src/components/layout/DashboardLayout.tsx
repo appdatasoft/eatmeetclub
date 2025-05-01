@@ -66,10 +66,18 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                     </li>
                     <li>
                       <Link 
+                        to="/dashboard/events" 
+                        className={`block px-3 py-2 rounded-md ${isActive('/dashboard/events')}`}
+                      >
+                        Events Management
+                      </Link>
+                    </li>
+                    <li>
+                      <Link 
                         to="/dashboard/create-event" 
                         className={`block px-3 py-2 rounded-md ${isActive('/dashboard/create-event')}`}
                       >
-                        Events
+                        Create Event
                       </Link>
                     </li>
                     <li>
