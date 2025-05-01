@@ -85,6 +85,10 @@ export const useAuth = () => {
   const handleLogout = async () => {
     try {
       console.log('Logging out user...');
+      // First clear any stored redirect paths
+      localStorage.removeItem('redirectAfterLogin');
+      localStorage.removeItem('pendingTicketPurchase');
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) throw error;

@@ -2,18 +2,41 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
   user: any;
-  handleLogout: () => void;
+  handleLogout: () => Promise<void>;
 }
 
 const MobileMenu = ({ isOpen, onClose, user, handleLogout }: MobileMenuProps) => {
   const { isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   
   if (!isOpen) return null;
+
+  const onLogout = async () => {
+    try {
+      await handleLogout();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account"
+      });
+      onClose();
+      navigate('/');
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast({
+        title: "Error logging out",
+        description: "An error occurred while logging out",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <div className="md:hidden fixed inset-0 bg-white z-50">
@@ -47,10 +70,7 @@ const MobileMenu = ({ isOpen, onClose, user, handleLogout }: MobileMenuProps) =>
                 )}
                 <Button 
                   variant="ghost" 
-                  onClick={() => {
-                    handleLogout();
-                    onClose();
-                  }}
+                  onClick={onLogout}
                   className="w-full justify-start p-0 text-lg py-2"
                 >
                   Logout
