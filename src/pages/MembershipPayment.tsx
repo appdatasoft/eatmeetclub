@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -10,7 +11,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const membershipSchema = z.object({
@@ -33,6 +34,8 @@ const MembershipPayment = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchParams] = useSearchParams();
   const paymentCanceled = searchParams.get('canceled') === 'true';
+  const paymentSuccess = searchParams.get('success') === 'true';
+  const sessionId = searchParams.get('session_id');
 
   const form = useForm<MembershipFormValues>({
     resolver: zodResolver(membershipSchema),
@@ -69,6 +72,84 @@ const MembershipPayment = () => {
     fetchMembershipFee();
   }, []);
 
+  // Check for successful payment and verify with backend
+  useEffect(() => {
+    if (paymentSuccess && sessionId) {
+      verifyPayment(sessionId);
+    }
+  }, [paymentSuccess, sessionId]);
+
+  const verifyPayment = async (paymentId: string) => {
+    setIsProcessing(true);
+    
+    try {
+      // Get user details from localStorage
+      const storedEmail = localStorage.getItem('signup_email');
+      const storedName = localStorage.getItem('signup_name');
+      const storedPhone = localStorage.getItem('signup_phone');
+      const storedAddress = localStorage.getItem('signup_address');
+      
+      if (!storedEmail) {
+        throw new Error("Missing email for payment verification");
+      }
+      
+      console.log("Verifying payment with session ID:", paymentId);
+      console.log("User details:", { email: storedEmail, name: storedName, phone: storedPhone });
+      
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+      };
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            paymentId,
+            email: storedEmail,
+            name: storedName,
+            phone: storedPhone || null,
+            address: storedAddress || null,
+            isSubscription: true
+          }),
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || "Payment verification failed");
+      }
+      
+      console.log("Payment verification response:", data);
+      
+      if (data.success) {
+        toast({
+          title: "Payment successful!",
+          description: "Your membership has been activated. Check your email for login instructions.",
+        });
+        
+        // Clean up localStorage
+        localStorage.removeItem('signup_email');
+        localStorage.removeItem('signup_name');
+        localStorage.removeItem('signup_phone');
+        localStorage.removeItem('signup_address');
+      } else {
+        throw new Error(data.message || "Payment verification failed");
+      }
+    } catch (error: any) {
+      console.error("Payment verification error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "There was a problem verifying your payment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const formatCardNumber = (value: string) => {
     const digits = value.replace(/\D/g, '');
     let formatted = '';
@@ -93,6 +174,12 @@ const MembershipPayment = () => {
     try {
       setIsProcessing(true);
       console.log("Processing membership signup with values:", values);
+      
+      // Store user details in localStorage for later use in verification
+      localStorage.setItem('signup_email', values.email);
+      localStorage.setItem('signup_name', values.name);
+      localStorage.setItem('signup_phone', values.phone || '');
+      localStorage.setItem('signup_address', values.address);
       
       // Set explicit headers without relying on authentication
       const headers: Record<string, string> = {
@@ -175,185 +262,198 @@ const MembershipPayment = () => {
               </div>
               
               <div className="p-6">
-                <div className="mb-6">
-                  <h2 className="text-lg font-medium mb-4">Membership Benefits</h2>
-                  <ul className="space-y-2">
-                    <li className="flex items-start">
-                      <svg className="h-5 w-5 text-brand-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      <span>Early access to exclusive events</span>
-                    </li>
-                    <li className="flex items-start">
-                      <svg className="h-5 w-5 text-brand-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      <span>Discounted event tickets</span>
-                    </li>
-                    <li className="flex items-start">
-                      <svg className="h-5 w-5 text-brand-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      <span>Member-only community access</span>
-                    </li>
-                    <li className="flex items-start">
-                      <svg className="h-5 w-5 text-brand-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      <span>Monthly newsletter with insider tips</span>
-                    </li>
-                  </ul>
-                </div>
+                {paymentSuccess && sessionId && (
+                  <Alert className="mb-6 bg-green-50 border-green-200">
+                    <Check className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-800">
+                      Your payment was successful! Please check your email for login instructions.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 
-                <div className="border-t border-gray-200 pt-6">
-                  {paymentCanceled && (
-                    <Alert variant="destructive" className="mb-4">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        Payment was canceled. Please try again when you're ready.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Full Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter your full name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input type="email" placeholder="Enter your email" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone Number</FormLabel>
-                            <FormControl>
-                              <Input type="tel" placeholder="Enter your phone number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="address"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Address</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter your address" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <div className="pt-4 border-t border-gray-200">
-                        <h3 className="text-lg font-medium mb-4">Payment Details</h3>
-                        
-                        <FormField
-                          control={form.control}
-                          name="cardNumber"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Card Number</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="1234 5678 9012 3456" 
-                                  {...field}
-                                  onChange={(e) => {
-                                    const formatted = formatCardNumber(e.target.value);
-                                    field.onChange(formatted);
-                                  }}
-                                  maxLength={19}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <div className="grid grid-cols-2 gap-4 mt-4">
+                {paymentCanceled && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Payment was canceled. Please try again when you're ready.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {!paymentSuccess && (
+                  <>
+                    <div className="mb-6">
+                      <h2 className="text-lg font-medium mb-4">Membership Benefits</h2>
+                      <ul className="space-y-2">
+                        <li className="flex items-start">
+                          <svg className="h-5 w-5 text-brand-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                          </svg>
+                          <span>Early access to exclusive events</span>
+                        </li>
+                        <li className="flex items-start">
+                          <svg className="h-5 w-5 text-brand-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                          </svg>
+                          <span>Discounted event tickets</span>
+                        </li>
+                        <li className="flex items-start">
+                          <svg className="h-5 w-5 text-brand-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                          </svg>
+                          <span>Member-only community access</span>
+                        </li>
+                        <li className="flex items-start">
+                          <svg className="h-5 w-5 text-brand-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                          </svg>
+                          <span>Monthly newsletter with insider tips</span>
+                        </li>
+                      </ul>
+                    </div>
+                    
+                    <div className="border-t border-gray-200 pt-6">
+                      <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                           <FormField
                             control={form.control}
-                            name="cardExpiry"
+                            name="name"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Expiry Date</FormLabel>
+                                <FormLabel>Full Name</FormLabel>
                                 <FormControl>
-                                  <Input 
-                                    placeholder="MM/YY" 
-                                    {...field}
-                                    onChange={(e) => {
-                                      const formatted = formatExpiryDate(e.target.value);
-                                      field.onChange(formatted);
-                                    }}
-                                    maxLength={5}
-                                  />
+                                  <Input placeholder="Enter your full name" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                  <Input type="email" placeholder="Enter your email" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="phone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Phone Number</FormLabel>
+                                <FormControl>
+                                  <Input type="tel" placeholder="Enter your phone number" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="address"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Address</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Enter your address" {...field} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
                           
-                          <FormField
-                            control={form.control}
-                            name="cardCvc"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>CVC</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    type="password" 
-                                    placeholder="123" 
-                                    {...field}
-                                    onChange={(e) => {
-                                      const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                                      field.onChange(value);
-                                    }}
-                                    maxLength={4}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-between mt-6">
-                        <Button type="button" variant="outline" onClick={handleCancel}>
-                          Cancel
-                        </Button>
-                        <Button type="submit" disabled={isProcessing}>
-                          {isProcessing ? "Processing..." : `Subscribe Now - $${membershipFee.toFixed(2)}/month`}
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </div>
+                          <div className="pt-4 border-t border-gray-200">
+                            <h3 className="text-lg font-medium mb-4">Payment Details</h3>
+                            
+                            <FormField
+                              control={form.control}
+                              name="cardNumber"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Card Number</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="1234 5678 9012 3456" 
+                                      {...field}
+                                      onChange={(e) => {
+                                        const formatted = formatCardNumber(e.target.value);
+                                        field.onChange(formatted);
+                                      }}
+                                      maxLength={19}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <div className="grid grid-cols-2 gap-4 mt-4">
+                              <FormField
+                                control={form.control}
+                                name="cardExpiry"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Expiry Date</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        placeholder="MM/YY" 
+                                        {...field}
+                                        onChange={(e) => {
+                                          const formatted = formatExpiryDate(e.target.value);
+                                          field.onChange(formatted);
+                                        }}
+                                        maxLength={5}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={form.control}
+                                name="cardCvc"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>CVC</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        type="password" 
+                                        placeholder="123" 
+                                        {...field}
+                                        onChange={(e) => {
+                                          const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                          field.onChange(value);
+                                        }}
+                                        maxLength={4}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="flex justify-between mt-6">
+                            <Button type="button" variant="outline" onClick={handleCancel}>
+                              Cancel
+                            </Button>
+                            <Button type="submit" disabled={isProcessing}>
+                              {isProcessing ? "Processing..." : `Subscribe Now - $${membershipFee.toFixed(2)}/month`}
+                            </Button>
+                          </div>
+                        </form>
+                      </Form>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

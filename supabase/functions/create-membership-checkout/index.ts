@@ -54,6 +54,10 @@ serve(async (req) => {
       console.log("No auth token provided - proceeding with guest checkout");
     }
 
+    // Get origin from request or use a default value
+    const origin = req.headers.get("origin") || "http://localhost:5173";
+    console.log("Using origin for redirects:", origin);
+
     // Create a Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -74,8 +78,8 @@ serve(async (req) => {
         },
       ],
       mode: 'subscription',
-      success_url: `https://www.eatmeetclub.com/signup?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `https://www.eatmeetclub.com/signup?canceled=true`,
+      success_url: `${origin}/membership-payment?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/membership-payment?canceled=true`,
       customer_email: email,
       metadata: {
         name: name || '',
