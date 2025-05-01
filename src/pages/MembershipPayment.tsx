@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -95,14 +94,17 @@ const MembershipPayment = () => {
       setIsProcessing(true);
       console.log("Processing membership signup with values:", values);
       
+      // Set explicit headers without relying on authentication
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      
       // Create a Stripe checkout session
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
           body: JSON.stringify({
             email: values.email,
             name: values.name,
@@ -126,51 +128,9 @@ const MembershipPayment = () => {
       const data = await response.json();
       console.log("Checkout session created:", data);
       
-      if (data.success) {
-        // Verify the payment (assuming the session is immediately successful in our mockup)
-        const verifyResponse = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              paymentId: data.session_id,
-              email: values.email,
-              name: values.name,
-              phone: values.phone,
-              address: values.address,
-              isSubscription: true
-            }),
-          }
-        );
-        
-        if (!verifyResponse.ok) {
-          let errorMessage = "Failed to verify payment";
-          try {
-            const errorData = await verifyResponse.json();
-            errorMessage = errorData.message || errorMessage;
-          } catch (e) {
-            console.error("Error parsing verify response:", e);
-          }
-          throw new Error(errorMessage);
-        }
-        
-        const verifyData = await verifyResponse.json();
-        console.log("Payment verification response:", verifyData);
-        
-        if (verifyData.success) {
-          toast({
-            title: "Payment successful!",
-            description: "We've sent you verification and invoice emails. Please check your inbox to set up your password.",
-          });
-          
-          // Redirect to a thank you page
-          navigate("/signup?success=true");
-        } else {
-          throw new Error("Payment verification failed");
-        }
+      if (data.success && data.url) {
+        // Redirect to Stripe checkout page
+        window.location.href = data.url;
       } else {
         throw new Error(data.message || "Failed to create checkout session");
       }
