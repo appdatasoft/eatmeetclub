@@ -12,6 +12,7 @@ import PaymentCanceledAlert from "@/components/signup/PaymentCanceledAlert";
 import PaymentSuccessAlert from "@/components/signup/PaymentSuccessAlert";
 import SignupFormContainer from "@/components/signup/SignupFormContainer";
 import useAuth from "@/hooks/useAuth";
+import Footer from "@/components/layout/Footer";
 
 const SignupContainer = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -50,7 +51,21 @@ const SignupContainer = () => {
       setUserDetails({
         email: user.email || '',
         password: '', // Not needed since user is already logged in
-        phoneNumber: user.user_metadata?.phone || ''
+        phoneNumber: user.user_metadata?.phone || '',
+        name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+        address: user.user_metadata?.address || ''
+      });
+      setShowPaymentForm(true);
+    } else if (!user && !showPaymentForm && !isVerifyingPayment && !isPaymentVerified) {
+      // For new users, we skip authentication and go straight to payment
+      console.log("Non-authenticated user - go straight to payment form");
+      // Initialize empty user details for collection in the payment form
+      setUserDetails({
+        email: '',
+        password: '',
+        phoneNumber: '',
+        name: '',
+        address: ''
       });
       setShowPaymentForm(true);
     }
@@ -63,7 +78,7 @@ const SignupContainer = () => {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 pt-16">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 pt-16 pb-16">
         <div className="max-w-md w-full">
           <Card className="shadow-md">
             <CardHeader>
@@ -89,12 +104,14 @@ const SignupContainer = () => {
                   handleSignupSubmit={handleSignupSubmit}
                   handlePayment={handlePayment}
                   handleBack={handleBack}
+                  skipAuth={true} // Always skip auth now
                 />
               )}
             </CardContent>
           </Card>
         </div>
       </div>
+      <Footer />
     </>
   );
 };

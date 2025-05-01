@@ -10,6 +10,7 @@ interface SignupFormContainerProps {
   handleSignupSubmit: (values: SignupFormValues) => Promise<void>;
   handlePayment: (e: React.FormEvent) => void;
   handleBack: () => void;
+  skipAuth?: boolean;
 }
 
 const SignupFormContainer = ({
@@ -19,7 +20,8 @@ const SignupFormContainer = ({
   membershipFee,
   handleSignupSubmit,
   handlePayment,
-  handleBack
+  handleBack,
+  skipAuth = false
 }: SignupFormContainerProps) => {
   if (showPaymentForm) {
     return (
@@ -30,6 +32,7 @@ const SignupFormContainer = ({
         onSubmit={handlePayment}
         isLoading={isLoading}
         isSubscription={true}
+        requireAllFields={true} // Always require all fields for collection
       />
     );
   }

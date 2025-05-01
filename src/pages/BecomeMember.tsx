@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,9 +20,9 @@ const BecomeMember = () => {
       description: "Taking you to the membership payment page",
     });
     
-    // Short delay to show the toast before redirecting
+    // Direct to signup/payment page without requiring authentication
     setTimeout(() => {
-      navigate("/membership-payment");
+      navigate("/signup?payment=true");
     }, 1000);
   };
 

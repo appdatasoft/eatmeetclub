@@ -10,23 +10,29 @@ export const usePaymentProcess = ({ setIsLoading }: UsePaymentProcessProps) => {
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Get form data from the hidden fields
+    const form = e.target as HTMLFormElement;
+    const email = (form.querySelector('#email') as HTMLInputElement)?.value;
+    const name = (form.querySelector('#name') as HTMLInputElement)?.value;
+    const phone = (form.querySelector('#phone') as HTMLInputElement)?.value;
+    const address = (form.querySelector('#address') as HTMLInputElement)?.value;
+    
+    if (!email) {
+      showToast({
+        title: "Error",
+        description: "Email is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
-      // Get the current authenticated user's email
+      // Get the current authenticated user (if any)
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session?.user) {
-        throw new Error("You must be logged in to complete this process");
-      }
-      
-      const userEmail = session.user.email;
-      const userName = session.user.user_metadata.name || userEmail?.split('@')[0];
-      const userPhone = session.user.user_metadata.phone;
-      
-      console.log("Initiating payment process with user details from auth:", userEmail);
-      
-      const accessToken = session.access_token;
+      console.log("Creating checkout session with details:", { email, name, phone, address });
       
       // Create a Stripe checkout session
       const response = await fetch(
@@ -35,12 +41,13 @@ export const usePaymentProcess = ({ setIsLoading }: UsePaymentProcessProps) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`, // Include the auth token
+            ...(session?.access_token ? { "Authorization": `Bearer ${session.access_token}` } : {}),
           },
           body: JSON.stringify({
-            email: userEmail,
-            name: userName,
-            phone: userPhone
+            email,
+            name,
+            phone,
+            address
           }),
         }
       );

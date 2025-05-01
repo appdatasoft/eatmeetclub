@@ -1,9 +1,23 @@
 
 import { useState } from "react";
-import { Button } from "@/components/common/Button";
+import { Button } from "@/components/ui/button";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft, CreditCard, User, Mail, Phone, MapPin } from "lucide-react";
 import { SignupFormValues } from "./SignupForm";
+
+const paymentFormSchema = z.object({
+  name: z.string().min(2, { message: "Name is required" }),
+  email: z.string().email({ message: "Valid email is required" }),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+});
+
+type PaymentFormValues = z.infer<typeof paymentFormSchema>;
 
 interface PaymentFormProps {
   userDetails: SignupFormValues;
@@ -12,6 +26,7 @@ interface PaymentFormProps {
   onSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
   isSubscription?: boolean;
+  requireAllFields?: boolean;
 }
 
 const PaymentForm = ({
@@ -20,139 +35,194 @@ const PaymentForm = ({
   onBack,
   onSubmit,
   isLoading,
-  isSubscription = false
+  isSubscription = false,
+  requireAllFields = false
 }: PaymentFormProps) => {
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvc, setCardCvc] = useState("");
+  const [formData, setFormData] = useState({
+    name: userDetails.name || "",
+    email: userDetails.email || "",
+    phone: userDetails.phoneNumber || "",
+    address: userDetails.address || "",
+  });
 
-  const formatCardNumber = (value: string) => {
-    // Remove any non-digit characters
-    const digits = value.replace(/\D/g, '');
+  const validationSchema = requireAllFields 
+    ? paymentFormSchema.extend({
+        phone: z.string().min(1, { message: "Phone number is required" }),
+        address: z.string().min(1, { message: "Address is required" }),
+      })
+    : paymentFormSchema;
+
+  const form = useForm<PaymentFormValues>({
+    resolver: zodResolver(validationSchema),
+    defaultValues: {
+      name: userDetails.name || "",
+      email: userDetails.email || "",
+      phone: userDetails.phoneNumber || "",
+      address: userDetails.address || "",
+    },
+  });
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData({ ...formData, [field]: value });
     
-    // Format with spaces every 4 digits
-    let formatted = '';
-    for (let i = 0; i < digits.length; i++) {
-      if (i > 0 && i % 4 === 0) {
-        formatted += ' ';
-      }
-      formatted += digits[i];
+    // Update the hidden form fields used for submission
+    const element = document.getElementById(field) as HTMLInputElement;
+    if (element) {
+      element.value = value;
     }
-    
-    // Limit to 19 characters (16 digits + 3 spaces)
-    return formatted.slice(0, 19);
-  };
-
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedValue = formatCardNumber(e.target.value);
-    setCardNumber(formattedValue);
-  };
-
-  const formatExpiryDate = (value: string) => {
-    // Remove any non-digit characters
-    const digits = value.replace(/\D/g, '');
-    
-    // Format as MM/YY
-    if (digits.length > 2) {
-      return `${digits.slice(0, 2)}/${digits.slice(2, 4)}`;
-    }
-    return digits;
-  };
-
-  const handleExpiryDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedValue = formatExpiryDate(e.target.value);
-    setCardExpiry(formattedValue);
-  };
-
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Payment form submitted");
-    onSubmit(e);
   };
 
   return (
-    <>
-      <div className="mb-6">
-        <h3 className="font-medium mb-2">Membership Details</h3>
-        <p className="text-sm text-gray-600">Email: {userDetails?.email}</p>
-        {userDetails?.phoneNumber && (
-          <p className="text-sm text-gray-600">Phone: {userDetails.phoneNumber}</p>
-        )}
-      </div>
-      
-      <form className="space-y-4" onSubmit={handleFormSubmit}>
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-4">
-          <p className="text-amber-800 text-sm">
-            You will be charged ${membershipFee.toFixed(2)}{isSubscription ? "/month" : ""} for your membership.
-            {isSubscription && (
-              <span className="block mt-1">Your subscription will automatically renew monthly until canceled.</span>
-            )}
-          </p>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="cardNumber">Card Number</Label>
-          <Input
-            id="cardNumber"
-            type="text"
-            value={cardNumber}
-            onChange={handleCardNumberChange}
-            required
-            placeholder="1234 5678 9012 3456"
-            className="mt-1"
-            maxLength={19}
-          />
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="cardExpiry">Expiry Date</Label>
-            <Input
-              id="cardExpiry"
-              type="text"
-              value={cardExpiry}
-              onChange={handleExpiryDateChange}
-              required
-              placeholder="MM/YY"
-              className="mt-1"
-              maxLength={5}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="cardCvc">CVC</Label>
-            <Input
-              id="cardCvc"
-              type="password"
-              value={cardCvc}
-              onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              required
-              placeholder="123"
-              className="mt-1"
-              maxLength={4}
-            />
-          </div>
-        </div>
+    <div>
+      <Form {...form}>
+        <form onSubmit={onSubmit} className="space-y-6">
+          {/* Hidden fields to store the actual values for submission */}
+          <input type="hidden" id="name" name="name" value={formData.name} />
+          <input type="hidden" id="email" name="email" value={formData.email} />
+          <input type="hidden" id="phone" name="phone" value={formData.phone} />
+          <input type="hidden" id="address" name="address" value={formData.address} />
 
-        <div className="pt-4 flex space-x-2">
-          <Button 
-            type="button" 
-            variant="outline"
-            onClick={onBack}
-            disabled={isLoading}
-          >
-            Back
-          </Button>
-          <Button
-            type="submit"
-            isLoading={isLoading}
-            className="flex-1"
-          >
-            Pay ${membershipFee.toFixed(2)}{isSubscription ? "/month" : ""}
-          </Button>
-        </div>
-      </form>
-    </>
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Full Name</FormLabel>
+                <FormControl>
+                  <div className="flex items-center">
+                    <User className="h-4 w-4 text-gray-500 mr-2" />
+                    <Input 
+                      placeholder="Enter your full name" 
+                      {...field} 
+                      onChange={(e) => {
+                        field.onChange(e);
+                        handleInputChange("name", e.target.value);
+                      }} 
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <div className="flex items-center">
+                    <Mail className="h-4 w-4 text-gray-500 mr-2" />
+                    <Input 
+                      type="email" 
+                      placeholder="Enter your email" 
+                      {...field} 
+                      onChange={(e) => {
+                        field.onChange(e);
+                        handleInputChange("email", e.target.value);
+                      }} 
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone Number {requireAllFields && <span className="text-red-500">*</span>}</FormLabel>
+                <FormControl>
+                  <div className="flex items-center">
+                    <Phone className="h-4 w-4 text-gray-500 mr-2" />
+                    <Input 
+                      placeholder="Enter your phone number" 
+                      {...field} 
+                      onChange={(e) => {
+                        field.onChange(e);
+                        handleInputChange("phone", e.target.value);
+                      }} 
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Address {requireAllFields && <span className="text-red-500">*</span>}</FormLabel>
+                <FormControl>
+                  <div className="flex items-center">
+                    <MapPin className="h-4 w-4 text-gray-500 mr-2" />
+                    <Input 
+                      placeholder="Enter your address" 
+                      {...field} 
+                      onChange={(e) => {
+                        field.onChange(e);
+                        handleInputChange("address", e.target.value);
+                      }} 
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <Card className="bg-gray-50 border border-gray-200">
+            <CardContent className="py-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium">Monthly Membership</p>
+                  {isSubscription && <p className="text-xs text-gray-500">Billed monthly</p>}
+                </div>
+                <p className="font-semibold">${membershipFee}.00</p>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
+                <p className="font-medium">Total</p>
+                <p className="font-bold text-lg">${membershipFee}.00</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onBack}
+              disabled={isLoading}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isLoading || !form.formState.isValid}
+              className="flex items-center"
+            >
+              {isLoading ? (
+                "Processing..."
+              ) : (
+                <>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Complete Payment
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 };
 

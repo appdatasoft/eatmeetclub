@@ -30,7 +30,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
     
-    // Extract the user's authToken if present (optional in new flow)
+    // Extract the user's authToken if present (optional)
     let authToken = null;
     let userId = null;
     const authHeader = req.headers.get('Authorization');
@@ -51,7 +51,7 @@ serve(async (req) => {
         console.error("Error validating token:", error.message);
       }
     } else {
-      console.log("No auth token provided in headers - this is normal for the new flow");
+      console.log("No auth token provided - proceeding with guest checkout");
     }
 
     // Create a Stripe checkout session
@@ -82,7 +82,7 @@ serve(async (req) => {
         phone: phone || '',
         address: address || '',
         is_subscription: 'true',
-        user_id: userId || '', // Include the user ID in metadata
+        user_id: userId || '', // Include the user ID in metadata if available
       },
     });
 
