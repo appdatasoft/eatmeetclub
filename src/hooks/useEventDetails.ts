@@ -1,6 +1,6 @@
 
 import { useEventFetch } from "./eventDetails";
-import { useEventPaymentHandler } from "./useEventPaymentHandler";
+import { useEventPaymentHandler } from "./event-payment";
 import { EventDetails } from "./types/eventTypes";
 
 export type { EventDetails } from "./types/eventTypes";
