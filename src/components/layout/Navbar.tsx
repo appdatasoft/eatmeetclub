@@ -34,7 +34,7 @@ const Navbar = () => {
           <NavLinks />
 
           {/* Authentication/User Buttons */}
-          <AuthButtons user={user} handleLogout={handleLogout} />
+          <AuthButtons />
 
           {/* Mobile menu button */}
           <MobileMenuButton isOpen={mobileMenuOpen} onClick={toggleMobileMenu} />
