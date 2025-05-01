@@ -51,14 +51,28 @@ export const useMembershipStatus = (): MembershipResponse => {
         throw membershipError;
       }
 
-      setMembership(data);
-      
-      // Check if membership is active
       if (data) {
-        const isActiveStatus = data.status === 'active';
+        // Ensure the status is one of the allowed types
+        const typedStatus = data.status as 'active' | 'expired' | 'canceled';
+        
+        // Create a properly typed membership object
+        const typedMembership: Membership = {
+          id: data.id,
+          status: typedStatus,
+          is_subscription: data.is_subscription,
+          started_at: data.started_at,
+          renewal_at: data.renewal_at,
+          subscription_id: data.subscription_id
+        };
+        
+        setMembership(typedMembership);
+        
+        // Check if membership is active
+        const isActiveStatus = typedStatus === 'active';
         const notExpired = !data.renewal_at || new Date(data.renewal_at) > new Date();
         setIsActive(isActiveStatus && notExpired);
       } else {
+        setMembership(null);
         setIsActive(false);
       }
     } catch (err) {

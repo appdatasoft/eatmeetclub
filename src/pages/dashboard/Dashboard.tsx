@@ -5,9 +5,11 @@ import QuickActions from "@/components/dashboard/QuickActions";
 import UpcomingEvents from "@/components/dashboard/UpcomingEvents";
 import UserTickets from "@/components/dashboard/UserTickets";
 import { useMembershipStatus } from "@/hooks/useMembershipStatus";
+import useAuth from "@/hooks/useAuth";
 
 const Dashboard = () => {
   const { isActive } = useMembershipStatus();
+  const { user } = useAuth();
 
   return (
     <DashboardLayout>
@@ -25,8 +27,8 @@ const Dashboard = () => {
           <div className="md:col-span-2 space-y-6">
             <UpcomingEvents />
             
-            {isActive && (
-              <UserTickets />
+            {isActive && user && (
+              <UserTickets userId={user.id} />
             )}
           </div>
         </div>
