@@ -4,7 +4,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import EventFilters from "@/components/events/EventFilters";
 import EventsList from "@/components/events/EventsList";
-import useEvents from "@/hooks/useEvents";
+import useEvents from "@/hooks/events";  // Updated import path
 import useEventFilters from "@/hooks/useEventFilters";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
