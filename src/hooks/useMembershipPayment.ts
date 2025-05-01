@@ -12,6 +12,11 @@ export const useMembershipPayment = () => {
   const [membershipFee, setMembershipFee] = useState(25);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [formErrors, setFormErrors] = useState<{
+    cardNumber?: boolean;
+    cardExpiry?: boolean;
+    cardCvc?: boolean;
+  }>({});
   
   const paymentCanceled = searchParams.get('canceled') === 'true';
   const paymentSuccess = searchParams.get('success') === 'true';
@@ -116,8 +121,59 @@ export const useMembershipPayment = () => {
     }
   };
 
+  const validateCardDetails = (values: MembershipFormValues) => {
+    const errors: {
+      cardNumber?: boolean;
+      cardExpiry?: boolean;
+      cardCvc?: boolean;
+    } = {};
+    
+    // Basic card number validation (Luhn algorithm is in the schema)
+    const cardDigits = values.cardNumber.replace(/\s/g, '');
+    if (cardDigits.length < 13 || cardDigits.length > 19) {
+      errors.cardNumber = true;
+    }
+    
+    // Basic expiry date validation
+    const [month, year] = values.cardExpiry.split('/').map(Number);
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear() % 100;
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    if (
+      isNaN(month) || isNaN(year) ||
+      month < 1 || month > 12 ||
+      year < currentYear || 
+      (year === currentYear && month < currentMonth)
+    ) {
+      errors.cardExpiry = true;
+    }
+    
+    // Basic CVC validation
+    if (values.cardCvc.length < 3 || values.cardCvc.length > 4 || !/^\d+$/.test(values.cardCvc)) {
+      errors.cardCvc = true;
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (values: MembershipFormValues) => {
     try {
+      // Reset form errors
+      setFormErrors({});
+      
+      // Validate card details before processing
+      const isValid = validateCardDetails(values);
+      if (!isValid) {
+        toast({
+          title: "Invalid card details",
+          description: "Please check your card information and try again",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       setIsProcessing(true);
       console.log("Processing membership signup with values:", values);
       
@@ -190,6 +246,7 @@ export const useMembershipPayment = () => {
     paymentCanceled,
     paymentSuccess,
     sessionId,
+    formErrors,
     handleSubmit,
     handleCancel
   };

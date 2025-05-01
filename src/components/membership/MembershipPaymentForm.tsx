@@ -13,9 +13,61 @@ export const membershipSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   phone: z.string().min(10, { message: "Please enter a valid phone number" }).optional(),
   address: z.string().min(5, { message: "Please enter your address" }),
-  cardNumber: z.string().min(16, { message: "Please enter a valid card number" }),
-  cardExpiry: z.string().min(5, { message: "Please enter a valid expiry date" }),
-  cardCvc: z.string().min(3, { message: "Please enter a valid CVC" }),
+  cardNumber: z.string()
+    .min(16, { message: "Card number must be at least 16 digits" })
+    .refine((val) => /^[\d\s]+$/.test(val), { 
+      message: "Card number can only contain digits and spaces" 
+    })
+    .refine((val) => {
+      // Luhn algorithm for card number validation
+      const digits = val.replace(/\s/g, '');
+      if (!/^\d+$/.test(digits)) return false;
+      
+      let sum = 0;
+      let shouldDouble = false;
+      
+      // Loop through values starting from the rightmost digit
+      for (let i = digits.length - 1; i >= 0; i--) {
+        let digit = parseInt(digits.charAt(i));
+        
+        if (shouldDouble) {
+          digit *= 2;
+          if (digit > 9) digit -= 9;
+        }
+        
+        sum += digit;
+        shouldDouble = !shouldDouble;
+      }
+      
+      return (sum % 10) === 0;
+    }, { message: "Please enter a valid card number" }),
+  cardExpiry: z.string()
+    .min(5, { message: "Please enter a valid expiry date" })
+    .refine((val) => /^\d{2}\/\d{2}$/.test(val), { 
+      message: "Expiry date must be in MM/YY format" 
+    })
+    .refine((val) => {
+      const [month, year] = val.split('/').map(Number);
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear() % 100;
+      const currentMonth = currentDate.getMonth() + 1;
+      
+      // Check if month is valid (1-12)
+      if (month < 1 || month > 12) return false;
+      
+      // Check if the date is in the future
+      if (year < currentYear || (year === currentYear && month < currentMonth)) {
+        return false;
+      }
+      
+      return true;
+    }, { message: "Card has expired" }),
+  cardCvc: z.string()
+    .min(3, { message: "CVC must be 3-4 digits" })
+    .max(4, { message: "CVC must be 3-4 digits" })
+    .refine((val) => /^\d+$/.test(val), { 
+      message: "CVC can only contain digits" 
+    }),
 });
 
 export type MembershipFormValues = z.infer<typeof membershipSchema>;
@@ -144,6 +196,7 @@ const MembershipPaymentForm = ({
                           field.onChange(formatted);
                         }}
                         maxLength={19}
+                        className={form.formState.errors.cardNumber ? "border-red-500" : ""}
                       />
                     </FormControl>
                     <FormMessage />
@@ -167,6 +220,7 @@ const MembershipPaymentForm = ({
                             field.onChange(formatted);
                           }}
                           maxLength={5}
+                          className={form.formState.errors.cardExpiry ? "border-red-500" : ""}
                         />
                       </FormControl>
                       <FormMessage />
@@ -182,7 +236,6 @@ const MembershipPaymentForm = ({
                       <FormLabel>CVC</FormLabel>
                       <FormControl>
                         <Input 
-                          type="password" 
                           placeholder="123" 
                           {...field}
                           onChange={(e) => {
@@ -190,6 +243,7 @@ const MembershipPaymentForm = ({
                             field.onChange(value);
                           }}
                           maxLength={4}
+                          className={form.formState.errors.cardCvc ? "border-red-500" : ""}
                         />
                       </FormControl>
                       <FormMessage />

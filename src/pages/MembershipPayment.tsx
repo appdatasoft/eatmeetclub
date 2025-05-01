@@ -14,6 +14,7 @@ const MembershipPayment = () => {
     paymentCanceled,
     paymentSuccess,
     sessionId,
+    formErrors,
     handleSubmit,
     handleCancel
   } = useMembershipPayment();
@@ -47,6 +48,7 @@ const MembershipPayment = () => {
                   paymentSuccess={paymentSuccess}
                   sessionId={sessionId}
                   paymentCanceled={paymentCanceled}
+                  formErrors={formErrors}
                 />
                 
                 {!paymentSuccess && (
