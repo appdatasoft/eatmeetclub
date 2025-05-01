@@ -13,8 +13,8 @@ export interface Event {
   id: string;
   title: string;
   date: string;
-  time: string;
-  restaurant_id: string;
+  time?: string;
+  restaurant_id?: string;
   capacity: number;
   price: number;
   payment_status: string;
