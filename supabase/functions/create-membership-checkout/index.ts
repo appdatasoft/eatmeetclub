@@ -1,7 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { stripe } from "../_shared/stripe.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -48,8 +47,8 @@ serve(async (req) => {
         },
       ],
       mode: 'subscription',
-      success_url: `${origin}/login?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/become-member?canceled=true`,
+      success_url: `${origin}/signup?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/signup?canceled=true`,
       customer_email: email,
       metadata: {
         name: name || '',

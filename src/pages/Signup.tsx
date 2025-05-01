@@ -20,11 +20,94 @@ const Signup = () => {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const paymentCanceled = searchParams.get('canceled') === 'true';
+  const success = searchParams.get('success') === 'true';
+  const sessionId = searchParams.get('session_id');
+
+  // Check if we need to verify a successful payment
+  useState(() => {
+    if (success && sessionId) {
+      verifyPayment(sessionId);
+    }
+  });
+
+  // Function to verify payment with the backend
+  const verifyPayment = async (paymentId: string) => {
+    setIsLoading(true);
+    try {
+      const email = localStorage.getItem('signup_email');
+      const name = localStorage.getItem('signup_name');
+      const phone = localStorage.getItem('signup_phone');
+      
+      if (!email || !name) {
+        throw new Error("Missing user details for payment verification");
+      }
+      
+      console.log("Verifying payment with session ID:", paymentId);
+      console.log("User details:", { email, name, phone });
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paymentId,
+            email,
+            name,
+            phone: phone || null,
+            isSubscription: true
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Payment verification failed");
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: "Payment successful!",
+          description: "Your membership has been activated.",
+        });
+        
+        // Clean up localStorage
+        localStorage.removeItem('signup_email');
+        localStorage.removeItem('signup_name');
+        localStorage.removeItem('signup_phone');
+        
+        // Redirect to login
+        navigate("/login?verified=true");
+      } else {
+        throw new Error(data.message || "Payment verification failed");
+      }
+    } catch (error: any) {
+      console.error("Payment verification error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "There was a problem verifying your payment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSignupSubmit = async (values: SignupFormValues) => {
     setIsLoading(true);
 
     try {
+      // Store the user details for later use in payment verification
+      localStorage.setItem('signup_email', values.email);
+      localStorage.setItem('signup_name', values.email.split('@')[0]); // Using part of email as name since we don't collect full name
+      if (values.phoneNumber) {
+        localStorage.setItem('signup_phone', values.phoneNumber);
+      }
+
       // Register the user in Supabase Auth
       const { error } = await supabase.auth.signUp({
         email: values.email,
@@ -48,7 +131,7 @@ const Signup = () => {
           },
           body: JSON.stringify({
             email: values.email,
-            name: values.email.split('@')[0], // Just using part of email as name since we don't collect full name
+            name: values.email.split('@')[0], // Just using part of email as name
             phone: values.phoneNumber,
           }),
         }
@@ -91,10 +174,6 @@ const Signup = () => {
     try {
       console.log("Initiating payment process with user details:", userDetails.email);
       
-      // Get the Supabase session
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token || '';
-      
       // Create a Stripe checkout session
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
@@ -102,7 +181,6 @@ const Signup = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             email: userDetails.email,

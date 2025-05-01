@@ -32,8 +32,47 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Generate a random password for the new user
-    const password = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    // Check if user already exists
+    const { data: existingUser, error: checkUserError } = await supabaseClient.auth.admin.listUsers({
+      filter: `email eq "${email}"`,
+    });
+
+    let userId;
+    let password;
+    
+    if (checkUserError) {
+      console.error("Error checking if user exists:", checkUserError.message);
+      throw new Error(`Error checking if user exists: ${checkUserError.message}`);
+    }
+    
+    console.log("Existing user check result:", existingUser);
+    
+    // If user doesn't exist in auth.users, create them
+    if (!existingUser.users || existingUser.users.length === 0) {
+      console.log("User does not exist, creating new user");
+      // Generate a random password for the new user
+      password = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      
+      const { data: userData, error: userError } = await supabaseClient.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { 
+          full_name: name,
+          phone: phone || null,
+        }
+      });
+
+      if (userError) {
+        throw new Error(`Error creating user: ${userError.message}`);
+      }
+
+      userId = userData.user.id;
+      console.log("User created successfully:", userId);
+    } else {
+      userId = existingUser.users[0].id;
+      console.log("User already exists, using existing user ID:", userId);
+    }
 
     // Verify the payment with Stripe
     let paymentVerified = false;
@@ -74,74 +113,107 @@ serve(async (req) => {
       throw new Error("Payment verification failed");
     }
     
-    // Create the user account in Supabase
-    const { data: userData, error: userError } = await supabaseClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { 
-        full_name: name,
-        phone: phone || null,
-      }
-    });
-
-    if (userError) {
-      throw new Error(`Error creating user: ${userError.message}`);
+    // Check if the user already has an active membership
+    const { data: existingMembership, error: membershipCheckError } = await supabaseClient
+      .from('memberships')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle();
+      
+    if (membershipCheckError) {
+      console.error("Error checking existing membership:", membershipCheckError);
+      // Continue anyway, since we want to create a new membership if needed
     }
-
-    console.log("User created successfully:", userData.user.id);
-
-    // Create a new membership record
+    
+    // Create or update membership record
     const renewalDate = isSubscription ? 
       new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : // 30 days from now for subscriptions
       null;
-
-    const { data: membership, error: membershipError } = await supabaseClient
-      .from('memberships')
-      .insert({
-        user_id: userData.user.id,
-        status: 'active',
-        is_subscription: isSubscription,
-        started_at: new Date().toISOString(),
-        renewal_at: renewalDate?.toISOString() || null,
-        subscription_id: subscriptionId,
-        last_payment_id: paymentId,
-      })
-      .select()
-      .single();
       
-    if (membershipError) {
-      console.error("Error creating membership:", membershipError);
-      throw new Error(`Error creating membership: ${membershipError.message}`);
+    let membership;
+    
+    if (existingMembership) {
+      // Update existing membership
+      console.log("Updating existing membership:", existingMembership.id);
+      const { data: updatedMembership, error: updateError } = await supabaseClient
+        .from('memberships')
+        .update({
+          status: 'active',
+          is_subscription: isSubscription,
+          renewal_at: renewalDate?.toISOString() || existingMembership.renewal_at,
+          subscription_id: subscriptionId || existingMembership.subscription_id,
+          last_payment_id: paymentId
+        })
+        .eq('id', existingMembership.id)
+        .select()
+        .single();
+        
+      if (updateError) {
+        console.error("Error updating membership:", updateError);
+        throw new Error(`Error updating membership: ${updateError.message}`);
+      }
+      
+      membership = updatedMembership;
+      console.log("Membership updated:", membership.id);
+    } else {
+      // Create new membership
+      console.log("Creating new membership");
+      const { data: newMembership, error: createError } = await supabaseClient
+        .from('memberships')
+        .insert({
+          user_id: userId,
+          status: 'active',
+          is_subscription: isSubscription,
+          started_at: new Date().toISOString(),
+          renewal_at: renewalDate?.toISOString() || null,
+          subscription_id: subscriptionId,
+          last_payment_id: paymentId,
+        })
+        .select()
+        .single();
+        
+      if (createError) {
+        console.error("Error creating membership:", createError);
+        throw new Error(`Error creating membership: ${createError.message}`);
+      }
+      
+      membership = newMembership;
+      console.log("Membership created:", membership.id);
     }
     
-    console.log("Membership created:", membership.id);
-    
     // Create a membership payment record
-    const { error: paymentError } = await supabaseClient
+    const { data: paymentRecord, error: paymentError } = await supabaseClient
       .from('membership_payments')
       .insert({
         membership_id: membership.id,
         amount: amountPaid / 100, // Convert cents to dollars
         payment_id: paymentId,
         payment_status: 'succeeded',
-      });
+      })
+      .select()
+      .single();
       
     if (paymentError) {
       console.error("Error recording payment:", paymentError);
-      // Don't fail the whole process if payment record fails
+      throw new Error(`Error recording payment: ${paymentError.message}`);
     }
+    
+    console.log("Payment recorded:", paymentRecord.id);
 
-    // Send a password reset email so the user can set their own password
-    const { error: resetError } = await supabaseClient.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-    });
+    // If we created a new user, send a password reset email
+    if (password) {
+      const { error: resetError } = await supabaseClient.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+      });
 
-    if (resetError) {
-      console.error("Error sending password reset email:", resetError.message);
-    } else {
-      console.log("Password reset email sent successfully");
+      if (resetError) {
+        console.error("Error sending password reset email:", resetError.message);
+        // Don't fail the process for this error
+      } else {
+        console.log("Password reset email sent successfully");
+      }
     }
 
     // Send welcome email
@@ -150,9 +222,10 @@ serve(async (req) => {
       console.log("Welcome email sent successfully");
     } catch (emailError) {
       console.error("Error sending welcome email:", emailError.message);
+      // Don't fail the process for this error
     }
 
-    // Send invoice email - add more detailed logging
+    // Send invoice email
     try {
       console.log(`Attempting to send invoice email for session ${sessionId} to ${email}`);
       const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -192,8 +265,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Membership activated and account created successfully",
-        userId: userData.user.id,
+        message: "Membership activated successfully",
+        userId,
+        membershipId: membership.id,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -219,27 +293,43 @@ serve(async (req) => {
 // Email sending function
 async function sendWelcomeEmail(email: string, name: string) {
   // In a production environment, this would use a service like Resend, SendGrid, etc.
-  // For this demo, we'll simply log that we would send an email
-  console.log(`Would send welcome email to ${email} with name ${name}`);
+  // For this demo, we'll use the custom email function we've created
+  console.log(`Sending welcome email to ${email} with name ${name}`);
   
-  // Mock email content
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  if (!supabaseUrl) {
+    throw new Error("SUPABASE_URL environment variable is not set");
+  }
+  
+  // Email content
   const emailContent = `
-    Hi ${name},
-    
-    Welcome to Eat Meet Club! Your membership is now active.
-    
-    Your monthly subscription of $25 has been processed successfully. You can find your receipt in your Stripe account or email.
-    
-    To get started, please log in to your account at our website using the email address you registered with. You should have received a separate password reset email to set your password.
-    
-    We're excited to have you as a member!
-    
-    Best regards,
-    The Eat Meet Club Team
+    <h1>Welcome to Eat Meet Club!</h1>
+    <p>Hi ${name},</p>
+    <p>Your membership is now active.</p>
+    <p>Your monthly subscription of $25 has been processed successfully. You can find your receipt in your email.</p>
+    <p>To get started, please log in to your account at our website using the email address you registered with.</p>
+    <p>We're excited to have you as a member!</p>
+    <p>Best regards,<br>The Eat Meet Club Team</p>
   `;
   
-  console.log("Email content:", emailContent);
+  // Call the custom email function
+  const response = await fetch(`${supabaseUrl}/functions/v1/send-custom-email`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      to: [email],
+      subject: "Welcome to Eat Meet Club - Membership Activated",
+      html: emailContent,
+      emailType: "welcome",
+    }),
+  });
   
-  // In a real implementation, this would call an email service API
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Failed to send welcome email: ${error.message}`);
+  }
+  
   return true;
 }
