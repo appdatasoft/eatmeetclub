@@ -1,12 +1,13 @@
 
 import React from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Check, CreditCard } from "lucide-react";
+import { AlertCircle, Check, CreditCard, Wifi } from "lucide-react";
 
 interface PaymentAlertsProps {
   paymentSuccess: boolean;
   sessionId: string | null;
   paymentCanceled: boolean;
+  networkError?: string | null;
   formErrors?: {
     cardNumber?: boolean;
     cardExpiry?: boolean;
@@ -18,6 +19,7 @@ const PaymentAlerts = ({
   paymentSuccess, 
   sessionId, 
   paymentCanceled,
+  networkError,
   formErrors 
 }: PaymentAlertsProps) => {
   if (paymentSuccess && sessionId) {
@@ -37,6 +39,17 @@ const PaymentAlerts = ({
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
           Payment was canceled. Please try again when you're ready.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (networkError) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <Wifi className="h-4 w-4" />
+        <AlertDescription>
+          {networkError}
         </AlertDescription>
       </Alert>
     );

@@ -17,6 +17,7 @@ export const useMembershipPayment = () => {
     cardExpiry?: boolean;
     cardCvc?: boolean;
   }>({});
+  const [networkError, setNetworkError] = useState<string | null>(null);
   
   const paymentCanceled = searchParams.get('canceled') === 'true';
   const paymentSuccess = searchParams.get('success') === 'true';
@@ -160,8 +161,9 @@ export const useMembershipPayment = () => {
 
   const handleSubmit = async (values: MembershipFormValues) => {
     try {
-      // Reset form errors
+      // Reset form errors and network errors
       setFormErrors({});
+      setNetworkError(null);
       
       // Validate card details before processing
       const isValid = validateCardDetails(values);
@@ -210,6 +212,8 @@ export const useMembershipPayment = () => {
           errorMessage = errorData.message || errorMessage;
         } catch (e) {
           console.error("Error parsing error response:", e);
+          // If we can't parse the error, it might be a network issue
+          errorMessage = response.statusText || "Network error occurred. Please check your connection and try again.";
         }
         throw new Error(errorMessage);
       }
@@ -225,6 +229,7 @@ export const useMembershipPayment = () => {
       }
     } catch (error: any) {
       console.error("Payment error:", error);
+      setNetworkError(error.message || "There was a problem processing your payment");
       toast({
         title: "Error",
         description: error.message || "There was a problem processing your payment",
@@ -247,6 +252,7 @@ export const useMembershipPayment = () => {
     paymentSuccess,
     sessionId,
     formErrors,
+    networkError,
     handleSubmit,
     handleCancel
   };
