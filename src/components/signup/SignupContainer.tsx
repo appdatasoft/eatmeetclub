@@ -1,15 +1,16 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import SignupForm, { SignupFormValues } from "@/components/signup/SignupForm";
-import PaymentForm from "@/components/signup/PaymentForm";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { SignupFormValues } from "@/components/signup/SignupForm";
 import Navbar from "@/components/layout/Navbar";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle } from "lucide-react";
 import { useSignupActions } from "@/components/signup/hooks/useSignupActions";
 import { PaymentVerification } from "@/components/signup/PaymentVerification";
+import AuthHeader from "@/components/signup/AuthHeader";
+import PaymentCanceledAlert from "@/components/signup/PaymentCanceledAlert";
+import PaymentSuccessAlert from "@/components/signup/PaymentSuccessAlert";
+import SignupFormContainer from "@/components/signup/SignupFormContainer";
 
 const SignupContainer = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -47,28 +48,12 @@ const SignupContainer = () => {
         <div className="max-w-md w-full">
           <Card className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-2xl font-bold">Monthly Membership</CardTitle>
-              <CardDescription>Subscribe to Eat Meet Club for $25/month</CardDescription>
+              <AuthHeader />
             </CardHeader>
             
             <CardContent>
-              {paymentCanceled && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Payment was canceled. Please try again when you're ready.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {isPaymentVerified && (
-                <Alert className="mb-4 bg-green-50 border-green-200">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  <AlertDescription className="text-green-800">
-                    Payment successful! Your membership has been activated. You'll be redirected to login shortly.
-                  </AlertDescription>
-                </Alert>
-              )}
+              {paymentCanceled && <PaymentCanceledAlert />}
+              {isPaymentVerified && <PaymentSuccessAlert />}
 
               <PaymentVerification
                 isVerifying={isVerifyingPayment}
@@ -77,21 +62,15 @@ const SignupContainer = () => {
               />
               
               {!isVerifyingPayment && !isPaymentVerified && (
-                !showPaymentForm ? (
-                  <SignupForm 
-                    onSubmit={handleSignupSubmit} 
-                    isLoading={isLoading}
-                  />
-                ) : (
-                  <PaymentForm 
-                    userDetails={userDetails!}
-                    membershipFee={membershipFee}
-                    onBack={handleBack}
-                    onSubmit={handlePayment}
-                    isLoading={isLoading}
-                    isSubscription={true}
-                  />
-                )
+                <SignupFormContainer
+                  showPaymentForm={showPaymentForm}
+                  isLoading={isLoading}
+                  userDetails={userDetails}
+                  membershipFee={membershipFee}
+                  handleSignupSubmit={handleSignupSubmit}
+                  handlePayment={handlePayment}
+                  handleBack={handleBack}
+                />
               )}
             </CardContent>
           </Card>
