@@ -56,7 +56,7 @@ serve(async (req) => {
       }
     }
 
-    // Get the origin from request headers or use default preview URL
+    // Get the origin from request headers or use default production URL
     const origin = req.headers.get('origin') || 'https://www.eatmeetclub.com';
     console.log("Using origin:", origin);
 
@@ -80,8 +80,8 @@ serve(async (req) => {
         },
       ],
       mode: 'subscription',
-      success_url: `${origin}/signup?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/signup?canceled=true`,
+      success_url: `https://www.eatmeetclub.com/signup?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://www.eatmeetclub.com/signup?canceled=true`,
       customer_email: email,
       metadata: {
         name: name || '',
