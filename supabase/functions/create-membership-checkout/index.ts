@@ -85,6 +85,7 @@ serve(async (req) => {
       }
 
       // Create checkout session with billing address and phone collection
+      // Important: Remove customer_email to make the email field editable
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
