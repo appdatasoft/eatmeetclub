@@ -64,7 +64,7 @@ const StripePaymentForm = ({
       <LinkAuthenticationElement 
         options={{
           defaultValues: { email },
-          forgotEmailText: "Use the email you entered in the form above",
+          // Remove the forgotEmailText property that's causing the error
           disabled: true,
         }}
       />
