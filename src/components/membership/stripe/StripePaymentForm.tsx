@@ -35,13 +35,18 @@ const StripePaymentForm = ({
   // Check if we're in Stripe live mode
   React.useEffect(() => {
     if (stripe) {
-      // _keyMode is not in the type definitions but exists on the object
-      const mode = stripe?.getElement?._key?.includes('pk_live') ? 'live' : 'test';
-      setIsLiveMode(mode === 'live');
-      
-      // Get the key being used (safely)
-      const key = stripe?.getElement?._key || '';
-      setStripeKey(key);
+      // Check if we can determine the mode from the Stripe object
+      try {
+        // Safely try to access the key to determine the mode
+        const stripeObj = stripe as any;
+        const key = stripeObj?._apiKey || stripeObj?._keyMode || '';
+        const mode = key?.includes('pk_live') ? 'live' : 'test';
+        setIsLiveMode(mode === 'live');
+        setStripeKey(key || 'unknown');
+      } catch (e) {
+        console.error("Error checking Stripe mode:", e);
+        setStripeKey('error-detecting');
+      }
     }
   }, [stripe]);
 
