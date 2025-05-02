@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -9,16 +10,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
 
 const AuthButtons = () => {
   const { user, handleLogout, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
 
   const isLoggedIn = !!user;
 
@@ -39,58 +37,8 @@ const AuthButtons = () => {
     }
   };
 
-  const handleJoinNowClick = async () => {
-    setIsCheckoutLoading(true);
-    
-    try {
-      // Store user details in localStorage for later use
-      const email = user?.email || 'guest@example.com';
-      const name = user?.user_metadata?.name || '';
-      
-      localStorage.setItem('signup_email', email);
-      if (name) {
-        localStorage.setItem('signup_name', name);
-      }
-      
-      // Create a checkout session
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            name,
-            redirectToCheckout: true,
-          }),
-        }
-      );
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create checkout session");
-      }
-      
-      const data = await response.json();
-      
-      if (data.url) {
-        // Redirect to Stripe checkout
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL returned");
-      }
-    } catch (error: any) {
-      console.error("Error starting checkout:", error);
-      toast({
-        title: "Error",
-        description: error.message || "There was a problem starting the checkout process",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCheckoutLoading(false);
-    }
+  const handleJoinNowClick = () => {
+    navigate('/become-member');
   };
 
   return (
@@ -125,11 +73,8 @@ const AuthButtons = () => {
           <Button variant="ghost" asChild>
             <Link to="/login">Login</Link>
           </Button>
-          <Button 
-            onClick={handleJoinNowClick}
-            disabled={isCheckoutLoading}
-          >
-            {isCheckoutLoading ? "Loading..." : "Join Now"}
+          <Button onClick={handleJoinNowClick}>
+            Join Now
           </Button>
         </>
       )}
