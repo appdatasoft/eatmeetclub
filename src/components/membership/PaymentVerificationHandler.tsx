@@ -36,6 +36,18 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             description: "Please wait while we confirm your membership...",
           });
           
+          // Check if we have the required email in localStorage
+          const storedEmail = localStorage.getItem('signup_email');
+          if (!storedEmail) {
+            console.error("Missing email for payment verification");
+            toast({
+              title: "Verification failed",
+              description: "Missing email for payment verification. Please try signing up again.",
+              variant: "destructive",
+            });
+            return;
+          }
+          
           // Use the modified verification hook that doesn't need auth headers
           const success = await verifyPayment(sessionId);
           

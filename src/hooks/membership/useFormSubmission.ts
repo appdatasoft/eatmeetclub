@@ -17,13 +17,19 @@ export const useFormSubmission = ({
     setNetworkError(null);
     
     try {
-      // Get user details from localStorage or use the form values
+      // Get user details from the form values
       const email = values.email;
       const name = values.name;
       const phone = values.phone || null;
       const address = values.address || null;
       
-      console.log("Submitting membership form with details:", { email, name });
+      // Store the details in localStorage immediately at the beginning
+      if (email) localStorage.setItem('signup_email', email);
+      if (name) localStorage.setItem('signup_name', name);
+      if (phone) localStorage.setItem('signup_phone', phone);
+      if (address) localStorage.setItem('signup_address', address);
+      
+      console.log("Submitting membership form with details:", { email, name, phone, address });
       
       // Create a checkout session or payment intent based on the form values
       const response = await fetch(
@@ -59,18 +65,18 @@ export const useFormSubmission = ({
       if (data.clientSecret) {
         setClientSecret(data.clientSecret);
         setPaymentIntentId(data.paymentIntentId);
-        
-        // Store the details in localStorage for verification later
-        localStorage.setItem('signup_email', email);
-        localStorage.setItem('signup_name', name);
-        if (phone) localStorage.setItem('signup_phone', phone);
-        if (address) localStorage.setItem('signup_address', address);
       } else {
         throw new Error("No client secret returned");
       }
     } catch (error: any) {
       console.error("Error starting payment process:", error);
       setNetworkError(error.message || "There was a problem starting the payment process");
+      
+      // Clear any stored data on error to prevent issues in future attempts
+      localStorage.removeItem('signup_email');
+      localStorage.removeItem('signup_name');
+      localStorage.removeItem('signup_phone');
+      localStorage.removeItem('signup_address');
     } finally {
       setIsProcessing(false);
     }

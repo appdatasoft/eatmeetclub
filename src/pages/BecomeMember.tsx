@@ -48,11 +48,22 @@ const BecomeMember = () => {
     try {
       const { name, email, phone, address } = values;
       
-      // Store all details for verification later
+      // Validate required fields
+      if (!email) {
+        throw new Error("Email is required");
+      }
+      
+      if (!name) {
+        throw new Error("Name is required");
+      }
+      
+      // Store all details for verification later - do this BEFORE any API calls
       localStorage.setItem('signup_email', email);
       localStorage.setItem('signup_name', name);
       if (phone) localStorage.setItem('signup_phone', phone);
       if (address) localStorage.setItem('signup_address', address);
+      
+      console.log("Stored user details in localStorage:", { email, name, phone, address });
       
       // Create a checkout session directly
       const response = await fetch(
