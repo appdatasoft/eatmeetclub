@@ -7,6 +7,7 @@ import MembershipPaymentForm from "@/components/membership/MembershipPaymentForm
 import PaymentAlerts from "@/components/membership/PaymentAlerts";
 import { useMembershipPayment } from "@/hooks/useMembershipPayment";
 import StripePaymentElement from "@/components/membership/StripePaymentElement";
+import { useToast } from "@/hooks/use-toast";
 
 const MembershipPayment = () => {
   const [stripeError, setStripeError] = useState<string | null>(null);
@@ -18,6 +19,8 @@ const MembershipPayment = () => {
   const canceled = searchParams.get('canceled') === 'true';
   const [directClientSecret, setDirectClientSecret] = useState<string | null>(null);
   const [isLoadingIntent, setIsLoadingIntent] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const { toast } = useToast();
   
   const {
     membershipFee,
@@ -42,15 +45,28 @@ const MembershipPayment = () => {
   // Effect to verify successful Stripe checkout completion
   useEffect(() => {
     const verifyCheckoutCompletion = async () => {
-      if (finalSessionId && finalPaymentSuccess) {
+      if (finalSessionId && finalPaymentSuccess && !verifyingPayment) {
+        setVerifyingPayment(true);
+        
         try {
           // Get user details from localStorage
           const storedEmail = localStorage.getItem('signup_email');
           const storedName = localStorage.getItem('signup_name');
+          const storedPhone = localStorage.getItem('signup_phone');
+          const storedAddress = localStorage.getItem('signup_address');
           
           if (!storedEmail) {
             throw new Error("Missing email for payment verification");
           }
+          
+          if (!storedName) {
+            throw new Error("Missing name for payment verification");
+          }
+          
+          toast({
+            title: "Verifying payment",
+            description: "Please wait while we confirm your membership...",
+          });
           
           // Call the verify endpoint to confirm subscription
           const response = await fetch(
@@ -63,7 +79,9 @@ const MembershipPayment = () => {
               body: JSON.stringify({
                 paymentId: finalSessionId,
                 email: storedEmail,
-                name: storedName || 'Guest User',
+                name: storedName,
+                phone: storedPhone || null,
+                address: storedAddress || null,
                 isSubscription: true
               }),
             }
@@ -73,15 +91,40 @@ const MembershipPayment = () => {
             const errorData = await response.json();
             throw new Error(errorData.message || "Payment verification failed");
           }
+          
+          const responseData = await response.json();
+          
+          if (responseData.success) {
+            // Clean up localStorage
+            localStorage.removeItem('signup_email');
+            localStorage.removeItem('signup_name');
+            localStorage.removeItem('signup_phone');
+            localStorage.removeItem('signup_address');
+            
+            toast({
+              title: "Payment successful!",
+              description: "Your membership has been activated. Check your email for login instructions.",
+            });
+          } else {
+            throw new Error(responseData.message || "Payment verification failed");
+          }
         } catch (error: any) {
           console.error("Error verifying checkout completion:", error);
           setValidationError(error.message || "There was a problem verifying your payment");
+          
+          toast({
+            title: "Payment verification failed",
+            description: error.message || "There was a problem verifying your payment",
+            variant: "destructive",
+          });
+        } finally {
+          setVerifyingPayment(false);
         }
       }
     };
     
     verifyCheckoutCompletion();
-  }, [finalSessionId, finalPaymentSuccess]);
+  }, [finalSessionId, finalPaymentSuccess, toast, verifyingPayment]);
 
   // Load direct intent if provided in URL
   useEffect(() => {
@@ -142,12 +185,15 @@ const MembershipPayment = () => {
   };
 
   // Show loading state while fetching data
-  if (isLoading || isLoadingIntent) {
+  if (isLoading || isLoadingIntent || verifyingPayment) {
     return (
       <>
         <Navbar />
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+          <div className="text-center space-y-4">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+            <p className="text-gray-500">{verifyingPayment ? "Verifying payment..." : "Loading..."}</p>
+          </div>
         </div>
         <Footer />
       </>
