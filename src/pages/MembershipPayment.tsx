@@ -16,8 +16,10 @@ const MembershipPayment = () => {
     sessionId,
     formErrors,
     networkError,
+    clientSecret,
     handleSubmit,
-    handleCancel
+    handleCancel,
+    handlePaymentSuccess
   } = useMembershipPayment();
 
   if (isLoading) {
@@ -59,6 +61,8 @@ const MembershipPayment = () => {
                     onSubmit={handleSubmit}
                     onCancel={handleCancel}
                     isProcessing={isProcessing}
+                    clientSecret={clientSecret}
+                    onPaymentSuccess={handlePaymentSuccess}
                   />
                 )}
               </div>

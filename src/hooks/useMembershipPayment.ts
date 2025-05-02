@@ -18,10 +18,12 @@ export const useMembershipPayment = () => {
     cardCvc?: boolean;
   }>({});
   const [networkError, setNetworkError] = useState<string | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   
   const paymentCanceled = searchParams.get('canceled') === 'true';
   const paymentSuccess = searchParams.get('success') === 'true';
-  const sessionId = searchParams.get('session_id');
+  const sessionId = searchParams.get('session_id') || paymentIntentId;
 
   useEffect(() => {
     const fetchMembershipFee = async () => {
@@ -107,6 +109,10 @@ export const useMembershipPayment = () => {
         localStorage.removeItem('signup_name');
         localStorage.removeItem('signup_phone');
         localStorage.removeItem('signup_address');
+        
+        // Reset payment state
+        setClientSecret(null);
+        setPaymentIntentId(null);
       } else {
         throw new Error(data.message || "Payment verification failed");
       }
@@ -122,59 +128,11 @@ export const useMembershipPayment = () => {
     }
   };
 
-  const validateCardDetails = (values: MembershipFormValues) => {
-    const errors: {
-      cardNumber?: boolean;
-      cardExpiry?: boolean;
-      cardCvc?: boolean;
-    } = {};
-    
-    // Basic card number validation (Luhn algorithm is in the schema)
-    const cardDigits = values.cardNumber.replace(/\s/g, '');
-    if (cardDigits.length < 13 || cardDigits.length > 19) {
-      errors.cardNumber = true;
-    }
-    
-    // Basic expiry date validation
-    const [month, year] = values.cardExpiry.split('/').map(Number);
-    const currentDate = new Date();
-    const currentYear = currentDate.getFullYear() % 100;
-    const currentMonth = currentDate.getMonth() + 1;
-    
-    if (
-      isNaN(month) || isNaN(year) ||
-      month < 1 || month > 12 ||
-      year < currentYear || 
-      (year === currentYear && month < currentMonth)
-    ) {
-      errors.cardExpiry = true;
-    }
-    
-    // Basic CVC validation
-    if (values.cardCvc.length < 3 || values.cardCvc.length > 4 || !/^\d+$/.test(values.cardCvc)) {
-      errors.cardCvc = true;
-    }
-    
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
   const handleSubmit = async (values: MembershipFormValues) => {
     try {
       // Reset form errors and network errors
       setFormErrors({});
       setNetworkError(null);
-      
-      // Validate card details before processing
-      const isValid = validateCardDetails(values);
-      if (!isValid) {
-        toast({
-          title: "Invalid card details",
-          description: "Please check your card information and try again",
-          variant: "destructive",
-        });
-        return;
-      }
       
       setIsProcessing(true);
       console.log("Processing membership signup with values:", values);
@@ -190,7 +148,7 @@ export const useMembershipPayment = () => {
         "Content-Type": "application/json",
       };
       
-      // Create a Stripe checkout session
+      // Create a payment intent instead of checkout session
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
         {
@@ -206,40 +164,26 @@ export const useMembershipPayment = () => {
       );
       
       if (!response.ok) {
-        let errorMessage = "Failed to create checkout session";
+        let errorMessage = "Failed to create payment intent";
         try {
           const errorData = await response.json();
           errorMessage = errorData.message || errorMessage;
         } catch (e) {
           console.error("Error parsing error response:", e);
-          // If we can't parse the error, it might be a network issue
           errorMessage = response.statusText || "Network error occurred. Please check your connection and try again.";
         }
         throw new Error(errorMessage);
       }
       
       const data = await response.json();
-      console.log("Checkout session created:", data);
+      console.log("Payment intent created:", data);
       
-      if (data.success && data.url) {
-        // Redirect to Stripe checkout page
-        console.log("Redirecting to Stripe checkout URL:", data.url);
-        
-        // IMPORTANT: Use direct window location change as a string, not an object
-        // This ensures the browser treats it as an external URL
-        const stripeUrl = data.url.toString();
-        console.log("Final redirect URL:", stripeUrl);
-        
-        // Directly set the window location to the Stripe checkout URL
-        window.location.href = stripeUrl;
-        
-        // Add a fallback redirect using setTimeout
-        setTimeout(() => {
-          console.log("Executing fallback redirect");
-          window.open(stripeUrl, "_self");
-        }, 1000);
+      if (data.success && data.clientSecret) {
+        // Save the client secret for the payment element
+        setClientSecret(data.clientSecret);
+        setPaymentIntentId(data.paymentIntentId);
       } else {
-        throw new Error(data.message || "Failed to create checkout session");
+        throw new Error(data.message || "Failed to create payment intent");
       }
     } catch (error: any) {
       console.error("Payment error:", error);
@@ -258,6 +202,13 @@ export const useMembershipPayment = () => {
     navigate("/");
   };
 
+  const handlePaymentSuccess = () => {
+    // This will be called when payment is successful directly on the page
+    if (paymentIntentId) {
+      verifyPayment(paymentIntentId);
+    }
+  };
+
   return {
     membershipFee,
     isLoading,
@@ -267,8 +218,10 @@ export const useMembershipPayment = () => {
     sessionId,
     formErrors,
     networkError,
+    clientSecret,
     handleSubmit,
-    handleCancel
+    handleCancel,
+    handlePaymentSuccess
   };
 };
 

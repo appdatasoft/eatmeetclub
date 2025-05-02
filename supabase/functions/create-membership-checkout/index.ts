@@ -60,45 +60,30 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || "http://localhost:5173";
     console.log("Using origin for redirects:", origin);
 
-    // Create a Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
+    // Instead of creating a checkout session, create a PaymentIntent or SetupIntent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: 2500, // $25.00 in cents
+      currency: 'usd',
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Eat Meet Club Membership',
-              description: 'Monthly membership for Eat Meet Club',
-            },
-            unit_amount: 2500, // $25.00 in cents
-            recurring: {
-              interval: 'month',
-            },
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      success_url: `${origin}/membership-payment?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/membership-payment?canceled=true`,
-      customer_email: email,
       metadata: {
         name: name || '',
         phone: phone || '',
         address: address || '',
+        email: email,
         is_subscription: 'true',
-        user_id: userId || '', // Include the user ID in metadata if available
+        user_id: userId || '',
       },
+      receipt_email: email,
+      setup_future_usage: 'off_session', // For future subscription payments
     });
 
-    console.log("Checkout session created:", { id: session.id, url: session.url });
+    console.log("Payment intent created:", { id: paymentIntent.id, client_secret: paymentIntent.client_secret ? 'exists' : 'undefined' });
 
     return new Response(
       JSON.stringify({
         success: true,
-        url: session.url,
-        session_id: session.id,
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
