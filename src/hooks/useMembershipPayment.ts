@@ -36,18 +36,39 @@ export const useMembershipPayment = () => {
     setPaymentIntentId
   });
 
+  // Check for stored email when component loads
+  useEffect(() => {
+    const storedEmail = localStorage.getItem('signup_email');
+    if (!storedEmail && (paymentSuccess || sessionId)) {
+      console.log("No stored email found but payment verification needed");
+      setNetworkError("Missing email for payment verification. Please try signing up again.");
+    }
+  }, [paymentSuccess, sessionId]);
+
   // Effect to verify payment on load when success=true
   useEffect(() => {
     const id = sessionId || paymentIntentId;
     if (paymentSuccess && id) {
-      verifyPayment(id);
+      const storedEmail = localStorage.getItem('signup_email');
+      if (storedEmail) {
+        verifyPayment(id);
+      } else {
+        console.error("Cannot verify payment: missing email in localStorage");
+        setNetworkError("Missing email for payment verification. Please try signing up again.");
+      }
     }
-  }, [paymentSuccess, sessionId, paymentIntentId]);
+  }, [paymentSuccess, sessionId, paymentIntentId, verifyPayment]);
 
   // Handler for when payment is successful on the page
   const handlePaymentSuccess = () => {
     if (paymentIntentId) {
-      verifyPayment(paymentIntentId);
+      const storedEmail = localStorage.getItem('signup_email');
+      if (storedEmail) {
+        verifyPayment(paymentIntentId);
+      } else {
+        console.error("Cannot verify payment: missing email in localStorage");
+        setNetworkError("Missing email for payment verification. Please try signing up again.");
+      }
     }
   };
 

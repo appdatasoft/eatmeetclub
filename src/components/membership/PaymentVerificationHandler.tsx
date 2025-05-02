@@ -28,18 +28,14 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
       // Verify only once with valid session ID when success parameter is present
       if (sessionId && paymentSuccess && !verificationProcessed && !isVerifying) {
         console.log("Starting payment verification with session ID:", sessionId);
-        setVerificationProcessed(true);
         
         try {
-          toast({
-            title: "Verifying payment",
-            description: "Please wait while we confirm your membership...",
-          });
-          
-          // Check if we have the required email in localStorage
+          // Check if we have the required email in localStorage first
           const storedEmail = localStorage.getItem('signup_email');
+          const storedName = localStorage.getItem('signup_name');
+          
           if (!storedEmail) {
-            console.error("Missing email for payment verification");
+            console.error("Missing email for payment verification in PaymentVerificationHandler");
             toast({
               title: "Verification failed",
               description: "Missing email for payment verification. Please try signing up again.",
@@ -48,7 +44,19 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             return;
           }
           
-          // Use the modified verification hook that doesn't need auth headers
+          if (!storedName) {
+            console.log("Missing name for payment verification, but can continue with default");
+          }
+          
+          toast({
+            title: "Verifying payment",
+            description: "Please wait while we confirm your membership...",
+          });
+          
+          // Mark verification as processed to prevent duplicate attempts
+          setVerificationProcessed(true);
+          
+          // Use the verification hook
           const success = await verifyPayment(sessionId);
           
           if (success) {

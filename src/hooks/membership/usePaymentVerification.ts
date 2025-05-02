@@ -29,6 +29,18 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       return false;
     }
     
+    // Check if we have the required email in localStorage BEFORE setting any state
+    const storedEmail = localStorage.getItem('signup_email');
+    if (!storedEmail) {
+      console.error("Missing email for payment verification in usePaymentVerification");
+      toast({
+        title: "Verification failed",
+        description: "Missing email for payment verification. Please try signing up again.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
     setIsVerifying(true);
     setIsProcessing(true);
     setVerificationError(null);
@@ -36,14 +48,9 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
     
     try {
       // Get user details from localStorage
-      const storedEmail = localStorage.getItem('signup_email');
       const storedName = localStorage.getItem('signup_name');
       const storedPhone = localStorage.getItem('signup_phone');
       const storedAddress = localStorage.getItem('signup_address');
-      
-      if (!storedEmail) {
-        throw new Error("Missing email for payment verification");
-      }
       
       console.log("Verifying payment with session ID:", paymentId);
       console.log("User details:", { email: storedEmail, name: storedName, phone: storedPhone });

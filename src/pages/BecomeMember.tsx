@@ -115,6 +115,12 @@ const BecomeMember = () => {
         description: error.message || "There was a problem starting the checkout process",
         variant: "destructive",
       });
+      
+      // Clear localStorage on error to prevent issues in future attempts
+      localStorage.removeItem('signup_email');
+      localStorage.removeItem('signup_name');
+      localStorage.removeItem('signup_phone');
+      localStorage.removeItem('signup_address');
     } finally {
       setIsLoading(false);
     }

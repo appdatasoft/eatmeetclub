@@ -23,9 +23,18 @@ export const useFormSubmission = ({
       const phone = values.phone || null;
       const address = values.address || null;
       
+      // Validate essential values
+      if (!email) {
+        throw new Error("Email is required for payment processing");
+      }
+      
+      if (!name) {
+        throw new Error("Name is required for payment processing");
+      }
+      
       // Store the details in localStorage immediately at the beginning
-      if (email) localStorage.setItem('signup_email', email);
-      if (name) localStorage.setItem('signup_name', name);
+      localStorage.setItem('signup_email', email);
+      localStorage.setItem('signup_name', name);
       if (phone) localStorage.setItem('signup_phone', phone);
       if (address) localStorage.setItem('signup_address', address);
       
