@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useMembershipPayment } from "@/hooks/useMembershipPayment";
@@ -8,11 +8,14 @@ import PaymentStatusDisplay from "@/components/membership/PaymentStatusDisplay";
 import PaymentVerificationHandler from "@/components/membership/PaymentVerificationHandler";
 import DirectPaymentIntentLoader from "@/components/membership/DirectPaymentIntentLoader";
 import PaymentContentArea from "@/components/membership/PaymentContentArea";
+import { useToast } from "@/hooks/use-toast";
 
 const MembershipPayment = () => {
   const [stripeError, setStripeError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const directIntentId = searchParams.get('intent');
   const sessionId = searchParams.get('session_id');
   const success = searchParams.get('success') === 'true';
@@ -40,6 +43,30 @@ const MembershipPayment = () => {
   const finalSessionId = sessionId || hookSessionId;
   const finalPaymentSuccess = success || paymentSuccess;
   const finalPaymentCanceled = canceled || paymentCanceled;
+
+  // Check for email presence on component mount
+  useEffect(() => {
+    // When showing the verification UI, make sure email exists in localStorage
+    if (finalPaymentSuccess && finalSessionId && !verificationProcessed) {
+      const storedEmail = localStorage.getItem('signup_email');
+      if (!storedEmail) {
+        console.error("Missing email in localStorage for payment verification");
+        toast({
+          title: "Verification issue",
+          description: "We couldn't find your email information. Please try signing up again.",
+          variant: "destructive",
+        });
+        
+        // Set verification as processed to prevent infinite loop
+        setVerificationProcessed(true);
+        
+        // Redirect back to become-member page after a delay
+        setTimeout(() => {
+          navigate('/become-member');
+        }, 3000);
+      }
+    }
+  }, [finalPaymentSuccess, finalSessionId, verificationProcessed, toast, navigate]);
 
   // Set verification processed flag to true if we detect the success parameter but no session ID
   // This prevents multiple verification attempts

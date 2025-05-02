@@ -18,6 +18,19 @@ const BecomeMember = () => {
     const checkoutInitiated = sessionStorage.getItem('checkout_initiated');
     
     if (checkoutInitiated === 'true') {
+      // Check if we have email stored before redirecting
+      const storedEmail = localStorage.getItem('signup_email');
+      if (!storedEmail) {
+        console.log("Checkout was initiated but no email found, resetting checkout flag");
+        sessionStorage.removeItem('checkout_initiated');
+        toast({
+          title: "Missing information",
+          description: "Your signup information is incomplete. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       // Redirect to membership payment page to handle post-payment flow
       navigate('/membership-payment');
     }
@@ -31,7 +44,7 @@ const BecomeMember = () => {
         localStorage.removeItem('signup_address');
       }
     };
-  }, [navigate, isSubmitted]);
+  }, [navigate, isSubmitted, toast]);
 
   const handleMembershipSubmit = async (values: any) => {
     // Prevent multiple submissions
@@ -57,13 +70,13 @@ const BecomeMember = () => {
         throw new Error("Name is required");
       }
       
+      console.log("Storing user details in localStorage:", { email, name, phone, address });
+      
       // Store all details for verification later - do this BEFORE any API calls
       localStorage.setItem('signup_email', email);
       localStorage.setItem('signup_name', name);
       if (phone) localStorage.setItem('signup_phone', phone);
       if (address) localStorage.setItem('signup_address', address);
-      
-      console.log("Stored user details in localStorage:", { email, name, phone, address });
       
       // Create a checkout session directly
       const response = await fetch(
@@ -102,6 +115,13 @@ const BecomeMember = () => {
         // Mark checkout as initiated to prevent duplicate submissions
         sessionStorage.setItem('checkout_initiated', 'true');
         setIsSubmitted(true);
+        
+        // Double check that email is stored
+        const checkEmail = localStorage.getItem('signup_email');
+        if (!checkEmail) {
+          console.error("Email not found in localStorage after setting");
+          localStorage.setItem('signup_email', email);
+        }
         
         // Redirect directly to Stripe checkout URL
         window.location.href = data.url;

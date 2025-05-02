@@ -18,12 +18,16 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
 }) => {
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [emailCheckDone, setEmailCheckDone] = useState(false);
   const { verifyPayment, isVerifying } = usePaymentVerification({
     setIsProcessing
   });
 
   // Effect to verify successful Stripe checkout completion
   useEffect(() => {
+    // Only run this check once
+    if (emailCheckDone) return;
+    
     const verifyCheckoutCompletion = async () => {
       // Verify only once with valid session ID when success parameter is present
       if (sessionId && paymentSuccess && !verificationProcessed && !isVerifying) {
@@ -34,6 +38,9 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
           const storedEmail = localStorage.getItem('signup_email');
           const storedName = localStorage.getItem('signup_name');
           
+          // Mark email check as done to prevent repeated checks
+          setEmailCheckDone(true);
+          
           if (!storedEmail) {
             console.error("Missing email for payment verification in PaymentVerificationHandler");
             toast({
@@ -41,6 +48,9 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
               description: "Missing email for payment verification. Please try signing up again.",
               variant: "destructive",
             });
+            
+            // Mark as processed to prevent further attempts when email is missing
+            setVerificationProcessed(true);
             return;
           }
           
@@ -83,13 +93,15 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
         }
       } else if (sessionId && paymentSuccess && verificationProcessed) {
         console.log("Payment verification already processed, skipping");
+        setEmailCheckDone(true);
       } else if (!sessionId && paymentSuccess) {
         console.log("Payment success flag present but no session ID available");
+        setEmailCheckDone(true);
       }
     };
     
     verifyCheckoutCompletion();
-  }, [sessionId, paymentSuccess, verificationProcessed, toast, setVerificationProcessed, verifyPayment, isVerifying]);
+  }, [sessionId, paymentSuccess, verificationProcessed, toast, setVerificationProcessed, verifyPayment, isVerifying, emailCheckDone]);
 
   return null; // This component doesn't render anything
 };
