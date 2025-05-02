@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { fetchStripeMode } from "@/utils/stripeApi";
 
 export const useStripeMode = () => {
@@ -7,34 +7,34 @@ export const useStripeMode = () => {
   const [stripeCheckError, setStripeCheckError] = useState<boolean>(false);
   const [isRetrying, setIsRetrying] = useState<boolean>(false);
   
-  useEffect(() => {
-    const checkStripeMode = async () => {
-      if (isRetrying) {
-        setIsRetrying(false);
-      }
-      
-      try {
-        setStripeCheckError(false);
-        const { isTestMode, error } = await fetchStripeMode();
-        
-        if (error) {
-          console.warn("Non-critical error checking Stripe mode:", error);
-          setStripeCheckError(true);
-          // Default to assuming test mode
-          setIsStripeTestMode(true);
-        } else {
-          setIsStripeTestMode(isTestMode);
-        }
-      } catch (error) {
-        console.error("Error checking Stripe mode:", error);
-        setStripeCheckError(true);
-        // Default to assuming we're in test mode if we can't determine
-        setIsStripeTestMode(true);
-      }
-    };
+  const checkStripeMode = useCallback(async () => {
+    if (isRetrying) {
+      setIsRetrying(false);
+    }
     
-    checkStripeMode();
+    try {
+      setStripeCheckError(false);
+      const { isTestMode, error } = await fetchStripeMode();
+      
+      if (error) {
+        console.warn("Non-critical error checking Stripe mode:", error);
+        setStripeCheckError(true);
+        // Default to assuming test mode on error
+        setIsStripeTestMode(true);
+      } else {
+        setIsStripeTestMode(isTestMode);
+      }
+    } catch (error) {
+      console.error("Error checking Stripe mode:", error);
+      setStripeCheckError(true);
+      // Default to assuming we're in test mode if we can't determine
+      setIsStripeTestMode(true);
+    }
   }, [isRetrying]);
+  
+  useEffect(() => {
+    checkStripeMode();
+  }, [checkStripeMode]);
 
   const handleRetryStripeCheck = () => {
     setIsRetrying(true);

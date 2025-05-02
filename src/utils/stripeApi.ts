@@ -1,87 +1,49 @@
 
 /**
- * Utility functions for interacting with Stripe via Edge Functions
+ * Utility functions for interacting with Stripe API via Supabase Edge Functions
  */
 
+/**
+ * Fetches the current Stripe mode (test or live)
+ * @returns A promise that resolves to an object containing the mode information
+ */
 export const fetchStripeMode = async () => {
   try {
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/check-stripe-mode`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        cache: "no-store"
-      }
-    );
+    // Add a timestamp to prevent caching
+    const timestamp = new Date().getTime();
+    const url = `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/check-stripe-mode?_=${timestamp}`;
     
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        // Add cache control headers
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+      },
+      // Credentials: omit to avoid CORS preflight issues
+      credentials: 'omit'
+    });
+
     if (!response.ok) {
-      throw new Error(`Failed to check Stripe mode: ${response.status}`);
+      console.warn(`Stripe mode check failed with status: ${response.status}`);
+      return { 
+        isTestMode: true, // Default to test mode for safety
+        error: `API returned status ${response.status}`
+      };
     }
-    
+
     const data = await response.json();
-    return {
+    return { 
       isTestMode: data.isTestMode,
       error: null
     };
   } catch (error) {
     console.error("Error checking Stripe mode:", error);
-    return {
-      isTestMode: true, // Default to test mode on error
-      error: error instanceof Error ? error.message : "Unknown error checking Stripe mode"
-    };
-  }
-};
-
-export const createMembershipCheckout = async (
-  email: string,
-  name: string,
-  phone?: string,
-  address?: string,
-  options?: {
-    redirectToCheckout?: boolean;
-    createUser?: boolean;
-    sendPasswordEmail?: boolean;
-    sendInvoiceEmail?: boolean;
-  }
-) => {
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          email,
-          name,
-          phone: phone || null,
-          address: address || null,
-          redirectToCheckout: options?.redirectToCheckout || false,
-          createUser: options?.createUser || true,
-          sendPasswordEmail: options?.sendPasswordEmail || true,
-          sendInvoiceEmail: options?.sendInvoiceEmail || true,
-          timestamp: new Date().getTime() // Prevent caching
-        }),
-      }
-    );
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || `Failed with status: ${response.status}`);
-    }
-    
-    return {
-      data: await response.json(),
-      error: null
-    };
-  } catch (error) {
-    console.error("Error creating membership checkout:", error);
-    return {
-      data: null,
-      error: error instanceof Error ? error.message : "Unknown error creating checkout"
+    return { 
+      isTestMode: true, // Default to test mode for safety
+      error: error instanceof Error ? error.message : "Unknown error" 
     };
   }
 };

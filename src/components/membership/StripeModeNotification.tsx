@@ -20,7 +20,7 @@ const StripeModeNotification: React.FC<StripeModeNotificationProps> = ({
       <Alert variant="default" className="mb-4 bg-yellow-50 border-yellow-200">
         <AlertCircle className="h-4 w-4 text-yellow-600" />
         <AlertDescription className="flex items-center justify-between">
-          <span>Could not verify payment system mode. Some features may be limited.</span>
+          <span>Stripe mode verification failed. Continuing with default settings.</span>
           <Button variant="outline" size="sm" onClick={onRetry} className="ml-2">
             <RefreshCcw className="h-4 w-4 mr-1" /> Retry
           </Button>

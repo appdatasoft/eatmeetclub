@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -6,57 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import MembershipSteps from "@/components/membership/MembershipSteps";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { RefreshCcw } from "lucide-react";
+import { useStripeMode } from "@/hooks/membership/useStripeMode";
+import StripeModeNotification from "@/components/membership/StripeModeNotification";
 
 const BecomeMember = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isStripeTestMode, setIsStripeTestMode] = useState<boolean | null>(null);
-  const [stripeError, setStripeError] = useState<string | null>(null);
-  const [isRetrying, setIsRetrying] = useState<boolean>(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  // Check if we're in Stripe test mode
-  useEffect(() => {
-    const checkStripeMode = async () => {
-      try {
-        if (isRetrying) {
-          setIsRetrying(false);
-        }
-        
-        setStripeError(null);
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/check-stripe-mode`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json"
-            }
-          }
-        );
-        
-        if (response.ok) {
-          const data = await response.json();
-          setIsStripeTestMode(data.isTestMode);
-          console.log("Stripe mode:", data.isTestMode ? "test" : "live");
-        } else {
-          console.warn("Non-critical error checking Stripe mode:", response.status);
-          // Default to assuming we're in test mode if there's an error
-          setIsStripeTestMode(true);
-          setStripeError("Could not verify Stripe mode. Continuing with default settings.");
-        }
-      } catch (error) {
-        console.error("Error checking Stripe mode:", error);
-        setStripeError("Could not verify Stripe mode. You can still continue with the membership form.");
-        // Default to assuming we're in test mode if we can't determine
-        setIsStripeTestMode(true);
-      }
-    };
-    
-    checkStripeMode();
-  }, [isRetrying]);
+  
+  // Use our hook for Stripe mode checking
+  const { isStripeTestMode, stripeCheckError, handleRetryStripeCheck } = useStripeMode();
 
   // Effect to prevent repeat submissions or navigation back to this page after checkout initiated
   useEffect(() => {
@@ -90,10 +49,6 @@ const BecomeMember = () => {
       }
     };
   }, [navigate, isSubmitted, toast]);
-
-  const handleRetryStripeCheck = () => {
-    setIsRetrying(true);
-  };
 
   const handleMembershipSubmit = async (values: any) => {
     // Prevent multiple submissions
@@ -210,28 +165,13 @@ const BecomeMember = () => {
       <Navbar />
       <div className="min-h-screen bg-gray-50 py-16 px-4">
         <div className="container-custom">
-          {stripeError && (
-            <div className="py-2 px-4 mb-4 text-center rounded-md flex items-center justify-between bg-yellow-50 border border-yellow-200 text-yellow-700">
-              <p>{stripeError}</p>
-              <Button variant="outline" size="sm" onClick={handleRetryStripeCheck} className="ml-2">
-                <RefreshCcw className="h-4 w-4 mr-1" /> Retry
-              </Button>
-            </div>
-          )}
+          {/* Display improved Stripe mode notification */}
+          <StripeModeNotification 
+            isStripeTestMode={isStripeTestMode}
+            stripeCheckError={stripeCheckError}
+            onRetry={handleRetryStripeCheck}
+          />
           
-          {isStripeTestMode !== null && !stripeError && (
-            <div className={`py-2 px-4 text-center rounded-md mb-8 ${
-              isStripeTestMode 
-                ? "bg-blue-50 border border-blue-200 text-blue-700" 
-                : "bg-amber-50 border border-amber-200 text-amber-700"
-            }`}>
-              {isStripeTestMode ? (
-                <p>Stripe is in <strong>test mode</strong>. You can use test cards like 4242 4242 4242 4242 for testing.</p>
-              ) : (
-                <p><strong>Live payment environment</strong>. Please use a real payment card. Test cards will be declined.</p>
-              )}
-            </div>
-          )}
           <div className="max-w-2xl mx-auto">
             <Card className="overflow-hidden">
               <CardHeader className="bg-brand-500 text-white">
