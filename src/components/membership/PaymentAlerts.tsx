@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Check, CreditCard, Wifi } from "lucide-react";
+import { AlertCircle, Check, CreditCard, Wifi, ShieldAlert, XCircle } from "lucide-react";
 
 interface PaymentAlertsProps {
   paymentSuccess: boolean;
@@ -13,6 +13,8 @@ interface PaymentAlertsProps {
     cardExpiry?: boolean;
     cardCvc?: boolean;
   };
+  stripeError?: string | null;
+  validationError?: string | null;
 }
 
 const PaymentAlerts = ({ 
@@ -20,7 +22,9 @@ const PaymentAlerts = ({
   sessionId, 
   paymentCanceled,
   networkError,
-  formErrors 
+  formErrors,
+  stripeError,
+  validationError
 }: PaymentAlertsProps) => {
   if (paymentSuccess && sessionId) {
     return (
@@ -36,7 +40,7 @@ const PaymentAlerts = ({
   if (paymentCanceled) {
     return (
       <Alert variant="destructive" className="mb-4">
-        <AlertCircle className="h-4 w-4" />
+        <XCircle className="h-4 w-4" />
         <AlertDescription>
           Payment was canceled. Please try again when you're ready.
         </AlertDescription>
@@ -50,6 +54,28 @@ const PaymentAlerts = ({
         <Wifi className="h-4 w-4" />
         <AlertDescription>
           {networkError}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (validationError) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          {validationError}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (stripeError) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <ShieldAlert className="h-4 w-4" />
+        <AlertDescription>
+          {stripeError}
         </AlertDescription>
       </Alert>
     );

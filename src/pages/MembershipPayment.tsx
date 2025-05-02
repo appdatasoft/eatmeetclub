@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import MembershipPaymentForm from "@/components/membership/MembershipPaymentForm";
@@ -7,6 +7,9 @@ import PaymentAlerts from "@/components/membership/PaymentAlerts";
 import { useMembershipPayment } from "@/hooks/useMembershipPayment";
 
 const MembershipPayment = () => {
+  const [stripeError, setStripeError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  
   const {
     membershipFee,
     isLoading,
@@ -22,9 +25,19 @@ const MembershipPayment = () => {
     handlePaymentSuccess
   } = useMembershipPayment();
 
+  const handlePaymentError = (errorMessage: string) => {
+    setStripeError(errorMessage);
+    console.error("Payment error:", errorMessage);
+  };
+
   // Fix TS error by creating a wrapper function that doesn't return a value
   const onSubmitWrapper = async (values: any) => {
-    await handleSubmit(values);
+    setValidationError(null);
+    try {
+      await handleSubmit(values);
+    } catch (error: any) {
+      setValidationError(error.message || "An error occurred during form submission");
+    }
   };
 
   if (isLoading) {
@@ -58,6 +71,8 @@ const MembershipPayment = () => {
                   paymentCanceled={paymentCanceled}
                   networkError={networkError}
                   formErrors={formErrors}
+                  stripeError={stripeError}
+                  validationError={validationError}
                 />
                 
                 {!paymentSuccess && (
@@ -68,6 +83,7 @@ const MembershipPayment = () => {
                     isProcessing={isProcessing}
                     clientSecret={clientSecret}
                     onPaymentSuccess={handlePaymentSuccess}
+                    onPaymentError={handlePaymentError}
                   />
                 )}
               </div>

@@ -10,6 +10,7 @@ import {
 import { loadStripe } from "@stripe/stripe-js";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 // Load Stripe outside of a component to avoid recreating it on each render
 // Using Stripe's test publishable key
@@ -20,16 +21,19 @@ interface StripePaymentFormProps {
   email: string;
   isProcessing: boolean;
   onPaymentSuccess: () => void;
+  onPaymentError: (errorMessage: string) => void;
 }
 
 const StripePaymentForm = ({ 
   clientSecret, 
   email, 
   isProcessing, 
-  onPaymentSuccess 
+  onPaymentSuccess,
+  onPaymentError
 }: StripePaymentFormProps) => {
   const stripe = useStripe();
   const elements = useElements();
+  const { toast } = useToast();
   const [error, setError] = React.useState<string | null>(null);
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -37,25 +41,51 @@ const StripePaymentForm = ({
     
     if (!stripe || !elements) {
       console.error("Stripe not loaded yet");
+      onPaymentError("Payment system is still initializing. Please try again in a moment.");
       return;
     }
     
-    const result = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: window.location.origin + '/membership-payment?success=true',
-      },
-      redirect: 'if_required',
-    });
-    
-    if (result.error) {
-      // Show error to your customer
-      setError(result.error.message || "An unknown error occurred");
-      console.error("Payment error:", result.error);
-    } else if (result.paymentIntent?.status === 'succeeded') {
-      console.log("Payment succeeded:", result.paymentIntent.id);
-      // Call the verify endpoint directly here
-      onPaymentSuccess();
+    try {
+      const result = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: window.location.origin + '/membership-payment?success=true',
+        },
+        redirect: 'if_required',
+      });
+      
+      if (result.error) {
+        // Show error to your customer
+        console.error("Payment error:", result.error);
+        setError(result.error.message || "An unknown error occurred during payment processing");
+        onPaymentError(result.error.message || "Payment failed. Please check your card details and try again.");
+        
+        // Also show a toast notification
+        toast({
+          title: "Payment failed",
+          description: result.error.message || "Please check your card details and try again",
+          variant: "destructive",
+        });
+      } else if (result.paymentIntent?.status === 'succeeded') {
+        console.log("Payment succeeded:", result.paymentIntent.id);
+        // Call the verify endpoint directly here
+        onPaymentSuccess();
+        
+        toast({
+          title: "Payment successful!",
+          description: "Your membership is being activated",
+        });
+      }
+    } catch (err: any) {
+      console.error("Unexpected payment error:", err);
+      setError("An unexpected error occurred. Please try again.");
+      onPaymentError("An unexpected error occurred. Please try again or contact support.");
+      
+      toast({
+        title: "Payment error",
+        description: "Something went wrong with your payment. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -64,8 +94,6 @@ const StripePaymentForm = ({
       <LinkAuthenticationElement 
         options={{
           defaultValues: { email },
-          // The disabled property is not supported in StripeLinkAuthenticationElementOptions
-          // Let's use readOnly instead which should achieve similar functionality
         }}
       />
       <div className="my-4">
@@ -101,13 +129,15 @@ interface StripePaymentElementProps {
   email: string;
   isProcessing: boolean;
   onPaymentSuccess: () => void;
+  onPaymentError: (errorMessage: string) => void;
 }
 
 const StripePaymentElement = ({ 
   clientSecret, 
   email, 
   isProcessing,
-  onPaymentSuccess
+  onPaymentSuccess,
+  onPaymentError
 }: StripePaymentElementProps) => {
   if (!clientSecret) {
     return null;
@@ -133,6 +163,7 @@ const StripePaymentElement = ({
         email={email} 
         isProcessing={isProcessing} 
         onPaymentSuccess={onPaymentSuccess}
+        onPaymentError={onPaymentError}
       />
     </Elements>
   );

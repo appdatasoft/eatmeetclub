@@ -26,6 +26,19 @@ export const useFormSubmission = ({
       setIsProcessing(true);
       console.log("Processing membership signup with values:", values);
       
+      // Validate form data
+      if (!values.name || values.name.length < 2) {
+        throw new Error("Please enter a valid name (at least 2 characters)");
+      }
+      
+      if (!values.email || !/\S+@\S+\.\S+/.test(values.email)) {
+        throw new Error("Please enter a valid email address");
+      }
+      
+      if (!values.address || values.address.length < 5) {
+        throw new Error("Please enter a valid address");
+      }
+      
       // Store user details in localStorage for later use in verification
       localStorage.setItem('signup_email', values.email);
       localStorage.setItem('signup_name', values.name);
@@ -83,7 +96,7 @@ export const useFormSubmission = ({
         description: error.message || "There was a problem processing your payment",
         variant: "destructive",
       });
-      return false;
+      throw error; // Re-throwing for form-level error handling
     } finally {
       setIsProcessing(false);
     }

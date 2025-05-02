@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,6 +25,7 @@ interface MembershipPaymentFormProps {
   isProcessing: boolean;
   clientSecret: string | null;
   onPaymentSuccess: () => void;
+  onPaymentError: (error: string) => void;
 }
 
 const MembershipPaymentForm = ({ 
@@ -33,8 +34,12 @@ const MembershipPaymentForm = ({
   onCancel, 
   isProcessing,
   clientSecret,
-  onPaymentSuccess
+  onPaymentSuccess,
+  onPaymentError
 }: MembershipPaymentFormProps) => {
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const form = useForm<MembershipFormValues>({
     resolver: zodResolver(membershipSchema),
     defaultValues: {
@@ -46,7 +51,20 @@ const MembershipPaymentForm = ({
   });
 
   const handleFormSubmit = async (values: MembershipFormValues) => {
-    await onSubmit(values);
+    setValidationError(null);
+    setIsSubmitting(true);
+    
+    try {
+      await onSubmit(values);
+    } catch (error) {
+      if (error instanceof Error) {
+        setValidationError(error.message);
+      } else {
+        setValidationError("An unexpected error occurred. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const email = form.watch("email");
@@ -63,7 +81,7 @@ const MembershipPaymentForm = ({
             
             <FormActions 
               onCancel={onCancel} 
-              isProcessing={isProcessing} 
+              isProcessing={isProcessing || isSubmitting} 
               formSubmitted={formSubmitted} 
             />
             
@@ -72,6 +90,7 @@ const MembershipPaymentForm = ({
               email={email}
               isProcessing={isProcessing}
               onPaymentSuccess={onPaymentSuccess}
+              onPaymentError={onPaymentError}
             />
           </form>
         </Form>

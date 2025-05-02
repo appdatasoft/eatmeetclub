@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import StripePaymentElement from "./StripePaymentElement";
 
 interface PaymentSectionProps {
@@ -7,13 +7,15 @@ interface PaymentSectionProps {
   email: string;
   isProcessing: boolean;
   onPaymentSuccess: () => void;
+  onPaymentError: (errorMessage: string) => void;
 }
 
 const PaymentSection = ({ 
   clientSecret, 
   email, 
   isProcessing, 
-  onPaymentSuccess 
+  onPaymentSuccess,
+  onPaymentError
 }: PaymentSectionProps) => {
   if (!clientSecret) {
     return null;
@@ -27,6 +29,7 @@ const PaymentSection = ({
         email={email}
         isProcessing={isProcessing}
         onPaymentSuccess={onPaymentSuccess}
+        onPaymentError={onPaymentError}
       />
     </div>
   );

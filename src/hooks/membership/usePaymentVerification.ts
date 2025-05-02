@@ -8,9 +8,11 @@ interface PaymentVerificationProps {
 
 export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationProps) => {
   const { toast } = useToast();
+  const [verificationError, setVerificationError] = useState<string | null>(null);
 
   const verifyPayment = async (paymentId: string) => {
     setIsProcessing(true);
+    setVerificationError(null);
     
     try {
       // Get user details from localStorage
@@ -21,6 +23,10 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       
       if (!storedEmail) {
         throw new Error("Missing email for payment verification");
+      }
+      
+      if (!storedName) {
+        throw new Error("Missing name for payment verification");
       }
       
       console.log("Verifying payment with session ID:", paymentId);
@@ -46,7 +52,16 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
         }
       );
       
-      const data = await response.json();
+      // Capture response text in case it's not valid JSON
+      const responseText = await response.text();
+      let data;
+      
+      try {
+        data = JSON.parse(responseText);
+      } catch (error) {
+        console.error("Error parsing response:", error, responseText);
+        throw new Error(`Invalid response from server: ${responseText.substring(0, 100)}...`);
+      }
       
       if (!response.ok) {
         throw new Error(data.message || "Payment verification failed");
@@ -72,6 +87,7 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       }
     } catch (error: any) {
       console.error("Payment verification error:", error);
+      setVerificationError(error.message || "There was a problem verifying your payment");
       toast({
         title: "Error",
         description: error.message || "There was a problem verifying your payment",
@@ -83,7 +99,7 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
     }
   };
 
-  return { verifyPayment };
+  return { verifyPayment, verificationError };
 };
 
 export default usePaymentVerification;
