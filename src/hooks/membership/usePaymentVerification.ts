@@ -51,7 +51,8 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
             name: storedName || "Guest User",
             phone: storedPhone || null,
             address: storedAddress || null,
-            isSubscription: true
+            isSubscription: true,
+            simplifiedVerification: true // Add flag to use simplified verification
           }),
         }
       );
