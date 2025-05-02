@@ -25,7 +25,7 @@ const Hero = () => {
           </p>
           
           <Button 
-            href="/become-member" 
+            href="/membership-payment" 
             size="lg" 
             className="bg-[#FEC6A1] text-[#703E1E] hover:bg-[#FDE1D3] px-10 py-4 text-xl font-bold rounded-full"
           >
