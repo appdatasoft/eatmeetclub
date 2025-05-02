@@ -1,7 +1,64 @@
 
 import { Button } from "@/components/common/Button";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 const Hero = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleCheckout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      // Store minimal user details in localStorage for later use in verification
+      localStorage.setItem('signup_email', 'guest@example.com');
+      localStorage.setItem('signup_name', 'Guest User');
+      
+      // Create a payment intent directly
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: 'guest@example.com',
+            name: 'Guest User',
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create payment intent");
+      }
+      
+      const data = await response.json();
+      console.log("Payment intent created:", data);
+      
+      if (data.clientSecret) {
+        // Redirect to the payment page with the client secret
+        navigate(`/membership-payment?intent=${data.paymentIntentId}`);
+      } else {
+        throw new Error("No client secret returned");
+      }
+    } catch (error: any) {
+      console.error("Error starting checkout:", error);
+      toast({
+        title: "Error",
+        description: error.message || "There was a problem starting the checkout process",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div 
       className="w-full py-12 md:py-24 relative h-[500px]"
@@ -25,8 +82,9 @@ const Hero = () => {
           </p>
           
           <Button 
-            href="/membership-payment" 
+            onClick={handleCheckout}
             size="lg" 
+            isLoading={isLoading}
             className="bg-[#FEC6A1] text-[#703E1E] hover:bg-[#FDE1D3] px-10 py-4 text-xl font-bold rounded-full"
           >
             BECOME A MEMBER

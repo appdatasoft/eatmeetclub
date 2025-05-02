@@ -1,10 +1,67 @@
 
 import { Button } from "@/components/common/Button";
 import { useAuth } from '@/hooks/useAuth';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from "@/hooks/use-toast";
 
 const CallToAction = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const handleCheckout = async () => {
+    setIsLoading(true);
+    
+    try {
+      // Store user details in localStorage for later use in verification
+      const email = user?.email || 'guest@example.com';
+      const name = user?.user_metadata?.name || 'Guest User';
+      
+      localStorage.setItem('signup_email', email);
+      localStorage.setItem('signup_name', name);
+      
+      // Create a payment intent directly
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email,
+            name,
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create payment intent");
+      }
+      
+      const data = await response.json();
+      console.log("Payment intent created:", data);
+      
+      if (data.clientSecret) {
+        // Redirect to the payment page with the client secret
+        navigate(`/membership-payment?intent=${data.paymentIntentId}`);
+      } else {
+        throw new Error("No client secret returned");
+      }
+    } catch (error: any) {
+      console.error("Error starting checkout:", error);
+      toast({
+        title: "Error",
+        description: error.message || "There was a problem starting the checkout process",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   return (
     <section className="py-16 bg-gradient-to-r from-brand-500 to-brand-600 text-white">
@@ -16,10 +73,14 @@ const CallToAction = () => {
           Become a member today and start connecting with fellow food enthusiasts
           at unique dining experiences.
         </p>
-        <Button asChild size="lg" variant="secondary">
-          <Link to="/membership-payment" className="font-semibold">
-            Join Membership Now
-          </Link>
+        <Button 
+          onClick={handleCheckout} 
+          size="lg" 
+          variant="secondary"
+          isLoading={isLoading}
+          className="font-semibold"
+        >
+          Join Membership Now
         </Button>
       </div>
     </section>

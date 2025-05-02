@@ -1,14 +1,20 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import MembershipPaymentForm from "@/components/membership/MembershipPaymentForm";
 import PaymentAlerts from "@/components/membership/PaymentAlerts";
 import { useMembershipPayment } from "@/hooks/useMembershipPayment";
+import StripePaymentElement from "@/components/membership/StripePaymentElement";
 
 const MembershipPayment = () => {
   const [stripeError, setStripeError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const directIntentId = searchParams.get('intent');
+  const [directClientSecret, setDirectClientSecret] = useState<string | null>(null);
+  const [isLoadingIntent, setIsLoadingIntent] = useState(false);
   
   const {
     membershipFee,
@@ -25,6 +31,49 @@ const MembershipPayment = () => {
     handlePaymentSuccess
   } = useMembershipPayment();
 
+  // Load direct intent if provided in URL
+  useEffect(() => {
+    const loadDirectIntent = async () => {
+      if (directIntentId) {
+        setIsLoadingIntent(true);
+        try {
+          // Fetch the client secret for this payment intent
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/get-payment-intent`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                paymentIntentId: directIntentId,
+                email: localStorage.getItem('signup_email') || 'guest@example.com'
+              }),
+            }
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.clientSecret) {
+              setDirectClientSecret(data.clientSecret);
+            } else {
+              setValidationError("Could not retrieve payment information. Please try again.");
+            }
+          } else {
+            setValidationError("Error retrieving payment details. Please try again.");
+          }
+        } catch (error) {
+          console.error("Error loading payment intent:", error);
+          setValidationError("Failed to load payment information. Please try again.");
+        } finally {
+          setIsLoadingIntent(false);
+        }
+      }
+    };
+    
+    loadDirectIntent();
+  }, [directIntentId]);
+
   const handlePaymentError = (errorMessage: string) => {
     setStripeError(errorMessage);
     console.error("Payment error:", errorMessage);
@@ -40,7 +89,8 @@ const MembershipPayment = () => {
     }
   };
 
-  if (isLoading) {
+  // Show loading state while fetching data
+  if (isLoading || isLoadingIntent) {
     return (
       <>
         <Navbar />
@@ -75,7 +125,23 @@ const MembershipPayment = () => {
                   validationError={validationError}
                 />
                 
-                {!paymentSuccess && (
+                {!paymentSuccess && directClientSecret && (
+                  <>
+                    <div className="mb-6">
+                      <h3 className="text-lg font-medium mb-4">Complete your membership payment</h3>
+                      <p className="mb-6">You're just one step away from joining our community!</p>
+                      <StripePaymentElement
+                        clientSecret={directClientSecret}
+                        email={localStorage.getItem('signup_email') || 'guest@example.com'}
+                        isProcessing={isProcessing}
+                        onPaymentSuccess={handlePaymentSuccess}
+                        onPaymentError={handlePaymentError}
+                      />
+                    </div>
+                  </>
+                )}
+                
+                {!paymentSuccess && !directClientSecret && (
                   <MembershipPaymentForm
                     membershipFee={membershipFee}
                     onSubmit={onSubmitWrapper}
