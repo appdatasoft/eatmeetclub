@@ -19,7 +19,7 @@ const MembershipPayment = () => {
   const canceled = searchParams.get('canceled') === 'true';
   const [directClientSecret, setDirectClientSecret] = useState<string | null>(null);
   const [isLoadingIntent, setIsLoadingIntent] = useState(false);
-  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [verificationProcessed, setVerificationProcessed] = useState(false);
   const { toast } = useToast();
   
   const {
@@ -45,8 +45,9 @@ const MembershipPayment = () => {
   // Effect to verify successful Stripe checkout completion
   useEffect(() => {
     const verifyCheckoutCompletion = async () => {
-      if (finalSessionId && finalPaymentSuccess && !verifyingPayment) {
-        setVerifyingPayment(true);
+      // Add verification flag to prevent multiple verification attempts
+      if (finalSessionId && finalPaymentSuccess && !verificationProcessed) {
+        setVerificationProcessed(true);
         
         try {
           // Get user details from localStorage
@@ -117,19 +118,17 @@ const MembershipPayment = () => {
             description: error.message || "There was a problem verifying your payment",
             variant: "destructive",
           });
-        } finally {
-          setVerifyingPayment(false);
         }
       }
     };
     
     verifyCheckoutCompletion();
-  }, [finalSessionId, finalPaymentSuccess, toast, verifyingPayment]);
+  }, [finalSessionId, finalPaymentSuccess, toast, verificationProcessed]);
 
   // Load direct intent if provided in URL
   useEffect(() => {
     const loadDirectIntent = async () => {
-      if (directIntentId) {
+      if (directIntentId && !directClientSecret) {
         setIsLoadingIntent(true);
         try {
           // Fetch the client secret for this payment intent
@@ -167,7 +166,7 @@ const MembershipPayment = () => {
     };
     
     loadDirectIntent();
-  }, [directIntentId]);
+  }, [directIntentId, directClientSecret]);
 
   const handlePaymentError = (errorMessage: string) => {
     setStripeError(errorMessage);
@@ -185,14 +184,14 @@ const MembershipPayment = () => {
   };
 
   // Show loading state while fetching data
-  if (isLoading || isLoadingIntent || verifyingPayment) {
+  if (isLoading || isLoadingIntent) {
     return (
       <>
         <Navbar />
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="text-center space-y-4">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-gray-500">{verifyingPayment ? "Verifying payment..." : "Loading..."}</p>
+            <p className="text-gray-500">Loading...</p>
           </div>
         </div>
         <Footer />

@@ -9,8 +9,16 @@ interface PaymentVerificationProps {
 export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationProps) => {
   const { toast } = useToast();
   const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const verifyPayment = async (paymentId: string) => {
+    // Prevent multiple verification attempts
+    if (isVerifying) {
+      console.log("Payment verification already in progress, skipping");
+      return false;
+    }
+    
+    setIsVerifying(true);
     setIsProcessing(true);
     setVerificationError(null);
     
@@ -96,10 +104,11 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       return false;
     } finally {
       setIsProcessing(false);
+      setIsVerifying(false);
     }
   };
 
-  return { verifyPayment, verificationError };
+  return { verifyPayment, verificationError, isVerifying };
 };
 
 export default usePaymentVerification;
