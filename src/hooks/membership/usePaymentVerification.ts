@@ -52,7 +52,9 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
             phone: storedPhone || null,
             address: storedAddress || null,
             isSubscription: true,
-            simplifiedVerification: true // Add flag to use simplified verification
+            simplifiedVerification: false, // Set to false to ensure database operations
+            forceCreateUser: true, // Add new flag to force user creation
+            sendPasswordEmail: true // Add flag to explicitly request password email
           }),
         }
       );

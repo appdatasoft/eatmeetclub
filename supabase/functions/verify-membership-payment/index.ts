@@ -34,14 +34,16 @@ serve(async (req) => {
       phone, 
       address, 
       isSubscription = false, 
-      simplifiedVerification = false 
+      simplifiedVerification = false,
+      forceCreateUser = false,
+      sendPasswordEmail = false
     } = await req.json();
 
     if (!paymentId) throw new Error("No payment ID provided");
     if (!email) throw new Error("No email provided");
     if (!name) throw new Error("No name provided");
 
-    logStep("Verifying payment", { paymentId, email, name, isSubscription, simplifiedVerification });
+    logStep("Verifying payment", { paymentId, email, name, isSubscription, simplifiedVerification, forceCreateUser, sendPasswordEmail });
 
     // Create Supabase client with service role key to bypass RLS
     const supabaseClient = createClient(
@@ -78,29 +80,50 @@ serve(async (req) => {
     // If no valid token, check if user exists by email
     if (!userId) {
       try {
-        // Use a simplified approach to check for existing users
-        const { data: existingUsers, error: userError } = await supabaseClient
-          .from('profiles')
-          .select('id, user_id')
+        // First check if user exists in auth.users
+        const { data: existingAuthUsers, error: authUserError } = await supabaseClient
+          .from('auth.users')
+          .select('id')
           .eq('email', email)
           .limit(1);
         
-        if (userError) {
-          logStep("Error checking for user by email", { error: userError.message });
-        } else if (existingUsers && existingUsers.length > 0) {
-          userId = existingUsers[0].user_id;
-          logStep("User found by email", { userId });
+        if (authUserError) {
+          logStep("Error checking for auth user", { error: authUserError.message });
+          // Continue with checking profiles table as fallback
+        } else if (existingAuthUsers && existingAuthUsers.length > 0) {
+          userId = existingAuthUsers[0].id;
+          logStep("User found in auth.users", { userId });
         } else {
-          logStep("No existing user found by email");
+          logStep("User not found in auth.users, checking profiles");
+          
+          // Fallback to checking profiles table
+          try {
+            const { data: existingUsers, error: userError } = await supabaseClient
+              .from('profiles')
+              .select('id, user_id')
+              .eq('email', email)
+              .limit(1);
+            
+            if (userError) {
+              logStep("Error checking for user by email", { error: userError.message });
+            } else if (existingUsers && existingUsers.length > 0) {
+              userId = existingUsers[0].user_id;
+              logStep("User found by email in profiles", { userId });
+            } else {
+              logStep("No existing user found by email");
+            }
+          } catch (error) {
+            logStep("Error in user email lookup", { error: error.message });
+          }
         }
       } catch (error) {
-        logStep("Error in user email lookup", { error: error.message });
+        logStep("Error checking for user", { error: error.message });
       }
     }
     
-    // If still no user ID and not using simplified verification, create a temporary user
-    if (!userId && !simplifiedVerification) {
-      logStep("Creating new temporary user");
+    // If still no user ID and forceCreateUser is true, create a user
+    if (!userId && forceCreateUser) {
+      logStep("Creating new user with email", { email });
       
       try {
         const { data: newUserData, error: newUserError } = await supabaseClient.auth.admin.createUser({
@@ -112,7 +135,7 @@ serve(async (req) => {
             address: address || null,
             needs_password: true
           },
-          password: null // No password yet - will be set later
+          password: crypto.randomUUID().substring(0, 16) // Random temporary password
         });
 
         if (newUserError) {
@@ -120,10 +143,36 @@ serve(async (req) => {
         }
 
         userId = newUserData.user.id;
-        logStep("Temporary user created successfully", { userId });
+        logStep("User created successfully", { userId });
+        
+        // If sendPasswordEmail is true, send a password reset email
+        if (sendPasswordEmail) {
+          try {
+            logStep("Sending password reset email", { email });
+            
+            const { error: resetError } = await supabaseClient.auth.admin.generateLink({
+              type: "recovery",
+              email,
+              options: {
+                redirectTo: `${Deno.env.get("FRONTEND_URL") || "https://eatmeetclub.lovable.app"}/set-password`
+              }
+            });
+            
+            if (resetError) {
+              logStep("Error sending password reset", { error: resetError.message });
+              throw new Error(`Error sending password reset: ${resetError.message}`);
+            }
+            
+            logStep("Password reset email sent successfully");
+          } catch (resetError) {
+            logStep("Error requesting password reset", { error: resetError.message });
+            // Don't fail the process if password reset email fails
+          }
+        }
       } catch (error) {
-        logStep("Error creating temporary user", { error: error.message });
+        logStep("Error creating user", { error: error.message });
         // If we can't create a user, we'll still verify the payment but skip user creation
+        // This will be handled by simplifiedVerification fallback later
       }
     }
 
@@ -214,7 +263,7 @@ serve(async (req) => {
           .maybeSingle();
           
         if (membershipCheckError) {
-          logStep("Error checking existing membership", { error: membershipCheckError });
+          logStep("Error checking existing membership", { error: membershipCheckError.message });
           // Continue anyway, since we want to create a new membership if needed
         }
         
@@ -242,7 +291,7 @@ serve(async (req) => {
             .single();
             
           if (updateError) {
-            logStep("Error updating membership", { error: updateError });
+            logStep("Error updating membership", { error: updateError.message });
             throw new Error(`Error updating membership: ${updateError.message}`);
           }
           
@@ -266,7 +315,7 @@ serve(async (req) => {
             .single();
             
           if (createError) {
-            logStep("Error creating membership", { error: createError });
+            logStep("Error creating membership", { error: createError.message });
             throw new Error(`Error creating membership: ${createError.message}`);
           }
           
@@ -287,11 +336,36 @@ serve(async (req) => {
           .single();
           
         if (paymentError) {
-          logStep("Error recording payment", { error: paymentError });
+          logStep("Error recording payment", { error: paymentError.message });
           throw new Error(`Error recording payment: ${paymentError.message}`);
         }
         
         logStep("Payment recorded", { id: paymentRecord.id });
+
+        // If sendPasswordEmail is true, send a password reset email
+        if (sendPasswordEmail) {
+          try {
+            logStep("Sending password reset email via admin API", { email });
+            
+            const { error: resetError } = await supabaseClient.auth.admin.generateLink({
+              type: "recovery",
+              email,
+              options: {
+                redirectTo: `${Deno.env.get("FRONTEND_URL") || "https://eatmeetclub.lovable.app"}/set-password`
+              }
+            });
+            
+            if (resetError) {
+              logStep("Error sending password reset", { error: resetError.message });
+              // Don't fail the process for password reset error
+            } else {
+              logStep("Password reset email sent successfully via admin API");
+            }
+          } catch (resetError) {
+            logStep("Error requesting password reset", { error: resetError.message });
+            // Don't fail the process if password reset email fails
+          }
+        }
 
         // Send welcome email
         try {
