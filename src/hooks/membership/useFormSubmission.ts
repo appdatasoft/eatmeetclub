@@ -1,9 +1,5 @@
 
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { MembershipFormValues } from "@/components/membership/MembershipPaymentForm";
-
-interface UseFormSubmissionProps {
+export interface FormSubmissionProps {
   setIsProcessing: (value: boolean) => void;
   setNetworkError: (value: string | null) => void;
   setClientSecret: (value: string | null) => void;
@@ -15,88 +11,66 @@ export const useFormSubmission = ({
   setNetworkError,
   setClientSecret,
   setPaymentIntentId
-}: UseFormSubmissionProps) => {
-  const { toast } = useToast();
-
-  const handleSubmit = async (values: MembershipFormValues) => {
+}: FormSubmissionProps) => {
+  const handleSubmit = async (values: any) => {
+    setIsProcessing(true);
+    setNetworkError(null);
+    
     try {
-      // Reset errors
-      setNetworkError(null);
+      // Get user details from localStorage or use the form values
+      const email = values.email;
+      const name = values.name;
+      const phone = values.phone || null;
+      const address = values.address || null;
       
-      setIsProcessing(true);
-      console.log("Processing membership signup with values:", values);
+      console.log("Submitting membership form with details:", { email, name });
       
-      // Validate form data
-      if (!values.name || values.name.length < 2) {
-        throw new Error("Please enter a valid name (at least 2 characters)");
-      }
-      
-      if (!values.email || !/\S+@\S+\.\S+/.test(values.email)) {
-        throw new Error("Please enter a valid email address");
-      }
-      
-      if (!values.address || values.address.length < 5) {
-        throw new Error("Please enter a valid address");
-      }
-      
-      // Store user details in localStorage for later use in verification
-      localStorage.setItem('signup_email', values.email);
-      localStorage.setItem('signup_name', values.name);
-      localStorage.setItem('signup_phone', values.phone || '');
-      localStorage.setItem('signup_address', values.address);
-      
-      // Set explicit headers without relying on authentication
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      
-      // Create a payment intent
+      // Create a checkout session or payment intent based on the form values
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
         {
           method: "POST",
-          headers,
+          headers: {
+            "Content-Type": "application/json"
+          },
           body: JSON.stringify({
-            email: values.email,
-            name: values.name,
-            phone: values.phone,
-            address: values.address,
+            email,
+            name,
+            phone,
+            address,
+            redirectToCheckout: false,
+            createUser: true,
+            sendPasswordEmail: true,
+            sendInvoiceEmail: true,
+            forceCreateUser: true,
+            createMembershipRecord: true
           }),
         }
       );
       
       if (!response.ok) {
-        let errorMessage = "Failed to create payment intent";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch (e) {
-          console.error("Error parsing error response:", e);
-          errorMessage = response.statusText || "Network error occurred. Please check your connection and try again.";
-        }
-        throw new Error(errorMessage);
+        const data = await response.json();
+        throw new Error(data.message || "Failed to create payment intent");
       }
       
       const data = await response.json();
-      console.log("Payment intent created:", data);
+      console.log("Payment form submission response:", data);
       
-      if (data.success && data.clientSecret) {
-        // Save the client secret for the payment element
+      if (data.clientSecret) {
         setClientSecret(data.clientSecret);
         setPaymentIntentId(data.paymentIntentId);
-        return true;
+        
+        // Store the details in localStorage for verification later
+        localStorage.setItem('signup_email', email);
+        localStorage.setItem('signup_name', name);
+        if (phone) localStorage.setItem('signup_phone', phone);
+        if (address) localStorage.setItem('signup_address', address);
       } else {
-        throw new Error(data.message || "Failed to create payment intent");
+        throw new Error("No client secret returned");
       }
     } catch (error: any) {
-      console.error("Payment error:", error);
-      setNetworkError(error.message || "There was a problem processing your payment");
-      toast({
-        title: "Error",
-        description: error.message || "There was a problem processing your payment",
-        variant: "destructive",
-      });
-      throw error; // Re-throwing for form-level error handling
+      console.error("Error starting payment process:", error);
+      setNetworkError(error.message || "There was a problem starting the payment process");
     } finally {
       setIsProcessing(false);
     }

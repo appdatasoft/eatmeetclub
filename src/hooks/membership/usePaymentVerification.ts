@@ -48,7 +48,7 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       console.log("Verifying payment with session ID:", paymentId);
       console.log("User details:", { email: storedEmail, name: storedName, phone: storedPhone });
       
-      // Make anonymous call without any Authorization header
+      // First attempt: try with simplified verification
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
         {
@@ -63,17 +63,18 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
             phone: storedPhone || null,
             address: storedAddress || null,
             isSubscription: true,
-            simplifiedVerification: true, // First try with simplified verification
-            forceCreateUser: true,        // Force user creation in auth table
-            sendPasswordEmail: true,      // Explicitly request password email
-            createMembershipRecord: true, // Ensure membership record creation
-            sendInvoiceEmail: true,       // Add flag to request invoice email
-            preventDuplicateEmails: true  // Add flag to prevent duplicate emails
+            simplifiedVerification: false,      // Try full verification first
+            forceCreateUser: true,              // Force user creation in auth table
+            sendPasswordEmail: true,            // Request password email
+            createMembershipRecord: true,       // Ensure membership record creation
+            sendInvoiceEmail: true,             // Request invoice email
+            preventDuplicateEmails: true,       // Prevent duplicate emails
+            retryAttempted: false               // Mark as first attempt
           }),
         }
       );
       
-      // Capture response text in case it's not valid JSON
+      // Get response text and parse it as JSON
       const responseText = await response.text();
       let data;
       
@@ -90,12 +91,13 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       
       console.log("Payment verification response:", data);
       
+      // Handle response based on success status
       if (data.success) {
-        // If simplified verification was successful but we need to retry full verification
-        if (data.simplifiedVerification && !data.membershipCreated && !data.retryAttempted) {
-          console.log("Simplified verification succeeded, attempting full verification");
+        // Check if membership was created
+        if (!data.membershipCreated) {
+          console.log("Membership not created on first attempt, trying with safe mode");
           
-          // Try again with regular verification but with safeMode to avoid stack errors
+          // Try again with safe mode to avoid stack errors
           const retryResponse = await fetch(
             `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
             {
@@ -110,20 +112,20 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
                 phone: storedPhone || null,
                 address: storedAddress || null,
                 isSubscription: true,
-                simplifiedVerification: false, // Try full verification
+                simplifiedVerification: false,    // Try full verification
                 forceCreateUser: true,
                 sendPasswordEmail: true,
                 createMembershipRecord: true,
                 sendInvoiceEmail: true,
-                safeMode: true, // Add safe mode flag to avoid stack depth errors
-                retryAttempted: true, // Mark as retry attempt
+                safeMode: true,                   // Add safe mode flag
+                retryAttempted: true,             // Mark as retry attempt
                 preventDuplicateEmails: true
               }),
             }
           );
           
           const retryData = await retryResponse.json();
-          console.log("Full verification retry response:", retryData);
+          console.log("Safe mode verification retry response:", retryData);
         }
         
         toast({
@@ -138,7 +140,7 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
         localStorage.removeItem('signup_address');
         sessionStorage.removeItem('checkout_initiated');
         
-        // Try to send the invoice email directly if the flag indicated it wasn't sent during verification
+        // Send invoice email directly if needed
         if (data.invoiceEmailNeeded) {
           try {
             console.log("Sending invoice email separately");
@@ -157,6 +159,7 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
                 }),
               }
             );
+            console.log("Invoice email sent separately");
           } catch (emailError) {
             console.error("Failed to send invoice email separately:", emailError);
             // Don't fail the process for this

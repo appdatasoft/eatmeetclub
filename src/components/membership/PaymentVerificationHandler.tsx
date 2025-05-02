@@ -41,12 +41,16 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
           
           if (success) {
             console.log("Payment verified successfully");
+            // Clear checkout initiated flag after successful verification
+            sessionStorage.removeItem('checkout_initiated');
+            
             toast({
               title: "Welcome to our membership!",
               description: "Your account has been activated. Please check your email for login instructions.",
             });
           } else {
             console.log("Payment verification returned failure");
+            // Don't clear checkout flag on failure to allow retry
           }
         } catch (error: any) {
           console.error("Error verifying checkout completion:", error);

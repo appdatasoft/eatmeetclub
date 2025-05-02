@@ -71,7 +71,10 @@ const BecomeMember = () => {
             // Add metadata to help with user creation and emails
             createUser: true,
             sendPasswordEmail: true,
-            sendInvoiceEmail: true
+            sendInvoiceEmail: true,
+            // Added force flags to ensure database records are created
+            forceCreateUser: true,
+            createMembershipRecord: true
           }),
         }
       );
