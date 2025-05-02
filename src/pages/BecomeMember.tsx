@@ -11,6 +11,7 @@ const BecomeMember = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isStripeTestMode, setIsStripeTestMode] = useState<boolean | null>(null);
+  const [stripeError, setStripeError] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -18,6 +19,7 @@ const BecomeMember = () => {
   useEffect(() => {
     const checkStripeMode = async () => {
       try {
+        setStripeError(null);
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/check-stripe-mode`,
           {
@@ -33,9 +35,14 @@ const BecomeMember = () => {
           const data = await response.json();
           setIsStripeTestMode(data.isTestMode);
           console.log("Stripe mode:", data.isTestMode ? "test" : "live");
+        } else {
+          console.warn("Non-critical error checking Stripe mode:", response.status);
+          // Default to assuming we're in test mode if there's an error
+          setIsStripeTestMode(true);
         }
       } catch (error) {
         console.error("Error checking Stripe mode:", error);
+        setStripeError("Could not verify Stripe mode. Continuing with default settings.");
         // Default to assuming we're in test mode if we can't determine
         setIsStripeTestMode(true);
       }
@@ -193,7 +200,14 @@ const BecomeMember = () => {
       <Navbar />
       <div className="min-h-screen bg-gray-50 py-16 px-4">
         <div className="container-custom">
-          {isStripeTestMode !== null && (
+          {stripeError && (
+            <div className="py-2 px-4 mb-4 text-center rounded-md bg-yellow-50 border border-yellow-200 text-yellow-700">
+              <p>{stripeError}</p>
+              <p className="text-sm mt-1">You can continue with the membership form.</p>
+            </div>
+          )}
+          
+          {isStripeTestMode !== null && !stripeError && (
             <div className={`py-2 px-4 text-center rounded-md mb-8 ${
               isStripeTestMode 
                 ? "bg-blue-50 border border-blue-200 text-blue-700" 

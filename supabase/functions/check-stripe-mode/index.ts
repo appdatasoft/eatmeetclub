@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { stripe } from "../_shared/stripe.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,7 +7,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight request
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: corsHeaders,
@@ -17,17 +16,16 @@ serve(async (req) => {
   }
 
   try {
-    // Check if we're using test mode by testing a small part of the API key
+    // Get the Stripe key from environment
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
-    const isTestMode = stripeKey.startsWith('sk_test_');
     
-    console.log("Stripe mode check: using", isTestMode ? "test mode" : "live mode");
-
+    // Check if it's a test key based on prefix
+    const isTestMode = stripeKey.startsWith("sk_test_") || !stripeKey.startsWith("sk_live_");
+    
+    console.log("Stripe mode check:", isTestMode ? "test" : "live");
+    
     return new Response(
-      JSON.stringify({
-        isTestMode,
-        mode: isTestMode ? 'test' : 'live'
-      }),
+      JSON.stringify({ isTestMode }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -36,16 +34,15 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error checking Stripe mode:", error.message);
     
+    // Default to test mode in case of errors
     return new Response(
-      JSON.stringify({
-        success: false,
-        message: error.message,
-        // Default to test mode if we can't determine
-        isTestMode: true
+      JSON.stringify({ 
+        isTestMode: true,
+        error: "Error determining Stripe mode, defaulting to test mode."
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
+        status: 200, // Return 200 even for errors to prevent client-side crashes
       }
     );
   }

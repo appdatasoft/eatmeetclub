@@ -9,6 +9,9 @@ import PaymentVerificationHandler from "@/components/membership/PaymentVerificat
 import DirectPaymentIntentLoader from "@/components/membership/DirectPaymentIntentLoader";
 import PaymentContentArea from "@/components/membership/PaymentContentArea";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, RefreshCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const MembershipPayment = () => {
   const [stripeError, setStripeError] = useState<string | null>(null);
@@ -27,6 +30,8 @@ const MembershipPayment = () => {
   const [emailChecked, setEmailChecked] = useState(false);
   const [emailMissingHandled, setEmailMissingHandled] = useState(false);
   const [isStripeTestMode, setIsStripeTestMode] = useState<boolean | null>(null);
+  const [stripeCheckError, setStripeCheckError] = useState<boolean>(false);
+  const [isRetrying, setIsRetrying] = useState<boolean>(false);
   
   const {
     membershipFee,
@@ -46,7 +51,12 @@ const MembershipPayment = () => {
   // Check if we're in Stripe test mode
   useEffect(() => {
     const checkStripeMode = async () => {
+      if (isRetrying) {
+        setIsRetrying(false);
+      }
+      
       try {
+        setStripeCheckError(false);
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/check-stripe-mode`,
           {
@@ -61,16 +71,23 @@ const MembershipPayment = () => {
         if (response.ok) {
           const data = await response.json();
           setIsStripeTestMode(data.isTestMode);
+        } else {
+          // Non-critical error, just log and continue
+          console.warn("Non-critical error checking Stripe mode:", response.status);
+          setStripeCheckError(true);
+          // Default to assuming test mode
+          setIsStripeTestMode(true);
         }
       } catch (error) {
         console.error("Error checking Stripe mode:", error);
+        setStripeCheckError(true);
         // Default to assuming we're in test mode if we can't determine
         setIsStripeTestMode(true);
       }
     };
     
     checkStripeMode();
-  }, []);
+  }, [isRetrying]);
 
   // Use the session ID from the URL if available
   const finalSessionId = sessionId || hookSessionId;
@@ -140,6 +157,10 @@ const MembershipPayment = () => {
     }
   };
 
+  const handleRetryStripeCheck = () => {
+    setIsRetrying(true);
+  };
+
   // Fix TS error by creating a wrapper function that doesn't return a value
   const onSubmitWrapper = async (values: any) => {
     setValidationError(null);
@@ -180,7 +201,19 @@ const MembershipPayment = () => {
         
         {/* Display Stripe mode notification if available */}
         <div className="container-custom mb-4">
-          {isStripeTestMode !== null && (
+          {stripeCheckError && (
+            <Alert variant="warning" className="mb-4">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="flex items-center justify-between">
+                <span>Could not verify payment system mode. Some features may be limited.</span>
+                <Button variant="outline" size="sm" onClick={handleRetryStripeCheck} className="ml-2">
+                  <RefreshCcw className="h-4 w-4 mr-1" /> Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {isStripeTestMode !== null && !stripeCheckError && (
             <div className={`py-2 px-4 text-center rounded-md mb-4 text-sm ${
               isStripeTestMode 
                 ? "bg-blue-50 border border-blue-200 text-blue-700" 
