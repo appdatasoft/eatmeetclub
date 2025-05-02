@@ -16,6 +16,7 @@ interface VerificationOptions {
   safeMode?: boolean;
   retry?: boolean;
   maxRetries?: number;
+  forceSendEmails?: boolean;
 }
 
 export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationProps) => {
@@ -26,20 +27,27 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
   const [lastVerifiedSession, setLastVerifiedSession] = useState<string | null>(null);
   
   const verifyPayment = useCallback(async (paymentId: string, options: VerificationOptions = {}) => {
-    // Prevent verifying the same session ID multiple times
-    if (lastVerifiedSession === paymentId) {
+    // Additional debug logging
+    console.log("verifyPayment called with options:", options);
+    console.log("Current state:", { isVerifying, verificationAttempts, lastVerifiedSession });
+    
+    // Allow forcing verification even for repeated session IDs if forceSendEmails is true
+    const bypassDuplicationCheck = options.forceSendEmails === true;
+    
+    // Check if we already verified this session and aren't bypassing duplicate checks
+    if (lastVerifiedSession === paymentId && !bypassDuplicationCheck) {
       console.log("This session ID has already been verified:", paymentId);
       return true; // Return success to prevent retries
     }
     
     // Prevent multiple verification attempts running simultaneously
-    if (isVerifying) {
+    if (isVerifying && !bypassDuplicationCheck) {
       console.log("Payment verification already in progress, skipping");
       return false;
     }
     
-    // Limit verification attempts to prevent spam
-    if (verificationAttempts >= (options.maxRetries || 3)) {
+    // Allow bypassing retry limits when forceSendEmails is true
+    if (verificationAttempts >= (options.maxRetries || 3) && !bypassDuplicationCheck) {
       console.log("Maximum verification attempts reached");
       toast({
         title: "Verification limit reached",
@@ -53,8 +61,8 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
     if (!storedEmail) {
       console.error("Missing email for payment verification in usePaymentVerification");
       toast({
-        title: "Verification failed",
-        description: "Missing email for payment verification. Please try signing up again.",
+        title: "Email missing",
+        description: "Unable to find your email information. Please try the signup process again.",
         variant: "destructive",
       });
       return false;
@@ -64,7 +72,11 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
     setIsProcessing(true);
     setVerificationError(null);
     setVerificationAttempts(prev => prev + 1);
-    setLastVerifiedSession(paymentId); // Store the session ID to prevent duplicate verifications
+    
+    // Only store the session ID if we aren't bypassing duplicate checks
+    if (!bypassDuplicationCheck) {
+      setLastVerifiedSession(paymentId);
+    }
     
     try {
       // Get user details from localStorage
@@ -76,12 +88,16 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       console.log("User details:", { email: storedEmail, name: storedName, phone: storedPhone });
       console.log("Verification options:", options);
       
+      // Add timestamp to request to help bypass caching
+      const timestamp = new Date().getTime();
+      
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
+        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment?t=${timestamp}`,
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache"
           },
           body: JSON.stringify({
             paymentId,
@@ -94,9 +110,10 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
             sendPasswordEmail: options.sendPasswordEmail !== false,  // Default to true
             createMembershipRecord: options.createMembershipRecord !== false, // Default to true
             sendInvoiceEmail: options.sendInvoiceEmail !== false,   // Default to true
-            preventDuplicateEmails: options.preventDuplicateEmails !== false, // Default to true
+            preventDuplicateEmails: options.forceSendEmails ? false : (options.preventDuplicateEmails !== false), // Default to true unless forced
             simplifiedVerification: options.simplifiedVerification === true, // Provide a simpler verification if needed
             safeMode: options.safeMode === true, // Minimal database operations mode
+            forceSend: options.forceSendEmails === true
           }),
         }
       );
@@ -120,14 +137,15 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
           console.log("Retry enabled, attempting with simplified verification");
           
           // Wait a moment before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 1500));
           
           // Try again with simplified verification
           const simplifiedResult = await verifyPayment(paymentId, {
             ...options,
             simplifiedVerification: true,
             safeMode: true,
-            retry: false // Prevent infinite recursion
+            retry: false, // Prevent infinite recursion
+            forceSendEmails: true // Force sending emails in simplified mode
           });
           
           if (simplifiedResult) {
@@ -161,7 +179,7 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       } else if (data.membershipCreated) {
         toast({
           title: "Membership activated!",
-          description: "Your membership has been successfully activated.",
+          description: "Your membership has been successfully activated. Check your email for details.",
         });
       } else if (data.simplifiedVerification) {
         toast({
@@ -173,21 +191,7 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
         if (data.invoiceEmailNeeded) {
           try {
             console.log("Sending invoice email separately");
-            await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-invoice-email`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                  sessionId: paymentId,
-                  email: storedEmail,
-                  name: storedName,
-                  preventDuplicate: true
-                }),
-              }
-            );
+            await sendInvoiceEmail(paymentId, storedEmail, storedName);
           } catch (emailError) {
             console.error("Error sending separate invoice email:", emailError);
           }
@@ -211,12 +215,45 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       console.error("Payment verification error:", error);
       setVerificationError(error.message || "There was a problem verifying your payment");
       
+      // Try the simplified verification as a fallback if not already using it
+      if (!options.simplifiedVerification && options.retry) {
+        console.log("Error encountered, trying simplified verification");
+        try {
+          // Wait a moment before trying simplified verification
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          const fallbackResult = await verifyPayment(paymentId, {
+            ...options,
+            simplifiedVerification: true,
+            safeMode: true, 
+            retry: false,
+            forceSendEmails: true
+          });
+          
+          if (fallbackResult) {
+            console.log("Fallback verification successful");
+            return true;
+          }
+        } catch (fallbackError) {
+          console.error("Fallback verification also failed:", fallbackError);
+        }
+      }
+      
       // More descriptive toast message
       toast({
         title: "Verification issue",
-        description: "We had trouble completing your membership setup. Please contact support with your payment ID.",
+        description: "We had trouble completing your membership setup. Your payment was received. Please check your email or contact support.",
         variant: "destructive",
       });
+      
+      // Attempt direct email send as last resort
+      try {
+        console.log("Attempting direct backup email");
+        const storedName = localStorage.getItem('signup_name') || storedEmail.split('@')[0] || 'Member';
+        await sendDirectBackupEmail(storedEmail, storedName, paymentId);
+      } catch (directEmailError) {
+        console.error("Direct backup email failed:", directEmailError);
+      }
       
       return false;
     } finally {
@@ -224,6 +261,78 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       setIsVerifying(false);
     }
   }, [toast, isVerifying, verificationAttempts, lastVerifiedSession, setIsProcessing]);
+
+  // Send invoice email directly as fallback
+  const sendInvoiceEmail = async (sessionId: string, email: string, name: string) => {
+    try {
+      console.log("Sending direct invoice email for", email, "session", sessionId);
+      const timestamp = new Date().getTime(); // Add timestamp to bypass caching
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-invoice-email?t=${timestamp}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache"
+          },
+          body: JSON.stringify({
+            sessionId,
+            email,
+            name,
+            preventDuplicate: false // Force send even if duplicate
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Invoice email sending failed: ${errorText}`);
+      }
+      
+      console.log("Direct invoice email sent successfully");
+      return true;
+    } catch (error) {
+      console.error("Error sending direct invoice email:", error);
+      return false;
+    }
+  };
+  
+  // Send a direct backup email through the custom email function
+  const sendDirectBackupEmail = async (email: string, name: string, paymentId: string) => {
+    try {
+      console.log("Sending backup welcome email");
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-custom-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            to: [email],
+            subject: "Important: Your Eat Meet Club Membership",
+            html: `
+              <h1>Your Eat Meet Club Membership</h1>
+              <p>Hello ${name},</p>
+              <p>Thank you for joining! Your payment (ID: ${paymentId}) has been received successfully.</p>
+              <p>We're completing your membership setup. If you don't receive login instructions within 15 minutes, please contact us at support@eatmeetclub.com with your payment ID.</p>
+              <p>Best regards,<br>The Eat Meet Club Team</p>
+            `,
+            emailType: "last_resort_backup",
+            preventDuplicate: false,
+            fromName: "Eat Meet Club Support"
+          }),
+        }
+      );
+      
+      return response.ok;
+    } catch (error) {
+      console.error("Error sending direct backup email:", error);
+      return false;
+    }
+  };
 
   return { verifyPayment, verificationError, isVerifying, verificationAttempts };
 };

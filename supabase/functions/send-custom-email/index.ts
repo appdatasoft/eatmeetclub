@@ -25,6 +25,7 @@ interface EmailRequest {
   fromName?: string;
   fromEmail?: string;
   preventDuplicate?: boolean;
+  forceSend?: boolean;
 }
 
 // Track sent emails to prevent duplicates during function execution
@@ -42,7 +43,7 @@ serve(async (req) => {
   try {
     console.log("Custom email function called");
     
-    const { to, subject, html, text, replyTo, emailType, fromName, fromEmail, preventDuplicate } = await req.json() as EmailRequest;
+    const { to, subject, html, text, replyTo, emailType, fromName, fromEmail, preventDuplicate, forceSend } = await req.json() as EmailRequest;
     
     if (!to || !to.length || !subject || !html) {
       throw new Error("Missing required email parameters");
@@ -59,7 +60,7 @@ serve(async (req) => {
     }
 
     // Check if this exact email was sent recently (within last 60 seconds)
-    if (preventDuplicate) {
+    if (preventDuplicate && !forceSend) {
       const cacheKey = `${to.join(',')}:${subject}`;
       if (sentEmails.has(cacheKey)) {
         const lastSent = sentEmails.get(cacheKey);
@@ -82,7 +83,7 @@ serve(async (req) => {
       }
       
       // Mark this email as sent
-      sentEmails.set(cacheKey, new Date());
+      sentEmails.set(`${to.join(',')}:${subject}`, new Date());
     }
 
     // Define the from address with optional customization

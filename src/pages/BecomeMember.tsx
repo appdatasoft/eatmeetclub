@@ -78,6 +78,12 @@ const BecomeMember = () => {
       if (phone) localStorage.setItem('signup_phone', phone);
       if (address) localStorage.setItem('signup_address', address);
       
+      // Also store in sessionStorage as backup
+      sessionStorage.setItem('signup_email', email);
+      sessionStorage.setItem('signup_name', name);
+      if (phone) sessionStorage.setItem('signup_phone', phone);
+      if (address) sessionStorage.setItem('signup_address', address);
+      
       // Double check that email is stored to avoid verification issues
       if (!localStorage.getItem('signup_email')) {
         console.error("Failed to store email in localStorage");
@@ -91,6 +97,7 @@ const BecomeMember = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Cache-Control": "no-cache"
           },
           body: JSON.stringify({
             email,
@@ -104,7 +111,9 @@ const BecomeMember = () => {
             sendInvoiceEmail: true,
             // Added force flags to ensure database records are created
             forceCreateUser: true,
-            createMembershipRecord: true
+            createMembershipRecord: true,
+            // Add timestamp to prevent caching
+            timestamp: new Date().getTime()
           }),
         }
       );
@@ -142,11 +151,7 @@ const BecomeMember = () => {
         variant: "destructive",
       });
       
-      // Clear localStorage on error to prevent issues in future attempts
-      localStorage.removeItem('signup_email');
-      localStorage.removeItem('signup_name');
-      localStorage.removeItem('signup_phone');
-      localStorage.removeItem('signup_address');
+      // Don't clear localStorage on error - we might need to retry
     } finally {
       setIsLoading(false);
     }

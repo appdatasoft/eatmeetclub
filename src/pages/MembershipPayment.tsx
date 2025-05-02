@@ -25,6 +25,7 @@ const MembershipPayment = () => {
   const [verificationProcessed, setVerificationProcessed] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [emailChecked, setEmailChecked] = useState(false);
+  const [emailMissingHandled, setEmailMissingHandled] = useState(false);
   
   const {
     membershipFee,
@@ -48,7 +49,7 @@ const MembershipPayment = () => {
 
   // Check for email presence on component mount and set up verification
   useEffect(() => {
-    if (emailChecked) return;
+    if (emailChecked || emailMissingHandled) return;
     
     setEmailChecked(true);
     
@@ -57,8 +58,10 @@ const MembershipPayment = () => {
       const storedEmail = localStorage.getItem('signup_email');
       if (!storedEmail) {
         console.error("Missing email in localStorage for payment verification");
+        setEmailMissingHandled(true);
+        
         toast({
-          title: "Verification issue",
+          title: "Missing information",
           description: "We couldn't find your email information. Please try signing up again.",
           variant: "destructive",
         });
@@ -67,13 +70,23 @@ const MembershipPayment = () => {
         setVerificationProcessed(true);
         setIsRedirecting(true);
         
+        // Try to retrieve email from session storage as fallback
+        const sessionEmail = sessionStorage.getItem('signup_email');
+        if (sessionEmail) {
+          console.log("Found email in sessionStorage, restoring to localStorage");
+          localStorage.setItem('signup_email', sessionEmail);
+          setEmailMissingHandled(false);
+          setEmailChecked(false);
+          return;
+        }
+        
         // Redirect back to become-member page after a delay
         setTimeout(() => {
           navigate('/become-member');
         }, 3000);
       }
     }
-  }, [finalPaymentSuccess, finalSessionId, verificationProcessed, toast, navigate, isRedirecting, emailChecked]);
+  }, [finalPaymentSuccess, finalSessionId, verificationProcessed, toast, navigate, isRedirecting, emailChecked, emailMissingHandled]);
 
   // Set verification processed flag to true if we detect the success parameter but no session ID
   // This prevents multiple verification attempts
