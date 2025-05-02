@@ -6,12 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import MembershipSteps from "@/components/membership/MembershipSteps";
 import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { RefreshCcw } from "lucide-react";
 
 const BecomeMember = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isStripeTestMode, setIsStripeTestMode] = useState<boolean | null>(null);
   const [stripeError, setStripeError] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState<boolean>(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -19,14 +22,17 @@ const BecomeMember = () => {
   useEffect(() => {
     const checkStripeMode = async () => {
       try {
+        if (isRetrying) {
+          setIsRetrying(false);
+        }
+        
         setStripeError(null);
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/check-stripe-mode`,
           {
             method: "GET",
             headers: {
-              "Content-Type": "application/json",
-              "Cache-Control": "no-cache"
+              "Content-Type": "application/json"
             }
           }
         );
@@ -39,17 +45,18 @@ const BecomeMember = () => {
           console.warn("Non-critical error checking Stripe mode:", response.status);
           // Default to assuming we're in test mode if there's an error
           setIsStripeTestMode(true);
+          setStripeError("Could not verify Stripe mode. Continuing with default settings.");
         }
       } catch (error) {
         console.error("Error checking Stripe mode:", error);
-        setStripeError("Could not verify Stripe mode. Continuing with default settings.");
+        setStripeError("Could not verify Stripe mode. You can still continue with the membership form.");
         // Default to assuming we're in test mode if we can't determine
         setIsStripeTestMode(true);
       }
     };
     
     checkStripeMode();
-  }, []);
+  }, [isRetrying]);
 
   // Effect to prevent repeat submissions or navigation back to this page after checkout initiated
   useEffect(() => {
@@ -83,6 +90,10 @@ const BecomeMember = () => {
       }
     };
   }, [navigate, isSubmitted, toast]);
+
+  const handleRetryStripeCheck = () => {
+    setIsRetrying(true);
+  };
 
   const handleMembershipSubmit = async (values: any) => {
     // Prevent multiple submissions
@@ -134,8 +145,7 @@ const BecomeMember = () => {
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "no-cache"
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
             email,
@@ -201,9 +211,11 @@ const BecomeMember = () => {
       <div className="min-h-screen bg-gray-50 py-16 px-4">
         <div className="container-custom">
           {stripeError && (
-            <div className="py-2 px-4 mb-4 text-center rounded-md bg-yellow-50 border border-yellow-200 text-yellow-700">
+            <div className="py-2 px-4 mb-4 text-center rounded-md flex items-center justify-between bg-yellow-50 border border-yellow-200 text-yellow-700">
               <p>{stripeError}</p>
-              <p className="text-sm mt-1">You can continue with the membership form.</p>
+              <Button variant="outline" size="sm" onClick={handleRetryStripeCheck} className="ml-2">
+                <RefreshCcw className="h-4 w-4 mr-1" /> Retry
+              </Button>
             </div>
           )}
           
