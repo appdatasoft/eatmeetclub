@@ -165,7 +165,7 @@ serve(async (req) => {
         const frontendUrl = Deno.env.get("FRONTEND_URL") || "https://eatmeetclub.lovable.app";
         logStep("Using frontend URL for password reset", { frontendUrl });
         
-        const { error: resetError } = await supabaseClient.auth.admin.generateLink({
+        const { error: resetError, data: resetData } = await supabaseClient.auth.admin.generateLink({
           type: "recovery",
           email,
           options: {
@@ -176,7 +176,11 @@ serve(async (req) => {
         if (resetError) {
           logStep("Error sending password reset", { error: resetError.message });
         } else {
-          logStep("Password reset email sent successfully");
+          // Log the generated link for debugging purposes
+          logStep("Password reset link generated successfully", { 
+            link: resetData?.properties?.action_link || "Link not available"
+          });
+          
           passwordEmailSent = true;
         }
       } catch (resetError) {
@@ -518,13 +522,14 @@ async function sendWelcomeEmail(email: string, name: string) {
       throw new Error("SUPABASE_URL environment variable is not set");
     }
     
-    // Email content
+    // Email content with clearer instructions about password setup
     const emailContent = `
       <h1>Welcome to Eat Meet Club!</h1>
       <p>Hi ${name},</p>
       <p>Your membership is now active.</p>
       <p>Your monthly subscription of $25 has been processed successfully. You can find your receipt in your email.</p>
-      <p>We've sent you a separate email to set up your password. Please complete that process to access your account.</p>
+      <p><strong>Important:</strong> We've sent you a separate email with a link to set up your password. Please check your inbox (and spam folder) for an email titled "Reset Your Password" and click on the link to complete your account setup.</p>
+      <p>If you don't see this email within a few minutes, please contact support for assistance.</p>
       <p>We're excited to have you as a member!</p>
       <p>Best regards,<br>The Eat Meet Club Team</p>
     `;

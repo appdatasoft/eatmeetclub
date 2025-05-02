@@ -33,8 +33,8 @@ const SetPassword = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get token from query params
-  const token = searchParams.get('token');
+  // Get token from query params - can be in either token or access_token parameter
+  const token = searchParams.get('token') || searchParams.get('access_token');
 
   const form = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
@@ -47,8 +47,15 @@ const SetPassword = () => {
   useEffect(() => {
     if (!token) {
       setError("Invalid or missing reset token. Please use the link from your email.");
+      toast({
+        title: "Missing token",
+        description: "Please use the link from the email to set your password.",
+        variant: "destructive",
+      });
+    } else {
+      console.log("Password reset token found:", token.substring(0, 10) + "...");
     }
-  }, [token]);
+  }, [token, toast]);
 
   const onSubmit = async (values: PasswordFormValues) => {
     try {
@@ -58,6 +65,8 @@ const SetPassword = () => {
       if (!token) {
         throw new Error("Invalid token");
       }
+
+      console.log("Attempting to update password with token");
 
       // Update user's password
       const { error } = await supabase.auth.updateUser({

@@ -43,6 +43,8 @@ serve(async (req) => {
     }
     
     console.log(`Sending ${emailType || "custom"} email to:`, to);
+    console.log("Email subject:", subject);
+    console.log("Email content preview:", html.substring(0, 100) + "...");
 
     const emailResponse = await resend.emails.send({
       from: "Eat Meet Club <info@eatmeetclub.com>",
