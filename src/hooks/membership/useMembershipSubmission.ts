@@ -2,12 +2,109 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export const useMembershipSubmission = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const generateTemporaryPassword = () => {
+    // Generate a secure random password
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  };
+
+  const createUserAccount = async (email: string, password: string, name: string) => {
+    try {
+      // Check if user already exists
+      const { data: existingUser } = await supabase.auth.signInWithPassword({
+        email,
+        password: 'checking-only-not-real-password',
+      });
+
+      // If user exists (no error thrown but login failed), return true (user exists)
+      if (existingUser.session) {
+        return { success: true, existed: true };
+      }
+
+      // Create new user
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+          },
+        },
+      });
+
+      if (error) {
+        if (error.message.includes('already registered')) {
+          // User exists but wrong password (expected in our check flow)
+          return { success: true, existed: true };
+        }
+        throw error;
+      }
+
+      return { success: true, existed: false, user: data.user };
+    } catch (error: any) {
+      console.error("Error creating user account:", error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  const sendWelcomeEmail = async (email: string, name: string) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-custom-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            to: [email],
+            subject: "Welcome to Eat Meet Club!",
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #4a5568;">Welcome to Eat Meet Club, ${name}!</h2>
+                <p>Thank you for becoming a member of our community! We're excited to have you join us.</p>
+                <p>We've created an account for you using your email address. To set your password and access your account, please click the button below:</p>
+                <div style="margin: 30px 0;">
+                  <a href="${window.location.origin}/set-password?email=${encodeURIComponent(email)}" 
+                     style="background-color: #4299e1; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                     Set Your Password
+                  </a>
+                </div>
+                <p>If the button doesn't work, you can copy and paste this URL into your browser:</p>
+                <p style="word-break: break-all;">${window.location.origin}/set-password?email=${encodeURIComponent(email)}</p>
+                <p>Looking forward to seeing you at our upcoming dining experiences!</p>
+                <p>Best regards,<br>The Eat Meet Club Team</p>
+              </div>
+            `,
+            fromName: "Eat Meet Club",
+            emailType: "welcome",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Error sending welcome email");
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error("Error sending welcome email:", error);
+      return false;
+    }
+  };
 
   const handleMembershipSubmit = async (values: any) => {
     // Prevent multiple submissions
@@ -60,7 +157,27 @@ export const useMembershipSubmission = () => {
         }
       }
       
-      // Create a checkout session directly
+      // Generate a temporary password for the user
+      const tempPassword = generateTemporaryPassword();
+      
+      // Create user account or verify if it already exists
+      const userResult = await createUserAccount(email, tempPassword, name);
+      
+      if (!userResult.success) {
+        throw new Error(userResult.error || "Failed to create user account");
+      }
+      
+      // Send welcome email with password reset link
+      if (!userResult.existed) {
+        const emailSent = await sendWelcomeEmail(email, name);
+        if (emailSent) {
+          console.log("Welcome email sent successfully");
+        } else {
+          console.warn("Welcome email could not be sent, continuing with checkout");
+        }
+      }
+      
+      // Create a checkout session
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
         {
