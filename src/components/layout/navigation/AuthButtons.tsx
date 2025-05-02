@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -46,10 +45,12 @@ const AuthButtons = () => {
     try {
       // Store user details in localStorage for later use
       const email = user?.email || 'guest@example.com';
-      const name = user?.user_metadata?.name || 'Guest User';
+      const name = user?.user_metadata?.name || '';
       
       localStorage.setItem('signup_email', email);
-      localStorage.setItem('signup_name', name);
+      if (name) {
+        localStorage.setItem('signup_name', name);
+      }
       
       // Create a checkout session
       const response = await fetch(

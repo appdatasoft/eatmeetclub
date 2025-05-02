@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/common/Button";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +14,13 @@ const Hero = () => {
     setIsLoading(true);
     
     try {
+      // Use a default email that will allow Stripe to work but still be editable
+      const defaultEmail = "guest@example.com";
+      
+      // Store this default for verification later
+      localStorage.setItem('signup_email', defaultEmail);
+      localStorage.setItem('signup_name', 'Guest User');
+      
       // Create a checkout session directly
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
@@ -22,8 +30,8 @@ const Hero = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            email: "", // Send empty email to allow user to enter it in Stripe checkout
-            name: "",  // Send empty name to allow user to enter it in Stripe checkout
+            email: defaultEmail, // Use default email that will be editable in Stripe checkout
+            name: "",  // Leave name empty so user can enter it
             redirectToCheckout: true,
           }),
         }

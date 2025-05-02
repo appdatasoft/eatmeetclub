@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/common/Button";
 import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
@@ -14,9 +15,15 @@ const CallToAction = () => {
     setIsLoading(true);
     
     try {
-      // If user is logged in, we can pre-fill some information
-      const email = user?.email || "";
+      // If user is logged in, use their email, otherwise use a default
+      const email = user?.email || "guest@example.com";
       const name = user?.user_metadata?.name || "";
+      
+      // Store for verification later
+      localStorage.setItem('signup_email', email);
+      if (name) {
+        localStorage.setItem('signup_name', name);
+      }
       
       // Create a checkout session directly
       const response = await fetch(
@@ -28,7 +35,7 @@ const CallToAction = () => {
             ...(user?.id ? { Authorization: `Bearer ${localStorage.getItem('supabase.auth.token')}` } : {})
           },
           body: JSON.stringify({
-            email, // Can be empty to let user enter it
+            email, // Use user email or default
             name,  // Can be empty to let user enter it
             redirectToCheckout: true, // New flag to request Stripe checkout URL
           }),
