@@ -64,12 +64,17 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             description: "Please wait while we confirm your membership...",
           });
           
-          // Call verify payment with all verification options enabled
+          // Call verify payment with enhanced options for reliability
           const success = await verifyPayment(sessionId, {
             forceCreateUser: true,
             sendPasswordEmail: true,
             createMembershipRecord: true,
-            sendInvoiceEmail: true
+            sendInvoiceEmail: true,
+            // Use simplified verification as backup if full verification fails
+            simplifiedVerification: true,
+            // Set retry if first attempt fails
+            retry: true,
+            maxRetries: 2
           });
           
           if (success) {

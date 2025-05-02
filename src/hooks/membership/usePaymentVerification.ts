@@ -12,6 +12,10 @@ interface VerificationOptions {
   createMembershipRecord?: boolean;
   sendInvoiceEmail?: boolean;
   preventDuplicateEmails?: boolean;
+  simplifiedVerification?: boolean;
+  safeMode?: boolean;
+  retry?: boolean;
+  maxRetries?: number;
 }
 
 export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationProps) => {
@@ -20,7 +24,7 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationAttempts, setVerificationAttempts] = useState(0);
   const [lastVerifiedSession, setLastVerifiedSession] = useState<string | null>(null);
-
+  
   const verifyPayment = useCallback(async (paymentId: string, options: VerificationOptions = {}) => {
     // Prevent verifying the same session ID multiple times
     if (lastVerifiedSession === paymentId) {
@@ -28,14 +32,14 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       return true; // Return success to prevent retries
     }
     
-    // Prevent multiple verification attempts
+    // Prevent multiple verification attempts running simultaneously
     if (isVerifying) {
       console.log("Payment verification already in progress, skipping");
       return false;
     }
     
     // Limit verification attempts to prevent spam
-    if (verificationAttempts >= 3) {
+    if (verificationAttempts >= (options.maxRetries || 3)) {
       console.log("Maximum verification attempts reached");
       toast({
         title: "Verification limit reached",
@@ -90,10 +94,50 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
             sendPasswordEmail: options.sendPasswordEmail !== false,  // Default to true
             createMembershipRecord: options.createMembershipRecord !== false, // Default to true
             sendInvoiceEmail: options.sendInvoiceEmail !== false,   // Default to true
-            preventDuplicateEmails: options.preventDuplicateEmails !== false // Default to true
+            preventDuplicateEmails: options.preventDuplicateEmails !== false, // Default to true
+            simplifiedVerification: options.simplifiedVerification === true, // Provide a simpler verification if needed
+            safeMode: options.safeMode === true, // Minimal database operations mode
           }),
         }
       );
+      
+      if (!response.ok) {
+        // Get response text and try to parse it as JSON
+        const responseText = await response.text();
+        let data;
+        let errorMessage = "Payment verification failed";
+        
+        try {
+          data = JSON.parse(responseText);
+          errorMessage = data.message || errorMessage;
+        } catch (parseError) {
+          console.error("Error parsing response:", parseError, responseText);
+          errorMessage = `Invalid response: ${responseText.substring(0, 100)}...`;
+        }
+        
+        // If retry is enabled and we haven't exceeded max attempts, try again with simplified verification
+        if (options.retry && verificationAttempts < (options.maxRetries || 3)) {
+          console.log("Retry enabled, attempting with simplified verification");
+          
+          // Wait a moment before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Try again with simplified verification
+          const simplifiedResult = await verifyPayment(paymentId, {
+            ...options,
+            simplifiedVerification: true,
+            safeMode: true,
+            retry: false // Prevent infinite recursion
+          });
+          
+          if (simplifiedResult) {
+            console.log("Simplified verification successful");
+            return true;
+          }
+        }
+        
+        throw new Error(errorMessage);
+      }
       
       // Get response text and parse it as JSON
       const responseText = await response.text();
@@ -104,10 +148,6 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       } catch (error) {
         console.error("Error parsing response:", error, responseText);
         throw new Error(`Invalid response from server: ${responseText.substring(0, 100)}...`);
-      }
-      
-      if (!response.ok) {
-        throw new Error(data.message || "Payment verification failed");
       }
       
       console.log("Payment verification response:", data);
@@ -123,6 +163,35 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
           title: "Membership activated!",
           description: "Your membership has been successfully activated.",
         });
+      } else if (data.simplifiedVerification) {
+        toast({
+          title: "Membership confirmed!",
+          description: "Your membership is being processed. Check your email shortly for account details.",
+        });
+        
+        // For simplified verification, trigger invoice email separately if needed
+        if (data.invoiceEmailNeeded) {
+          try {
+            console.log("Sending invoice email separately");
+            await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-invoice-email`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  sessionId: paymentId,
+                  email: storedEmail,
+                  name: storedName,
+                  preventDuplicate: true
+                }),
+              }
+            );
+          } catch (emailError) {
+            console.error("Error sending separate invoice email:", emailError);
+          }
+        }
       } else {
         toast({
           title: "Payment successful!",
@@ -141,11 +210,14 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
     } catch (error: any) {
       console.error("Payment verification error:", error);
       setVerificationError(error.message || "There was a problem verifying your payment");
+      
+      // More descriptive toast message
       toast({
-        title: "Error",
-        description: error.message || "There was a problem verifying your payment",
+        title: "Verification issue",
+        description: "We had trouble completing your membership setup. Please contact support with your payment ID.",
         variant: "destructive",
       });
+      
       return false;
     } finally {
       setIsProcessing(false);

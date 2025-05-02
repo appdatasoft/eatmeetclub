@@ -22,7 +22,13 @@ interface EmailRequest {
   text?: string;
   replyTo?: string;
   emailType?: string;
+  fromName?: string;
+  fromEmail?: string;
+  preventDuplicate?: boolean;
 }
+
+// Track sent emails to prevent duplicates during function execution
+const sentEmails = new Map<string, Date>();
 
 serve(async (req) => {
   // Handle CORS preflight request
@@ -36,7 +42,7 @@ serve(async (req) => {
   try {
     console.log("Custom email function called");
     
-    const { to, subject, html, text, replyTo, emailType } = await req.json() as EmailRequest;
+    const { to, subject, html, text, replyTo, emailType, fromName, fromEmail, preventDuplicate } = await req.json() as EmailRequest;
     
     if (!to || !to.length || !subject || !html) {
       throw new Error("Missing required email parameters");
@@ -52,10 +58,40 @@ serve(async (req) => {
       throw new Error(`Invalid email recipient(s): ${to.join(', ')}`);
     }
 
+    // Check if this exact email was sent recently (within last 60 seconds)
+    if (preventDuplicate) {
+      const cacheKey = `${to.join(',')}:${subject}`;
+      if (sentEmails.has(cacheKey)) {
+        const lastSent = sentEmails.get(cacheKey);
+        const timeSince = new Date().getTime() - lastSent!.getTime();
+        
+        if (timeSince < 60000) {
+          console.log(`Preventing duplicate email to ${to} with subject "${subject}" (sent ${timeSince}ms ago)`);
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: "Email already sent recently, skipped duplicate",
+              duplicate: true
+            }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 200,
+            }
+          );
+        }
+      }
+      
+      // Mark this email as sent
+      sentEmails.set(cacheKey, new Date());
+    }
+
+    // Define the from address with optional customization
+    const from = `${fromName || "Eat Meet Club"} <${fromEmail || "info@eatmeetclub.com"}>`;
+    
     // Try to send the email with detailed error handling
     try {
       const emailResponse = await resend.emails.send({
-        from: "Eat Meet Club <info@eatmeetclub.com>",
+        from,
         to,
         subject,
         html,
@@ -82,6 +118,7 @@ serve(async (req) => {
       try {
         console.log("Attempting fallback email sending...");
         
+        // Try with different from address
         const fallbackResponse = await resend.emails.send({
           from: "Eat Meet Club <onboarding@resend.dev>", // Fallback sender
           to,
@@ -105,7 +142,35 @@ serve(async (req) => {
         );
       } catch (fallbackError) {
         console.error("Fallback email also failed:", fallbackError);
-        throw new Error(`Email sending failed: ${fallbackError.message}`);
+        
+        // Try one more time with minimal settings
+        try {
+          console.log("Attempting last resort email sending...");
+          
+          const lastResortResponse = await resend.emails.send({
+            from: "onboarding@resend.dev",
+            to,
+            subject,
+            html: `<p>${html.replace(/<[^>]*>?/gm, '')}</p>`,
+          });
+          
+          console.log("Last resort email sent successfully:", lastResortResponse);
+          
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: lastResortResponse,
+              lastResort: true,
+            }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 200,
+            }
+          );
+        } catch (lastResortError) {
+          console.error("All email sending attempts failed:", lastResortError);
+          throw new Error(`Email sending failed after multiple attempts: ${lastResortError.message}`);
+        }
       }
     }
   } catch (error) {
