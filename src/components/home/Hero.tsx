@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/common/Button";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -14,10 +13,6 @@ const Hero = () => {
     setIsLoading(true);
     
     try {
-      // Store minimal user details in localStorage for later use in verification
-      localStorage.setItem('signup_email', 'guest@example.com');
-      localStorage.setItem('signup_name', 'Guest User');
-      
       // Create a checkout session directly
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
@@ -27,9 +22,9 @@ const Hero = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            email: 'guest@example.com',
-            name: 'Guest User',
-            redirectToCheckout: true, // New flag to request Stripe checkout URL
+            email: "", // Send empty email to allow user to enter it in Stripe checkout
+            name: "",  // Send empty name to allow user to enter it in Stripe checkout
+            redirectToCheckout: true,
           }),
         }
       );

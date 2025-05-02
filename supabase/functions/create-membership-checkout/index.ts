@@ -119,7 +119,8 @@ serve(async (req) => {
         phone_number_collection: {
           enabled: true,
         },
-        customer_email: customerId ? undefined : email, // Only set if no customer ID
+        // Remove customer_email to allow the user to edit the email field
+        // When customer_email is set, Stripe pre-fills and disables the email field
       });
 
       console.log("Checkout session created:", { 
