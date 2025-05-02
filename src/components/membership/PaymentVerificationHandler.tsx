@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import usePaymentVerification from "@/hooks/membership/usePaymentVerification"; 
 
 interface PaymentVerificationHandlerProps {
   sessionId: string | null;
@@ -16,7 +17,10 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
   setVerificationProcessed
 }) => {
   const { toast } = useToast();
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { verifyPayment, isVerifying } = usePaymentVerification({
+    setIsProcessing
+  });
 
   // Effect to verify successful Stripe checkout completion
   useEffect(() => {
@@ -24,72 +28,18 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
       // Add verification flag to prevent multiple verification attempts
       if (sessionId && paymentSuccess && !verificationProcessed && !isVerifying) {
         setVerificationProcessed(true);
-        setIsVerifying(true);
         
         try {
-          // Get user details from localStorage
-          const storedEmail = localStorage.getItem('signup_email');
-          const storedName = localStorage.getItem('signup_name');
-          const storedPhone = localStorage.getItem('signup_phone');
-          const storedAddress = localStorage.getItem('signup_address');
-          
-          if (!storedEmail) {
-            throw new Error("Missing email for payment verification");
-          }
-          
           toast({
             title: "Verifying payment",
             description: "Please wait while we confirm your membership...",
           });
           
-          // Call the verify endpoint to confirm subscription
-          const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                paymentId: sessionId,
-                email: storedEmail,
-                name: storedName || "Guest User",
-                phone: storedPhone || null,
-                address: storedAddress || null,
-                isSubscription: true
-              }),
-            }
-          );
+          // Use the reusable payment verification hook
+          const success = await verifyPayment(sessionId);
           
-          if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = "Payment verification failed";
-            
-            try {
-              const errorData = JSON.parse(errorText);
-              errorMessage = errorData.message || errorMessage;
-            } catch (e) {
-              console.error("Failed to parse error response:", errorText);
-            }
-            
-            throw new Error(errorMessage);
-          }
-          
-          const responseData = await response.json();
-          
-          if (responseData.success) {
-            // Clean up localStorage
-            localStorage.removeItem('signup_email');
-            localStorage.removeItem('signup_name');
-            localStorage.removeItem('signup_phone');
-            localStorage.removeItem('signup_address');
-            
-            toast({
-              title: "Payment successful!",
-              description: "Your membership has been activated. Check your email for login instructions.",
-            });
-          } else {
-            throw new Error(responseData.message || "Payment verification failed");
+          if (success) {
+            console.log("Payment verified successfully");
           }
         } catch (error: any) {
           console.error("Error verifying checkout completion:", error);
@@ -99,14 +49,12 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             description: error.message || "There was a problem verifying your payment",
             variant: "destructive",
           });
-        } finally {
-          setIsVerifying(false);
         }
       }
     };
     
     verifyCheckoutCompletion();
-  }, [sessionId, paymentSuccess, verificationProcessed, toast, setVerificationProcessed]);
+  }, [sessionId, paymentSuccess, verificationProcessed, toast, setVerificationProcessed, verifyPayment, isVerifying]);
 
   return null; // This component doesn't render anything
 };

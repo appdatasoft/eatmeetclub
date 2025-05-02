@@ -36,6 +36,8 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       console.log("Verifying payment with session ID:", paymentId);
       console.log("User details:", { email: storedEmail, name: storedName, phone: storedPhone });
       
+      // No need to add Authorization header - this is an anonymous call
+      // that doesn't require authentication for checkout verification
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
         {
