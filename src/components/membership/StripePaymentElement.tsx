@@ -13,8 +13,9 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Load Stripe outside of a component to avoid recreating it on each render
-// Using Stripe's test publishable key
-const stripePromise = loadStripe("pk_test_51IkMKHBttGiztABC8RlNDjAaaAnoviPnHlOkymIEl0QosgW8yQpOeLeJQSzPyhJkokPFc1t4PsjSPpEaDYdIZS9000AXObBqtA");
+// Use environment variable for the publishable key to switch between test and production
+const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "pk_test_51IkMKHBttGiztABC8RlNDjAaaAnoviPnHlOkymIEl0QosgW8yQpOeLeJQSzPyhJkokPFc1t4PsjSPpEaDYdIZS9000AXObBqtA";
+const stripePromise = loadStripe(stripeKey);
 
 interface StripePaymentFormProps {
   clientSecret: string;
@@ -35,6 +36,16 @@ const StripePaymentForm = ({
   const elements = useElements();
   const { toast } = useToast();
   const [error, setError] = React.useState<string | null>(null);
+  const [isLiveMode, setIsLiveMode] = React.useState<boolean>(false);
+
+  // Check if we're in Stripe live mode
+  React.useEffect(() => {
+    if (stripe) {
+      // @ts-ignore - _keyMode is not in the type definitions but exists on the object
+      const mode = stripe._keyMode;
+      setIsLiveMode(mode === 'live');
+    }
+  }, [stripe]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -57,15 +68,27 @@ const StripePaymentForm = ({
       if (result.error) {
         // Show error to your customer
         console.error("Payment error:", result.error);
-        setError(result.error.message || "An unknown error occurred during payment processing");
-        onPaymentError(result.error.message || "Payment failed. Please check your card details and try again.");
         
-        // Also show a toast notification
-        toast({
-          title: "Payment failed",
-          description: result.error.message || "Please check your card details and try again",
-          variant: "destructive",
-        });
+        // Handle specific error cases
+        if (result.error.code === 'card_declined' && result.error.message?.includes('test card')) {
+          setError("Test cards can't be used in live mode. Please use a real card for payment.");
+          onPaymentError("Test cards can't be used in live mode. Please use a real card for payment.");
+          
+          toast({
+            title: "Payment failed",
+            description: "Test cards can't be used in live mode. Please use a real card.",
+            variant: "destructive",
+          });
+        } else {
+          setError(result.error.message || "An unknown error occurred during payment processing");
+          onPaymentError(result.error.message || "Payment failed. Please check your card details and try again.");
+          
+          toast({
+            title: "Payment failed",
+            description: result.error.message || "Please check your card details and try again",
+            variant: "destructive",
+          });
+        }
       } else if (result.paymentIntent?.status === 'succeeded') {
         console.log("Payment succeeded:", result.paymentIntent.id);
         // Call the verify endpoint directly here
@@ -99,6 +122,13 @@ const StripePaymentForm = ({
       <div className="my-4">
         <PaymentElement />
       </div>
+      {isLiveMode && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded mb-4">
+          <p className="text-sm">
+            <strong>Live Mode:</strong> Use a real payment card. Test cards will be declined.
+          </p>
+        </div>
+      )}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
           {error}

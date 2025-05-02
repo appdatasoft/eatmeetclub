@@ -26,6 +26,7 @@ const MembershipPayment = () => {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [emailChecked, setEmailChecked] = useState(false);
   const [emailMissingHandled, setEmailMissingHandled] = useState(false);
+  const [isStripeTestMode, setIsStripeTestMode] = useState<boolean | null>(null);
   
   const {
     membershipFee,
@@ -41,6 +42,35 @@ const MembershipPayment = () => {
     handleCancel,
     handlePaymentSuccess
   } = useMembershipPayment();
+
+  // Check if we're in Stripe test mode
+  useEffect(() => {
+    const checkStripeMode = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/check-stripe-mode`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-cache"
+            }
+          }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          setIsStripeTestMode(data.isTestMode);
+        }
+      } catch (error) {
+        console.error("Error checking Stripe mode:", error);
+        // Default to assuming we're in test mode if we can't determine
+        setIsStripeTestMode(true);
+      }
+    };
+    
+    checkStripeMode();
+  }, []);
 
   // Use the session ID from the URL if available
   const finalSessionId = sessionId || hookSessionId;
@@ -99,6 +129,15 @@ const MembershipPayment = () => {
   const handlePaymentError = (errorMessage: string) => {
     setStripeError(errorMessage);
     console.error("Payment error:", errorMessage);
+    
+    // Check for test card in live mode error
+    if (errorMessage.includes('test card') && errorMessage.includes('live mode')) {
+      toast({
+        title: "Card Error",
+        description: "You're using a test card in live mode. Please use a real payment card.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Fix TS error by creating a wrapper function that doesn't return a value
@@ -138,6 +177,23 @@ const MembershipPayment = () => {
           setIsLoadingIntent={setIsLoadingIntent}
           setValidationError={setValidationError}
         />
+        
+        {/* Display Stripe mode notification if available */}
+        <div className="container-custom mb-4">
+          {isStripeTestMode !== null && (
+            <div className={`py-2 px-4 text-center rounded-md mb-4 text-sm ${
+              isStripeTestMode 
+                ? "bg-blue-50 border border-blue-200 text-blue-700" 
+                : "bg-amber-50 border border-amber-200 text-amber-700"
+            }`}>
+              {isStripeTestMode ? (
+                <p>Stripe is in <strong>test mode</strong>. You can use test cards like 4242 4242 4242 4242.</p>
+              ) : (
+                <p><strong>Live payment environment</strong>. Please use a real payment card. Test cards will be declined.</p>
+              )}
+            </div>
+          )}
+        </div>
         
         {/* Main payment content area */}
         <PaymentContentArea

@@ -10,8 +10,39 @@ import { useNavigate } from "react-router-dom";
 const BecomeMember = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isStripeTestMode, setIsStripeTestMode] = useState<boolean | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Check if we're in Stripe test mode
+  useEffect(() => {
+    const checkStripeMode = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/check-stripe-mode`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-cache"
+            }
+          }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          setIsStripeTestMode(data.isTestMode);
+          console.log("Stripe mode:", data.isTestMode ? "test" : "live");
+        }
+      } catch (error) {
+        console.error("Error checking Stripe mode:", error);
+        // Default to assuming we're in test mode if we can't determine
+        setIsStripeTestMode(true);
+      }
+    };
+    
+    checkStripeMode();
+  }, []);
 
   // Effect to prevent repeat submissions or navigation back to this page after checkout initiated
   useEffect(() => {
@@ -162,6 +193,19 @@ const BecomeMember = () => {
       <Navbar />
       <div className="min-h-screen bg-gray-50 py-16 px-4">
         <div className="container-custom">
+          {isStripeTestMode !== null && (
+            <div className={`py-2 px-4 text-center rounded-md mb-8 ${
+              isStripeTestMode 
+                ? "bg-blue-50 border border-blue-200 text-blue-700" 
+                : "bg-amber-50 border border-amber-200 text-amber-700"
+            }`}>
+              {isStripeTestMode ? (
+                <p>Stripe is in <strong>test mode</strong>. You can use test cards like 4242 4242 4242 4242 for testing.</p>
+              ) : (
+                <p><strong>Live payment environment</strong>. Please use a real payment card. Test cards will be declined.</p>
+              )}
+            </div>
+          )}
           <div className="max-w-2xl mx-auto">
             <Card className="overflow-hidden">
               <CardHeader className="bg-brand-500 text-white">
