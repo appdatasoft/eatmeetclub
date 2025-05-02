@@ -33,15 +33,16 @@ export const useMembershipSubmission = () => {
         throw new Error("Name is required");
       }
       
-      console.log("Storing user details in localStorage:", { email, name, phone, address });
+      console.log("Storing user details in localStorage and sessionStorage:", { email, name, phone, address });
       
-      // Store all details for verification later - do this BEFORE any API calls
+      // Store all details in BOTH localStorage and sessionStorage for redundancy
+      // localStorage
       localStorage.setItem('signup_email', email);
       localStorage.setItem('signup_name', name);
       if (phone) localStorage.setItem('signup_phone', phone);
       if (address) localStorage.setItem('signup_address', address);
       
-      // Also store in sessionStorage as backup
+      // sessionStorage (backup)
       sessionStorage.setItem('signup_email', email);
       sessionStorage.setItem('signup_name', name);
       if (phone) sessionStorage.setItem('signup_phone', phone);
@@ -51,6 +52,12 @@ export const useMembershipSubmission = () => {
       if (!localStorage.getItem('signup_email')) {
         console.error("Failed to store email in localStorage");
         localStorage.setItem('signup_email', email);
+        
+        // Check once more
+        if (!localStorage.getItem('signup_email')) {
+          console.error("Still failed to store email in localStorage, falling back to sessionStorage only");
+          // We'll rely on sessionStorage for verification
+        }
       }
       
       // Create a checkout session directly
@@ -93,11 +100,17 @@ export const useMembershipSubmission = () => {
         sessionStorage.setItem('checkout_initiated', 'true');
         setIsSubmitted(true);
         
-        // Double check that email is stored
-        const checkEmail = localStorage.getItem('signup_email');
-        if (!checkEmail) {
-          console.error("Email not found in localStorage after setting");
+        // Double check that email is stored in both locations
+        const checkLocalEmail = localStorage.getItem('signup_email');
+        const checkSessionEmail = sessionStorage.getItem('signup_email');
+        
+        if (!checkLocalEmail && checkSessionEmail) {
+          console.log("Email missing from localStorage but found in sessionStorage, restoring");
+          localStorage.setItem('signup_email', checkSessionEmail);
+        } else if (!checkLocalEmail && !checkSessionEmail) {
+          console.error("Email not found in any storage, saving again before redirect");
           localStorage.setItem('signup_email', email);
+          sessionStorage.setItem('signup_email', email);
         }
         
         // Redirect directly to Stripe checkout URL

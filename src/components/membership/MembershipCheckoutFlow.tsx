@@ -21,7 +21,8 @@ const MembershipCheckoutFlow: React.FC<MembershipCheckoutFlowProps> = ({
     
     if (checkoutInitiated === 'true') {
       // Check if we have email stored before redirecting
-      const storedEmail = localStorage.getItem('signup_email');
+      const storedEmail = localStorage.getItem('signup_email') || sessionStorage.getItem('signup_email');
+      
       if (!storedEmail) {
         console.log("Checkout was initiated but no email found, resetting checkout flag");
         sessionStorage.removeItem('checkout_initiated');
@@ -31,6 +32,13 @@ const MembershipCheckoutFlow: React.FC<MembershipCheckoutFlowProps> = ({
           variant: "destructive",
         });
         return;
+      }
+      
+      // Ensure email is available in both storage locations
+      if (!localStorage.getItem('signup_email') && sessionStorage.getItem('signup_email')) {
+        const sessionEmail = sessionStorage.getItem('signup_email');
+        console.log("Restoring email from sessionStorage to localStorage:", sessionEmail);
+        localStorage.setItem('signup_email', sessionEmail);
       }
       
       // Redirect to membership payment page to handle post-payment flow

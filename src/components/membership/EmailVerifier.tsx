@@ -43,6 +43,17 @@ const EmailVerifier: React.FC<EmailVerifierProps> = ({
         console.error("Missing email in localStorage for payment verification");
         setEmailMissingHandled(true);
         
+        // Try to retrieve email from session storage as fallback
+        const sessionEmail = sessionStorage.getItem('signup_email');
+        if (sessionEmail) {
+          console.log("Found email in sessionStorage, restoring to localStorage");
+          localStorage.setItem('signup_email', sessionEmail);
+          localStorage.setItem('email_restored', 'true');
+          setEmailMissingHandled(false);
+          setEmailChecked(false);
+          return;
+        }
+        
         toast({
           title: "Missing information",
           description: "We couldn't find your email information. Please try signing up again.",
@@ -52,16 +63,6 @@ const EmailVerifier: React.FC<EmailVerifierProps> = ({
         // Set verification as processed to prevent infinite loop
         setVerificationProcessed(true);
         setIsRedirecting(true);
-        
-        // Try to retrieve email from session storage as fallback
-        const sessionEmail = sessionStorage.getItem('signup_email');
-        if (sessionEmail) {
-          console.log("Found email in sessionStorage, restoring to localStorage");
-          localStorage.setItem('signup_email', sessionEmail);
-          setEmailMissingHandled(false);
-          setEmailChecked(false);
-          return;
-        }
         
         // Redirect back to become-member page after a delay
         setTimeout(() => {
