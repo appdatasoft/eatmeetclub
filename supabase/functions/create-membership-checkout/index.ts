@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { stripe } from "../_shared/stripe.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
@@ -83,7 +84,7 @@ serve(async (req) => {
         console.log("Created new Stripe customer:", customerId);
       }
 
-      // Create checkout session
+      // Create checkout session with billing address and phone collection
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
@@ -113,6 +114,12 @@ serve(async (req) => {
           email: email,
           user_id: userId || '',
         },
+        // Add settings to collect additional information
+        billing_address_collection: 'required',
+        phone_number_collection: {
+          enabled: true,
+        },
+        customer_email: customerId ? undefined : email, // Only set if no customer ID
       });
 
       console.log("Checkout session created:", { 
