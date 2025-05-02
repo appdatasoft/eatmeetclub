@@ -10,6 +10,7 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
   const { toast } = useToast();
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationAttempts, setVerificationAttempts] = useState(0);
 
   const verifyPayment = async (paymentId: string) => {
     // Prevent multiple verification attempts
@@ -18,9 +19,20 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       return false;
     }
     
+    // Limit verification attempts to prevent spam
+    if (verificationAttempts >= 3) {
+      console.log("Maximum verification attempts reached");
+      toast({
+        title: "Verification limit reached",
+        description: "We're still processing your payment. Please check your email for confirmation.",
+      });
+      return false;
+    }
+    
     setIsVerifying(true);
     setIsProcessing(true);
     setVerificationError(null);
+    setVerificationAttempts(prev => prev + 1);
     
     try {
       // Get user details from localStorage
@@ -55,7 +67,8 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
             forceCreateUser: true,        // Force user creation in auth table
             sendPasswordEmail: true,      // Explicitly request password email
             createMembershipRecord: true, // Ensure membership record creation
-            sendInvoiceEmail: true        // Add flag to request invoice email
+            sendInvoiceEmail: true,       // Add flag to request invoice email
+            preventDuplicateEmails: true  // Add flag to prevent duplicate emails
           }),
         }
       );
@@ -79,7 +92,7 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       
       if (data.success) {
         // If simplified verification was successful but we need to retry full verification
-        if (data.simplifiedVerification && !data.membershipCreated) {
+        if (data.simplifiedVerification && !data.membershipCreated && !data.retryAttempted) {
           console.log("Simplified verification succeeded, attempting full verification");
           
           // Try again with regular verification but with safeMode to avoid stack errors
@@ -102,7 +115,9 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
                 sendPasswordEmail: true,
                 createMembershipRecord: true,
                 sendInvoiceEmail: true,
-                safeMode: true // Add safe mode flag to avoid stack depth errors
+                safeMode: true, // Add safe mode flag to avoid stack depth errors
+                retryAttempted: true, // Mark as retry attempt
+                preventDuplicateEmails: true
               }),
             }
           );
@@ -116,11 +131,12 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
           description: "Your membership has been activated. Check your email for login instructions.",
         });
         
-        // Clean up localStorage
+        // Clean up localStorage and sessionStorage
         localStorage.removeItem('signup_email');
         localStorage.removeItem('signup_name');
         localStorage.removeItem('signup_phone');
         localStorage.removeItem('signup_address');
+        sessionStorage.removeItem('checkout_initiated');
         
         // Try to send the invoice email directly if the flag indicated it wasn't sent during verification
         if (data.invoiceEmailNeeded) {
@@ -136,7 +152,8 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
                 body: JSON.stringify({
                   sessionId: paymentId,
                   email: storedEmail,
-                  name: storedName
+                  name: storedName,
+                  preventDuplicate: true
                 }),
               }
             );
@@ -165,7 +182,7 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
     }
   };
 
-  return { verifyPayment, verificationError, isVerifying };
+  return { verifyPayment, verificationError, isVerifying, verificationAttempts };
 };
 
 export default usePaymentVerification;

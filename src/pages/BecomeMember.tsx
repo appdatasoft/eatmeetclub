@@ -1,16 +1,48 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import MembershipSteps from "@/components/membership/MembershipSteps";
+import { useNavigate } from "react-router-dom";
 
 const BecomeMember = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Effect to prevent repeat submissions or navigation back to this page after checkout initiated
+  useEffect(() => {
+    const checkoutInitiated = sessionStorage.getItem('checkout_initiated');
+    
+    if (checkoutInitiated === 'true') {
+      // Redirect to membership payment page to handle post-payment flow
+      navigate('/membership-payment');
+    }
+    
+    return () => {
+      // Clean up localStorage data when component unmounts if not submitted
+      if (!isSubmitted) {
+        localStorage.removeItem('signup_email');
+        localStorage.removeItem('signup_name');
+        localStorage.removeItem('signup_phone');
+        localStorage.removeItem('signup_address');
+      }
+    };
+  }, [navigate, isSubmitted]);
 
   const handleMembershipSubmit = async (values: any) => {
+    // Prevent multiple submissions
+    if (isLoading || isSubmitted) {
+      toast({
+        title: "Processing",
+        description: "Your membership request is already being processed",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -53,6 +85,10 @@ const BecomeMember = () => {
       console.log("Checkout session created:", data);
       
       if (data.url) {
+        // Mark checkout as initiated to prevent duplicate submissions
+        sessionStorage.setItem('checkout_initiated', 'true');
+        setIsSubmitted(true);
+        
         // Redirect directly to Stripe checkout URL
         window.location.href = data.url;
       } else {
