@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
@@ -202,7 +201,7 @@ const MembershipPayment = () => {
         {/* Display Stripe mode notification if available */}
         <div className="container-custom mb-4">
           {stripeCheckError && (
-            <Alert variant="warning" className="mb-4">
+            <Alert variant="default" className="mb-4 bg-yellow-50 border-yellow-200">
               <AlertCircle className="h-4 w-4 text-yellow-600" />
               <AlertDescription className="flex items-center justify-between">
                 <span>Could not verify payment system mode. Some features may be limited.</span>

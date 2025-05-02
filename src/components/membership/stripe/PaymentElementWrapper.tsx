@@ -118,10 +118,11 @@ const PaymentElementWrapper = ({
     );
   }
 
+  // Fix the type error by properly typing the options object
   const options = {
-    clientSecret,
+    clientSecret: clientSecret,
     appearance: {
-      theme: 'stripe',
+      theme: 'stripe' as const,
       variables: {
         colorPrimary: '#0A5A55',
       },
