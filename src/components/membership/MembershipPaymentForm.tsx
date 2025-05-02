@@ -3,11 +3,11 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
 import MembershipBenefits from "./MembershipBenefits";
-import StripePaymentElement from "./StripePaymentElement";
+import MembershipFormFields from "./MembershipFormFields";
+import FormActions from "./FormActions";
+import PaymentSection from "./PaymentSection";
 
 export const membershipSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -59,79 +59,20 @@ const MembershipPaymentForm = ({
       <div className="border-t border-gray-200 pt-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your full name" {...field} disabled={formSubmitted} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="Enter your email" {...field} disabled={formSubmitted} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
-                  <FormControl>
-                    <Input type="tel" placeholder="Enter your phone number" {...field} disabled={formSubmitted} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Address</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your address" {...field} disabled={formSubmitted} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <MembershipFormFields form={form} disabled={formSubmitted} />
+            
+            <FormActions 
+              onCancel={onCancel} 
+              isProcessing={isProcessing} 
+              formSubmitted={formSubmitted} 
             />
             
-            {!formSubmitted ? (
-              <div className="flex justify-between mt-6">
-                <Button type="button" variant="outline" onClick={onCancel}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isProcessing}>
-                  {isProcessing ? "Processing..." : "Continue"}
-                </Button>
-              </div>
-            ) : (
-              <div className="pt-4 border-t border-gray-200">
-                <h3 className="text-lg font-medium mb-4">Payment Details</h3>
-                <StripePaymentElement
-                  clientSecret={clientSecret}
-                  email={email}
-                  isProcessing={isProcessing}
-                  onPaymentSuccess={onPaymentSuccess}
-                />
-              </div>
-            )}
+            <PaymentSection 
+              clientSecret={clientSecret}
+              email={email}
+              isProcessing={isProcessing}
+              onPaymentSuccess={onPaymentSuccess}
+            />
           </form>
         </Form>
       </div>

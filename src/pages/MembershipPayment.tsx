@@ -22,6 +22,11 @@ const MembershipPayment = () => {
     handlePaymentSuccess
   } = useMembershipPayment();
 
+  // Fix TS error by creating a wrapper function that doesn't return a value
+  const onSubmitWrapper = async (values: any) => {
+    await handleSubmit(values);
+  };
+
   if (isLoading) {
     return (
       <>
@@ -58,7 +63,7 @@ const MembershipPayment = () => {
                 {!paymentSuccess && (
                   <MembershipPaymentForm
                     membershipFee={membershipFee}
-                    onSubmit={handleSubmit}
+                    onSubmit={onSubmitWrapper}
                     onCancel={handleCancel}
                     isProcessing={isProcessing}
                     clientSecret={clientSecret}
