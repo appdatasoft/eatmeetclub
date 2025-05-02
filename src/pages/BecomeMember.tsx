@@ -78,6 +78,12 @@ const BecomeMember = () => {
       if (phone) localStorage.setItem('signup_phone', phone);
       if (address) localStorage.setItem('signup_address', address);
       
+      // Double check that email is stored to avoid verification issues
+      if (!localStorage.getItem('signup_email')) {
+        console.error("Failed to store email in localStorage");
+        localStorage.setItem('signup_email', email);
+      }
+      
       // Create a checkout session directly
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,

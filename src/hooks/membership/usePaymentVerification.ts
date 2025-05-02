@@ -6,6 +6,14 @@ interface PaymentVerificationProps {
   setIsProcessing: (value: boolean) => void;
 }
 
+interface VerificationOptions {
+  forceCreateUser?: boolean;
+  sendPasswordEmail?: boolean;
+  createMembershipRecord?: boolean;
+  sendInvoiceEmail?: boolean;
+  preventDuplicateEmails?: boolean;
+}
+
 export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationProps) => {
   const { toast } = useToast();
   const [verificationError, setVerificationError] = useState<string | null>(null);
@@ -13,7 +21,7 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
   const [verificationAttempts, setVerificationAttempts] = useState(0);
   const [lastVerifiedSession, setLastVerifiedSession] = useState<string | null>(null);
 
-  const verifyPayment = useCallback(async (paymentId: string) => {
+  const verifyPayment = useCallback(async (paymentId: string, options: VerificationOptions = {}) => {
     // Prevent verifying the same session ID multiple times
     if (lastVerifiedSession === paymentId) {
       console.log("This session ID has already been verified:", paymentId);
@@ -56,14 +64,14 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
     
     try {
       // Get user details from localStorage
-      const storedName = localStorage.getItem('signup_name');
+      const storedName = localStorage.getItem('signup_name') || storedEmail.split('@')[0] || 'Member';
       const storedPhone = localStorage.getItem('signup_phone');
       const storedAddress = localStorage.getItem('signup_address');
       
       console.log("Verifying payment with session ID:", paymentId);
       console.log("User details:", { email: storedEmail, name: storedName, phone: storedPhone });
+      console.log("Verification options:", options);
       
-      // First attempt: try with simplified verification
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
         {
@@ -74,18 +82,15 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
           body: JSON.stringify({
             paymentId,
             email: storedEmail,
-            name: storedName || "Guest User",
+            name: storedName,
             phone: storedPhone || null,
             address: storedAddress || null,
             isSubscription: true,
-            simplifiedVerification: true,    // Use simplified verification to avoid errors
-            forceCreateUser: true,           // Force user creation in auth table
-            sendPasswordEmail: true,         // Request password email
-            createMembershipRecord: false,   // Skip membership record creation initially
-            sendInvoiceEmail: true,          // Request invoice email
-            preventDuplicateEmails: true,    // Prevent duplicate emails
-            retryAttempted: false,           // Mark as first attempt
-            skipDatabaseOperations: true     // Skip database operations to avoid errors
+            forceCreateUser: options.forceCreateUser !== false,  // Default to true
+            sendPasswordEmail: options.sendPasswordEmail !== false,  // Default to true
+            createMembershipRecord: options.createMembershipRecord !== false, // Default to true
+            sendInvoiceEmail: options.sendInvoiceEmail !== false,   // Default to true
+            preventDuplicateEmails: options.preventDuplicateEmails !== false // Default to true
           }),
         }
       );
@@ -107,10 +112,23 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       
       console.log("Payment verification response:", data);
       
-      toast({
-        title: "Payment successful!",
-        description: "Your membership has been activated. Check your email for login instructions.",
-      });
+      // Show appropriate message based on response
+      if (data.passwordEmailSent) {
+        toast({
+          title: "Account activated!",
+          description: "Check your email for instructions to set your password.",
+        });
+      } else if (data.membershipCreated) {
+        toast({
+          title: "Membership activated!",
+          description: "Your membership has been successfully activated.",
+        });
+      } else {
+        toast({
+          title: "Payment successful!",
+          description: "Your membership has been activated. Check your email for login instructions.",
+        });
+      }
       
       // Clean up localStorage and sessionStorage
       localStorage.removeItem('signup_email');

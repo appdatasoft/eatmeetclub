@@ -23,6 +23,7 @@ const MembershipPayment = () => {
   const [directClientSecret, setDirectClientSecret] = useState<string | null>(null);
   const [isLoadingIntent, setIsLoadingIntent] = useState(false);
   const [verificationProcessed, setVerificationProcessed] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   
   const {
     membershipFee,
@@ -47,7 +48,7 @@ const MembershipPayment = () => {
   // Check for email presence on component mount
   useEffect(() => {
     // When showing the verification UI, make sure email exists in localStorage
-    if (finalPaymentSuccess && finalSessionId && !verificationProcessed) {
+    if (finalPaymentSuccess && finalSessionId && !verificationProcessed && !isRedirecting) {
       const storedEmail = localStorage.getItem('signup_email');
       if (!storedEmail) {
         console.error("Missing email in localStorage for payment verification");
@@ -59,6 +60,7 @@ const MembershipPayment = () => {
         
         // Set verification as processed to prevent infinite loop
         setVerificationProcessed(true);
+        setIsRedirecting(true);
         
         // Redirect back to become-member page after a delay
         setTimeout(() => {
@@ -66,7 +68,7 @@ const MembershipPayment = () => {
         }, 3000);
       }
     }
-  }, [finalPaymentSuccess, finalSessionId, verificationProcessed, toast, navigate]);
+  }, [finalPaymentSuccess, finalSessionId, verificationProcessed, toast, navigate, isRedirecting]);
 
   // Set verification processed flag to true if we detect the success parameter but no session ID
   // This prevents multiple verification attempts

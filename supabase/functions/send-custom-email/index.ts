@@ -45,28 +45,69 @@ serve(async (req) => {
     console.log(`Sending ${emailType || "custom"} email to:`, to);
     console.log("Email subject:", subject);
     console.log("Email content preview:", html.substring(0, 100) + "...");
+    console.log("Email using Resend API key:", resendApiKey ? "API key is set" : "API key is NOT set");
 
-    const emailResponse = await resend.emails.send({
-      from: "Eat Meet Club <info@eatmeetclub.com>",
-      to,
-      subject,
-      html,
-      text: text || undefined,
-      reply_to: replyTo || "info@eatmeetclub.com",
-    });
+    // Verify we have valid recipients
+    if (!to.every(email => email && email.includes('@'))) {
+      throw new Error(`Invalid email recipient(s): ${to.join(', ')}`);
+    }
 
-    console.log("Email sent successfully:", emailResponse);
+    // Try to send the email with detailed error handling
+    try {
+      const emailResponse = await resend.emails.send({
+        from: "Eat Meet Club <info@eatmeetclub.com>",
+        to,
+        subject,
+        html,
+        text: text || undefined,
+        reply_to: replyTo || "info@eatmeetclub.com",
+      });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: emailResponse,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
+      console.log("Email sent successfully:", emailResponse);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: emailResponse,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    } catch (emailError) {
+      console.error("Error sending email via Resend:", emailError);
+      
+      // Try fallback if first attempt failed
+      try {
+        console.log("Attempting fallback email sending...");
+        
+        const fallbackResponse = await resend.emails.send({
+          from: "Eat Meet Club <onboarding@resend.dev>", // Fallback sender
+          to,
+          subject,
+          html,
+          text: text || undefined,
+        });
+        
+        console.log("Fallback email sent successfully:", fallbackResponse);
+        
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: fallbackResponse,
+            fallback: true,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      } catch (fallbackError) {
+        console.error("Fallback email also failed:", fallbackError);
+        throw new Error(`Email sending failed: ${fallbackError.message}`);
       }
-    );
+    }
   } catch (error) {
     console.error("Error sending custom email:", error);
     

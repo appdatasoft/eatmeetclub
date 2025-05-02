@@ -55,7 +55,8 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
           }
           
           if (!storedName) {
-            console.log("Missing name for payment verification, but can continue with default");
+            console.log("Missing name for payment verification, using email as name");
+            localStorage.setItem('signup_name', storedEmail.split('@')[0] || 'Member');
           }
           
           toast({
@@ -63,11 +64,13 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             description: "Please wait while we confirm your membership...",
           });
           
-          // Mark verification as processed to prevent duplicate attempts
-          setVerificationProcessed(true);
-          
-          // Use the verification hook
-          const success = await verifyPayment(sessionId);
+          // Call verify payment with all verification options enabled
+          const success = await verifyPayment(sessionId, {
+            forceCreateUser: true,
+            sendPasswordEmail: true,
+            createMembershipRecord: true,
+            sendInvoiceEmail: true
+          });
           
           if (success) {
             console.log("Payment verified successfully");
@@ -82,6 +85,9 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             console.log("Payment verification returned failure");
             // Don't clear checkout flag on failure to allow retry
           }
+          
+          // Mark verification as processed to prevent duplicate attempts
+          setVerificationProcessed(true);
         } catch (error: any) {
           console.error("Error verifying checkout completion:", error);
           
@@ -90,6 +96,9 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             description: error.message || "There was a problem verifying your payment",
             variant: "destructive",
           });
+          
+          // Mark as processed to prevent further attempts
+          setVerificationProcessed(true);
         }
       } else if (sessionId && paymentSuccess && verificationProcessed) {
         console.log("Payment verification already processed, skipping");
