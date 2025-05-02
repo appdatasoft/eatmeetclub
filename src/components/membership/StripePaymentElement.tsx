@@ -64,8 +64,8 @@ const StripePaymentForm = ({
       <LinkAuthenticationElement 
         options={{
           defaultValues: { email },
-          // Remove the forgotEmailText property that's causing the error
-          disabled: true,
+          // The disabled property is not supported in StripeLinkAuthenticationElementOptions
+          // Let's use readOnly instead which should achieve similar functionality
         }}
       />
       <div className="my-4">
