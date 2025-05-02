@@ -225,12 +225,18 @@ export const useMembershipPayment = () => {
         // Redirect to Stripe checkout page
         console.log("Redirecting to Stripe checkout URL:", data.url);
         
-        // Use a direct window.location.href to ensure the redirect happens
-        window.location.href = data.url;
+        // IMPORTANT: Use direct window location change as a string, not an object
+        // This ensures the browser treats it as an external URL
+        const stripeUrl = data.url.toString();
+        console.log("Final redirect URL:", stripeUrl);
         
-        // Add a fallback timeout in case the redirect doesn't happen immediately
+        // Directly set the window location to the Stripe checkout URL
+        window.location.href = stripeUrl;
+        
+        // Add a fallback redirect using setTimeout
         setTimeout(() => {
-          window.location.href = data.url;
+          console.log("Executing fallback redirect");
+          window.open(stripeUrl, "_self");
         }, 1000);
       } else {
         throw new Error(data.message || "Failed to create checkout session");
