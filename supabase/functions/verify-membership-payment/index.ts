@@ -37,14 +37,16 @@ serve(async (req) => {
       simplifiedVerification = false,
       forceCreateUser = false,
       sendPasswordEmail = false,
-      createMembershipRecord = false
+      createMembershipRecord = false,
+      sendInvoiceEmail = false,
+      safeMode = false
     } = await req.json();
 
     if (!paymentId) throw new Error("No payment ID provided");
     if (!email) throw new Error("No email provided");
     if (!name) throw new Error("No name provided");
 
-    logStep("Verifying payment", { paymentId, email, name, isSubscription, simplifiedVerification, forceCreateUser, sendPasswordEmail, createMembershipRecord });
+    logStep("Verifying payment", { paymentId, email, name, isSubscription, simplifiedVerification, forceCreateUser, sendPasswordEmail, createMembershipRecord, sendInvoiceEmail, safeMode });
 
     // Create Supabase client with service role key to bypass RLS
     const supabaseClient = createClient(
@@ -64,6 +66,10 @@ serve(async (req) => {
     
     // Try to get user from token first
     let userId = null;
+    let passwordEmailSent = false;
+    let membershipCreated = false;
+    let invoiceEmailSent = false;
+    
     if (authToken) {
       try {
         const { data: userData, error: userError } = await supabaseClient.auth.getUser(authToken);
@@ -78,110 +84,104 @@ serve(async (req) => {
       }
     }
     
-    // If no valid token, check if user exists by email
-    if (!userId) {
+    // If no valid token, try to get user by email or create one if needed
+    if (!userId && forceCreateUser) {
       try {
-        // First check if user exists in auth.users
-        const { data: existingAuthUsers, error: authUserError } = await supabaseClient
-          .from('auth.users')
-          .select('id')
-          .eq('email', email)
-          .limit(1);
+        logStep("Checking for existing user in auth system");
         
-        if (authUserError) {
-          logStep("Error checking for auth user", { error: authUserError.message });
-          // Continue with checking profiles table as fallback
-        } else if (existingAuthUsers && existingAuthUsers.length > 0) {
-          userId = existingAuthUsers[0].id;
-          logStep("User found in auth.users", { userId });
-        } else {
-          logStep("User not found in auth.users table, checking profiles");
+        // First try to get a user by email directly through auth API
+        const { data: existingUser, error: existingUserError } = await supabaseClient.auth.admin.listUsers({
+          filter: {
+            email: email
+          }
+        });
+
+        if (existingUserError) {
+          logStep("Error checking for existing user", { error: existingUserError.message });
+        } 
+        else if (existingUser && existingUser.users && existingUser.users.length > 0) {
+          userId = existingUser.users[0].id;
+          logStep("Found existing user in auth table", { userId });
+        } 
+        else {
+          logStep("No existing user found, attempting to create one");
           
-          // Fallback to checking profiles table
           try {
-            const { data: existingUsers, error: userError } = await supabaseClient
-              .from('profiles')
-              .select('id, user_id')
-              .eq('email', email)
-              .limit(1);
+            // Generate a strong random password
+            const tempPassword = Array.from({ length: 16 }, () => 
+              Math.floor(Math.random() * 36).toString(36)
+            ).join('');
             
-            if (userError) {
-              logStep("Error checking for user by email", { error: userError.message });
-            } else if (existingUsers && existingUsers.length > 0) {
-              userId = existingUsers[0].user_id;
-              logStep("User found by email in profiles", { userId });
-            } else {
-              logStep("No existing user found by email");
+            // Create a new user
+            const { data: newUserData, error: newUserError } = await supabaseClient.auth.admin.createUser({
+              email,
+              email_confirm: true,
+              user_metadata: { 
+                full_name: name,
+                phone: phone || null,
+                address: address || null,
+                needs_password: true
+              },
+              password: tempPassword // Random temporary password
+            });
+    
+            if (newUserError) {
+              logStep("Error creating user", { error: newUserError.message });
+              if (newUserError.message.includes("already been registered")) {
+                // Try one more time to get the user
+                const { data: retryUser } = await supabaseClient.auth.admin.listUsers({
+                  filter: {
+                    email: email
+                  }
+                });
+                
+                if (retryUser && retryUser.users && retryUser.users.length > 0) {
+                  userId = retryUser.users[0].id;
+                  logStep("Found user on second attempt", { userId });
+                }
+              } else {
+                throw new Error(`Error creating user: ${newUserError.message}`);
+              }
+            } else if (newUserData && newUserData.user) {
+              userId = newUserData.user.id;
+              logStep("User created successfully", { userId });
             }
-          } catch (error) {
-            logStep("Error in user email lookup", { error: error.message });
+          } catch (createError) {
+            logStep("Error in user creation process", { error: createError.message });
+            // Continue without failing - we'll use simplified verification
           }
         }
-      } catch (error) {
-        logStep("Error checking for user", { error: error.message });
+      } catch (userLookupError) {
+        logStep("Error during user lookup/creation", { error: userLookupError.message });
+        // Continue to try simplified verification
       }
     }
     
-    // If still no user ID and forceCreateUser is true, create a user
-    if (!userId && forceCreateUser) {
-      logStep("Creating new user with email", { email });
-      
+    // Send password reset email if requested and we have a userId
+    if (userId && sendPasswordEmail) {
       try {
-        // Generate a strong random password
-        const tempPassword = Array.from({ length: 16 }, () => 
-          Math.floor(Math.random() * 36).toString(36)
-        ).join('');
+        logStep("Sending password reset email", { email });
         
-        const { data: newUserData, error: newUserError } = await supabaseClient.auth.admin.createUser({
+        const frontendUrl = Deno.env.get("FRONTEND_URL") || "https://eatmeetclub.lovable.app";
+        logStep("Using frontend URL for password reset", { frontendUrl });
+        
+        const { error: resetError } = await supabaseClient.auth.admin.generateLink({
+          type: "recovery",
           email,
-          email_confirm: true,
-          user_metadata: { 
-            full_name: name,
-            phone: phone || null,
-            address: address || null,
-            needs_password: true
-          },
-          password: tempPassword // Random temporary password
-        });
-
-        if (newUserError) {
-          throw new Error(`Error creating user: ${newUserError.message}`);
-        }
-
-        userId = newUserData.user.id;
-        logStep("User created successfully", { userId });
-        
-        // If sendPasswordEmail is true, always send a password reset email
-        if (sendPasswordEmail) {
-          try {
-            logStep("Sending password reset email", { email });
-            
-            const frontendUrl = Deno.env.get("FRONTEND_URL") || "https://eatmeetclub.lovable.app";
-            logStep("Using frontend URL for password reset", { frontendUrl });
-            
-            const { error: resetError } = await supabaseClient.auth.admin.generateLink({
-              type: "recovery",
-              email,
-              options: {
-                redirectTo: `${frontendUrl}/set-password`
-              }
-            });
-            
-            if (resetError) {
-              logStep("Error sending password reset", { error: resetError.message });
-              throw new Error(`Error sending password reset: ${resetError.message}`);
-            }
-            
-            logStep("Password reset email sent successfully");
-          } catch (resetError) {
-            logStep("Error requesting password reset", { error: resetError.message });
-            // Don't fail the process if password reset email fails
+          options: {
+            redirectTo: `${frontendUrl}/set-password`
           }
+        });
+        
+        if (resetError) {
+          logStep("Error sending password reset", { error: resetError.message });
+        } else {
+          logStep("Password reset email sent successfully");
+          passwordEmailSent = true;
         }
-      } catch (error) {
-        logStep("Error creating user", { error: error.message });
-        // If we can't create a user, we'll still verify the payment but skip user creation
-        // This will be handled by simplifiedVerification fallback later
+      } catch (resetError) {
+        logStep("Error requesting password reset", { error: resetError.message });
+        // Don't fail the process if password reset email fails
       }
     }
 
@@ -234,24 +234,41 @@ serve(async (req) => {
     if (!paymentVerified) {
       throw new Error("Payment verification failed");
     }
+
+    // Send welcome email regardless of other operations
+    try {
+      await sendWelcomeEmail(email, name);
+      logStep("Welcome email sent successfully");
+    } catch (emailError) {
+      logStep("Error sending welcome email", { error: emailError.message });
+    }
     
-    // For simplified verification (to avoid stack depth exceeded), skip database operations
+    // For simplified verification or when in safe mode, avoid complex database operations
     if (simplifiedVerification) {
       logStep("Using simplified verification, skipping database operations");
       
-      // Send confirmation email
-      try {
-        await sendWelcomeEmail(email, name);
-        logStep("Welcome email sent successfully");
-      } catch (emailError) {
-        logStep("Error sending welcome email", { error: emailError.message });
+      // Send invoice email if requested, even in simplified mode
+      if (sendInvoiceEmail) {
+        try {
+          logStep("Attempting to send invoice email during simplified verification");
+          await sendInvoiceEmail(paymentId, email, name);
+          invoiceEmailSent = true;
+          logStep("Invoice email sent successfully");
+        } catch (invoiceEmailError) {
+          logStep("Error sending invoice email", { error: invoiceEmailError.message });
+        }
       }
       
       return new Response(
         JSON.stringify({
           success: true,
           message: "Payment verified successfully",
-          simplifiedVerification: true
+          simplifiedVerification: true,
+          userId,
+          passwordEmailSent,
+          membershipCreated: false,
+          invoiceEmailSent,
+          invoiceEmailNeeded: !invoiceEmailSent && sendInvoiceEmail
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -261,7 +278,7 @@ serve(async (req) => {
     }
     
     // If we have a userId, proceed with membership database operations
-    if (userId) {
+    if (userId && createMembershipRecord && !safeMode) {
       try {
         // Check if the user already has an active membership
         const { data: existingMembership, error: membershipCheckError } = await supabaseClient
@@ -306,20 +323,25 @@ serve(async (req) => {
           
           membership = updatedMembership;
           logStep("Membership updated", { id: membership.id });
+          membershipCreated = true;
         } else {
           // Create new membership
           logStep("Creating new membership");
+          
+          // To avoid stack depth exceeded errors, use a direct query for membership creation
+          const membershipObj = {
+            user_id: userId,
+            status: 'active',
+            is_subscription: isSubscription,
+            started_at: new Date().toISOString(),
+            renewal_at: renewalDate?.toISOString(),
+            subscription_id: subscriptionId,
+            last_payment_id: paymentId,
+          };
+          
           const { data: newMembership, error: createError } = await supabaseClient
             .from('memberships')
-            .insert({
-              user_id: userId,
-              status: 'active',
-              is_subscription: isSubscription,
-              started_at: new Date().toISOString(),
-              renewal_at: renewalDate?.toISOString() || null,
-              subscription_id: subscriptionId,
-              last_payment_id: paymentId,
-            })
+            .insert(membershipObj)
             .select()
             .single();
             
@@ -330,62 +352,42 @@ serve(async (req) => {
           
           membership = newMembership;
           logStep("Membership created", { id: membership.id });
+          membershipCreated = true;
         }
         
         // Create a membership payment record
-        const { data: paymentRecord, error: paymentError } = await supabaseClient
-          .from('membership_payments')
-          .insert({
+        if (membership && membership.id) {
+          const paymentRecord = {
             membership_id: membership.id,
             amount: amountPaid / 100, // Convert cents to dollars
             payment_id: paymentId,
             payment_status: 'succeeded',
-          })
-          .select()
-          .single();
+          };
           
-        if (paymentError) {
-          logStep("Error recording payment", { error: paymentError.message });
-          throw new Error(`Error recording payment: ${paymentError.message}`);
-        }
-        
-        logStep("Payment recorded", { id: paymentRecord.id });
-
-        // Always send a password reset email if we created a user
-        if (sendPasswordEmail) {
-          try {
-            logStep("Sending password reset email via admin API", { email });
+          const { data: insertedPayment, error: paymentError } = await supabaseClient
+            .from('membership_payments')
+            .insert(paymentRecord)
+            .select()
+            .single();
             
-            const frontendUrl = Deno.env.get("FRONTEND_URL") || "https://eatmeetclub.lovable.app";
-            logStep("Using frontend URL for password reset", { frontendUrl });
-            
-            const { error: resetError } = await supabaseClient.auth.admin.generateLink({
-              type: "recovery",
-              email,
-              options: {
-                redirectTo: `${frontendUrl}/set-password`
-              }
-            });
-            
-            if (resetError) {
-              logStep("Error sending password reset", { error: resetError.message });
-              // Don't fail the process for password reset error
-            } else {
-              logStep("Password reset email sent successfully via admin API");
-            }
-          } catch (resetError) {
-            logStep("Error requesting password reset", { error: resetError.message });
-            // Don't fail the process if password reset email fails
+          if (paymentError) {
+            logStep("Error recording payment", { error: paymentError.message });
+            // Don't fail the whole process for payment record
+          } else {
+            logStep("Payment recorded", { id: insertedPayment.id });
           }
         }
 
-        // Send welcome email
-        try {
-          await sendWelcomeEmail(email, name);
-          logStep("Welcome email sent successfully");
-        } catch (emailError) {
-          logStep("Error sending welcome email", { error: emailError.message });
-          // Don't fail the process for this error
+        // Send invoice email if requested
+        if (sendInvoiceEmail) {
+          try {
+            logStep("Sending invoice email");
+            await sendInvoiceEmail(paymentId, email, name);
+            invoiceEmailSent = true;
+            logStep("Invoice email sent successfully");
+          } catch (invoiceEmailError) {
+            logStep("Error sending invoice email", { error: invoiceEmailError.message });
+          }
         }
 
         return new Response(
@@ -394,7 +396,10 @@ serve(async (req) => {
             message: "Membership activated successfully",
             userId,
             membershipId: membership.id,
-            needsPassword: true
+            membershipCreated,
+            passwordEmailSent,
+            invoiceEmailSent,
+            invoiceEmailNeeded: !invoiceEmailSent && sendInvoiceEmail
           }),
           {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -408,7 +413,13 @@ serve(async (req) => {
           JSON.stringify({
             success: true,
             message: "Payment verified but database operations failed",
-            simplifiedVerification: true
+            simplifiedVerification: true,
+            userId,
+            passwordEmailSent,
+            membershipCreated: false,
+            invoiceEmailSent,
+            invoiceEmailNeeded: !invoiceEmailSent && sendInvoiceEmail,
+            error: dbError.message
           }),
           {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -416,14 +427,62 @@ serve(async (req) => {
           }
         );
       }
+    } else if (userId && safeMode) {
+      // Safe mode - minimal operations
+      logStep("Operating in safe mode - minimal operations");
+      
+      // Try to send invoice email
+      if (sendInvoiceEmail) {
+        try {
+          logStep("Sending invoice email in safe mode");
+          await sendInvoiceEmail(paymentId, email, name);
+          invoiceEmailSent = true;
+          logStep("Invoice email sent successfully");
+        } catch (invoiceEmailError) {
+          logStep("Error sending invoice email", { error: invoiceEmailError.message });
+        }
+      }
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Payment verified in safe mode",
+          userId,
+          passwordEmailSent,
+          membershipCreated: false,
+          invoiceEmailSent,
+          invoiceEmailNeeded: !invoiceEmailSent && sendInvoiceEmail
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
     } else {
       // No user ID, but payment was verified
       logStep("Payment verified but no user ID available");
+      
+      // Try to send invoice email anyway
+      if (sendInvoiceEmail) {
+        try {
+          logStep("Sending invoice email without user ID");
+          await sendInvoiceEmail(paymentId, email, name);
+          invoiceEmailSent = true;
+          logStep("Invoice email sent successfully");
+        } catch (invoiceEmailError) {
+          logStep("Error sending invoice email", { error: invoiceEmailError.message });
+        }
+      }
+      
       return new Response(
         JSON.stringify({
           success: true,
           message: "Payment verified successfully, but no user account created",
-          simplifiedVerification: true
+          simplifiedVerification: true,
+          passwordEmailSent: false,
+          membershipCreated: false,
+          invoiceEmailSent,
+          invoiceEmailNeeded: !invoiceEmailSent && sendInvoiceEmail
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -493,5 +552,40 @@ async function sendWelcomeEmail(email: string, name: string) {
   } catch (error) {
     logStep("Email error", { error: error.message });
     return false; // Don't break the entire process if email fails
+  }
+}
+
+// Function to send invoice email
+async function sendInvoiceEmail(sessionId: string, email: string, name: string) {
+  try {
+    logStep(`Sending invoice email to ${email} with session ID ${sessionId}`);
+    
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    if (!supabaseUrl) {
+      throw new Error("SUPABASE_URL environment variable is not set");
+    }
+    
+    // Call the invoice email function
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-invoice-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sessionId,
+        email,
+        name
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to send invoice email: ${errorText}`);
+    }
+    
+    return true;
+  } catch (error) {
+    logStep("Invoice email error", { error: error.message });
+    throw error; // Propagate the error to handle it in the calling function
   }
 }

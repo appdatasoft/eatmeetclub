@@ -51,10 +51,11 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
             phone: storedPhone || null,
             address: storedAddress || null,
             isSubscription: true,
-            simplifiedVerification: false, // Set to false to ensure database operations
-            forceCreateUser: true, // Add flag to force user creation in auth table
-            sendPasswordEmail: true, // Add flag to explicitly request password email
-            createMembershipRecord: true // Add flag to ensure membership record creation
+            simplifiedVerification: true, // First try with simplified verification
+            forceCreateUser: true,        // Force user creation in auth table
+            sendPasswordEmail: true,      // Explicitly request password email
+            createMembershipRecord: true, // Ensure membership record creation
+            sendInvoiceEmail: true        // Add flag to request invoice email
           }),
         }
       );
@@ -77,6 +78,39 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       console.log("Payment verification response:", data);
       
       if (data.success) {
+        // If simplified verification was successful but we need to retry full verification
+        if (data.simplifiedVerification && !data.membershipCreated) {
+          console.log("Simplified verification succeeded, attempting full verification");
+          
+          // Try again with regular verification but with safeMode to avoid stack errors
+          const retryResponse = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                paymentId,
+                email: storedEmail,
+                name: storedName || "Guest User",
+                phone: storedPhone || null,
+                address: storedAddress || null,
+                isSubscription: true,
+                simplifiedVerification: false, // Try full verification
+                forceCreateUser: true,
+                sendPasswordEmail: true,
+                createMembershipRecord: true,
+                sendInvoiceEmail: true,
+                safeMode: true // Add safe mode flag to avoid stack depth errors
+              }),
+            }
+          );
+          
+          const retryData = await retryResponse.json();
+          console.log("Full verification retry response:", retryData);
+        }
+        
         toast({
           title: "Payment successful!",
           description: "Your membership has been activated. Check your email for login instructions.",
@@ -87,6 +121,30 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
         localStorage.removeItem('signup_name');
         localStorage.removeItem('signup_phone');
         localStorage.removeItem('signup_address');
+        
+        // Try to send the invoice email directly if the flag indicated it wasn't sent during verification
+        if (data.invoiceEmailNeeded) {
+          try {
+            console.log("Sending invoice email separately");
+            await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-invoice-email`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  sessionId: paymentId,
+                  email: storedEmail,
+                  name: storedName
+                }),
+              }
+            );
+          } catch (emailError) {
+            console.error("Failed to send invoice email separately:", emailError);
+            // Don't fail the process for this
+          }
+        }
         
         return true;
       } else {

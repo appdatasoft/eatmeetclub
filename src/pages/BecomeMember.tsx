@@ -36,6 +36,10 @@ const BecomeMember = () => {
             phone,
             address,
             redirectToCheckout: true,
+            // Add metadata to help with user creation and emails
+            createUser: true,
+            sendPasswordEmail: true,
+            sendInvoiceEmail: true
           }),
         }
       );

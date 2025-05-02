@@ -21,10 +21,29 @@ serve(async (req) => {
 
   try {
     // Parse the request body to get user details
-    const { email, name, phone, address, redirectToCheckout } = await req.json();
+    const { 
+      email, 
+      name, 
+      phone, 
+      address, 
+      redirectToCheckout, 
+      createUser, 
+      sendPasswordEmail, 
+      sendInvoiceEmail 
+    } = await req.json();
+    
     if (!email) throw new Error("No email provided");
 
-    console.log("Creating checkout session for:", { email, name, phone, address, redirectToCheckout });
+    console.log("Creating checkout session for:", { 
+      email, 
+      name, 
+      phone, 
+      address, 
+      redirectToCheckout,
+      createUser,
+      sendPasswordEmail,
+      sendInvoiceEmail
+    });
 
     // Create Supabase client with service role key to bypass RLS
     const supabaseClient = createClient(
@@ -57,7 +76,8 @@ serve(async (req) => {
     }
 
     // Get origin from request or use a default value
-    const origin = req.headers.get("origin") || "http://localhost:5173";
+    const frontendUrl = Deno.env.get("FRONTEND_URL") || "https://eatmeetclub.lovable.app";
+    const origin = req.headers.get("origin") || frontendUrl;
     console.log("Using origin for redirects:", origin);
 
     // If redirectToCheckout is true, create a Stripe checkout session
@@ -78,6 +98,9 @@ serve(async (req) => {
           name: name || '',
           metadata: {
             user_id: userId || '',
+            create_user: createUser ? 'true' : 'false',
+            send_password_email: sendPasswordEmail ? 'true' : 'false',
+            send_invoice_email: sendInvoiceEmail ? 'true' : 'false'
           }
         });
         customerId = customer.id;
@@ -85,7 +108,6 @@ serve(async (req) => {
       }
 
       // Create checkout session with billing address and phone collection
-      // Important: Remove customer_email to make the email field editable
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
@@ -114,14 +136,15 @@ serve(async (req) => {
           address: address || '',
           email: email,
           user_id: userId || '',
+          create_user: createUser ? 'true' : 'false',
+          send_password_email: sendPasswordEmail ? 'true' : 'false',
+          send_invoice_email: sendInvoiceEmail ? 'true' : 'false'
         },
         // Add settings to collect additional information
         billing_address_collection: 'required',
         phone_number_collection: {
           enabled: true,
         },
-        // Remove customer_email to allow the user to edit the email field
-        // When customer_email is set, Stripe pre-fills and disables the email field
       });
 
       console.log("Checkout session created:", { 
@@ -153,6 +176,9 @@ serve(async (req) => {
           email: email,
           is_subscription: 'true',
           user_id: userId || '',
+          create_user: createUser ? 'true' : 'false',
+          send_password_email: sendPasswordEmail ? 'true' : 'false',
+          send_invoice_email: sendInvoiceEmail ? 'true' : 'false'
         },
         receipt_email: email,
         setup_future_usage: 'off_session', // For future subscription payments
