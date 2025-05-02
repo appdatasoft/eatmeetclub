@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -41,6 +41,14 @@ const MembershipPayment = () => {
   const finalPaymentSuccess = success || paymentSuccess;
   const finalPaymentCanceled = canceled || paymentCanceled;
 
+  // Set verification processed flag to true if we detect the success parameter but no session ID
+  // This prevents multiple verification attempts
+  useEffect(() => {
+    if (success && !sessionId && !verificationProcessed) {
+      setVerificationProcessed(true);
+    }
+  }, [success, sessionId, verificationProcessed]);
+
   const handlePaymentError = (errorMessage: string) => {
     setStripeError(errorMessage);
     console.error("Payment error:", errorMessage);
@@ -66,12 +74,14 @@ const MembershipPayment = () => {
       <Navbar />
       <div className="min-h-screen bg-gray-50 py-16 px-4">
         {/* Handle payment verification via URL parameters */}
-        <PaymentVerificationHandler
-          sessionId={finalSessionId}
-          paymentSuccess={finalPaymentSuccess}
-          verificationProcessed={verificationProcessed}
-          setVerificationProcessed={setVerificationProcessed}
-        />
+        {finalSessionId && finalPaymentSuccess && (
+          <PaymentVerificationHandler
+            sessionId={finalSessionId}
+            paymentSuccess={finalPaymentSuccess}
+            verificationProcessed={verificationProcessed}
+            setVerificationProcessed={setVerificationProcessed}
+          />
+        )}
         
         {/* Handle direct payment intent loading from URL */}
         <DirectPaymentIntentLoader

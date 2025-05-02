@@ -1,7 +1,6 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { usePaymentVerification } from "@/hooks/membership/usePaymentVerification";
 
 interface PaymentVerificationHandlerProps {
   sessionId: string | null;
@@ -17,13 +16,15 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
   setVerificationProcessed
 }) => {
   const { toast } = useToast();
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // Effect to verify successful Stripe checkout completion
   useEffect(() => {
     const verifyCheckoutCompletion = async () => {
       // Add verification flag to prevent multiple verification attempts
-      if (sessionId && paymentSuccess && !verificationProcessed) {
+      if (sessionId && paymentSuccess && !verificationProcessed && !isVerifying) {
         setVerificationProcessed(true);
+        setIsVerifying(true);
         
         try {
           // Get user details from localStorage
@@ -34,10 +35,6 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
           
           if (!storedEmail) {
             throw new Error("Missing email for payment verification");
-          }
-          
-          if (!storedName) {
-            throw new Error("Missing name for payment verification");
           }
           
           toast({
@@ -56,7 +53,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
               body: JSON.stringify({
                 paymentId: sessionId,
                 email: storedEmail,
-                name: storedName,
+                name: storedName || "Guest User",
                 phone: storedPhone || null,
                 address: storedAddress || null,
                 isSubscription: true
@@ -65,8 +62,17 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
           );
           
           if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || "Payment verification failed");
+            const errorText = await response.text();
+            let errorMessage = "Payment verification failed";
+            
+            try {
+              const errorData = JSON.parse(errorText);
+              errorMessage = errorData.message || errorMessage;
+            } catch (e) {
+              console.error("Failed to parse error response:", errorText);
+            }
+            
+            throw new Error(errorMessage);
           }
           
           const responseData = await response.json();
@@ -93,6 +99,8 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             description: error.message || "There was a problem verifying your payment",
             variant: "destructive",
           });
+        } finally {
+          setIsVerifying(false);
         }
       }
     };

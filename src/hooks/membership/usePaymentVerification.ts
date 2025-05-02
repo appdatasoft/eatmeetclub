@@ -33,26 +33,20 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
         throw new Error("Missing email for payment verification");
       }
       
-      if (!storedName) {
-        throw new Error("Missing name for payment verification");
-      }
-      
       console.log("Verifying payment with session ID:", paymentId);
       console.log("User details:", { email: storedEmail, name: storedName, phone: storedPhone });
-      
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json"
-      };
       
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
         {
           method: "POST",
-          headers,
+          headers: {
+            "Content-Type": "application/json"
+          },
           body: JSON.stringify({
             paymentId,
             email: storedEmail,
-            name: storedName,
+            name: storedName || "Guest User",
             phone: storedPhone || null,
             address: storedAddress || null,
             isSubscription: true
