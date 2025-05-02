@@ -36,14 +36,15 @@ serve(async (req) => {
       isSubscription = false, 
       simplifiedVerification = false,
       forceCreateUser = false,
-      sendPasswordEmail = false
+      sendPasswordEmail = false,
+      createMembershipRecord = false
     } = await req.json();
 
     if (!paymentId) throw new Error("No payment ID provided");
     if (!email) throw new Error("No email provided");
     if (!name) throw new Error("No name provided");
 
-    logStep("Verifying payment", { paymentId, email, name, isSubscription, simplifiedVerification, forceCreateUser, sendPasswordEmail });
+    logStep("Verifying payment", { paymentId, email, name, isSubscription, simplifiedVerification, forceCreateUser, sendPasswordEmail, createMembershipRecord });
 
     // Create Supabase client with service role key to bypass RLS
     const supabaseClient = createClient(
@@ -94,7 +95,7 @@ serve(async (req) => {
           userId = existingAuthUsers[0].id;
           logStep("User found in auth.users", { userId });
         } else {
-          logStep("User not found in auth.users, checking profiles");
+          logStep("User not found in auth.users table, checking profiles");
           
           // Fallback to checking profiles table
           try {
@@ -126,6 +127,11 @@ serve(async (req) => {
       logStep("Creating new user with email", { email });
       
       try {
+        // Generate a strong random password
+        const tempPassword = Array.from({ length: 16 }, () => 
+          Math.floor(Math.random() * 36).toString(36)
+        ).join('');
+        
         const { data: newUserData, error: newUserError } = await supabaseClient.auth.admin.createUser({
           email,
           email_confirm: true,
@@ -135,7 +141,7 @@ serve(async (req) => {
             address: address || null,
             needs_password: true
           },
-          password: crypto.randomUUID().substring(0, 16) // Random temporary password
+          password: tempPassword // Random temporary password
         });
 
         if (newUserError) {
@@ -145,16 +151,19 @@ serve(async (req) => {
         userId = newUserData.user.id;
         logStep("User created successfully", { userId });
         
-        // If sendPasswordEmail is true, send a password reset email
+        // If sendPasswordEmail is true, always send a password reset email
         if (sendPasswordEmail) {
           try {
             logStep("Sending password reset email", { email });
+            
+            const frontendUrl = Deno.env.get("FRONTEND_URL") || "https://eatmeetclub.lovable.app";
+            logStep("Using frontend URL for password reset", { frontendUrl });
             
             const { error: resetError } = await supabaseClient.auth.admin.generateLink({
               type: "recovery",
               email,
               options: {
-                redirectTo: `${Deno.env.get("FRONTEND_URL") || "https://eatmeetclub.lovable.app"}/set-password`
+                redirectTo: `${frontendUrl}/set-password`
               }
             });
             
@@ -342,16 +351,19 @@ serve(async (req) => {
         
         logStep("Payment recorded", { id: paymentRecord.id });
 
-        // If sendPasswordEmail is true, send a password reset email
+        // Always send a password reset email if we created a user
         if (sendPasswordEmail) {
           try {
             logStep("Sending password reset email via admin API", { email });
+            
+            const frontendUrl = Deno.env.get("FRONTEND_URL") || "https://eatmeetclub.lovable.app";
+            logStep("Using frontend URL for password reset", { frontendUrl });
             
             const { error: resetError } = await supabaseClient.auth.admin.generateLink({
               type: "recovery",
               email,
               options: {
-                redirectTo: `${Deno.env.get("FRONTEND_URL") || "https://eatmeetclub.lovable.app"}/set-password`
+                redirectTo: `${frontendUrl}/set-password`
               }
             });
             

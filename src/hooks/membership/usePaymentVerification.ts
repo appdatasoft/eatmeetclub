@@ -37,7 +37,6 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       console.log("User details:", { email: storedEmail, name: storedName, phone: storedPhone });
       
       // Make anonymous call without any Authorization header
-      // The endpoint should be configured to not require auth for checkout verification
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
         {
@@ -53,8 +52,9 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
             address: storedAddress || null,
             isSubscription: true,
             simplifiedVerification: false, // Set to false to ensure database operations
-            forceCreateUser: true, // Add new flag to force user creation
-            sendPasswordEmail: true // Add flag to explicitly request password email
+            forceCreateUser: true, // Add flag to force user creation in auth table
+            sendPasswordEmail: true, // Add flag to explicitly request password email
+            createMembershipRecord: true // Add flag to ensure membership record creation
           }),
         }
       );
