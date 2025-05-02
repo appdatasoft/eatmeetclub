@@ -11,11 +11,10 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
 
-// Load Stripe outside of a component to avoid recreating it on each render
-// Use environment variable for the publishable key to switch between test and production
-const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "pk_test_51IkMKHBttGiztABC8RlNDjAaaAnoviPnHlOkymIEl0QosgW8yQpOeLeJQSzPyhJkokPFc1t4PsjSPpEaDYdIZS9000AXObBqtA";
-const stripePromise = loadStripe(stripeKey);
+// Initialize stripePromise as null, we'll set it when we have the key
+let stripePromise: Promise<any> | null = null;
 
 interface StripePaymentFormProps {
   clientSecret: string;
@@ -37,6 +36,7 @@ const StripePaymentForm = ({
   const { toast } = useToast();
   const [error, setError] = React.useState<string | null>(null);
   const [isLiveMode, setIsLiveMode] = React.useState<boolean>(false);
+  const [stripeKey, setStripeKey] = React.useState<string>('loading...');
 
   // Check if we're in Stripe live mode
   React.useEffect(() => {
@@ -44,6 +44,10 @@ const StripePaymentForm = ({
       // @ts-ignore - _keyMode is not in the type definitions but exists on the object
       const mode = stripe._keyMode;
       setIsLiveMode(mode === 'live');
+      
+      // Get the key being used
+      const key = stripe._apiKey || '';
+      setStripeKey(key);
     }
   }, [stripe]);
 
@@ -176,8 +180,75 @@ const StripePaymentElement = ({
   onPaymentSuccess,
   onPaymentError
 }: StripePaymentElementProps) => {
+  const [stripePublishableKey, setStripePublishableKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  // Fetch the Stripe publishable key from the server
+  useEffect(() => {
+    const fetchStripeKey = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/get-stripe-publishable-key`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json"
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to fetch Stripe key");
+        }
+        
+        const data = await response.json();
+        if (data.publishableKey) {
+          setStripePublishableKey(data.publishableKey);
+          // Load Stripe outside of the component with the fetched key
+          stripePromise = loadStripe(data.publishableKey);
+        } else {
+          throw new Error("No Stripe publishable key returned");
+        }
+      } catch (err: any) {
+        console.error("Error fetching Stripe key:", err);
+        setError(err.message || "Failed to load Stripe");
+        toast({
+          title: "Configuration Error",
+          description: "Failed to load payment system. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStripeKey();
+  }, [toast]);
+
   if (!clientSecret) {
     return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading payment system...</span>
+      </div>
+    );
+  }
+
+  if (error || !stripePromise) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md">
+        <p className="font-medium">Payment system error</p>
+        <p>{error || "Unable to load the payment system. Please try again later."}</p>
+      </div>
+    );
   }
 
   return (
