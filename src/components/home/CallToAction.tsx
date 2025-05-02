@@ -22,7 +22,7 @@ const CallToAction = () => {
       localStorage.setItem('signup_email', email);
       localStorage.setItem('signup_name', name);
       
-      // Create a payment intent directly
+      // Create a checkout session directly
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
         {
@@ -33,23 +33,27 @@ const CallToAction = () => {
           body: JSON.stringify({
             email,
             name,
+            redirectToCheckout: true, // New flag to request Stripe checkout URL
           }),
         }
       );
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create payment intent");
+        throw new Error(errorData.message || "Failed to create checkout session");
       }
       
       const data = await response.json();
-      console.log("Payment intent created:", data);
+      console.log("Checkout session created:", data);
       
-      if (data.clientSecret) {
-        // Redirect to the payment page with the client secret
+      if (data.url) {
+        // Redirect directly to Stripe checkout URL
+        window.location.href = data.url;
+      } else if (data.clientSecret) {
+        // Fallback to our payment page if only client secret is provided
         navigate(`/membership-payment?intent=${data.paymentIntentId}`);
       } else {
-        throw new Error("No client secret returned");
+        throw new Error("No checkout URL or client secret returned");
       }
     } catch (error: any) {
       console.error("Error starting checkout:", error);

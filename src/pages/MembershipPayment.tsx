@@ -13,6 +13,9 @@ const MembershipPayment = () => {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const directIntentId = searchParams.get('intent');
+  const sessionId = searchParams.get('session_id');
+  const success = searchParams.get('success') === 'true';
+  const canceled = searchParams.get('canceled') === 'true';
   const [directClientSecret, setDirectClientSecret] = useState<string | null>(null);
   const [isLoadingIntent, setIsLoadingIntent] = useState(false);
   
@@ -22,7 +25,7 @@ const MembershipPayment = () => {
     isProcessing,
     paymentCanceled,
     paymentSuccess,
-    sessionId,
+    sessionId: hookSessionId,
     formErrors,
     networkError,
     clientSecret,
@@ -30,6 +33,55 @@ const MembershipPayment = () => {
     handleCancel,
     handlePaymentSuccess
   } = useMembershipPayment();
+
+  // Use the session ID from the URL if available
+  const finalSessionId = sessionId || hookSessionId;
+  const finalPaymentSuccess = success || paymentSuccess;
+  const finalPaymentCanceled = canceled || paymentCanceled;
+
+  // Effect to verify successful Stripe checkout completion
+  useEffect(() => {
+    const verifyCheckoutCompletion = async () => {
+      if (finalSessionId && finalPaymentSuccess) {
+        try {
+          // Get user details from localStorage
+          const storedEmail = localStorage.getItem('signup_email');
+          const storedName = localStorage.getItem('signup_name');
+          
+          if (!storedEmail) {
+            throw new Error("Missing email for payment verification");
+          }
+          
+          // Call the verify endpoint to confirm subscription
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                paymentId: finalSessionId,
+                email: storedEmail,
+                name: storedName || 'Guest User',
+                isSubscription: true
+              }),
+            }
+          );
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Payment verification failed");
+          }
+        } catch (error: any) {
+          console.error("Error verifying checkout completion:", error);
+          setValidationError(error.message || "There was a problem verifying your payment");
+        }
+      }
+    };
+    
+    verifyCheckoutCompletion();
+  }, [finalSessionId, finalPaymentSuccess]);
 
   // Load direct intent if provided in URL
   useEffect(() => {
@@ -116,16 +168,16 @@ const MembershipPayment = () => {
               
               <div className="p-6">
                 <PaymentAlerts 
-                  paymentSuccess={paymentSuccess}
-                  sessionId={sessionId}
-                  paymentCanceled={paymentCanceled}
+                  paymentSuccess={finalPaymentSuccess}
+                  sessionId={finalSessionId}
+                  paymentCanceled={finalPaymentCanceled}
                   networkError={networkError}
                   formErrors={formErrors}
                   stripeError={stripeError}
                   validationError={validationError}
                 />
                 
-                {!paymentSuccess && directClientSecret && (
+                {!finalPaymentSuccess && directClientSecret && (
                   <>
                     <div className="mb-6">
                       <h3 className="text-lg font-medium mb-4">Complete your membership payment</h3>
@@ -141,7 +193,7 @@ const MembershipPayment = () => {
                   </>
                 )}
                 
-                {!paymentSuccess && !directClientSecret && (
+                {!finalPaymentSuccess && !directClientSecret && !finalSessionId && (
                   <MembershipPaymentForm
                     membershipFee={membershipFee}
                     onSubmit={onSubmitWrapper}

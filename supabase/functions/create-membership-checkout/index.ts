@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { stripe } from "../_shared/stripe.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
@@ -21,10 +20,10 @@ serve(async (req) => {
 
   try {
     // Parse the request body to get user details
-    const { email, name, phone, address } = await req.json();
+    const { email, name, phone, address, redirectToCheckout } = await req.json();
     if (!email) throw new Error("No email provided");
 
-    console.log("Creating checkout session for:", { email, name, phone, address });
+    console.log("Creating checkout session for:", { email, name, phone, address, redirectToCheckout });
 
     // Create Supabase client with service role key to bypass RLS
     const supabaseClient = createClient(
@@ -60,36 +59,110 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || "http://localhost:5173";
     console.log("Using origin for redirects:", origin);
 
-    // Instead of creating a checkout session, create a PaymentIntent or SetupIntent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: 2500, // $25.00 in cents
-      currency: 'usd',
-      payment_method_types: ['card'],
-      metadata: {
-        name: name || '',
-        phone: phone || '',
-        address: address || '',
+    // If redirectToCheckout is true, create a Stripe checkout session
+    if (redirectToCheckout) {
+      // Create a customer if they don't exist
+      const customers = await stripe.customers.list({
         email: email,
-        is_subscription: 'true',
-        user_id: userId || '',
-      },
-      receipt_email: email,
-      setup_future_usage: 'off_session', // For future subscription payments
-    });
+        limit: 1,
+      });
 
-    console.log("Payment intent created:", { id: paymentIntent.id, client_secret: paymentIntent.client_secret ? 'exists' : 'undefined' });
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
+      let customerId;
+      if (customers.data.length > 0) {
+        customerId = customers.data[0].id;
+        console.log("Using existing Stripe customer:", customerId);
+      } else {
+        const customer = await stripe.customers.create({
+          email: email,
+          name: name || '',
+          metadata: {
+            user_id: userId || '',
+          }
+        });
+        customerId = customer.id;
+        console.log("Created new Stripe customer:", customerId);
       }
-    );
+
+      // Create checkout session
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: 'Monthly Membership',
+                description: 'Access to exclusive dining experiences',
+              },
+              unit_amount: 2500, // $25.00 in cents
+              recurring: {
+                interval: 'month',
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'subscription',
+        success_url: `${origin}/membership-payment?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/membership-payment?canceled=true`,
+        metadata: {
+          name: name || '',
+          phone: phone || '',
+          address: address || '',
+          email: email,
+          user_id: userId || '',
+        },
+      });
+
+      console.log("Checkout session created:", { 
+        id: session.id, 
+        url: session.url ? 'exists' : 'undefined' 
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          url: session.url,
+          sessionId: session.id,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    } else {
+      // Otherwise create a PaymentIntent or SetupIntent (previous behavior)
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: 2500, // $25.00 in cents
+        currency: 'usd',
+        payment_method_types: ['card'],
+        metadata: {
+          name: name || '',
+          phone: phone || '',
+          address: address || '',
+          email: email,
+          is_subscription: 'true',
+          user_id: userId || '',
+        },
+        receipt_email: email,
+        setup_future_usage: 'off_session', // For future subscription payments
+      });
+
+      console.log("Payment intent created:", { id: paymentIntent.id, client_secret: paymentIntent.client_secret ? 'exists' : 'undefined' });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          clientSecret: paymentIntent.client_secret,
+          paymentIntentId: paymentIntent.id,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
   } catch (error) {
     console.error("Error:", error.message);
     
