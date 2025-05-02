@@ -25,8 +25,9 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
   // Effect to verify successful Stripe checkout completion
   useEffect(() => {
     const verifyCheckoutCompletion = async () => {
-      // Add verification flag to prevent multiple verification attempts
+      // Verify only once with valid session ID when success parameter is present
       if (sessionId && paymentSuccess && !verificationProcessed && !isVerifying) {
+        console.log("Starting payment verification with session ID:", sessionId);
         setVerificationProcessed(true);
         
         try {
@@ -35,11 +36,17 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             description: "Please wait while we confirm your membership...",
           });
           
-          // Use the reusable payment verification hook
+          // Use the modified verification hook that doesn't need auth headers
           const success = await verifyPayment(sessionId);
           
           if (success) {
             console.log("Payment verified successfully");
+            toast({
+              title: "Welcome to our membership!",
+              description: "Your account has been activated. Please check your email for login instructions.",
+            });
+          } else {
+            console.log("Payment verification returned failure");
           }
         } catch (error: any) {
           console.error("Error verifying checkout completion:", error);
@@ -50,6 +57,10 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             variant: "destructive",
           });
         }
+      } else if (sessionId && paymentSuccess && verificationProcessed) {
+        console.log("Payment verification already processed, skipping");
+      } else if (!sessionId && paymentSuccess) {
+        console.log("Payment success flag present but no session ID available");
       }
     };
     
