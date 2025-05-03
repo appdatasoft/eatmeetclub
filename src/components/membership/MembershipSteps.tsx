@@ -1,17 +1,18 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useMembershipVerification } from "@/hooks/membership/useMembershipVerification";
-import { useCheckoutSession } from "@/hooks/membership/useCheckoutSession";
-import useMembershipSubmission from "@/hooks/membership/useMembershipSubmission";
 import { membershipFormSchema, MembershipFormValues } from "@/lib/schemas/membership";
 
-const MembershipSteps = () => {
-  const { handleMembershipSubmit, isLoading } = useMembershipSubmission();
+interface MembershipStepsProps {
+  onSubmit: (values: MembershipFormValues) => Promise<void>;
+  isLoading: boolean;
+}
 
+const MembershipSteps: React.FC<MembershipStepsProps> = ({ onSubmit, isLoading }) => {
   const form = useForm<MembershipFormValues>({
     resolver: zodResolver(membershipFormSchema),
     defaultValues: {
@@ -22,14 +23,14 @@ const MembershipSteps = () => {
     },
   });
 
-  const onSubmit = async (values: MembershipFormValues) => {
-    await handleMembershipSubmit(values);
+  const handleSubmit = async (values: MembershipFormValues) => {
+    await onSubmit(values);
   };
 
   return (
     <div className="p-6 max-w-xl mx-auto">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           <h2 className="text-xl font-bold">Membership Information</h2>
 
           <FormField
