@@ -1,99 +1,72 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control, pragma, expires",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Max-Age": "86400",
-};
+// supabase/functions/check-membership-status/index.ts
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle preflight CORS request
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: corsHeaders,
-      status: 204,
+    return new Response("ok", {
+      headers: corsHeaders
     });
   }
 
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Parse the request body
-    const { email, userId } = await req.json();
-
-    // If userId is provided, check for active membership
-    if (userId) {
-      console.log("Checking membership status for user ID:", userId);
-      
-      const { data: memberships, error: membershipError } = await supabase
-        .from('memberships')
-        .select('id, status, renewal_at')
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (membershipError) {
-        throw membershipError;
-      }
-
-      // Check if membership exists and is active (not expired)
-      const hasActiveMembership = memberships && 
-        memberships.status === 'active' && 
-        (!memberships.renewal_at || new Date(memberships.renewal_at) > new Date());
-
-      return new Response(
-        JSON.stringify({
-          hasActiveMembership,
-          membership: memberships
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
-      );
+    const { email } = await req.json();
+    if (!email) {
+      return new Response(JSON.stringify({ error: "Email is required" }), {
+        status: 400,
+        headers: corsHeaders
+      });
     }
 
-    // If email is provided, check if user exists
-    if (email) {
-      console.log("Checking if user exists with email:", email);
-      const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) {
-        throw authError;
-      }
+    const { data, error } = await supabase
+      .from("memberships")
+      .select("*, user:users(email)")
+      .eq("user_email", email)
+      .single();
 
-      // Filter users by email
-      const matchingUsers = users.filter(u => u.email === email);
-
-      return new Response(
-        JSON.stringify({
-          users: matchingUsers,
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
-      );
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: corsHeaders
+      });
     }
 
-    throw new Error("Either email or userId must be provided");
+    const isActive = data?.status === "active" && new Date(data.expires_at) > new Date();
+    const remainingDays = data?.expires_at
+      ? Math.ceil((new Date(data.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      : 0;
 
-  } catch (error) {
-    console.error("Error in check-membership-status function:", error.message);
-    
+    const proratedAmount = isActive ? 0 : Math.max(5, 25 - (remainingDays * (25 / 30))); // Example calc
+
     return new Response(
       JSON.stringify({
-        error: error.message || "An error occurred while checking membership status",
+        active: isActive,
+        remainingDays,
+        proratedAmount: parseFloat(proratedAmount.toFixed(2))
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
+        status: 200,
+        headers: corsHeaders
       }
     );
+  } catch (err) {
+    console.error("check-membership-status error:", err);
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), {
+      status: 500,
+      headers: corsHeaders
+    });
   }
 });
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
+};
