@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import usePaymentVerification from "@/hooks/membership/usePaymentVerification";
 import { useBackupEmail } from "@/hooks/membership/useBackupEmail";
+import { useWelcomeEmail } from "@/hooks/membership/useWelcomeEmail";
 
 interface PaymentVerificationHandlerProps {
   sessionId: string | null;
@@ -25,6 +26,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
     setIsProcessing
   });
   const { sendDirectBackupEmail } = useBackupEmail();
+  const { sendWelcomeEmail } = useWelcomeEmail();
 
   // Effect to verify successful Stripe checkout completion
   useEffect(() => {
@@ -92,6 +94,13 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             // Clear checkout initiated flag after successful verification
             sessionStorage.removeItem('checkout_initiated');
             
+            // Send welcome email with invoice link
+            try {
+              await sendWelcomeEmail(storedEmail, storedName || 'Member', sessionId);
+            } catch (welcomeEmailError) {
+              console.error("Failed to send welcome email with invoice link:", welcomeEmailError);
+            }
+            
             toast({
               title: "Welcome to our membership!",
               description: "Your account has been activated. Please check your email for login instructions and invoice.",
@@ -109,8 +118,10 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             // Send a direct email manually as fallback
             try {
               await sendDirectBackupEmail(storedEmail, storedName || 'Member', sessionId);
+              // Also try to send welcome email with invoice link as fallback
+              await sendWelcomeEmail(storedEmail, storedName || 'Member', sessionId);
             } catch (emailErr) {
-              console.error("Failed to send backup email:", emailErr);
+              console.error("Failed to send backup emails:", emailErr);
             }
           } else {
             console.log("Payment verification returned failure");
@@ -141,7 +152,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
     };
     
     verifyCheckoutCompletion();
-  }, [sessionId, paymentSuccess, verificationProcessed, toast, setVerificationProcessed, verifyPayment, isVerifying, emailCheckDone, verificationAttempts, sendDirectBackupEmail]);
+  }, [sessionId, paymentSuccess, verificationProcessed, toast, setVerificationProcessed, verifyPayment, isVerifying, emailCheckDone, verificationAttempts, sendDirectBackupEmail, sendWelcomeEmail]);
 
   return null; // This component doesn't render anything
 };

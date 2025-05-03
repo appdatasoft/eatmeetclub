@@ -1,6 +1,6 @@
 
 /**
- * Hook for sending invoice emails
+ * Hook for sending invoice emails and retrieving invoice links
  */
 export const useInvoiceEmail = () => {
   /**
@@ -41,8 +41,47 @@ export const useInvoiceEmail = () => {
       return false;
     }
   };
+  
+  /**
+   * Get the invoice receipt URL for a given session ID
+   * @param sessionId Stripe session ID
+   * @returns Receipt URL or null if not found
+   */
+  const getInvoiceReceiptUrl = async (sessionId: string) => {
+    try {
+      console.log("Getting invoice receipt URL for session", sessionId);
+      const timestamp = new Date().getTime();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/get-invoice-receipt?t=${timestamp}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
+          },
+          body: JSON.stringify({
+            sessionId
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to get invoice receipt: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      return data.receiptUrl || null;
+      
+    } catch (error) {
+      console.error("Error getting invoice receipt URL:", error);
+      return null;
+    }
+  };
 
-  return { sendInvoiceEmail };
+  return { sendInvoiceEmail, getInvoiceReceiptUrl };
 };
 
 export default useInvoiceEmail;

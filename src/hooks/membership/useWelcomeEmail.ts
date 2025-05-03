@@ -1,15 +1,33 @@
 
+import { useInvoiceEmail } from "./useInvoiceEmail";
+
 /**
  * Hook for handling welcome email functionality
  */
 export const useWelcomeEmail = () => {
+  const { getInvoiceReceiptUrl } = useInvoiceEmail();
+  
   /**
    * Sends a welcome email to the user with a password reset link
    */
-  const sendWelcomeEmail = async (email: string, name: string) => {
+  const sendWelcomeEmail = async (email: string, name: string, sessionId?: string) => {
     try {
       // Get the current origin for generating correct URLs
       const currentOrigin = window.location.origin;
+      
+      // If session ID is provided, try to get the receipt URL
+      let receiptUrl = "";
+      if (sessionId) {
+        try {
+          const url = await getInvoiceReceiptUrl(sessionId);
+          if (url) {
+            receiptUrl = `<p>You can view your invoice receipt <a href="${url}" style="color: #4a5568; font-weight: bold;" target="_blank">here</a>.</p>`;
+          }
+        } catch (receiptError) {
+          console.error("Failed to get receipt URL:", receiptError);
+          // Continue without the receipt URL
+        }
+      }
       
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-custom-email`,
@@ -34,6 +52,7 @@ export const useWelcomeEmail = () => {
                 </div>
                 <p>If the button doesn't work, you can copy and paste this URL into your browser:</p>
                 <p style="word-break: break-all;">${currentOrigin}/set-password?email=${encodeURIComponent(email)}</p>
+                ${receiptUrl}
                 <p>Looking forward to seeing you at our upcoming dining experiences!</p>
                 <p>Best regards,<br>The Eat Meet Club Team</p>
               </div>
