@@ -71,6 +71,8 @@ const MembershipSteps = ({ onSubmit, isLoading }: MembershipStepsProps) => {
           {
             createUser: !userExists, // Only create user if they don't exist
             sendPasswordEmail: !userExists, // Only send password email for new users
+            sendInvoiceEmail: true, // Added missing parameter
+            checkExisting: true, // Added missing parameter
           }
         );
         

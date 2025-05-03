@@ -46,6 +46,8 @@ export const useMembershipSubmission = () => {
         {
           createUser: !userExists,
           sendPasswordEmail: !userExists,
+          sendInvoiceEmail: true, // Added missing parameter
+          checkExisting: true, // Added missing parameter
         }
       );
 
