@@ -2,7 +2,6 @@
 # A string used to distinguish different Supabase projects on the same host. Defaults to the working
 # directory name when running `supabase init`.
 project_id = "wocfwpedauuhlrfugxuu"
-org_id = "2022"
 
 [api]
 # Port to use for the API URL.
@@ -63,7 +62,6 @@ enable_confirmations = false
 # Custom SMTP configuration for auth emails.
 [auth.email.smtp]
 sender_name = "Eat Meet Club"
-sender_address = "no-reply@eatmeetclub.com"
 
 [analytics]
 enabled = false
