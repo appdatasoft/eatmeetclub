@@ -10,7 +10,7 @@ export const useInvoiceEmail = () => {
     active: boolean;
     remainingDays: number;
     proratedAmount: number;
-  }> => {
+  } | null> => {
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-membership-status`,
@@ -28,14 +28,17 @@ export const useInvoiceEmail = () => {
         throw new Error("Failed to check membership status");
       }
 
-      return await response.json();
+      const data = await response.json();
+      
+      // If no membership data is found or response indicates no membership
+      if (data.error || !data.hasOwnProperty('active')) {
+        return null;
+      }
+      
+      return data;
     } catch (error) {
       console.error("checkActiveMembership error:", error);
-      return {
-        active: false,
-        remainingDays: 0,
-        proratedAmount: 25.0
-      };
+      return null;
     }
   };
 

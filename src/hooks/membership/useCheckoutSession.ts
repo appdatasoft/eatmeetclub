@@ -31,25 +31,22 @@ export const useCheckoutSession = () => {
       if (options.checkExisting) {
         const membership = await checkActiveMembership(email);
 
-        if (membership) {
-          const proratedAmount = membership.proratedAmount || 25.0;
+        if (membership && membership.active) {
+          toast({
+            title: "Active Membership",
+            description: "You already have an active membership that doesn't need renewal yet.",
+            variant: "default",
+          });
+          throw new Error("User already has an active membership");
+        }
 
-          if (proratedAmount <= 0) {
-            toast({
-              title: "Active Membership",
-              description: "You already have an active membership that doesn't need renewal yet.",
-              variant: "default",
-            });
-            throw new Error("User already has an active membership");
-          }
-
-          if (membership.remainingDays < 15) {
-            toast({
-              title: "Existing Membership",
-              description: `You already have a membership with ${membership.remainingDays} days remaining. You'll be charged a prorated amount of $${proratedAmount.toFixed(2)}.`,
-              variant: "default",
-            });
-          }
+        // Only show prorated amount toast if there are actual remaining days
+        if (membership && membership.remainingDays > 0 && membership.proratedAmount > 0) {
+          toast({
+            title: "Existing Membership",
+            description: `You have a membership with ${membership.remainingDays} days remaining. You'll be charged a prorated amount of $${membership.proratedAmount.toFixed(2)}.`,
+            variant: "default",
+          });
         }
       }
 
