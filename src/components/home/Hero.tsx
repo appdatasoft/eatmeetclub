@@ -13,10 +13,7 @@ const Hero = () => {
     <div 
       className="w-full py-12 md:py-24 relative h-[500px]"
       style={{ 
-        backgroundImage: `url('/lovable-uploads/37ba24a5-e795-4364-9d0c-e41383e1dc60.png')`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundColor: "#B5642A" // Fallback color that matches the image
+        backgroundColor: "#B5642A" // Use solid color as fallback without depending on image
       }}
     >
       <div className="absolute inset-0 bg-black bg-opacity-30"></div>
