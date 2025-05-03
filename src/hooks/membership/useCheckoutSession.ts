@@ -1,4 +1,5 @@
 
+// src/hooks/membership/useCheckoutSession.ts
 import { useInvoiceEmail } from "./useInvoiceEmail";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +32,7 @@ export const useCheckoutSession = () => {
         const membership = await checkActiveMembership(email);
 
         if (membership) {
-          const proratedAmount = membership.proratedAmount || 25.00;
+          const proratedAmount = membership.proratedAmount || 25.0;
 
           if (proratedAmount <= 0) {
             toast({
@@ -77,3 +78,30 @@ export const useCheckoutSession = () => {
             address,
             redirectToCheckout: true,
             createUser: options.createUser,
+            sendPasswordEmail: options.sendPasswordEmail,
+            sendInvoiceEmail: options.sendInvoiceEmail,
+            forceCreateUser: options.createUser,
+            createMembershipRecord: true,
+            timestamp: new Date().getTime()
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create checkout session");
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error("Error creating checkout session:", error);
+      throw error;
+    }
+  };
+
+  return {
+    createCheckoutSession
+  };
+};
+
+export default useCheckoutSession;
