@@ -1,5 +1,4 @@
 
-# A string used to distinguish different Supabase projects on the same host
 project_id = "wocfwpedauuhlrfugxuu"
 
 [api]
