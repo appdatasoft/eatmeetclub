@@ -71,10 +71,23 @@ export const useUserStorage = () => {
     sessionStorage.removeItem('checkout_initiated');
   };
 
+  /**
+   * Get user details from local storage
+   */
+  const getUserDetails = () => {
+    const email = localStorage.getItem('signup_email');
+    const name = localStorage.getItem('signup_name') || (email ? email.split('@')[0] : 'Member');
+    const phone = localStorage.getItem('signup_phone');
+    const address = localStorage.getItem('signup_address');
+    
+    return { email, name, phone, address };
+  };
+
   return {
     storeUserDetails,
     verifyStoredDetails,
-    clearUserDetails
+    clearUserDetails,
+    getUserDetails
   };
 };
 

@@ -1,33 +1,19 @@
 
+import { useUserStorage as useMainUserStorage } from "../useUserStorage";
+
 /**
  * Hook for managing user data in local storage during payment verification
+ * This is a wrapper around the main useUserStorage hook for backward compatibility
  */
 export const useUserStorage = () => {
-  /**
-   * Get user details from local storage
-   */
-  const getUserDetails = () => {
-    const email = localStorage.getItem('signup_email');
-    const name = localStorage.getItem('signup_name') || (email ? email.split('@')[0] : 'Member');
-    const phone = localStorage.getItem('signup_phone');
-    const address = localStorage.getItem('signup_address');
-    
-    return { email, name, phone, address };
-  };
+  // Import main hook's functionality
+  const mainUserStorage = useMainUserStorage();
   
-  /**
-   * Clear user details from local storage
-   */
-  const clearUserDetails = () => {
-    localStorage.removeItem('signup_email');
-    localStorage.removeItem('signup_name');
-    localStorage.removeItem('signup_phone');
-    localStorage.removeItem('signup_address');
-    sessionStorage.removeItem('checkout_initiated');
-  };
-  
+  // Return only the methods used in payment verification
   return {
-    getUserDetails,
-    clearUserDetails
+    getUserDetails: mainUserStorage.getUserDetails,
+    clearUserDetails: mainUserStorage.clearUserDetails
   };
 };
+
+export default useUserStorage;

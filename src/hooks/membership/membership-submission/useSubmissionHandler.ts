@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAccountCreation } from "../useAccountCreation";
 import { useWelcomeEmail } from "../useWelcomeEmail";
 import { useCheckoutSession } from "../useCheckoutSession";
-import { useUserStorage } from "../payment-verification/useUserStorage";
+import { useUserStorage } from "../useUserStorage";
 import { useSubmissionStorage } from "./useSubmissionStorage";
 import { useSubmissionValidation } from "./useSubmissionValidation";
 

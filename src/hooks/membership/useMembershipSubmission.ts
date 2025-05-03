@@ -1,5 +1,5 @@
 
-import { useSubmissionHandler } from "./membership-submission/useSubmissionHandler";
+import { useSubmissionHandler } from "./membership-submission";
 
 /**
  * Main hook for membership submission
