@@ -31,17 +31,20 @@ serve(async (req) => {
     // Get current date for comparison
     const now = new Date();
     
-    // First, get user ID from auth.users
-    const { data: userData, error: userError } = await supabaseClient
-      .from('auth.users')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
+    // Get user ID using the auth admin API
+    const { data: { users }, error: userError } = await supabaseClient.auth.admin.listUsers({
+      filter: {
+        email: email
+      }
+    });
       
     if (userError) {
       console.error("Error querying user:", userError);
       throw new Error(`Error querying user: ${userError.message}`);
     }
+    
+    // Get the first user that matches the email
+    const userData = users?.[0];
     
     if (!userData) {
       console.log("No user found with email:", email);
