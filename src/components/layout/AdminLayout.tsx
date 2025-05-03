@@ -129,14 +129,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                         Manage Users
                       </Link>
                     </li>
-                    <li>
-                      <Link 
-                        to="/dashboard/admin-settings" 
-                        className={`block px-3 py-2 rounded-md ${isActive('/dashboard/admin-settings')}`}
-                      >
-                        Advanced Settings
-                      </Link>
-                    </li>
                   </ul>
                 </nav>
               </div>

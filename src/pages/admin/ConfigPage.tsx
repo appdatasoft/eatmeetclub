@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface ConfigFormValues {
   EVENT_CREATION_FEE: string;
+  MEMBERSHIP_FEE: string;
 }
 
 interface ConfigItem {
@@ -28,6 +29,7 @@ const ConfigPage = () => {
   const form = useForm<ConfigFormValues>({
     defaultValues: {
       EVENT_CREATION_FEE: '50',
+      MEMBERSHIP_FEE: '25',
     }
   });
 
@@ -50,6 +52,7 @@ const ConfigPage = () => {
         
         // Initialize with default values first
         configMap['EVENT_CREATION_FEE'] = '50';
+        configMap['MEMBERSHIP_FEE'] = '25';
         
         // Then override with actual values from database
         data.forEach((item: ConfigItem) => {
@@ -70,7 +73,7 @@ const ConfigPage = () => {
     };
     
     fetchConfigs();
-  }, [toast]);
+  }, [toast, form]);
 
   const onSubmit = async (values: ConfigFormValues) => {
     try {
@@ -83,7 +86,7 @@ const ConfigPage = () => {
       }
       
       // Update event creation fee
-      const { error } = await supabase
+      const { error: eventFeeError } = await supabase
         .from('app_config')
         .update({ 
           value: values.EVENT_CREATION_FEE,
@@ -92,8 +95,22 @@ const ConfigPage = () => {
         })
         .eq('key', 'EVENT_CREATION_FEE');
       
-      if (error) {
-        throw error;
+      if (eventFeeError) {
+        throw eventFeeError;
+      }
+
+      // Update or insert membership fee
+      const { error: membershipFeeError } = await supabase
+        .from('app_config')
+        .upsert({ 
+          key: 'MEMBERSHIP_FEE',
+          value: values.MEMBERSHIP_FEE,
+          updated_by: sessionData.session.user.id,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+      
+      if (membershipFeeError) {
+        throw membershipFeeError;
       }
       
       toast({
@@ -123,9 +140,9 @@ const ConfigPage = () => {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Application Settings</CardTitle>
+            <CardTitle>Event Configuration</CardTitle>
             <CardDescription>
-              Manage the core settings for your application
+              Manage event-related settings for your application
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -152,6 +169,33 @@ const ConfigPage = () => {
                       </FormControl>
                       <FormDescription>
                         The amount charged to users when creating a new event
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="MEMBERSHIP_FEE"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Monthly Membership Fee (USD)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <span className="text-gray-500">$</span>
+                          </div>
+                          <Input 
+                            type="number" 
+                            placeholder="25.00"
+                            className="pl-8" 
+                            {...field}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        The monthly subscription fee for membership
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

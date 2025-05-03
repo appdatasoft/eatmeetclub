@@ -1,3 +1,4 @@
+
 import { ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
@@ -145,12 +146,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                         <div className="px-3 py-1 text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Admin
                         </div>
-                        <Link 
-                          to="/dashboard/admin-settings" 
-                          className={`block px-3 py-2 rounded-md ${isActive('/dashboard/admin-settings')}`}
-                        >
-                          Admin Settings
-                        </Link>
                         <Link 
                           to="/admin" 
                           className={`block px-3 py-2 rounded-md ${isActive('/admin')}`}
