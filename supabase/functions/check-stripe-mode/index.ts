@@ -28,12 +28,24 @@ serve(async (req) => {
       .eq("key", "stripe_mode")
       .maybeSingle();
 
+    // If there's a database error, log it and default to test mode
     if (error) {
       console.error("Database error:", error);
+      // Create the admin_config table if it doesn't exist
+      try {
+        const { error: createError } = await supabase.rpc('create_admin_config_if_not_exists');
+        if (createError) {
+          console.error("Failed to create admin_config table:", createError);
+        }
+      } catch (e) {
+        console.error("Failed to create admin_config table:", e);
+      }
+      
       return new Response(JSON.stringify({ 
         mode: "test",
         error: error.message,
-        fallback: true
+        fallback: true,
+        timestamp: new Date().toISOString()
       }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -54,7 +66,8 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       mode: "test", 
       error: "Internal Server Error",
-      fallback: true
+      fallback: true,
+      timestamp: new Date().toISOString()
     }), {
       status: 200, // Return 200 even on error but with fallback data
       headers: { ...corsHeaders, "Content-Type": "application/json" }

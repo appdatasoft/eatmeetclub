@@ -2,6 +2,7 @@
 # A string used to distinguish different Supabase projects on the same host. Defaults to the working
 # directory name when running `supabase init`.
 project_id = "wocfwpedauuhlrfugxuu"
+org_id = "2022"
 
 [api]
 # Port to use for the API URL.
@@ -41,9 +42,9 @@ file_size_limit = "50MiB"
 [auth]
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://localhost:3000"
+site_url = "https://example.com"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://localhost:3000"]
+additional_redirect_urls = ["https://example.com"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 seconds (one
 # week).
 jwt_expiry = 3600
@@ -59,113 +60,21 @@ double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
 enable_confirmations = false
 
-# Use an external OAuth provider. The full list of providers are: "apple", "azure", "bitbucket",
-# "discord", "facebook", "github", "gitlab", "google", "keycloak", "linkedin", "notion", "twitch",
-# "twitter", "slack", "spotify", "workos", "zoom".
-[auth.external.apple]
-enabled = false
-client_id = ""
-secret = ""
-# Overrides the default auth redirectUrl.
-redirect_uri = ""
-# Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
-# or any other third-party OIDC providers.
-url = ""
+# Custom SMTP configuration for auth emails.
+[auth.email.smtp]
+sender_name = "Eat Meet Club"
+sender_address = "no-reply@eatmeetclub.com"
 
-[auth.external.azure]
+[analytics]
 enabled = false
-client_id = ""
-secret = ""
-url = ""
+port = 54327
+vector_port = 54328
 
-[auth.external.bitbucket]
-enabled = false
-client_id = ""
-secret = ""
-
-[auth.external.discord]
-enabled = false
-client_id = ""
-secret = ""
-
-[auth.external.facebook]
-enabled = false
-client_id = ""
-secret = ""
-
-[auth.external.github]
-enabled = false
-client_id = ""
-secret = ""
-
-[auth.external.gitlab]
-enabled = false
-client_id = ""
-secret = ""
-url = ""
-
-[auth.external.google]
-enabled = false
-client_id = ""
-secret = ""
-
-[auth.external.keycloak]
-enabled = false
-client_id = ""
-secret = ""
-url = ""
-
-[auth.external.linkedin]
-enabled = false
-client_id = ""
-secret = ""
-
-[auth.external.notion]
-enabled = false
-client_id = ""
-secret = ""
-url = ""
-
-[auth.external.twitch]
-enabled = false
-client_id = ""
-secret = ""
-
-[auth.external.twitter]
-enabled = false
-client_id = ""
-secret = ""
-
-[auth.external.slack]
-enabled = false
-client_id = ""
-secret = ""
-
-[auth.external.spotify]
-enabled = false
-client_id = ""
-secret = ""
-
-[auth.external.workos]
-enabled = false
-client_id = ""
-secret = ""
-url = ""
-
-[auth.external.zoom]
-enabled = false
-client_id = ""
-secret = ""
-
+# Configure Edge Functions
 [functions]
-# Allow/disallow public access to functions by default
-default_allow_all = false
-
+[functions.create-membership-checkout]
+verify_jwt = false
 [functions.check-stripe-mode]
 verify_jwt = false
-
-[functions.check-membership-status]
-verify_jwt = false
-
-[functions.create-membership-checkout]
+[functions.send-welcome-email]
 verify_jwt = false
