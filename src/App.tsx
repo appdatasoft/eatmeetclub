@@ -12,6 +12,7 @@ import Dashboard from "@/pages/dashboard/Dashboard";
 import CreateEvent from "@/pages/dashboard/CreateEvent";
 import PaymentSuccessPage from "@/pages/dashboard/PaymentSuccessPage";
 import Events from "@/pages/Events";
+import EventDetailsPage from "@/pages/EventDetailsPage";
 import VenuesPage from "@/pages/VenuesPage";
 import RestaurantDetailsPage from "@/pages/RestaurantDetailsPage";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -35,6 +36,7 @@ function App() {
         
         {/* New routes for events and venues */}
         <Route path="/events" element={<Events />} />
+        <Route path="/event/:id" element={<EventDetailsPage />} />
         <Route path="/venues" element={<VenuesPage />} />
         <Route path="/restaurant/:id" element={<RestaurantDetailsPage />} />
         
