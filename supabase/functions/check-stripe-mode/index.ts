@@ -43,7 +43,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         isTestMode,
-        publishableKeyPrefix 
+        key: stripePublishableKey
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
