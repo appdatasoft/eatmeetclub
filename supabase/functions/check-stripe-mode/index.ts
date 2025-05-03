@@ -1,47 +1,48 @@
 
-// check-stripe-mode.tsx
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { corsHeaders } from "../_shared/cors.ts";
+// supabase/functions/check-stripe-mode/index.ts
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: corsHeaders,
-      status: 204,
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
 
   try {
-    const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
-    const stripePublishableKey = Deno.env.get("STRIPE_PUBLISHABLE_KEY") || "";
+    const { data: config, error } = await supabase
+      .from("admin_config")
+      .select("stripe_mode")
+      .single();
 
-    const isSecretTest = stripeSecretKey.startsWith("sk_test_");
-    const isPublishableTest = stripePublishableKey.startsWith("pk_test_");
-    const isTestMode = isSecretTest || isPublishableTest;
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: corsHeaders
+      });
+    }
 
-    return new Response(
-      JSON.stringify({
-        isTestMode,
-        stripePublishableKey,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
-    );
-  } catch (error) {
-    console.error("Stripe mode verification failed:", error.message);
+    const mode = config?.stripe_mode || "test";
 
-    return new Response(
-      JSON.stringify({
-        isTestMode: true,
-        error: "Stripe mode verification failed. Using default test mode.",
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
-    );
+    return new Response(JSON.stringify({ mode }), {
+      status: 200,
+      headers: corsHeaders
+    });
+  } catch (err) {
+    console.error("check-stripe-mode error:", err);
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), {
+      status: 500,
+      headers: corsHeaders
+    });
   }
 });
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
+};
