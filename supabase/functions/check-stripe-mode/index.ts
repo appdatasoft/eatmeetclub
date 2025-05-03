@@ -3,44 +3,61 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
-
-  try {
-    const { data, error } = await supabase
-      .from("admin_config")
-      .select("stripe_mode")
-      .single();
-
-    if (error || !data?.stripe_mode) {
-      return new Response(JSON.stringify({ mode: "test" }), {
-        status: 200,
-        headers: corsHeaders
-      });
-    }
-
-    return new Response(JSON.stringify({ mode: data.stripe_mode }), {
-      status: 200,
-      headers: corsHeaders
-    });
-  } catch (err) {
-    console.error("check-stripe-mode error:", err);
-    return new Response(JSON.stringify({ error: "Internal Server Error" }), {
-      status: 500,
-      headers: corsHeaders
-    });
-  }
-});
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
 };
+
+serve(async (req) => {
+  // Handle OPTIONS request for CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Get Stripe mode from the admin_config table
+    const { data, error } = await supabase
+      .from("admin_config")
+      .select("value")
+      .eq("key", "stripe_mode")
+      .maybeSingle();
+
+    if (error) {
+      console.error("Database error:", error);
+      return new Response(JSON.stringify({ 
+        mode: "test",
+        error: error.message,
+        fallback: true
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    const mode = data?.value === "live" ? "live" : "test";
+    
+    return new Response(JSON.stringify({ 
+      mode,
+      timestamp: new Date().toISOString() 
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  } catch (err) {
+    console.error("check-stripe-mode error:", err);
+    return new Response(JSON.stringify({ 
+      mode: "test", 
+      error: "Internal Server Error",
+      fallback: true
+    }), {
+      status: 200, // Return 200 even on error but with fallback data
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+});

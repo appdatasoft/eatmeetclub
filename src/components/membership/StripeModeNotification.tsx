@@ -1,51 +1,62 @@
 
 import React from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, RefreshCcw } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
 interface StripeModeNotificationProps {
-  isStripeTestMode: boolean | null;
+  isStripeTestMode: boolean;
   stripeCheckError: boolean;
   onRetry: () => void;
 }
 
-const StripeModeNotification: React.FC<StripeModeNotificationProps> = ({
+const StripeModeNotification = ({
   isStripeTestMode,
   stripeCheckError,
   onRetry
-}) => {
+}: StripeModeNotificationProps) => {
   if (stripeCheckError) {
     return (
-      <Alert variant="default" className="mb-4 bg-yellow-50 border-yellow-200">
-        <AlertCircle className="h-4 w-4 text-yellow-600" />
-        <AlertDescription className="flex items-center justify-between">
-          <span>Stripe mode verification failed. Using default test mode.</span>
-          <Button variant="outline" size="sm" onClick={onRetry} className="ml-2">
-            <RefreshCcw className="h-4 w-4 mr-1" /> Retry
+      <Alert variant="destructive" className="mb-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Payment System Warning</AlertTitle>
+        <AlertDescription className="flex flex-col gap-2">
+          <p>
+            We couldn't check the payment system mode. Using test mode by default.
+          </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-fit flex items-center" 
+            onClick={onRetry}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Retry
           </Button>
         </AlertDescription>
       </Alert>
     );
   }
   
-  if (isStripeTestMode !== null && !stripeCheckError) {
+  if (!isStripeTestMode) {
     return (
-      <div className={`py-2 px-4 text-center rounded-md mb-4 text-sm ${
-        isStripeTestMode 
-          ? "bg-blue-50 border border-blue-200 text-blue-700" 
-          : "bg-amber-50 border border-amber-200 text-amber-700"
-      }`}>
-        {isStripeTestMode ? (
-          <p>Stripe is in <strong>test mode</strong>. You can use test cards like 4242 4242 4242 4242.</p>
-        ) : (
-          <p><strong>Live payment environment</strong>. Please use a real payment card. Test cards will be declined.</p>
-        )}
-      </div>
+      <Alert variant="default" className="bg-amber-50 border-amber-200 mb-4">
+        <AlertTitle className="text-amber-800">Live Payment Mode</AlertTitle>
+        <AlertDescription className="text-amber-700">
+          Payment system is in live mode. Real charges will be applied.
+        </AlertDescription>
+      </Alert>
     );
   }
   
-  return null;
+  return (
+    <Alert variant="default" className="bg-blue-50 border-blue-200 mb-4">
+      <AlertTitle className="text-blue-800">Test Payment Mode</AlertTitle>
+      <AlertDescription className="text-blue-700">
+        Payment system is in test mode. No real charges will be applied.
+      </AlertDescription>
+    </Alert>
+  );
 };
 
 export default StripeModeNotification;
