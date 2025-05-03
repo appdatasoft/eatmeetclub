@@ -10,6 +10,10 @@ import Index from "@/pages/Index";
 import HowItWorks from "@/pages/HowItWorks";
 import Dashboard from "@/pages/dashboard/Dashboard";
 import PaymentSuccessPage from "@/pages/dashboard/PaymentSuccessPage";
+import Events from "@/pages/Events";
+import VenuesPage from "@/pages/VenuesPage";
+import RestaurantDetailsPage from "@/pages/RestaurantDetailsPage";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
 
 function App() {
   return (
@@ -23,6 +27,14 @@ function App() {
         <Route path="/set-password" element={<SetPassword />} />
         <Route path="/become-member" element={<BecomeMember />} />
         <Route path="/how-it-works" element={<HowItWorks />} />
+        
+        {/* New routes for events and venues */}
+        <Route path="/events" element={<Events />} />
+        <Route path="/venues" element={<VenuesPage />} />
+        <Route path="/restaurant/:id" element={<RestaurantDetailsPage />} />
+        
+        {/* Admin routes */}
+        <Route path="/admin" element={<AdminDashboard />} />
         
         {/* Dashboard routes */}
         <Route path="/dashboard" element={<Dashboard />} />
