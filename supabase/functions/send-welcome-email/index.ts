@@ -1,21 +1,33 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
+};
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   try {
     const { email, name } = await req.json();
 
     if (!email) {
       return new Response(
-        JSON.stringify({ error: "Missing email field" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Missing email field", success: false }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
       return new Response(
-        JSON.stringify({ error: "Missing RESEND_API_KEY environment variable" }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Missing RESEND_API_KEY environment variable", success: false }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -32,7 +44,7 @@ serve(async (req) => {
         html: `
           <h1>Hi ${name || "there"} 👋</h1>
           <p>Welcome to EatMeetClub! Your journey to discovering great dining experiences begins now.</p>
-          <p><strong>We’re excited to have you onboard.</strong></p>
+          <p><strong>We're excited to have you onboard.</strong></p>
         `,
       }),
     });
@@ -41,20 +53,20 @@ serve(async (req) => {
       const errorText = await response.text();
       console.error("Resend error:", errorText);
       return new Response(
-        JSON.stringify({ error: "Failed to send email", details: errorText }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Failed to send email", details: errorText, success: false }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     return new Response(JSON.stringify({ success: true }), {
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (err) {
     console.error("Function error:", err);
     return new Response(
-      JSON.stringify({ error: "Internal server error", details: err.message }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Internal server error", details: err.message, success: false }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
