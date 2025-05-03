@@ -22,6 +22,33 @@ serve(async (req) => {
       });
     }
 
+    // First check if the user exists
+    const { data: users, error: userError } = await supabase
+      .from("users")
+      .select("id, email")
+      .eq("email", email);
+    
+    if (userError) {
+      return new Response(JSON.stringify({ error: userError.message }), {
+        status: 500,
+        headers: corsHeaders
+      });
+    }
+
+    // If no user exists with this email, return a clear response indicating no membership
+    if (!users || users.length === 0) {
+      return new Response(
+        JSON.stringify({
+          active: false,
+          remainingDays: 0,
+          proratedAmount: null,
+          userExists: false
+        }),
+        { status: 200, headers: corsHeaders }
+      );
+    }
+
+    // If user exists, check for membership
     const { data: membership, error } = await supabase
       .from("memberships")
       .select("*")
@@ -40,7 +67,9 @@ serve(async (req) => {
         JSON.stringify({
           active: false,
           remainingDays: 0,
-          proratedAmount: null
+          proratedAmount: null,
+          userExists: true,
+          users
         }),
         { status: 200, headers: corsHeaders }
       );
@@ -61,13 +90,16 @@ serve(async (req) => {
     const daysRemaining = Math.max(0, Math.ceil((lastDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
     const daysInMonth = lastDay.getDate();
 
+    // Only calculate prorated amount if not active
     const proratedAmount = isActive ? 0 : parseFloat(((monthlyFee * daysRemaining) / daysInMonth).toFixed(2));
 
     return new Response(
       JSON.stringify({
         active: isActive,
         remainingDays: daysRemaining,
-        proratedAmount
+        proratedAmount,
+        userExists: true,
+        users
       }),
       {
         status: 200,

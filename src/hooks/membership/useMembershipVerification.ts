@@ -37,8 +37,8 @@ export const useMembershipVerification = () => {
         throw new Error('Failed to verify membership status');
       }
 
-      // If no users or error, user doesn't exist
-      if (data.error || !data.users || data.users.length === 0) {
+      // If explicit error or userExists is false, user doesn't exist
+      if (data.error || data.userExists === false) {
         return { 
           userExists: false, 
           hasActiveMembership: false, 
@@ -50,7 +50,7 @@ export const useMembershipVerification = () => {
       return { 
         userExists: data.userExists || false, 
         hasActiveMembership: data.active || data.hasActiveMembership || false,
-        userId: data.users[0]?.id || null
+        userId: data.users?.[0]?.id || null
       };
     } catch (error: any) {
       console.error('Verification error:', error);

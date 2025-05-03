@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -11,7 +10,7 @@ interface MembershipNoticeProps {
 }
 
 const MembershipNotice = ({ existingMembership, proratedAmount }: MembershipNoticeProps) => {
-  if (!existingMembership || !existingMembership.remainingDays) return null;
+  if (!existingMembership || !existingMembership.remainingDays || !existingMembership.userExists) return null;
   
   return (
     <div className="bg-amber-50 border border-amber-200 p-4 rounded-md mb-6">
@@ -83,9 +82,11 @@ const PaymentContentArea = ({
   const email = localStorage.getItem('signup_email') || '';
   
   // Only show membership notice if it's a valid existing membership with remaining days
+  // and the user actually exists in the system
   const showMembershipNotice = existingMembership && 
                               existingMembership.hasOwnProperty('remainingDays') && 
-                              existingMembership.remainingDays > 0;
+                              existingMembership.remainingDays > 0 &&
+                              existingMembership.userExists === true;
   
   return (
     <div className="container-custom">

@@ -9,7 +9,8 @@ export const useInvoiceEmail = () => {
   const checkActiveMembership = async (email: string): Promise<{
     active: boolean;
     remainingDays: number;
-    proratedAmount: number;
+    proratedAmount: number | null;
+    userExists: boolean;
   } | null> => {
     try {
       const response = await fetch(
