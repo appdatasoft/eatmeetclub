@@ -37,9 +37,20 @@ export const useCheckoutSession = () => {
       // Step 1: Call backend function to create or invite user
       const userCheck = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-or-invite-user`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache" 
+        },
         body: JSON.stringify({ email })
       });
+      
+      // Check for HTTP errors from the user check
+      if (!userCheck.ok) {
+        const errorText = await userCheck.text();
+        console.error("User check API error:", errorText);
+        throw new Error(`User check failed: ${userCheck.status}`);
+      }
+      
       const userResult = await userCheck.json();
 
       // Step 2: Check if user has active membership
@@ -60,11 +71,25 @@ export const useCheckoutSession = () => {
       const amount = membership?.proratedAmount || membershipFee;
 
       // Step 4: Call create-membership-checkout function
+      console.log("Calling create-membership-checkout with data:", {
+        email,
+        name,
+        phone,
+        address,
+        amount,
+        stripeMode,
+        redirectToCheckout: true,
+        ...options
+      });
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-membership-checkout`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache"
+          },
           body: JSON.stringify({
             email,
             name,
@@ -78,9 +103,25 @@ export const useCheckoutSession = () => {
         }
       );
 
-      const data = await response.json();
+      // Handle non-200 responses
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Checkout API error response:", response.status, errorText);
+        throw new Error(`API returned status ${response.status}`);
+      }
 
-      if (!response.ok || !data.url) {
+      // Try to parse response as JSON
+      let data;
+      try {
+        const responseText = await response.text();
+        console.log("Raw response:", responseText);
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("Failed to parse JSON response:", parseError);
+        throw new Error("Invalid response format from server");
+      }
+
+      if (!data.url) {
         console.error("Checkout failed:", data);
         toast({
           title: "Checkout failed",
