@@ -61,6 +61,9 @@ export const useMembershipSubmission = () => {
 
   const sendWelcomeEmail = async (email: string, name: string) => {
     try {
+      // Get the current origin for generating correct URLs
+      const currentOrigin = window.location.origin;
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-custom-email`,
         {
@@ -77,13 +80,13 @@ export const useMembershipSubmission = () => {
                 <p>Thank you for becoming a member of our community! We're excited to have you join us.</p>
                 <p>We've created an account for you using your email address. To set your password and access your account, please click the button below:</p>
                 <div style="margin: 30px 0;">
-                  <a href="${window.location.origin}/set-password?email=${encodeURIComponent(email)}" 
+                  <a href="${currentOrigin}/set-password?email=${encodeURIComponent(email)}" 
                      style="background-color: #4299e1; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
                      Set Your Password
                   </a>
                 </div>
                 <p>If the button doesn't work, you can copy and paste this URL into your browser:</p>
-                <p style="word-break: break-all;">${window.location.origin}/set-password?email=${encodeURIComponent(email)}</p>
+                <p style="word-break: break-all;">${currentOrigin}/set-password?email=${encodeURIComponent(email)}</p>
                 <p>Looking forward to seeing you at our upcoming dining experiences!</p>
                 <p>Best regards,<br>The Eat Meet Club Team</p>
               </div>

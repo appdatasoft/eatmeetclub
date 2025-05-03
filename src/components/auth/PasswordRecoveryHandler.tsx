@@ -14,9 +14,12 @@ const PasswordRecoveryHandler = ({ userEmail }: PasswordRecoveryHandlerProps) =>
 
   const handleSendRecoveryEmail = async () => {
     try {
-      // Send a password reset email
+      // Get the current origin (domain) for the redirect URL
+      const currentOrigin = window.location.origin;
+      
+      // Send a password reset email with dynamic redirect URL
       const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-        redirectTo: `${window.location.origin}/set-password`,
+        redirectTo: `${currentOrigin}/set-password`,
       });
 
       if (error) {
