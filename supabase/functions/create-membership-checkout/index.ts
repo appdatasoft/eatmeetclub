@@ -3,6 +3,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@12.1.0?target=deno";
+import { userOperations } from "./user-operations.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -26,7 +27,10 @@ serve(async (req) => {
       address,
       amount,
       stripeMode = "test",
-      redirectToCheckout
+      redirectToCheckout,
+      createMembershipRecord,
+      createUser = true,
+      sendPasswordEmail = true
     } = body;
 
     if (!email || !amount) {
@@ -34,6 +38,18 @@ serve(async (req) => {
         status: 400,
         headers: corsHeaders
       });
+    }
+
+    // Handle user creation if requested
+    if (createUser) {
+      await userOperations.findOrCreateUser(
+        supabase, 
+        email, 
+        name, 
+        phone, 
+        address, 
+        sendPasswordEmail
+      );
     }
 
     const stripe = new Stripe(stripeMode === "live" ? stripeLiveKey : stripeSecretKey, {

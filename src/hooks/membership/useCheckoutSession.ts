@@ -21,31 +21,32 @@ export const useCheckoutSession = () => {
     firstName: string,
     lastName: string,
     phone: string | null = null,
-    address: string | null = null
+    address: string | null = null,
+    options = {
+      createUser: true,
+      sendPasswordEmail: true,
+      sendInvoiceEmail: true,
+      checkExisting: true,
+    }
   ) => {
     try {
       const fullName = `${firstName} ${lastName}`;
 
-      // Step 1: Check if user exists in Supabase Auth
-      const { data: { users }, error: userFetchError } = await supabase.auth.admin.listUsers();
-      const user = users?.find(u => u.email === email);
-
-      if (!user) {
-        // Invite new user to set password
-        const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
-          emailRedirectTo: `${window.location.origin}/set-password`
+      // Step 1: Check if user exists and has active membership
+      // Using a function invocation instead of direct admin API calls
+      if (options.checkExisting) {
+        // Add timestamp to prevent caching issues
+        const timestamp = new Date().getTime();
+        const { data, error } = await supabase.functions.invoke('check-membership-status', {
+          body: { email, timestamp },
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
         });
-        if (inviteError) throw new Error("Failed to send invitation email.");
 
-        // Read full membership fee from admin config (mocked here)
-        const membershipFee = 25.00;
+        if (error) throw new Error("Failed to check membership status");
 
-        return await startCheckout(email, fullName, phone, address, membershipFee);
-      } else {
-        // Step 2: Check if user has active membership
-        const membership = await checkActiveMembership(email);
-
-        if (membership?.active) {
+        if (data.userExists && data.active) {
           toast({
             title: "Already a Member",
             description: "You already have an active membership. Please log in to continue.",
@@ -55,10 +56,28 @@ export const useCheckoutSession = () => {
           return;
         } else {
           const membershipFee = 25.00;
-          const proratedAmount = membership?.proratedAmount || membershipFee;
+          const proratedAmount = data.proratedAmount || membershipFee;
 
-          return await startCheckout(email, fullName, phone, address, proratedAmount);
+          return await startCheckout(
+            email, 
+            fullName, 
+            phone, 
+            address, 
+            proratedAmount,
+            options
+          );
         }
+      } else {
+        // Skip existing user check, just proceed with checkout
+        const membershipFee = 25.00;
+        return await startCheckout(
+          email, 
+          fullName, 
+          phone, 
+          address, 
+          membershipFee,
+          options
+        );
       }
     } catch (error: any) {
       console.error("Error handling membership flow:", error);
@@ -71,7 +90,12 @@ export const useCheckoutSession = () => {
     name: string,
     phone: string | null,
     address: string | null,
-    amount: number
+    amount: number,
+    options = {
+      createUser: true,
+      sendPasswordEmail: true,
+      sendInvoiceEmail: true,
+    }
   ) => {
     const response = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
@@ -89,6 +113,9 @@ export const useCheckoutSession = () => {
           stripeMode,
           redirectToCheckout: true,
           createMembershipRecord: true,
+          createUser: options.createUser,
+          sendPasswordEmail: options.sendPasswordEmail,
+          sendInvoiceEmail: options.sendInvoiceEmail,
           timestamp: new Date().getTime()
         })
       }

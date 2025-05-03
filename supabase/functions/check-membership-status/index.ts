@@ -1,122 +1,115 @@
 
-// supabase/functions/check-membership-status/index.ts
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+export const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+  "Pragma": "no-cache",
+  "Expires": "0",
+};
+
+serve(async (req) => {
+  // Handle CORS preflight request
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      headers: corsHeaders,
+      status: 204,
+    });
+  }
 
   try {
     const { email } = await req.json();
-    if (!email) {
-      return new Response(JSON.stringify({ error: "Email is required" }), {
-        status: 400,
-        headers: corsHeaders
-      });
-    }
-
-    // First check if the user exists
-    const { data: users, error: userError } = await supabase
-      .from("users")
-      .select("id, email")
-      .eq("email", email);
     
-    if (userError) {
-      return new Response(JSON.stringify({ error: userError.message }), {
-        status: 500,
-        headers: corsHeaders
-      });
+    if (!email) {
+      throw new Error("Email is required");
     }
 
-    // If no user exists with this email, return a clear response indicating no membership
-    if (!users || users.length === 0) {
+    // Step 1: Check if user exists
+    const { data: { users }, error: userFetchError } = await supabase.auth.admin.listUsers();
+    const user = users?.find(u => u.email === email);
+
+    if (userFetchError) {
+      throw new Error("Error checking user existence");
+    }
+
+    // If user doesn't exist, return early with userExists: false
+    if (!user) {
       return new Response(
         JSON.stringify({
+          userExists: false,
           active: false,
-          remainingDays: 0,
-          proratedAmount: null,
-          userExists: false
+          proratedAmount: 25.00,
         }),
-        { status: 200, headers: corsHeaders }
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
       );
     }
 
-    // If user exists, check for membership
-    const { data: membership, error } = await supabase
+    // Step 2: Check membership status
+    const { data: memberships, error: membershipError } = await supabase
       .from("memberships")
       .select("*")
-      .eq("user_email", email)
-      .maybeSingle();
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1);
 
-    if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: corsHeaders
-      });
+    if (membershipError) {
+      throw new Error("Error checking membership status");
     }
 
-    if (!membership) {
-      return new Response(
-        JSON.stringify({
-          active: false,
-          remainingDays: 0,
-          proratedAmount: null,
-          userExists: true,
-          users
-        }),
-        { status: 200, headers: corsHeaders }
-      );
-    }
+    const membership = memberships?.[0];
+    const isActive = membership && 
+                     membership.status === "active" && 
+                     (!membership.renewal_at || new Date(membership.renewal_at) > new Date());
 
-    const isActive = membership?.status === "active" && new Date(membership.expires_at) > new Date();
-
-    // Get membership fee from admin_config
-    const { data: config } = await supabase
-      .from("admin_config")
-      .select("membership_fee")
+    // Get standard membership fee
+    const { data: configData } = await supabase
+      .from("app_config")
+      .select("value")
+      .eq("key", "MEMBERSHIP_FEE")
       .single();
 
-    const monthlyFee = config?.membership_fee || 25;
+    const standardFee = configData ? parseFloat(configData.value) : 25.00;
 
-    const today = new Date();
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    const daysRemaining = Math.max(0, Math.ceil((lastDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
-    const daysInMonth = lastDay.getDate();
-
-    // Only calculate prorated amount if not active
-    const proratedAmount = isActive ? 0 : parseFloat(((monthlyFee * daysRemaining) / daysInMonth).toFixed(2));
+    // Calculate prorated fee if applicable (for now using standard fee)
+    const proratedAmount = standardFee;
 
     return new Response(
       JSON.stringify({
-        active: isActive,
-        remainingDays: daysRemaining,
-        proratedAmount,
         userExists: true,
-        users
+        active: isActive,
+        proratedAmount,
+        membershipId: membership?.id,
+        membershipData: membership,
+        users: [user],
       }),
       {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
-        headers: corsHeaders
       }
     );
-  } catch (err) {
-    console.error("check-membership-status error:", err);
-    return new Response(JSON.stringify({ error: "Internal Server Error" }), {
-      status: 500,
-      headers: corsHeaders
-    });
+  } catch (error) {
+    console.error("Error checking membership status:", error);
+    
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
   }
 });
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
-};
