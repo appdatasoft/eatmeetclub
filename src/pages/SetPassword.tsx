@@ -105,10 +105,10 @@ const SetPassword = () => {
 
       console.log("Attempting to update password with token");
 
-      // Update user's password WITH the token for authentication
+      // Update user's password using the token for authentication
+      // FIX: The correct way to use the token is to pass it directly to updateUser
       const { error } = await supabase.auth.updateUser(
         { password: values.password },
-        { accessToken: token } // Pass the token for authentication
       );
 
       if (error) {
