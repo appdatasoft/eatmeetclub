@@ -1,126 +1,75 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders, verifyTicketSession, sendInvoiceEmail } from "./utils.ts";
-import { 
-  checkExistingTickets, 
-  updateTicketRecord, 
-  incrementTicketsSold,
-  fetchEventDetails
-} from "./db-operations.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { stripe } from "../_shared/stripe.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
+};
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      headers: corsHeaders,
+      status: 204,
+    });
   }
 
   try {
-    // Create Supabase client with auth context from request
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing Authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const { sessionId, email, eventId } = await req.json();
+    if (!sessionId || !email || !eventId) throw new Error("Missing required fields");
 
-    // Create Supabase client with admin privileges
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Get the user from the auth context
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser();
-
-    if (userError || !user) {
-      console.error("Authentication error:", userError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (!session.customer_email || session.customer_email !== email) {
+      throw new Error("Email mismatch or missing from session");
     }
 
-    // Parse request body
-    const { sessionId } = await req.json();
+    const { data: userList } = await supabase.auth.admin.listUsers();
+    const user = userList.users.find((u) => u.email === email);
+    const userId = user?.id;
+    if (!userId) throw new Error("User not found");
 
-    if (!sessionId) {
-      return new Response(
-        JSON.stringify({ error: 'Missing session ID' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const amount = session.amount_total || 1000;
 
-    console.log(`Verifying payment for session ${sessionId} and user ${user.id}`);
+    // Insert event ticket purchase
+    const { error: insertError } = await supabase.from("event_attendees").insert({
+      user_id: userId,
+      event_id: eventId,
+      payment_id: sessionId,
+      amount: amount / 100,
+      status: "confirmed"
+    });
 
-    // Verify the session with Stripe
-    const { session, metadata } = await verifyTicketSession(sessionId);
-    
-    // Extract metadata
-    const { eventId, userId, quantity } = metadata;
-    
-    // Verify that the user ID matches the authenticated user
-    if (userId !== user.id) {
-      return new Response(
-        JSON.stringify({ error: 'User mismatch' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Check if there's already a completed ticket record to avoid duplication
-    const existingTickets = await checkExistingTickets(supabaseClient, sessionId, userId);
-    
-    // If we already have a completed ticket, return success without duplicating
-    if (existingTickets && existingTickets.length > 0 && existingTickets[0].payment_status === 'completed') {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          ticket: existingTickets[0],
-          status: 'already_processed',
-          message: 'Ticket payment was already processed'
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Update the ticket record in the database
-    const ticketData = await updateTicketRecord(supabaseClient, sessionId, userId);
-    
-    // Update the tickets_sold count in the events table
-    await incrementTicketsSold(supabaseClient, eventId, quantity);
-    
-    // Fetch event and user details for the invoice email
-    const eventData = await fetchEventDetails(supabaseClient, eventId);
-      
-    let emailSent = false;
-    // Send invoice email - but don't fail if email sending fails
-    if (eventData && ticketData && ticketData.length > 0) {
-      emailSent = await sendInvoiceEmail(authHeader, sessionId, user, eventData, ticketData[0]);
-    }
-    
-    // Return success response
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        ticket: ticketData && ticketData.length > 0 ? ticketData[0] : null,
-        emailSent
+    if (insertError) throw new Error("Failed to record ticket: " + insertError.message);
+
+    // Optionally: send ticket confirmation email
+    const frontendUrl = Deno.env.get("FRONTEND_URL") || "https://eatmeetclub.lovable.app";
+    await fetch(`${frontendUrl}/functions/v1/send-ticket-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId,
+        email,
+        eventId,
+        name: user.user_metadata?.full_name || "Guest"
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error('Error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    });
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ success: false, message: err.message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 400,
+    });
   }
 });

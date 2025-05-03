@@ -1,9 +1,16 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
-import { corsHeaders } from "../_shared/cors.ts";
+import { stripe } from "../_shared/stripe.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
+};
 
 serve(async (req) => {
-  // Handle CORS preflight request
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: corsHeaders,
@@ -12,134 +19,92 @@ serve(async (req) => {
   }
 
   try {
-    // Parse the request body to get email
-    const { email } = await req.json();
+    const { email, name } = await req.json();
+    if (!email || !name) throw new Error("Missing email or name");
 
-    if (!email) {
-      throw new Error("No email provided");
-    }
-
-    console.log("Checking membership status for email:", email);
-
-    // Create Supabase client with service role key
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Get current date for proration logic
-    const now = new Date();
+    // Step 1: Check if user exists
+    const { data: userList } = await supabase.auth.admin.listUsers();
+    const user = userList.users.find((u) => u.email === email);
+    let userId = user?.id;
 
-    // Step 1: Get all users and find the one with matching email
-    const { data: usersList, error: userError } = await supabaseClient.auth.admin.listUsers();
+    // Step 2: Create user if not exists
+    if (!userId) {
+      const tempPassword = crypto.randomUUID();
+      const { data: newUser, error } = await supabase.auth.admin.createUser({
+        email,
+        email_confirm: true,
+        password: tempPassword,
+        user_metadata: { full_name: name }
+      });
+      if (error) throw new Error("Error creating user: " + error.message);
+      userId = newUser.user?.id;
 
-    if (userError) {
-      console.error("Error querying users:", userError);
-      throw new Error(`Error querying users: ${userError.message}`);
+      // Send password setup link
+      await supabase.auth.admin.generateLink({
+        type: "recovery",
+        email,
+        options: { redirectTo: "https://www.eatmeetclub.com/set-password" }
+      });
     }
 
-    const userData = usersList.users.find((u) => u.email === email);
-
-    if (!userData) {
-      console.log("No user found with email:", email);
-      return new Response(
-        JSON.stringify({
-          success: true,
-          membership: null
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
-      );
-    }
-
-    // Step 2: Check for active membership using the user ID
-    const { data, error } = await supabaseClient
-      .from('memberships')
-      .select(`
-        id,
-        status,
-        is_subscription,
-        started_at,
-        renewal_at,
-        subscription_id,
-        user_id
-      `)
-      .eq('user_id', userData.id)
-      .eq('status', 'active')
-      .or(`renewal_at.gt.${now.toISOString()},renewal_at.is.null`)
+    // Step 3: Check membership status
+    const now = new Date().toISOString();
+    const { data: membership } = await supabase
+      .from("memberships")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .or(`renewal_at.gt.${now},renewal_at.is.null`)
       .maybeSingle();
 
-    if (error) {
-      console.error("Database query error:", error);
-      throw new Error(`Error querying memberships: ${error.message}`);
-    }
-
-    // Step 3: Calculate remaining days and proration if active membership found
-    if (data) {
-      console.log("Found active membership:", data);
-
-      let remainingDays = 0;
-      let proratedAmount = 25.00; // Default full price
-
-      if (data.renewal_at) {
-        const renewalDate = new Date(data.renewal_at);
-        const totalDays = 30;
-        const elapsedMs = now.getTime() - new Date(data.started_at).getTime();
-        const elapsedDays = Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
-        remainingDays = totalDays - elapsedDays;
-
-        if (remainingDays <= 0) {
-          proratedAmount = 25.00;
-        } else if (remainingDays < 15) {
-          proratedAmount = 12.50;
-        } else {
-          proratedAmount = 0;
-        }
-      }
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          membership: {
-            ...data,
-            remainingDays,
-            proratedAmount
-          }
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
-      );
-    }
-
-    // No active membership found
-    return new Response(
-      JSON.stringify({
+    if (membership) {
+      return new Response(JSON.stringify({
         success: true,
-        membership: null
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
-    );
+        activeMembership: true,
+        message: "User already has active membership"
+      }), { headers: corsHeaders });
+    }
 
-  } catch (error) {
-    console.error("Error in create-membership-checkout function:", error);
+    // Step 4: Get price from admin config (e.g., monthly $25)
+    const priceCents = 2500; // Replace with DB fetch if needed
 
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: error.message,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      }
-    );
+    // Step 5: Create Stripe Checkout
+    const customer = await stripe.customers.create({ email, name });
+    const session = await stripe.checkout.sessions.create({
+      customer: customer.id,
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: { name: 'Monthly Membership' },
+            unit_amount: priceCents,
+            recurring: { interval: 'month' },
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: `https://www.eatmeetclub.com/membership-payment?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://www.eatmeetclub.com/membership-payment?canceled=true`,
+    });
+
+    return new Response(JSON.stringify({
+      success: true,
+      activeMembership: false,
+      checkoutUrl: session.url
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ success: false, message: err.message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 400,
+    });
   }
 });
-
