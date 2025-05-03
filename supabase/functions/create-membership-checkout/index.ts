@@ -16,12 +16,17 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("create-membership-checkout function called");
+
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
+    console.log("Handling OPTIONS request");
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
+    console.log("Processing checkout request");
+    
     // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -32,6 +37,7 @@ serve(async (req) => {
     let body;
     try {
       body = await req.json();
+      console.log("Request body parsed:", JSON.stringify(body));
     } catch (e) {
       console.error("Failed to parse request body:", e);
       return new Response(JSON.stringify({ 
@@ -55,6 +61,7 @@ serve(async (req) => {
 
     // Check for required fields
     if (!email) {
+      console.log("Missing email in request");
       return new Response(JSON.stringify({ 
         error: "Missing email", 
         success: false 

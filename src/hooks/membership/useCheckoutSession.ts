@@ -102,23 +102,26 @@ export const useCheckoutSession = () => {
         }
       );
 
+      console.log("Response from create-membership-checkout:", response.status);
+
       // Handle non-200 responses
       if (!response.ok) {
         let errorMessage = `API returned status ${response.status}`;
         
         try {
           const contentType = response.headers.get('Content-Type');
+          console.log("Response content type:", contentType);
           
           if (contentType && contentType.includes('application/json')) {
             const errorJson = await response.json();
             errorMessage = errorJson.error || errorMessage;
           } else {
             const errorText = await response.text();
+            console.error("Non-JSON response received:", errorText.substring(0, 200));
             if (errorText.trim().startsWith('<!DOCTYPE') || errorText.trim().startsWith('<html')) {
-              errorMessage = "Server returned HTML instead of JSON";
-              console.error("HTML response:", errorText.substring(0, 200));
+              errorMessage = "Server returned HTML instead of JSON. This usually indicates a CORS issue or a server error.";
             } else {
-              errorMessage = errorText.substring(0, 100);
+              errorMessage = `Invalid response format: ${errorText.substring(0, 100)}`;
             }
           }
         } catch (parseError) {
@@ -130,14 +133,16 @@ export const useCheckoutSession = () => {
 
       // Parse response
       const contentType = response.headers.get('Content-Type');
+      console.log("Success response content type:", contentType);
       
       if (!contentType || !contentType.includes('application/json')) {
         const responseText = await response.text();
-        console.error("Invalid content type, received:", contentType, "Response:", responseText.substring(0, 200));
-        throw new Error("Server returned non-JSON response");
+        console.error("Invalid content type on success, received:", contentType, "Response:", responseText.substring(0, 200));
+        throw new Error("Server returned non-JSON response. Please check server logs.");
       }
       
       const data = await response.json();
+      console.log("Checkout session response data:", data);
       
       if (!data.success) {
         console.error("Checkout failed:", data);

@@ -27,28 +27,22 @@ export const fetchStripeMode = async () => {
 
     console.log("Stripe mode response status:", response.status);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.warn(`Stripe key fetch failed with status: ${response.status}`, errorText);
+    // Print the raw response for debugging
+    const rawResponse = await response.text();
+    console.log("Raw response:", rawResponse);
+
+    // Parse the text as JSON
+    let data;
+    try {
+      data = JSON.parse(rawResponse);
+      console.log("Stripe mode data:", data);
+    } catch (jsonError) {
+      console.error("Failed to parse JSON response:", jsonError, "Raw response:", rawResponse.substring(0, 200));
       return { 
         mode: "test", // Default to test mode for safety
-        error: `API returned status ${response.status}: ${errorText.substring(0, 100)}`
+        error: "Invalid JSON response received"
       };
     }
-
-    // Check content type to ensure we're getting JSON
-    const contentType = response.headers.get('Content-Type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const responseText = await response.text();
-      console.error("Invalid content type, received:", contentType, "Response:", responseText.substring(0, 200));
-      return { 
-        mode: "test", 
-        error: "Server returned non-JSON response" 
-      };
-    }
-    
-    const data = await response.json();
-    console.log("Stripe mode data:", data);
     
     return { 
       mode: data.mode || "test", // Default to test mode if not specified
