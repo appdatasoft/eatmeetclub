@@ -98,4 +98,3 @@ const MembershipSteps = () => {
 };
 
 export default MembershipSteps;
-

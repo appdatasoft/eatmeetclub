@@ -1,10 +1,10 @@
-
 // src/hooks/membership/useMembershipSubmission.ts
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useCheckoutSession } from "./useCheckoutSession";
 import { useMembershipVerification } from "./useMembershipVerification";
+import { MembershipFormValues } from "@/lib/schemas/membership";
 
 export const useMembershipSubmission = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,12 +14,7 @@ export const useMembershipSubmission = () => {
   const { createCheckoutSession } = useCheckoutSession();
   const { verifyEmailAndMembershipStatus, handleExistingMember } = useMembershipVerification();
 
-  const handleMembershipSubmit = async (formData: {
-    name: string;
-    email: string;
-    phone: string;
-    address: string;
-  }) => {
+  const handleMembershipSubmit = async (formData: MembershipFormValues) => {
     try {
       setIsLoading(true);
 
