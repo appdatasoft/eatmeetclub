@@ -111,8 +111,8 @@ serve(async (req) => {
             quantity: 1
           }
         ],
-        success_url: `${Deno.env.get("SITE_URL") || "https://eatmeet.club"}/membership-payment?success=true&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${Deno.env.get("SITE_URL") || "https://eatmeet.club"}/membership-payment?canceled=true`,
+        success_url: `${Deno.env.get("SITE_URL") || "https://www.eatmeetclub.com"}/membership-payment?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${Deno.env.get("SITE_URL") || "https://www.eatmeetclub.com"}/membership-payment?canceled=true`,
         metadata: {
           user_email: email,
           user_name: name || "",

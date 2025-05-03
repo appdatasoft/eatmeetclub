@@ -34,8 +34,6 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
 
-# ✅ Removed invalid [auth.email.smtp] section
-
 [analytics]
 enabled = false
 port = 54327

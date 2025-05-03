@@ -104,41 +104,40 @@ export const useCheckoutSession = () => {
 
       // Handle non-200 responses
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Checkout API error response:", response.status, errorText);
-        
         let errorMessage = `API returned status ${response.status}`;
         
-        // Try to parse as JSON if possible
-        if (!errorText.trim().startsWith('<')) {
-          try {
-            const errorJson = JSON.parse(errorText);
-            if (errorJson.error) {
-              errorMessage = errorJson.error;
+        try {
+          const contentType = response.headers.get('Content-Type');
+          
+          if (contentType && contentType.includes('application/json')) {
+            const errorJson = await response.json();
+            errorMessage = errorJson.error || errorMessage;
+          } else {
+            const errorText = await response.text();
+            if (errorText.trim().startsWith('<!DOCTYPE') || errorText.trim().startsWith('<html')) {
+              errorMessage = "Server returned HTML instead of JSON";
+              console.error("HTML response:", errorText.substring(0, 200));
+            } else {
+              errorMessage = errorText.substring(0, 100);
             }
-          } catch (jsonError) {
-            // Not JSON, use the error text
-            errorMessage = errorText.substring(0, 100);
           }
-        } else {
-          errorMessage = "Server returned HTML instead of JSON";
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError);
         }
         
         throw new Error(errorMessage);
       }
 
       // Parse response
-      const responseText = await response.text();
-      console.log("Raw response:", responseText);
+      const contentType = response.headers.get('Content-Type');
       
-      // Check if response is HTML (likely an error page)
-      if (responseText.trim().startsWith('<!DOCTYPE') || 
-          responseText.trim().startsWith('<html')) {
-        console.error("Received HTML instead of JSON:", responseText.substring(0, 200));
-        throw new Error("Invalid response format: received HTML instead of JSON data");
+      if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await response.text();
+        console.error("Invalid content type, received:", contentType, "Response:", responseText.substring(0, 200));
+        throw new Error("Server returned non-JSON response");
       }
       
-      const data = JSON.parse(responseText);
+      const data = await response.json();
       
       if (!data.success) {
         console.error("Checkout failed:", data);

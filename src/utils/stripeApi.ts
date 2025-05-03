@@ -36,37 +36,24 @@ export const fetchStripeMode = async () => {
       };
     }
 
-    // First try to parse as JSON
-    let responseText;
-    try {
-      responseText = await response.text();
-      console.log("Raw response:", responseText);
-      
-      // Check if response is HTML (likely an error page)
-      if (responseText.trim().startsWith('<!DOCTYPE') || 
-          responseText.trim().startsWith('<html')) {
-        console.error("Received HTML instead of JSON:", responseText.substring(0, 200));
-        return { 
-          mode: "test", // Default to test mode on error
-          error: "Received HTML instead of JSON" 
-        };
-      }
-      
-      const data = JSON.parse(responseText);
-      console.log("Stripe mode data:", data);
-      
+    // Check content type to ensure we're getting JSON
+    const contentType = response.headers.get('Content-Type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const responseText = await response.text();
+      console.error("Invalid content type, received:", contentType, "Response:", responseText.substring(0, 200));
       return { 
-        mode: data.mode || "test", // Default to test mode if not specified
-        error: data.error || null
-      };
-    } catch (parseError) {
-      console.error("Error parsing response as JSON:", parseError);
-      console.error("Raw response was:", responseText);
-      return { 
-        mode: "test", // Default to test mode on parse error
-        error: `Failed to parse response: ${responseText?.substring(0, 100)}` 
+        mode: "test", 
+        error: "Server returned non-JSON response" 
       };
     }
+    
+    const data = await response.json();
+    console.log("Stripe mode data:", data);
+    
+    return { 
+      mode: data.mode || "test", // Default to test mode if not specified
+      error: data.error || null
+    };
   } catch (error) {
     console.error("Error fetching Stripe mode:", error);
     return { 
