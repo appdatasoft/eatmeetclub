@@ -3,7 +3,6 @@
 import { useInvoiceEmail } from "./useInvoiceEmail";
 import { useToast } from "@/hooks/use-toast";
 import { useStripeMode } from "@/hooks/membership/useStripeMode";
-import { supabase } from "@/integrations/supabase/client";
 
 interface CheckoutOptions {
   createUser: boolean;
@@ -115,6 +114,14 @@ export const useCheckoutSession = () => {
       try {
         const responseText = await response.text();
         console.log("Raw response:", responseText);
+        
+        // Check if response is HTML (likely an error page)
+        if (responseText.trim().startsWith('<!DOCTYPE') || 
+            responseText.trim().startsWith('<html')) {
+          console.error("Received HTML instead of JSON:", responseText.substring(0, 200));
+          throw new Error("Invalid response format: received HTML instead of JSON data");
+        }
+        
         data = JSON.parse(responseText);
       } catch (parseError) {
         console.error("Failed to parse JSON response:", parseError);

@@ -21,6 +21,37 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Make sure admin_config table exists first
+    try {
+      await supabase.rpc('create_admin_config_if_not_exists');
+      console.log("Checked admin_config table exists");
+    } catch (setupError) {
+      console.log("Setup admin_config error (continuing anyway):", setupError);
+      
+      // Try to create the table directly as fallback
+      try {
+        const { error: createTableError } = await supabase.query(`
+          CREATE TABLE IF NOT EXISTS public.admin_config (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            key TEXT NOT NULL UNIQUE,
+            value TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+          );
+          
+          INSERT INTO public.admin_config (key, value)
+          VALUES ('stripe_mode', 'test')
+          ON CONFLICT (key) DO NOTHING;
+        `);
+        
+        if (createTableError) {
+          console.error("Failed to create admin_config table directly:", createTableError);
+        }
+      } catch (directCreateError) {
+        console.error("Failed in direct table creation attempt:", directCreateError);
+      }
+    }
+
     // Get Stripe mode from the admin_config table
     const { data, error } = await supabase
       .from("admin_config")
@@ -31,15 +62,6 @@ serve(async (req) => {
     // If there's a database error, log it and default to test mode
     if (error) {
       console.error("Database error:", error);
-      // Create the admin_config table if it doesn't exist
-      try {
-        const { error: createError } = await supabase.rpc('create_admin_config_if_not_exists');
-        if (createError) {
-          console.error("Failed to create admin_config table:", createError);
-        }
-      } catch (e) {
-        console.error("Failed to create admin_config table:", e);
-      }
       
       return new Response(JSON.stringify({ 
         mode: "test",
