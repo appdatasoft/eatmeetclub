@@ -1,3 +1,4 @@
+
 // src/hooks/membership/useMembershipSubmission.ts
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -19,7 +20,7 @@ export const useMembershipSubmission = () => {
       setIsLoading(true);
 
       // Store form data in localStorage for access during payment flow
-      localStorage.setItem('signup_name', formData.name);
+      localStorage.setItem('signup_name', `${formData.firstName} ${formData.lastName}`);
       localStorage.setItem('signup_email', formData.email);
       localStorage.setItem('signup_phone', formData.phone);
       localStorage.setItem('signup_address', formData.address);
@@ -34,9 +35,10 @@ export const useMembershipSubmission = () => {
       }
 
       // Step 2: Create checkout session
+      const fullName = `${formData.firstName} ${formData.lastName}`;
       const result = await createCheckoutSession(
         formData.email,
-        formData.name,
+        fullName,
         formData.phone,
         formData.address,
         {

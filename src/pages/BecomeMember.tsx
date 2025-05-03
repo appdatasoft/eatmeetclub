@@ -5,9 +5,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { membershipFormSchema, MembershipFormValues } from "@/lib/schemas/membership";
 import { useCheckoutSession } from "@/hooks/membership/useCheckoutSession";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form } from "@/components/ui/form";
+import MembershipFormFields from "@/components/membership/MembershipFormFields";
 
 const BecomeMember = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -16,7 +16,8 @@ const BecomeMember = () => {
   const form = useForm<MembershipFormValues>({
     resolver: zodResolver(membershipFormSchema),
     defaultValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
       phone: "",
       address: ""
@@ -26,9 +27,12 @@ const BecomeMember = () => {
   const onSubmit = async (values: MembershipFormValues) => {
     setIsLoading(true);
     try {
+      // Combine first and last name for the API call
+      const fullName = `${values.firstName} ${values.lastName}`;
+      
       await createCheckoutSession(
         values.email,
-        values.name,
+        fullName,
         values.phone,
         values.address,
         {
@@ -50,58 +54,7 @@ const BecomeMember = () => {
       <h2 className="text-xl font-bold mb-6">Become a Member</h2>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Full Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Full name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input type="email" placeholder="Email" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone Number</FormLabel>
-                <FormControl>
-                  <Input placeholder="Phone number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="address"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Address</FormLabel>
-                <FormControl>
-                  <Input placeholder="Address" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <MembershipFormFields form={form} disabled={isLoading} />
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Processing..." : "Complete Payment"}
           </Button>
