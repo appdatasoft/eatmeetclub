@@ -1,6 +1,8 @@
 
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useBackupEmail } from "./useBackupEmail";
+import { useInvoiceEmail } from "./useInvoiceEmail";
 
 interface PaymentVerificationProps {
   setIsProcessing: (value: boolean) => void;
@@ -25,6 +27,9 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationAttempts, setVerificationAttempts] = useState(0);
   const [lastVerifiedSession, setLastVerifiedSession] = useState<string | null>(null);
+  
+  const { sendDirectBackupEmail } = useBackupEmail();
+  const { sendInvoiceEmail } = useInvoiceEmail();
   
   const verifyPayment = useCallback(async (paymentId: string, options: VerificationOptions = {}) => {
     // Additional debug logging
@@ -261,82 +266,7 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       setIsProcessing(false);
       setIsVerifying(false);
     }
-  }, [toast, isVerifying, verificationAttempts, lastVerifiedSession, setIsProcessing]);
-
-  // Send invoice email directly as fallback
-  const sendInvoiceEmail = async (sessionId: string, email: string, name: string) => {
-    try {
-      console.log("Sending direct invoice email for", email, "session", sessionId);
-      const timestamp = new Date().getTime(); // Add timestamp to bypass caching
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-invoice-email?t=${timestamp}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache"
-          },
-          body: JSON.stringify({
-            sessionId,
-            email,
-            name,
-            preventDuplicate: false // Force send even if duplicate
-          }),
-        }
-      );
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Invoice email sending failed: ${errorText}`);
-      }
-      
-      console.log("Direct invoice email sent successfully");
-      return true;
-    } catch (error) {
-      console.error("Error sending direct invoice email:", error);
-      return false;
-    }
-  };
-  
-  // Send a direct backup email through the custom email function
-  const sendDirectBackupEmail = async (email: string, name: string, paymentId: string) => {
-    try {
-      console.log("Sending backup welcome email");
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-custom-email`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache"
-          },
-          body: JSON.stringify({
-            to: [email],
-            subject: "Important: Your Eat Meet Club Membership",
-            html: `
-              <h1>Your Eat Meet Club Membership</h1>
-              <p>Hello ${name},</p>
-              <p>Thank you for joining! Your payment (ID: ${paymentId}) has been received successfully.</p>
-              <p>We're completing your membership setup. If you don't receive login instructions within 15 minutes, please contact us at support@eatmeetclub.com with your payment ID.</p>
-              <p>Best regards,<br>The Eat Meet Club Team</p>
-            `,
-            emailType: "last_resort_backup",
-            preventDuplicate: false,
-            fromName: "Eat Meet Club Support"
-          }),
-        }
-      );
-      
-      return response.ok;
-    } catch (error) {
-      console.error("Error sending direct backup email:", error);
-      return false;
-    }
-  };
+  }, [toast, isVerifying, verificationAttempts, lastVerifiedSession, setIsProcessing, sendInvoiceEmail, sendDirectBackupEmail]);
 
   return { verifyPayment, verificationError, isVerifying, verificationAttempts };
 };

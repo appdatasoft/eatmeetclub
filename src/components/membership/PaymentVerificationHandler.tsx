@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import usePaymentVerification from "@/hooks/membership/usePaymentVerification";
+import { useBackupEmail } from "@/hooks/membership/useBackupEmail";
 
 interface PaymentVerificationHandlerProps {
   sessionId: string | null;
@@ -23,6 +24,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
   const { verifyPayment, isVerifying, verificationAttempts } = usePaymentVerification({
     setIsProcessing
   });
+  const { sendDirectBackupEmail } = useBackupEmail();
 
   // Effect to verify successful Stripe checkout completion
   useEffect(() => {
@@ -106,7 +108,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             
             // Send a direct email manually as fallback
             try {
-              await sendBackupEmail(storedEmail, storedName || 'Member');
+              await sendDirectBackupEmail(storedEmail, storedName || 'Member', sessionId);
             } catch (emailErr) {
               console.error("Failed to send backup email:", emailErr);
             }
@@ -139,47 +141,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
     };
     
     verifyCheckoutCompletion();
-  }, [sessionId, paymentSuccess, verificationProcessed, toast, setVerificationProcessed, verifyPayment, isVerifying, emailCheckDone, verificationAttempts]);
-
-  // Attempt to send a backup welcome email if all else fails
-  const sendBackupEmail = async (email: string, name: string) => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-custom-email`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "no-cache"
-          },
-          body: JSON.stringify({
-            to: [email],
-            subject: "Your Eat Meet Club Membership",
-            html: `
-              <h1>Thank you for joining Eat Meet Club!</h1>
-              <p>Hello ${name},</p>
-              <p>Your membership has been activated. You will receive a separate email with login instructions shortly.</p>
-              <p>If you don't receive login instructions within the next 15 minutes, please contact our support at support@eatmeetclub.com.</p>
-              <p>Best regards,<br>The Eat Meet Club Team</p>
-            `,
-            emailType: "backup_welcome",
-            preventDuplicate: false,
-            fromName: "Eat Meet Club Support"
-          }),
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error("Failed to send backup email");
-      }
-      
-      console.log("Backup email sent successfully");
-      return true;
-    } catch (error) {
-      console.error("Error sending backup email:", error);
-      return false;
-    }
-  };
+  }, [sessionId, paymentSuccess, verificationProcessed, toast, setVerificationProcessed, verifyPayment, isVerifying, emailCheckDone, verificationAttempts, sendDirectBackupEmail]);
 
   return null; // This component doesn't render anything
 };

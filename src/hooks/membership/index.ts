@@ -9,3 +9,5 @@ export { default as useAccountCreation } from './useAccountCreation';
 export { default as useWelcomeEmail } from './useWelcomeEmail';
 export { default as useCheckoutSession } from './useCheckoutSession';
 export { default as useUserStorage } from './useUserStorage';
+export { default as useBackupEmail } from './useBackupEmail';
+export { default as useInvoiceEmail } from './useInvoiceEmail';
