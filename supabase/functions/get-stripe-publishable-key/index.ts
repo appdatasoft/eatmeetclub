@@ -27,7 +27,7 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({
-        publishableKey: stripePublishableKey
+        key: stripePublishableKey
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
