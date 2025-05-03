@@ -1,3 +1,4 @@
+
 // src/pages/admin/BillingDashboard.tsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -98,46 +99,48 @@ const BillingDashboard = () => {
       )}
 
       {userEmail && (
-        isAdmin && (
-          <div className="flex items-center gap-2">
-            <select
+        <>
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <select
+                onChange={(e) => setSearch(e.target.value)}
+                className="border px-3 py-2 rounded text-sm"
+              >
+                <option value="">All users</option>
+                {[...new Set(records.map((r) => r.email))].map((email) => (
+                  <option key={email} value={email}>{email}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => navigate(`/admin/impersonate/${search}`)}
+                className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-sm"
+              >
+                Impersonate
+              </button>
+            </div>
+          )}
+          <div className="flex items-center justify-between mb-4 gap-4">
+            <input
+              type="text"
+              placeholder="Search by email..."
+              value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="border px-3 py-2 rounded text-sm"
-            >
-              <option value="">All users</option>
-              {[...new Set(records.map((r) => r.email))].map((email) => (
-                <option key={email} value={email}>{email}</option>
-              ))}
-            </select>
+              className="border px-3 py-2 rounded w-64"
+            />
+            <input
+              type="month"
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="border px-3 py-2 rounded"
+            />
             <button
-              onClick={() => navigate(`/admin/impersonate/${search}`)}
-              className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-sm"
+              onClick={exportCSV}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
             >
-              Impersonate
+              Export CSV
             </button>
           </div>
-        )
-        <div className="flex items-center justify-between mb-4 gap-4">
-          <input
-            type="text"
-            placeholder="Search by email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="border px-3 py-2 rounded w-64"
-          />
-          <input
-            type="month"
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-            className="border px-3 py-2 rounded"
-          />
-          <button
-            onClick={exportCSV}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Export CSV
-          </button>
-        </div>
+        </>
       )}
 
       <div className="mb-4 text-sm text-gray-700">
