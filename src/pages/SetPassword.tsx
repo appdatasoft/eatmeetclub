@@ -35,6 +35,9 @@ const SetPassword = () => {
 
   // Get token from query params - can be in either token or access_token parameter
   const token = searchParams.get('token') || searchParams.get('access_token');
+  
+  // Get email from query params if available (for the email link flow)
+  const email = searchParams.get('email');
 
   const form = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
@@ -46,16 +49,50 @@ const SetPassword = () => {
 
   useEffect(() => {
     if (!token) {
-      setError("Invalid or missing reset token. Please use the link from your email.");
-      toast({
-        title: "Missing token",
-        description: "Please use the link from the email to set your password.",
-        variant: "destructive",
-      });
+      // When there's no token but there is an email, it's likely coming from the welcome email
+      // where the user needs to set their password through a password recovery flow
+      if (email) {
+        console.log("Email provided without token, initiating password recovery:", email);
+        handlePasswordRecovery(email);
+      } else {
+        setError("Invalid or missing reset token. Please use the link from your email.");
+        toast({
+          title: "Missing token",
+          description: "Please use the link from the email to set your password.",
+          variant: "destructive",
+        });
+      }
     } else {
       console.log("Password reset token found:", token.substring(0, 10) + "...");
     }
-  }, [token, toast]);
+  }, [token, toast, email]);
+
+  // Handle the case where user comes with email only and no token
+  const handlePasswordRecovery = async (userEmail: string) => {
+    try {
+      // Send a password reset email
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+        redirectTo: `${window.location.origin}/set-password`,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Password reset email sent",
+        description: "Please check your email for a link to set your password."
+      });
+    } catch (error: any) {
+      console.error("Failed to send password reset email:", error);
+      setError(error.message || "Failed to send password reset email");
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send password reset email",
+        variant: "destructive",
+      });
+    }
+  };
 
   const onSubmit = async (values: PasswordFormValues) => {
     try {
@@ -63,15 +100,16 @@ const SetPassword = () => {
       setError(null);
 
       if (!token) {
-        throw new Error("Invalid token");
+        throw new Error("Invalid or missing token");
       }
 
       console.log("Attempting to update password with token");
 
-      // Update user's password
-      const { error } = await supabase.auth.updateUser({
-        password: values.password
-      });
+      // Update user's password WITH the token for authentication
+      const { error } = await supabase.auth.updateUser(
+        { password: values.password },
+        { accessToken: token } // Pass the token for authentication
+      );
 
       if (error) {
         throw error;
