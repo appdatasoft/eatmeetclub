@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -15,37 +14,32 @@ serve(async (req) => {
   try {
     // Parse the request body to get email
     const { email } = await req.json();
-    
+
     if (!email) {
       throw new Error("No email provided");
     }
-    
+
     console.log("Checking membership status for email:", email);
-    
+
     // Create Supabase client with service role key
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
-    
-    // Get current date for comparison
+
+    // Get current date for proration logic
     const now = new Date();
-    
-    // Get user ID using the auth admin API
-    const { data: { users }, error: userError } = await supabaseClient.auth.admin.listUsers({
-      filter: {
-        email: email
-      }
-    });
-      
+
+    // Step 1: Get all users and find the one with matching email
+    const { data: usersList, error: userError } = await supabaseClient.auth.admin.listUsers();
+
     if (userError) {
-      console.error("Error querying user:", userError);
-      throw new Error(`Error querying user: ${userError.message}`);
+      console.error("Error querying users:", userError);
+      throw new Error(`Error querying users: ${userError.message}`);
     }
-    
-    // Get the first user that matches the email
-    const userData = users?.[0];
-    
+
+    const userData = usersList.users.find((u) => u.email === email);
+
     if (!userData) {
       console.log("No user found with email:", email);
       return new Response(
@@ -59,8 +53,8 @@ serve(async (req) => {
         }
       );
     }
-    
-    // Now check for active membership using the user ID
+
+    // Step 2: Check for active membership using the user ID
     const { data, error } = await supabaseClient
       .from('memberships')
       .select(`
@@ -76,37 +70,35 @@ serve(async (req) => {
       .eq('status', 'active')
       .or(`renewal_at.gt.${now.toISOString()},renewal_at.is.null`)
       .maybeSingle();
-    
+
     if (error) {
       console.error("Database query error:", error);
       throw new Error(`Error querying memberships: ${error.message}`);
     }
-    
-    // If membership found, return it
+
+    // Step 3: Calculate remaining days and proration if active membership found
     if (data) {
       console.log("Found active membership:", data);
-      
-      // Calculate remaining days in subscription
+
       let remainingDays = 0;
       let proratedAmount = 25.00; // Default full price
-      
+
       if (data.renewal_at) {
         const renewalDate = new Date(data.renewal_at);
-        const totalDays = 30; // Assuming 30 days per month
+        const totalDays = 30;
         const elapsedMs = now.getTime() - new Date(data.started_at).getTime();
         const elapsedDays = Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
         remainingDays = totalDays - elapsedDays;
-        
-        // Calculate prorated amount (if < 15 days remaining, charge half price)
+
         if (remainingDays <= 0) {
-          proratedAmount = 25.00; // Full price for new period
+          proratedAmount = 25.00;
         } else if (remainingDays < 15) {
-          proratedAmount = 12.50; // Half price for less than half a period remaining
+          proratedAmount = 12.50;
         } else {
-          proratedAmount = 0; // Free if more than half the period remains
+          proratedAmount = 0;
         }
       }
-      
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -122,7 +114,7 @@ serve(async (req) => {
         }
       );
     }
-    
+
     // No active membership found
     return new Response(
       JSON.stringify({
@@ -134,10 +126,10 @@ serve(async (req) => {
         status: 200,
       }
     );
-    
+
   } catch (error) {
-    console.error("Error in check-membership-status function:", error);
-    
+    console.error("Error in create-membership-checkout function:", error);
+
     return new Response(
       JSON.stringify({
         success: false,
@@ -150,3 +142,4 @@ serve(async (req) => {
     );
   }
 });
+
