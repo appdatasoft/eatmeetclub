@@ -104,78 +104,69 @@ export const useCheckoutSession = () => {
 
       // Handle non-200 responses
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Checkout API error response:", response.status, errorText);
+        
         let errorMessage = `API returned status ${response.status}`;
         
-        try {
-          const errorText = await response.text();
-          console.error("Checkout API error response:", response.status, errorText);
-          
-          // Check if response is HTML (likely an error page)
-          if (!errorText.trim().startsWith('<')) {
-            try {
-              const errorJson = JSON.parse(errorText);
-              if (errorJson.error) {
-                errorMessage = errorJson.error;
-              }
-            } catch (jsonError) {
-              // Not JSON, use the error text
-              errorMessage = errorText.substring(0, 100);
+        // Try to parse as JSON if possible
+        if (!errorText.trim().startsWith('<')) {
+          try {
+            const errorJson = JSON.parse(errorText);
+            if (errorJson.error) {
+              errorMessage = errorJson.error;
             }
+          } catch (jsonError) {
+            // Not JSON, use the error text
+            errorMessage = errorText.substring(0, 100);
           }
-        } catch (parseError) {
-          console.error("Failed to parse error response:", parseError);
+        } else {
+          errorMessage = "Server returned HTML instead of JSON";
         }
         
         throw new Error(errorMessage);
       }
 
-      // Try to parse response as JSON
-      let rawResponseText;
-      try {
-        rawResponseText = await response.text();
-        console.log("Raw response:", rawResponseText);
-        
-        // Check if response is HTML (likely an error page)
-        if (rawResponseText.trim().startsWith('<!DOCTYPE') || 
-            rawResponseText.trim().startsWith('<html')) {
-          console.error("Received HTML instead of JSON:", rawResponseText.substring(0, 200));
-          throw new Error("Invalid response format: received HTML instead of JSON data");
-        }
-        
-        const data = JSON.parse(rawResponseText);
-        
-        if (!data.success) {
-          console.error("Checkout failed:", data);
-          toast({
-            title: "Checkout failed",
-            description: data.error || "Unable to start payment. Please try again.",
-            variant: "destructive"
-          });
-          return { success: false, error: data.error || "Checkout failed" };
-        }
-
-        if (!data.url) {
-          console.error("Checkout missing URL:", data);
-          toast({
-            title: "Checkout failed",
-            description: "Unable to start payment. Please try again.",
-            variant: "destructive"
-          });
-          return { success: false, error: "No checkout URL returned" };
-        }
-
-        console.log("Checkout session created:", data);
-        
-        // Redirect to Stripe checkout page
-        window.location.href = data.url;
-        
-        return { success: true, url: data.url };
-        
-      } catch (parseError) {
-        console.error("Failed to parse JSON response:", parseError);
-        console.error("Raw response was:", rawResponseText);
-        throw new Error("Invalid response format from server");
+      // Parse response
+      const responseText = await response.text();
+      console.log("Raw response:", responseText);
+      
+      // Check if response is HTML (likely an error page)
+      if (responseText.trim().startsWith('<!DOCTYPE') || 
+          responseText.trim().startsWith('<html')) {
+        console.error("Received HTML instead of JSON:", responseText.substring(0, 200));
+        throw new Error("Invalid response format: received HTML instead of JSON data");
       }
+      
+      const data = JSON.parse(responseText);
+      
+      if (!data.success) {
+        console.error("Checkout failed:", data);
+        toast({
+          title: "Checkout failed",
+          description: data.error || "Unable to start payment. Please try again.",
+          variant: "destructive"
+        });
+        return { success: false, error: data.error || "Checkout failed" };
+      }
+
+      if (!data.url) {
+        console.error("Checkout missing URL:", data);
+        toast({
+          title: "Checkout failed",
+          description: "Unable to start payment. Please try again.",
+          variant: "destructive"
+        });
+        return { success: false, error: "No checkout URL returned" };
+      }
+
+      console.log("Checkout session created:", data);
+      
+      // Redirect to Stripe checkout page
+      window.location.href = data.url;
+      
+      return { success: true, url: data.url };
+      
     } catch (error: any) {
       console.error("createCheckoutSession error:", error);
       toast({
