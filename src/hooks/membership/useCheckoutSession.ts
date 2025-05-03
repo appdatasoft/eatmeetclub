@@ -5,6 +5,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useStripeMode } from "@/hooks/membership/useStripeMode";
 import { supabase } from "@/integrations/supabase/client";
 
+interface CheckoutOptions {
+  createUser?: boolean;
+  sendPasswordEmail?: boolean;
+  sendInvoiceEmail?: boolean;
+  checkExisting?: boolean;
+}
+
 /**
  * Hook for creating checkout sessions and onboarding members
  */
@@ -18,11 +25,10 @@ export const useCheckoutSession = () => {
    */
   const createCheckoutSession = async (
     email: string,
-    firstName: string,
-    lastName: string,
+    name: string,
     phone: string | null = null,
     address: string | null = null,
-    options = {
+    options: CheckoutOptions = {
       createUser: true,
       sendPasswordEmail: true,
       sendInvoiceEmail: true,
@@ -30,8 +36,6 @@ export const useCheckoutSession = () => {
     }
   ) => {
     try {
-      const fullName = `${firstName} ${lastName}`;
-
       // Step 1: Check if user exists and has active membership
       // Using a function invocation instead of direct admin API calls
       if (options.checkExisting) {
@@ -53,14 +57,14 @@ export const useCheckoutSession = () => {
             variant: "default"
           });
           window.location.href = "/login";
-          return;
+          return { success: false };
         } else {
           const membershipFee = 25.00;
           const proratedAmount = data.proratedAmount || membershipFee;
 
           return await startCheckout(
             email, 
-            fullName, 
+            name, 
             phone, 
             address, 
             proratedAmount,
@@ -72,7 +76,7 @@ export const useCheckoutSession = () => {
         const membershipFee = 25.00;
         return await startCheckout(
           email, 
-          fullName, 
+          name, 
           phone, 
           address, 
           membershipFee,
@@ -91,7 +95,7 @@ export const useCheckoutSession = () => {
     phone: string | null,
     address: string | null,
     amount: number,
-    options = {
+    options: CheckoutOptions = {
       createUser: true,
       sendPasswordEmail: true,
       sendInvoiceEmail: true,
@@ -131,7 +135,7 @@ export const useCheckoutSession = () => {
       toast({
         title: "Payment Success",
         description: "A confirmation email and invoice has been sent.",
-        variant: "success"
+        variant: "default"
       });
       window.location.href = "/dashboard";
     } else {

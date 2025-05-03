@@ -72,6 +72,14 @@ serve(async (req) => {
                      membership.status === "active" && 
                      (!membership.renewal_at || new Date(membership.renewal_at) > new Date());
 
+    // Calculate remaining days for active memberships
+    let remainingDays = 0;
+    if (isActive && membership.renewal_at) {
+      const now = new Date();
+      const renewalDate = new Date(membership.renewal_at);
+      remainingDays = Math.ceil((renewalDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    }
+
     // Get standard membership fee
     const { data: configData } = await supabase
       .from("app_config")
@@ -89,9 +97,9 @@ serve(async (req) => {
         userExists: true,
         active: isActive,
         proratedAmount,
+        remainingDays,
         membershipId: membership?.id,
-        membershipData: membership,
-        users: [user],
+        membershipData: membership
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

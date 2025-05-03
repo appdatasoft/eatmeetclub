@@ -1,28 +1,58 @@
 
 // src/hooks/membership/useStripeMode.ts
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const useStripeMode = () => {
   const [mode, setMode] = useState<"test" | "live">("test");
+  const [isLive, setIsLive] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchMode = async () => {
-      try {
-        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-stripe-mode`);
-        const data = await res.json();
-        if (data?.mode === "live" || data?.mode === "test") {
-          setMode(data.mode);
-        }
-      } catch (err) {
-        console.error("Failed to fetch stripe mode", err);
-      } finally {
-        setLoading(false);
+  const [stripeCheckError, setStripeCheckError] = useState(false);
+  
+  const checkStripeMode = async () => {
+    try {
+      setLoading(true);
+      setStripeCheckError(false);
+      
+      // Call the function to check Stripe mode
+      const { data, error } = await supabase.functions.invoke("check-stripe-mode");
+      
+      if (error) {
+        console.error("Error checking Stripe mode:", error);
+        setStripeCheckError(true);
+        return;
       }
-    };
-
-    fetchMode();
+      
+      const stripeMode = data?.mode || "test";
+      setMode(stripeMode);
+      setIsLive(stripeMode === "live");
+    } catch (error) {
+      console.error("Failed to check Stripe mode:", error);
+      setStripeCheckError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleRetryStripeCheck = () => {
+    checkStripeMode();
+  };
+  
+  useEffect(() => {
+    checkStripeMode();
   }, []);
-
-  return { mode, isLive: mode === "live", loading };
+  
+  // For compatibility with existing code
+  const isStripeTestMode = mode === "test";
+  
+  return { 
+    mode, 
+    isLive, 
+    loading,
+    isStripeTestMode, 
+    stripeCheckError, 
+    handleRetryStripeCheck 
+  };
 };
+
+export default useStripeMode;

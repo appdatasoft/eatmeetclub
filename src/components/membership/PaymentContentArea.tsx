@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -10,7 +11,10 @@ interface MembershipNoticeProps {
 }
 
 const MembershipNotice = ({ existingMembership, proratedAmount }: MembershipNoticeProps) => {
-  if (!existingMembership || !existingMembership.remainingDays || !existingMembership.userExists) return null;
+  if (!existingMembership || !existingMembership.remainingDays) return null;
+  
+  // Only show if user exists (prevents showing for non-existent users)
+  if (!existingMembership.userExists) return null;
   
   return (
     <div className="bg-amber-50 border border-amber-200 p-4 rounded-md mb-6">
