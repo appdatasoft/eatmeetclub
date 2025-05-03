@@ -14,6 +14,9 @@ import Events from "@/pages/Events";
 import VenuesPage from "@/pages/VenuesPage";
 import RestaurantDetailsPage from "@/pages/RestaurantDetailsPage";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
+import ConfigPage from "@/pages/admin/ConfigPage";
+import UsersPage from "@/pages/admin/UsersPage";
+import AdminSettings from "@/pages/dashboard/AdminSettings";
 
 function App() {
   return (
@@ -35,10 +38,13 @@ function App() {
         
         {/* Admin routes */}
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/config" element={<ConfigPage />} />
+        <Route path="/admin/users" element={<UsersPage />} />
         
         {/* Dashboard routes */}
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/dashboard/payment-success" element={<PaymentSuccessPage />} />
+        <Route path="/dashboard/admin-settings" element={<AdminSettings />} />
         
         {/* Catch-all route */}
         <Route path="*" element={<NotFound />} />

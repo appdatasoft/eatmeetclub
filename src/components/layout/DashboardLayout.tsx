@@ -1,4 +1,3 @@
-
 import { ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
@@ -153,10 +152,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                           Admin Settings
                         </Link>
                         <Link 
-                          to="/dashboard/users" 
-                          className={`block px-3 py-2 rounded-md ${isActive('/dashboard/users')}`}
+                          to="/admin" 
+                          className={`block px-3 py-2 rounded-md ${isActive('/admin')}`}
                         >
-                          Manage Users
+                          Admin Dashboard
                         </Link>
                       </li>
                     )}
