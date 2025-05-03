@@ -2,103 +2,120 @@
 // src/hooks/membership/useCheckoutSession.ts
 import { useInvoiceEmail } from "./useInvoiceEmail";
 import { useToast } from "@/hooks/use-toast";
+import { useStripeMode } from "@/hooks/membership/useStripeMode";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Hook for creating checkout sessions
+ * Hook for creating checkout sessions and onboarding members
  */
 export const useCheckoutSession = () => {
   const { checkActiveMembership } = useInvoiceEmail();
   const { toast } = useToast();
+  const { mode: stripeMode } = useStripeMode();
 
   /**
-   * Creates a checkout session with Stripe
+   * Main function for handling the "Become a Member" flow
    */
   const createCheckoutSession = async (
     email: string,
-    name: string,
+    firstName: string,
+    lastName: string,
     phone: string | null = null,
-    address: string | null = null,
-    options = {
-      createUser: true,
-      sendPasswordEmail: true,
-      sendInvoiceEmail: true,
-      checkExisting: true
-    }
+    address: string | null = null
   ) => {
     try {
-      // Check if user already has an active membership
-      if (options.checkExisting) {
+      const fullName = `${firstName} ${lastName}`;
+
+      // Step 1: Check if user exists in Supabase Auth
+      const { data: { users }, error: userFetchError } = await supabase.auth.admin.listUsers();
+      const user = users?.find(u => u.email === email);
+
+      if (!user) {
+        // Invite new user to set password
+        const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
+          emailRedirectTo: `${window.location.origin}/set-password`
+        });
+        if (inviteError) throw new Error("Failed to send invitation email.");
+
+        // Read full membership fee from admin config (mocked here)
+        const membershipFee = 25.00;
+
+        return await startCheckout(email, fullName, phone, address, membershipFee);
+      } else {
+        // Step 2: Check if user has active membership
         const membership = await checkActiveMembership(email);
 
-        // Only check active membership status if the user exists
-        if (membership && membership.userExists && membership.active) {
+        if (membership?.active) {
           toast({
-            title: "Active Membership",
-            description: "You already have an active membership that doesn't need renewal yet.",
-            variant: "default",
+            title: "Already a Member",
+            description: "You already have an active membership. Please log in to continue.",
+            variant: "default"
           });
-          throw new Error("User already has an active membership");
-        }
+          window.location.href = "/login";
+          return;
+        } else {
+          const membershipFee = 25.00;
+          const proratedAmount = membership?.proratedAmount || membershipFee;
 
-        // Only show prorated amount toast if there are actual remaining days
-        // and the user exists
-        if (membership && membership.userExists && 
-            membership.remainingDays > 0 && 
-            membership.proratedAmount && 
-            membership.proratedAmount > 0) {
-          toast({
-            title: "Existing Membership",
-            description: `You have a membership with ${membership.remainingDays} days remaining. You'll be charged a prorated amount of $${membership.proratedAmount.toFixed(2)}.`,
-            variant: "default",
-          });
+          return await startCheckout(email, fullName, phone, address, proratedAmount);
         }
       }
-
-      // Get Supabase access token
-      const {
-        data: { session },
-        error: sessionError
-      } = await supabase.auth.getSession();
-
-      if (sessionError || !session?.access_token) {
-        throw new Error("User is not authenticated or session is missing");
-      }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            email,
-            name,
-            phone,
-            address,
-            redirectToCheckout: true,
-            createUser: options.createUser,
-            sendPasswordEmail: options.sendPasswordEmail,
-            sendInvoiceEmail: options.sendInvoiceEmail,
-            forceCreateUser: options.createUser,
-            createMembershipRecord: true,
-            timestamp: new Date().getTime()
-          })
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create checkout session");
-      }
-
-      return await response.json();
     } catch (error: any) {
-      console.error("Error creating checkout session:", error);
+      console.error("Error handling membership flow:", error);
       throw error;
     }
+  };
+
+  const startCheckout = async (
+    email: string,
+    name: string,
+    phone: string | null,
+    address: string | null,
+    amount: number
+  ) => {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email,
+          name,
+          phone,
+          address,
+          amount,
+          stripeMode,
+          redirectToCheckout: true,
+          createMembershipRecord: true,
+          timestamp: new Date().getTime()
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || "Failed to create checkout session");
+    }
+
+    if (result.success) {
+      toast({
+        title: "Payment Success",
+        description: "A confirmation email and invoice has been sent.",
+        variant: "success"
+      });
+      window.location.href = "/dashboard";
+    } else {
+      toast({
+        title: "Payment Incomplete",
+        description: "A payment link has been emailed to you.",
+        variant: "destructive"
+      });
+    }
+
+    return result;
   };
 
   return {
