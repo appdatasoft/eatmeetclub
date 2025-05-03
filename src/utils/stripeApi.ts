@@ -11,18 +11,14 @@ export const fetchStripeMode = async () => {
   try {
     // Add a timestamp to prevent caching
     const timestamp = new Date().getTime();
-    const url = `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/get-stripe-publishable-key?_=${timestamp}`;
+    const url = `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/check-stripe-mode?_=${timestamp}`;
     
     const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        // Add cache control headers
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        "Pragma": "no-cache",
-        "Expires": "0"
       },
-      // Credentials: omit to avoid CORS preflight issues
+      // Omit credentials to prevent CORS preflight issues with additional headers
       credentials: 'omit'
     });
 
