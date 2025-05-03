@@ -42,6 +42,9 @@ vector_port = 54328
 [functions.create-membership-checkout]
 verify_jwt = false
 
+[functions.check-membership-status]
+verify_jwt = false
+
 [functions.check-stripe-mode]
 verify_jwt = false
 

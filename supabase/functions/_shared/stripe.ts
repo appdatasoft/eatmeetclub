@@ -6,3 +6,44 @@ export const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
   apiVersion: "2023-10-16", // Use the latest Stripe API version
   httpClient: Stripe.createFetchHttpClient(),
 });
+
+// Common CORS headers for all Stripe-related functions
+export const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
+};
+
+// Helper for handling OPTIONS preflight requests
+export function handleCorsOptions() {
+  return new Response(null, { headers: corsHeaders });
+}
+
+// Helper for creating JSON responses with CORS headers
+export function createJsonResponse(data: any, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" }
+  });
+}
+
+// Helper for creating error responses
+export function createErrorResponse(error: unknown, status = 500) {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  console.error("Error:", errorMessage);
+  
+  return createJsonResponse({
+    error: errorMessage,
+    success: false
+  }, status);
+}
+
+// Helper function to safely parse JSON with fallback
+export function safeJsonParse(text: string, fallback: any = null) {
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("Failed to parse JSON:", e);
+    return fallback;
+  }
+}
