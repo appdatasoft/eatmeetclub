@@ -13,6 +13,8 @@ export const fetchStripeMode = async () => {
     const timestamp = new Date().getTime();
     const url = `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/check-stripe-mode?_=${timestamp}`;
     
+    console.log("Fetching Stripe mode from:", url);
+    
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -23,15 +25,20 @@ export const fetchStripeMode = async () => {
       credentials: 'omit'
     });
 
+    console.log("Stripe mode response status:", response.status);
+
     if (!response.ok) {
-      console.warn(`Stripe key fetch failed with status: ${response.status}`);
+      const errorText = await response.text();
+      console.warn(`Stripe key fetch failed with status: ${response.status}`, errorText);
       return { 
         isTestMode: true, // Default to test mode for safety
-        error: `API returned status ${response.status}`
+        error: `API returned status ${response.status}: ${errorText.substring(0, 100)}`
       };
     }
 
     const data = await response.json();
+    console.log("Stripe mode data:", data);
+    
     return { 
       isTestMode: data.isTestMode ?? true, // Default to test mode if not specified
       publishableKey: data.key,
