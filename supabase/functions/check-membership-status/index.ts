@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    // Parse the request body to get session ID
+    // Parse the request body to get email
     const { email } = await req.json();
     
     if (!email) {
@@ -31,7 +31,33 @@ serve(async (req) => {
     // Get current date for comparison
     const now = new Date();
     
-    // Check for active membership in database
+    // First, get user ID from auth.users
+    const { data: userData, error: userError } = await supabaseClient
+      .from('auth.users')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+      
+    if (userError) {
+      console.error("Error querying user:", userError);
+      throw new Error(`Error querying user: ${userError.message}`);
+    }
+    
+    if (!userData) {
+      console.log("No user found with email:", email);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          membership: null
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
+    
+    // Now check for active membership using the user ID
     const { data, error } = await supabaseClient
       .from('memberships')
       .select(`
@@ -43,10 +69,9 @@ serve(async (req) => {
         subscription_id,
         user_id
       `)
+      .eq('user_id', userData.id)
       .eq('status', 'active')
       .or(`renewal_at.gt.${now.toISOString()},renewal_at.is.null`)
-      .inner join('auth.users(id, email)')
-      .eq('users.email', email)
       .maybeSingle();
     
     if (error) {
