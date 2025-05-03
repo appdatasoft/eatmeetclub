@@ -1,36 +1,28 @@
 
-import { useState, useEffect } from "react";
-import { fetchStripeMode } from "@/utils/stripeApi";
+// src/hooks/membership/useStripeMode.ts
+import { useEffect, useState } from "react";
 
 export const useStripeMode = () => {
-  const [isStripeTestMode, setIsStripeTestMode] = useState<boolean | null>(null);
-  const [stripeCheckError, setStripeCheckError] = useState<boolean>(false);
-
-  const checkStripeMode = async () => {
-    try {
-      const { isTestMode, error } = await fetchStripeMode();
-      
-      setIsStripeTestMode(isTestMode);
-      setStripeCheckError(!!error);
-      
-      if (error) {
-        console.warn("Stripe mode check error:", error);
-      }
-    } catch (error) {
-      console.error("Error checking Stripe mode:", error);
-      setIsStripeTestMode(true); // Default to test mode
-      setStripeCheckError(true);
-    }
-  };
+  const [mode, setMode] = useState<"test" | "live">("test");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkStripeMode();
+    const fetchMode = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-stripe-mode`);
+        const data = await res.json();
+        if (data?.mode === "live" || data?.mode === "test") {
+          setMode(data.mode);
+        }
+      } catch (err) {
+        console.error("Failed to fetch stripe mode", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMode();
   }, []);
 
-  const handleRetryStripeCheck = () => {
-    setStripeCheckError(false);
-    checkStripeMode();
-  };
-
-  return { isStripeTestMode, stripeCheckError, handleRetryStripeCheck };
+  return { mode, isLive: mode === "live", loading };
 };
