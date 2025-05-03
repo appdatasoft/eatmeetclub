@@ -7,6 +7,12 @@ import { useMembershipStatus } from "./useMembershipStatus";
 export type { EventDetails } from "./types/eventTypes";
 export { useMembershipStatus };
 
+/**
+ * Main hook for accessing event details and related functionality
+ * 
+ * @param eventId The ID of the event to fetch
+ * @returns Object containing event data and related functions
+ */
 export const useEventDetails = (eventId: string | undefined) => {
   const { 
     event, 

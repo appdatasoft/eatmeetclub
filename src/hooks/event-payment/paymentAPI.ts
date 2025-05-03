@@ -1,50 +1,44 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { EventDetails } from "../types/eventTypes";
 
-/**
- * Creates a payment session for ticket purchases
- * @param token Auth token for the API call
- * @param event Event details
- * @param ticketCount Number of tickets to purchase
- * @param serviceFee Service fee calculated for the purchase
- * @param totalAmount Total amount to be charged
- */
-export const createTicketPaymentSession = async (
-  token: string,
-  event: EventDetails,
-  ticketCount: number,
-  serviceFee: number,
-  totalAmount: number
-) => {
-  console.log("Creating payment session for event:", event.id);
-  
-  // Prepare ticket purchase data
-  const purchaseData = {
-    eventId: event.id,
-    quantity: ticketCount,
-    unitPrice: event.price,
-    serviceFee: serviceFee,
-    totalAmount: totalAmount
-  };
-  
-  // Create payment session with Stripe
-  const response = await supabase.functions.invoke('create-ticket-payment', {
-    body: { purchaseData },
-    headers: {
-      Authorization: `Bearer ${token}`
+export interface PaymentResponse {
+  url?: string;
+  error?: string;
+}
+
+export const createTicketPayment = async (
+  eventId: string, 
+  quantity: number, 
+  userId: string
+): Promise<PaymentResponse> => {
+  try {
+    // Get user session for authorization
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    
+    if (!token) {
+      throw new Error("User not authenticated");
     }
-  });
-  
-  console.log("Payment session response:", response);
-  
-  if (response.error) {
-    throw new Error(response.error.message || "Failed to create payment session");
+
+    // Call the Supabase Edge Function to create a payment
+    const response = await supabase.functions.invoke('create-ticket-payment', {
+      body: {
+        eventId,
+        quantity,
+        userId
+      },
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (response.error) {
+      throw new Error(response.error.message || "Payment creation failed");
+    }
+
+    return response.data || {};
+  } catch (error: any) {
+    console.error("Error creating ticket payment:", error);
+    throw error;
   }
-  
-  if (!response.data?.url) {
-    throw new Error("No checkout URL returned from payment service");
-  }
-  
-  return response.data.url;
 };
