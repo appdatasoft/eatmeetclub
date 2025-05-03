@@ -1,25 +1,66 @@
 
-import { useState } from "react";
+// src/components/membership/MembershipSteps.tsx
+import { useMembershipSubmission } from "@/hooks/membership/useMembershipSubmission";
 import { Button } from "@/components/ui/button";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { CreditCard, User, Mail, Phone, MapPin } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useMembershipVerification } from "@/hooks/membership/useMembershipVerification";
-import { useWelcomeEmail } from "@/hooks/membership/useWelcomeEmail";
-import { useCheckoutSession } from "@/hooks/membership/useCheckoutSession";
 
-const membershipFormSchema = z.object({
-  name: z.string().min(2, { message: "Name is required" }),
-  email: z.string().email({ message: "Valid email is required" }),
-  phone: z.string().min(6, { message: "Phone number is required" }),
-  address: z.string().min(5, { message: "Address is required" }),
-});
+const MembershipSteps = () => {
+  const { submitMembership } = useMembershipSubmission();
 
-type MembershipFormValues = z.infer<typeof membershipFormSchema>;
+  const handleComplete = () => {
+    submitMembership({
+      createUser: true,
+      sendPasswordEmail: true,
+      sendInvoiceEmail: false, // Change to true if you want to email invoices
+      checkExisting: true
+    });
+  };
+
+  return (
+    <div className="flex justify-center mt-10">
+      <Button onClick={handleComplete}>Complete Membership</Button>
+    </div>
+  );
+};
+
+export default MembershipSteps;
+
+
+// src/hooks/membership/useMembershipSubmission.ts
+export type MembershipSubmissionOptions = {
+  createUser: boolean;
+  sendPasswordEmail: boolean;
+  sendInvoiceEmail: boolean;
+  checkExisting: boolean;
+};
+
+export const useMembershipSubmission = () => {
+  const submitMembership = async ({
+    createUser,
+    sendPasswordEmail,
+    sendInvoiceEmail,
+    checkExisting
+  }: MembershipSubmissionOptions) => {
+    try {
+      console.log("Submitting membership with options:", {
+        createUser,
+        sendPasswordEmail,
+        sendInvoiceEmail,
+        checkExisting
+      });
+
+      // Your logic here to handle each step
+      // Example: check Supabase user, create user, Stripe checkout, etc.
+
+    } catch (error) {
+      console.error("Membership submission error:", error);
+    }
+  };
+
+  return {
+    submitMembership
+  };
+};
+pFormValues = z.infer<typeof membershipFormSchema>;
 
 interface MembershipStepsProps {
   onSubmit: (values: MembershipFormValues) => Promise<void>;
