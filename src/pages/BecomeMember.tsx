@@ -16,8 +16,7 @@ const BecomeMember = () => {
   const form = useForm<MembershipFormValues>({
     resolver: zodResolver(membershipFormSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
+      name: "",
       email: "",
       phone: "",
       address: ""
@@ -29,10 +28,15 @@ const BecomeMember = () => {
     try {
       await createCheckoutSession(
         values.email,
-        values.firstName,
-        values.lastName,
+        values.name,
         values.phone,
-        values.address
+        values.address,
+        {
+          createUser: true,
+          sendPasswordEmail: true,
+          sendInvoiceEmail: true,
+          checkExisting: true
+        }
       );
     } catch (error) {
       console.error("Membership submission error:", error);
@@ -48,25 +52,12 @@ const BecomeMember = () => {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
             control={form.control}
-            name="firstName"
+            name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>First Name</FormLabel>
+                <FormLabel>Full Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="First name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="lastName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Last Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Last name" {...field} />
+                  <Input placeholder="Full name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
