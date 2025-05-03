@@ -29,7 +29,6 @@ serve(async (req) => {
     return new Response(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
-  // Handle the successful payment event
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const email = session.customer_email;
@@ -48,6 +47,13 @@ serve(async (req) => {
         console.error("Failed to update membership:", error);
         return new Response("Failed to update membership", { status: 500 });
       }
+
+      // Send welcome/invoice email via Supabase Edge Email function or webhook
+      await fetch(`${Deno.env.get("SITE_URL")}/api/send-welcome-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
     }
   }
 
