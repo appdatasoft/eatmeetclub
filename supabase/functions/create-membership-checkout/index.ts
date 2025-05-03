@@ -88,51 +88,66 @@ serve(async (req) => {
       amount: Math.round(amount * 100)
     });
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      mode: "payment",
-      customer_email: email,
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: { 
-              name: "Eat Meet Club Membership",
-              description: "Monthly membership fee"
+    try {
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        mode: "payment",
+        customer_email: email,
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: { 
+                name: "Eat Meet Club Membership",
+                description: "Monthly membership fee"
+              },
+              unit_amount: Math.round(amount * 100) // Convert to cents
             },
-            unit_amount: Math.round(amount * 100) // Convert to cents
-          },
-          quantity: 1
+            quantity: 1
+          }
+        ],
+        success_url: `${Deno.env.get("SITE_URL") || "https://eatmeet.club"}/membership-payment?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${Deno.env.get("SITE_URL") || "https://eatmeet.club"}/membership-payment?canceled=true`,
+        metadata: {
+          user_email: email,
+          user_name: name || "",
+          phone: phone || "",
+          address: address || ""
         }
-      ],
-      success_url: `${Deno.env.get("SITE_URL") || "https://eatmeet.club"}/membership-payment?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${Deno.env.get("SITE_URL") || "https://eatmeet.club"}/membership-payment?canceled=true`,
-      metadata: {
-        user_email: email,
-        user_name: name || "",
-        phone: phone || "",
-        address: address || ""
-      }
-    });
+      });
 
-    console.log("Checkout session created:", {
-      id: session.id,
-      url: session.url,
-      success: true
-    });
+      console.log("Checkout session created:", {
+        id: session.id,
+        url: session.url,
+        success: true
+      });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        mode: stripeMode,
-        url: redirectToCheckout ? session.url : null,
-        sessionId: session.id
-      }),
-      { 
-        status: 200, 
-        headers: corsHeaders
-      }
-    );
+      return new Response(
+        JSON.stringify({
+          success: true,
+          mode: stripeMode,
+          url: redirectToCheckout ? session.url : null,
+          sessionId: session.id
+        }),
+        { 
+          status: 200, 
+          headers: corsHeaders
+        }
+      );
+    } catch (stripeError) {
+      console.error("Stripe error:", stripeError);
+      return new Response(
+        JSON.stringify({ 
+          error: stripeError instanceof Error ? stripeError.message : "Stripe API error",
+          details: stripeError instanceof Error ? stripeError.toString() : undefined,
+          success: false
+        }), 
+        {
+          status: 500,
+          headers: corsHeaders
+        }
+      );
+    }
   } catch (err) {
     console.error("Checkout session creation error:", err);
     return new Response(

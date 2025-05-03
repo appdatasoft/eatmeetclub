@@ -46,7 +46,10 @@ export const fetchStripeMode = async () => {
       if (responseText.trim().startsWith('<!DOCTYPE') || 
           responseText.trim().startsWith('<html')) {
         console.error("Received HTML instead of JSON:", responseText.substring(0, 200));
-        throw new Error("Invalid response format: received HTML instead of JSON");
+        return { 
+          mode: "test", // Default to test mode on error
+          error: "Received HTML instead of JSON" 
+        };
       }
       
       const data = JSON.parse(responseText);
@@ -54,7 +57,7 @@ export const fetchStripeMode = async () => {
       
       return { 
         mode: data.mode || "test", // Default to test mode if not specified
-        error: null
+        error: data.error || null
       };
     } catch (parseError) {
       console.error("Error parsing response as JSON:", parseError);

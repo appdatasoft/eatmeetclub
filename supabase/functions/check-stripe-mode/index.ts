@@ -47,9 +47,27 @@ serve(async (req) => {
         
         if (createTableError) {
           console.error("Failed to create admin_config table directly:", createTableError);
+          return new Response(JSON.stringify({ 
+            mode: "test",
+            error: "Failed to create admin_config table: " + createTableError.message,
+            fallback: true,
+            timestamp: new Date().toISOString()
+          }), {
+            status: 200,
+            headers: corsHeaders
+          });
         }
       } catch (directCreateError) {
         console.error("Failed in direct table creation attempt:", directCreateError);
+        return new Response(JSON.stringify({ 
+          mode: "test",
+          error: "Failed to create admin_config table directly",
+          fallback: true,
+          timestamp: new Date().toISOString()
+        }), {
+          status: 200,
+          headers: corsHeaders
+        });
       }
     }
 
@@ -88,7 +106,7 @@ serve(async (req) => {
     console.error("check-stripe-mode error:", err);
     return new Response(JSON.stringify({ 
       mode: "test", 
-      error: "Internal Server Error",
+      error: err instanceof Error ? err.message : "Internal Server Error",
       fallback: true,
       timestamp: new Date().toISOString()
     }), {

@@ -128,7 +128,7 @@ export const useCheckoutSession = () => {
         throw new Error("Invalid response format from server");
       }
 
-      if (!data.url) {
+      if (!data.success) {
         console.error("Checkout failed:", data);
         toast({
           title: "Checkout failed",
@@ -136,6 +136,16 @@ export const useCheckoutSession = () => {
           variant: "destructive"
         });
         return { success: false, error: data.error || "Checkout failed" };
+      }
+
+      if (!data.url) {
+        console.error("Checkout missing URL:", data);
+        toast({
+          title: "Checkout failed",
+          description: "Unable to start payment. Please try again.",
+          variant: "destructive"
+        });
+        return { success: false, error: "No checkout URL returned" };
       }
 
       console.log("Checkout session created:", data);
