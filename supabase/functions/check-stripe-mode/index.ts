@@ -20,16 +20,9 @@ serve(async (req) => {
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
     const stripePublishableKey = Deno.env.get("STRIPE_PUBLISHABLE_KEY") || "";
 
-    const isTestSecret = stripeSecretKey.startsWith("sk_test_");
-    const isTestPublic = stripePublishableKey.startsWith("pk_test_");
-    const isTestMode = isTestSecret || isTestPublic;
-
-    console.log("Stripe mode status:", {
-      secretKeyPrefix: stripeSecretKey.substring(0, 8),
-      publicKeyPrefix: stripePublishableKey.substring(0, 8),
-      isTestMode,
-      matched: isTestSecret === isTestPublic
-    });
+    const isSecretTest = stripeSecretKey.startsWith("sk_test_");
+    const isPublishableTest = stripePublishableKey.startsWith("pk_test_");
+    const isTestMode = isSecretTest || isPublishableTest;
 
     return new Response(
       JSON.stringify({
@@ -42,7 +35,8 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Stripe mode check failed:", error.message);
+    console.error("Stripe mode verification failed:", error.message);
+
     return new Response(
       JSON.stringify({
         isTestMode: true,
@@ -50,7 +44,7 @@ serve(async (req) => {
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200, // don't crash frontend
+        status: 200,
       }
     );
   }
