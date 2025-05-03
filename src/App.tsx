@@ -17,6 +17,7 @@ import AdminDashboard from "@/pages/admin/AdminDashboard";
 import ConfigPage from "@/pages/admin/ConfigPage";
 import UsersPage from "@/pages/admin/UsersPage";
 import AdminSettings from "@/pages/dashboard/AdminSettings";
+import AddRestaurant from "@/pages/dashboard/AddRestaurant";
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/dashboard/payment-success" element={<PaymentSuccessPage />} />
         <Route path="/dashboard/admin-settings" element={<AdminSettings />} />
+        <Route path="/dashboard/add-restaurant" element={<AddRestaurant />} />
         
         {/* Catch-all route */}
         <Route path="*" element={<NotFound />} />

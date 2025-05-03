@@ -8,14 +8,17 @@ import Footer from "@/components/layout/Footer";
 import { Restaurant } from "@/components/restaurants/types/restaurant";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MapPin, Utensils as RestaurantIcon } from "lucide-react";
-import { Link } from "react-router-dom";
+import { MapPin, Utensils as RestaurantIcon, Plus } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const VenuesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
+  const { user } = useAuth();
   
   const { data: restaurants, isLoading, error } = useQuery({
     queryKey: ["restaurants"],
@@ -27,7 +30,7 @@ const VenuesPage = () => {
       
       if (error) {
         console.error("Error fetching restaurants:", error);
-        toast({
+        useToast().toast({
           title: "Error fetching venues",
           description: error.message,
           variant: "destructive",
@@ -61,10 +64,22 @@ const VenuesPage = () => {
       <main className="min-h-screen py-12 bg-background">
         <div className="container-custom">
           <div className="flex flex-col items-center mb-12 text-center">
-            <h1 className="text-4xl font-bold mb-4">Explore Our Venues</h1>
-            <p className="text-lg text-gray-600 max-w-2xl">
-              Discover amazing restaurants and venues for your next dining experience or event
-            </p>
+            <div className="flex flex-col md:flex-row justify-between items-center w-full max-w-2xl">
+              <div className="text-left mb-4 md:mb-0">
+                <h1 className="text-4xl font-bold mb-4">Explore Our Venues</h1>
+                <p className="text-lg text-gray-600">
+                  Discover amazing restaurants and venues for your next dining experience or event
+                </p>
+              </div>
+              {user && (
+                <Button 
+                  onClick={() => navigate("/dashboard/add-restaurant")} 
+                  className="whitespace-nowrap"
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add Venue
+                </Button>
+              )}
+            </div>
             
             <div className="w-full max-w-md mt-8">
               <Input
@@ -142,6 +157,14 @@ const VenuesPage = () => {
                   <p className="mt-1 text-gray-500">
                     {searchTerm ? "Try adjusting your search terms" : "No venues have been added yet"}
                   </p>
+                  {user && (
+                    <Button 
+                      onClick={() => navigate("/dashboard/add-restaurant")}
+                      className="mt-4"
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Add a venue
+                    </Button>
+                  )}
                 </div>
               )}
             </>
