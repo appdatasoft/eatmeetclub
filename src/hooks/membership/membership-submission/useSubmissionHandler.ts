@@ -67,7 +67,7 @@ export const useSubmissionHandler = () => {
       }
       
       // Create a checkout session
-      const data = await createCheckoutSession(
+      const checkoutResult = await createCheckoutSession(
         email, 
         name, 
         phone, 
@@ -80,9 +80,9 @@ export const useSubmissionHandler = () => {
         }
       );
       
-      console.log("Checkout session created:", data);
+      console.log("Checkout session created:", checkoutResult);
       
-      if (data.url) {
+      if (checkoutResult.success && checkoutResult.url) {
         // Mark checkout as initiated to prevent duplicate submissions
         markCheckoutInitiated();
         
@@ -90,7 +90,7 @@ export const useSubmissionHandler = () => {
         verifyStoredDetails(email);
         
         // Redirect directly to Stripe checkout URL
-        window.location.href = data.url;
+        window.location.href = checkoutResult.url;
       } else {
         throw new Error("No checkout URL returned");
       }

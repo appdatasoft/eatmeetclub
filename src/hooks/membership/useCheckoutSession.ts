@@ -1,8 +1,22 @@
+
 // src/hooks/membership/useCheckoutSession.ts
 import { useInvoiceEmail } from "./useInvoiceEmail";
 import { useToast } from "@/hooks/use-toast";
 import { useStripeMode } from "@/hooks/membership/useStripeMode";
 import { supabase } from "@/integrations/supabase/client";
+
+interface CheckoutOptions {
+  createUser: boolean;
+  sendPasswordEmail: boolean;
+  sendInvoiceEmail: boolean;
+  checkExisting: boolean;
+}
+
+interface CheckoutResponse {
+  url?: string;
+  success: boolean;
+  error?: string;
+}
 
 /**
  * Hook for creating checkout sessions and onboarding members
@@ -14,14 +28,12 @@ export const useCheckoutSession = () => {
 
   const createCheckoutSession = async (
     email: string,
-    firstName: string,
-    lastName: string,
+    name: string,
     phone: string | null = null,
-    address: string | null = null
-  ) => {
+    address: string | null = null,
+    options: CheckoutOptions
+  ): Promise<CheckoutResponse> => {
     try {
-      const fullName = `${firstName} ${lastName}`;
-
       // Step 1: Call backend function to create or invite user
       const userCheck = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-or-invite-user`, {
         method: "POST",
@@ -40,7 +52,7 @@ export const useCheckoutSession = () => {
           variant: "default"
         });
         window.location.href = "/login";
-        return;
+        return { success: false };
       }
 
       // Step 3: Determine fee
@@ -55,12 +67,13 @@ export const useCheckoutSession = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email,
-            name: fullName,
+            name,
             phone,
             address,
             amount,
             stripeMode,
-            redirectToCheckout: true
+            redirectToCheckout: true,
+            ...options
           })
         }
       );
@@ -74,11 +87,11 @@ export const useCheckoutSession = () => {
           description: data.error || "Unable to start payment. Please try again.",
           variant: "destructive"
         });
-        return;
+        return { success: false, error: data.error || "Checkout failed" };
       }
 
-      console.log("Redirecting to Stripe:", data.url);
-      window.location.href = data.url;
+      console.log("Checkout session created:", data);
+      return { success: true, url: data.url };
 
     } catch (error: any) {
       console.error("createCheckoutSession error:", error);
@@ -87,6 +100,7 @@ export const useCheckoutSession = () => {
         description: error.message || "An unexpected error occurred.",
         variant: "destructive"
       });
+      return { success: false, error: error.message || "An unexpected error occurred" };
     }
   };
 
