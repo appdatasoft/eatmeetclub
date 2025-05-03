@@ -5,13 +5,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useStripeMode } from "@/hooks/membership/useStripeMode";
 import { supabase } from "@/integrations/supabase/client";
 
-interface CheckoutOptions {
-  createUser?: boolean;
-  sendPasswordEmail?: boolean;
-  sendInvoiceEmail?: boolean;
-  checkExisting?: boolean;
-}
-
 /**
  * Hook for creating checkout sessions and onboarding members
  */
@@ -20,133 +13,82 @@ export const useCheckoutSession = () => {
   const { toast } = useToast();
   const { mode: stripeMode } = useStripeMode();
 
-  /**
-   * Main function for handling the "Become a Member" flow
-   */
   const createCheckoutSession = async (
     email: string,
-    name: string,
+    firstName: string,
+    lastName: string,
     phone: string | null = null,
-    address: string | null = null,
-    options: CheckoutOptions = {
-      createUser: true,
-      sendPasswordEmail: true,
-      sendInvoiceEmail: true,
-      checkExisting: true,
-    }
+    address: string | null = null
   ) => {
     try {
-      // Step 1: Check if user exists and has active membership
-      // Using a function invocation instead of direct admin API calls
-      if (options.checkExisting) {
-        // Add timestamp to prevent caching issues
-        const timestamp = new Date().getTime();
-        const { data, error } = await supabase.functions.invoke('check-membership-status', {
-          body: { email, timestamp },
-          headers: {
-            'Cache-Control': 'no-cache'
-          }
-        });
+      const fullName = `${firstName} ${lastName}`;
 
-        if (error) throw new Error("Failed to check membership status");
-
-        if (data.userExists && data.active) {
-          toast({
-            title: "Already a Member",
-            description: "You already have an active membership. Please log in to continue.",
-            variant: "default"
-          });
-          window.location.href = "/login";
-          return { success: false };
-        } else {
-          const membershipFee = 25.00;
-          const proratedAmount = data.proratedAmount || membershipFee;
-
-          return await startCheckout(
-            email, 
-            name, 
-            phone, 
-            address, 
-            proratedAmount,
-            options
-          );
-        }
-      } else {
-        // Skip existing user check, just proceed with checkout
-        const membershipFee = 25.00;
-        return await startCheckout(
-          email, 
-          name, 
-          phone, 
-          address, 
-          membershipFee,
-          options
-        );
-      }
-    } catch (error: any) {
-      console.error("Error handling membership flow:", error);
-      throw error;
-    }
-  };
-
-  const startCheckout = async (
-    email: string,
-    name: string,
-    phone: string | null,
-    address: string | null,
-    amount: number,
-    options: CheckoutOptions = {
-      createUser: true,
-      sendPasswordEmail: true,
-      sendInvoiceEmail: true,
-    }
-  ) => {
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/create-membership-checkout`,
-      {
+      // Step 1: Call backend function to create or invite user
+      const userCheck = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-or-invite-user`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          email,
-          name,
-          phone,
-          address,
-          amount,
-          stripeMode,
-          redirectToCheckout: true,
-          createMembershipRecord: true,
-          createUser: options.createUser,
-          sendPasswordEmail: options.sendPasswordEmail,
-          sendInvoiceEmail: options.sendInvoiceEmail,
-          timestamp: new Date().getTime()
-        })
-      }
-    );
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to create checkout session");
-    }
-
-    if (result.success) {
-      toast({
-        title: "Payment Success",
-        description: "A confirmation email and invoice has been sent.",
-        variant: "default"
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
       });
-      window.location.href = "/dashboard";
-    } else {
+      const userResult = await userCheck.json();
+
+      // Step 2: Check if user has active membership
+      const membership = await checkActiveMembership(email);
+
+      if (membership?.active) {
+        toast({
+          title: "Already a Member",
+          description: "You already have an active membership. Please log in to continue.",
+          variant: "default"
+        });
+        window.location.href = "/login";
+        return;
+      }
+
+      // Step 3: Determine fee
+      const membershipFee = 25.0;
+      const amount = membership?.proratedAmount || membershipFee;
+
+      // Step 4: Call create-membership-checkout function
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-membership-checkout`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            name: fullName,
+            phone,
+            address,
+            amount,
+            stripeMode,
+            redirectToCheckout: true
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.url) {
+        console.error("Checkout failed:", data);
+        toast({
+          title: "Checkout failed",
+          description: data.error || "Unable to start payment. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log("Redirecting to Stripe:", data.url);
+      window.location.href = data.url;
+
+    } catch (error: any) {
+      console.error("createCheckoutSession error:", error);
       toast({
-        title: "Payment Incomplete",
-        description: "A payment link has been emailed to you.",
+        title: "Error",
+        description: error.message || "An unexpected error occurred.",
         variant: "destructive"
       });
     }
-
-    return result;
   };
 
   return {
