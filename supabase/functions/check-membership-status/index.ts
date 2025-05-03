@@ -1,92 +1,141 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
-
-  try {
-    const { email } = await req.json();
-
-    if (!email) {
-      return new Response(JSON.stringify({ error: "Email is required" }), {
-        status: 400,
-        headers: corsHeaders
-      });
-    }
-
-    // Check if the user has a membership
-    const { data: membership, error } = await supabase
-      .from("memberships")
-      .select("*")
-      .eq("user_email", email)
-      .maybeSingle();
-
-    if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: corsHeaders
-      });
-    }
-
-    // No membership yet
-    if (!membership) {
-      return new Response(JSON.stringify({
-        active: false,
-        remainingDays: 0,
-        proratedAmount: null
-      }), {
-        status: 200,
-        headers: corsHeaders
-      });
-    }
-
-    const isActive = membership.status === "active" && new Date(membership.expires_at) > new Date();
-
-    const today = new Date();
-    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    const daysRemaining = Math.max(0, Math.ceil((endOfMonth.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
-    const daysInMonth = endOfMonth.getDate();
-
-    // Fetch admin config for membership fee
-    const { data: config } = await supabase
-      .from("admin_config")
-      .select("membership_fee")
-      .single();
-
-    const membershipFee = config?.membership_fee || 25;
-
-    const proratedAmount = isActive
-      ? 0
-      : parseFloat(((membershipFee * daysRemaining) / daysInMonth).toFixed(2));
-
-    return new Response(JSON.stringify({
-      active: isActive,
-      remainingDays: daysRemaining,
-      proratedAmount
-    }), {
-      status: 200,
-      headers: corsHeaders
-    });
-
-  } catch (err) {
-    console.error("check-membership-status error:", err);
-    return new Response(JSON.stringify({ error: "Internal Server Error" }), {
-      status: 500,
-      headers: corsHeaders
-    });
-  }
-});
+import Stripe from "https://esm.sh/stripe@12.1.0?target=deno";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
 };
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    // Extract JWT from Authorization header
+    const authHeader = req.headers.get("Authorization");
+    const jwt = authHeader?.replace("Bearer ", "");
+
+    if (!jwt) {
+      return new Response(JSON.stringify({ error: "Missing authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Initialize Supabase with JWT
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      {
+        global: { headers: { Authorization: `Bearer ${jwt}` } }
+      }
+    );
+
+    // Parse body
+    const {
+      email,
+      name,
+      phone,
+      address,
+      amount = 25.0,
+      redirectToCheckout = true,
+      stripeMode = "test"
+    } = await req.json();
+
+    if (!email) {
+      return new Response(JSON.stringify({ error: "Missing email", success: false }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Determine Stripe key
+    const stripeKey = stripeMode === "live"
+      ? Deno.env.get("STRIPE_SECRET_KEY_LIVE")
+      : Deno.env.get("STRIPE_SECRET_KEY");
+
+    if (!stripeKey) {
+      return new Response(
+        JSON.stringify({ error: `Stripe ${stripeMode} key is not configured`, success: false }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
+
+    const stripe = new Stripe(stripeKey, { apiVersion: "2022-11-15" });
+
+    // Create Stripe checkout session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      customer_email: email,
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: "Eat Meet Club Membership",
+              description: "Monthly membership fee"
+            },
+            unit_amount: Math.round(amount * 100)
+          },
+          quantity: 1
+        }
+      ],
+      success_url: `${Deno.env.get("SITE_URL")}/membership-confirmed?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${Deno.env.get("SITE_URL")}/membership-payment?canceled=true`,
+      metadata: {
+        user_email: email,
+        user_name: name || "",
+        phone: phone || "",
+        address: address || ""
+      }
+    });
+
+    // Optional: trigger welcome email
+    try {
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-welcome-email`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email, name })
+      });
+    } catch (err) {
+      console.warn("Failed to send welcome email:", err);
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        mode: stripeMode,
+        url: redirectToCheckout ? session.url : null,
+        sessionId: session.id
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      }
+    );
+  } catch (err) {
+    console.error("❌ Error creating checkout session:", err);
+    return new Response(
+      JSON.stringify({
+        error: err instanceof Error ? err.message : "Internal server error",
+        details: err instanceof Error ? err.toString() : undefined,
+        success: false
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      }
+    );
+  }
+});
