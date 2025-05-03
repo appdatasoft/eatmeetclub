@@ -18,16 +18,33 @@ serve(async (req) => {
   }
 
   try {
-    // Get the Stripe key from environment
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
+    // Get both Stripe keys from environment
+    const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
+    const stripePublishableKey = Deno.env.get("STRIPE_PUBLISHABLE_KEY") || "";
     
     // Check if it's a test key based on prefix
-    const isTestMode = stripeKey.startsWith("sk_test_") || !stripeKey.startsWith("sk_live_");
+    const isSecretTestMode = stripeSecretKey.startsWith("sk_test_");
+    const isPublishableTestMode = stripePublishableKey.startsWith("pk_test_");
     
-    console.log("Stripe mode check:", isTestMode ? "test" : "live");
+    // Both keys should be in the same mode (test or live)
+    const isTestMode = isSecretTestMode || isPublishableTestMode;
+    
+    // Log keys partially for debugging (only first few chars)
+    const secretKeyPrefix = stripeSecretKey.substring(0, 8) + "...";
+    const publishableKeyPrefix = stripePublishableKey.substring(0, 8) + "...";
+    
+    console.log("Stripe mode check:", { 
+      isTestMode, 
+      secretKeyPrefix,
+      publishableKeyPrefix,
+      secretKeyMatch: isSecretTestMode === isPublishableTestMode ? "matching" : "mismatched" 
+    });
     
     return new Response(
-      JSON.stringify({ isTestMode }),
+      JSON.stringify({ 
+        isTestMode,
+        publishableKeyPrefix 
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,

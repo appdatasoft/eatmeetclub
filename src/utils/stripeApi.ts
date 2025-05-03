@@ -11,7 +11,7 @@ export const fetchStripeMode = async () => {
   try {
     // Add a timestamp to prevent caching
     const timestamp = new Date().getTime();
-    const url = `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/check-stripe-mode?_=${timestamp}`;
+    const url = `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/get-stripe-publishable-key?_=${timestamp}`;
     
     const response = await fetch(url, {
       method: "GET",
@@ -27,7 +27,7 @@ export const fetchStripeMode = async () => {
     });
 
     if (!response.ok) {
-      console.warn(`Stripe mode check failed with status: ${response.status}`);
+      console.warn(`Stripe key fetch failed with status: ${response.status}`);
       return { 
         isTestMode: true, // Default to test mode for safety
         error: `API returned status ${response.status}`
@@ -36,11 +36,12 @@ export const fetchStripeMode = async () => {
 
     const data = await response.json();
     return { 
-      isTestMode: data.isTestMode,
+      isTestMode: data.isTestMode ?? true, // Default to test mode if not specified
+      publishableKey: data.key,
       error: null
     };
   } catch (error) {
-    console.error("Error checking Stripe mode:", error);
+    console.error("Error fetching Stripe mode:", error);
     return { 
       isTestMode: true, // Default to test mode for safety
       error: error instanceof Error ? error.message : "Unknown error" 

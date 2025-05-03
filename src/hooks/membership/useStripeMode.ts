@@ -6,6 +6,7 @@ export const useStripeMode = () => {
   const [isStripeTestMode, setIsStripeTestMode] = useState<boolean | null>(null);
   const [stripeCheckError, setStripeCheckError] = useState<boolean>(false);
   const [isRetrying, setIsRetrying] = useState<boolean>(false);
+  const [stripePublishableKey, setStripePublishableKey] = useState<string | null>(null);
   
   const checkStripeMode = useCallback(async () => {
     if (isRetrying) {
@@ -14,7 +15,7 @@ export const useStripeMode = () => {
     
     try {
       setStripeCheckError(false);
-      const { isTestMode, error } = await fetchStripeMode();
+      const { isTestMode, error, publishableKey } = await fetchStripeMode();
       
       if (error) {
         console.warn("Non-critical error checking Stripe mode:", error);
@@ -23,6 +24,9 @@ export const useStripeMode = () => {
         setIsStripeTestMode(true);
       } else {
         setIsStripeTestMode(isTestMode);
+        if (publishableKey) {
+          setStripePublishableKey(publishableKey);
+        }
       }
     } catch (error) {
       console.error("Error checking Stripe mode:", error);
@@ -43,6 +47,7 @@ export const useStripeMode = () => {
   return {
     isStripeTestMode,
     stripeCheckError,
+    stripePublishableKey,
     handleRetryStripeCheck
   };
 };
