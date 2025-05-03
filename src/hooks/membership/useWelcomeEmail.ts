@@ -1,4 +1,5 @@
 
+import { supabase } from "@/integrations/supabase/client";
 import { useInvoiceEmail } from "./useInvoiceEmail";
 
 /**
@@ -8,7 +9,7 @@ export const useWelcomeEmail = () => {
   const { getInvoiceReceiptUrl } = useInvoiceEmail();
   
   /**
-   * Sends a welcome email to the user with a password setup link that also activates their account
+   * Sends a combined welcome and activation email to the user
    */
   const sendWelcomeEmail = async (email: string, name: string, sessionId?: string) => {
     try {
@@ -32,7 +33,7 @@ export const useWelcomeEmail = () => {
         }
       }
       
-      // Create activation link
+      // Create a direct activation link that goes to set password page with email prefilled
       const activationLink = `${currentOrigin}/set-password?email=${encodeURIComponent(email)}`;
       
       const response = await fetch(
@@ -51,12 +52,12 @@ export const useWelcomeEmail = () => {
                 
                 <p>We're excited to have you as a member of our community.</p>
                 
-                <p>To complete your signup, please activate your account and set your password by clicking the button below:</p>
+                <p>To activate your account and set your password, please click the button below:</p>
                 
                 <div style="margin: 30px 0; text-align: center;">
                   <a href="${activationLink}" 
                      style="padding: 12px 24px; background: #ff5b2e; color: white; border-radius: 5px; display: inline-block; text-decoration: none; font-weight: bold;">
-                     Activate Account
+                     Activate Account & Set Password
                   </a>
                 </div>
                 
