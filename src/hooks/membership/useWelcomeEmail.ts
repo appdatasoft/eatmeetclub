@@ -16,7 +16,7 @@ export const useWelcomeEmail = () => {
       // Get the current origin for generating correct URLs
       // Never use localhost in production emails - use the actual domain
       const currentOrigin = window.location.origin.includes('localhost') 
-        ? "https://eatmeetclub.lovable.app" 
+        ? "https://www.eatmeetclub.com" 
         : window.location.origin;
 
       // If session ID is provided, try to get the receipt URL

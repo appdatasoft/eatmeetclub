@@ -8,6 +8,9 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreditCard, User, Mail, Phone, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useMembershipVerification } from "@/hooks/membership/useMembershipVerification";
+import { useWelcomeEmail } from "@/hooks/membership/useWelcomeEmail";
+import { useCheckoutSession } from "@/hooks/membership/useCheckoutSession";
 
 const membershipFormSchema = z.object({
   name: z.string().min(2, { message: "Name is required" }),
@@ -25,6 +28,9 @@ interface MembershipStepsProps {
 
 const MembershipSteps = ({ onSubmit, isLoading }: MembershipStepsProps) => {
   const { toast } = useToast();
+  const [isProcessingVerification, setIsProcessingVerification] = useState(false);
+  const { isVerifying, verifyEmailAndMembershipStatus, handleExistingMember } = useMembershipVerification();
+  const { createCheckoutSession } = useCheckoutSession();
   
   const form = useForm<MembershipFormValues>({
     resolver: zodResolver(membershipFormSchema),
@@ -37,16 +43,60 @@ const MembershipSteps = ({ onSubmit, isLoading }: MembershipStepsProps) => {
   });
 
   const handleFormSubmit = form.handleSubmit(async (values) => {
-    // Store all values in localStorage
-    localStorage.setItem('signup_name', values.name);
-    localStorage.setItem('signup_email', values.email);
-    localStorage.setItem('signup_phone', values.phone);
-    localStorage.setItem('signup_address', values.address);
-    
     try {
-      await onSubmit(values);
+      // Store all values in localStorage
+      localStorage.setItem('signup_name', values.name);
+      localStorage.setItem('signup_email', values.email);
+      localStorage.setItem('signup_phone', values.phone);
+      localStorage.setItem('signup_address', values.address);
+      
+      setIsProcessingVerification(true);
+      
+      // Step 1: Check if user exists and has membership
+      const { userExists, hasActiveMembership } = await verifyEmailAndMembershipStatus(values.email);
+      
+      // If user exists and has active membership, redirect to login
+      if (userExists && hasActiveMembership) {
+        handleExistingMember(values.email);
+        return;
+      }
+      
+      // Step 2: Process to payment (create checkout session)
+      try {
+        const checkoutResult = await createCheckoutSession(
+          values.email,
+          values.name,
+          values.phone,
+          values.address,
+          {
+            createUser: !userExists, // Only create user if they don't exist
+            sendPasswordEmail: !userExists, // Only send password email for new users
+          }
+        );
+        
+        // Redirect to Stripe checkout
+        if (checkoutResult.success && checkoutResult.url) {
+          window.location.href = checkoutResult.url;
+        } else {
+          throw new Error("Failed to create checkout session");
+        }
+      } catch (checkoutError) {
+        console.error("Checkout error:", checkoutError);
+        toast({
+          title: "Payment Error",
+          description: "There was a problem setting up the payment. Please try again.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      console.error("Error submitting form:", error);
+      console.error("Form submission error:", error);
+      toast({
+        title: "Error",
+        description: "There was a problem processing your request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingVerification(false);
     }
   });
 
@@ -127,9 +177,9 @@ const MembershipSteps = ({ onSubmit, isLoading }: MembershipStepsProps) => {
           <Button 
             type="submit" 
             className="w-full mt-6"
-            disabled={isLoading || !form.formState.isValid}
+            disabled={isLoading || isVerifying || isProcessingVerification || !form.formState.isValid}
           >
-            {isLoading ? (
+            {isLoading || isVerifying || isProcessingVerification ? (
               <span className="flex items-center">
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

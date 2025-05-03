@@ -44,7 +44,7 @@ serve(async (req) => {
     // Ensure the redirect URL is absolute and properly formatted
     if (!redirectTo.startsWith('http')) {
       // If not absolute, construct a proper URL using a default domain
-      const defaultDomain = "https://eatmeetclub.lovable.app";
+      const defaultDomain = "https://www.eatmeetclub.com";
       redirectTo = `${defaultDomain}${redirectTo.startsWith('/') ? '' : '/'}${redirectTo}`;
     }
     
