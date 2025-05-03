@@ -1,9 +1,41 @@
-
 import React from "react";
-import PaymentAlerts from "./PaymentAlerts";
-import StripePaymentElement from "./StripePaymentElement";
-import MembershipPaymentForm from "./MembershipPaymentForm";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import StripePaymentForm from "./stripe/StripePaymentForm";
 
+// Add a new component to display existing membership info
+interface MembershipNoticeProps {
+  existingMembership: any;
+  proratedAmount: number | null;
+}
+
+const MembershipNotice = ({ existingMembership, proratedAmount }: MembershipNoticeProps) => {
+  if (!existingMembership) return null;
+  
+  return (
+    <div className="bg-amber-50 border border-amber-200 p-4 rounded-md mb-6">
+      <h3 className="text-amber-800 font-medium mb-2">Existing Membership Detected</h3>
+      
+      {proratedAmount === 0 ? (
+        <p className="text-amber-700">
+          You already have an active membership. There's no need to sign up again at this time.
+        </p>
+      ) : (
+        <p className="text-amber-700">
+          You'll be charged a prorated amount of ${proratedAmount?.toFixed(2) || '25.00'} for this renewal.
+        </p>
+      )}
+      
+      {existingMembership.remainingDays > 0 && (
+        <p className="mt-2 text-amber-700">
+          Your current membership has {existingMembership.remainingDays} days remaining.
+        </p>
+      )}
+    </div>
+  );
+};
+
+// Update the PaymentContentArea component to include this notice
 interface PaymentContentAreaProps {
   paymentSuccess: boolean;
   sessionId: string | null;
@@ -20,13 +52,15 @@ interface PaymentContentAreaProps {
   isProcessing: boolean;
   membershipFee: number;
   handlePaymentSuccess: () => void;
-  handlePaymentError: (error: string) => void;
+  handlePaymentError: (errorMessage: string) => void;
   handleSubmit: (values: any) => Promise<void>;
   handleCancel: () => void;
   clientSecret: string | null;
+  existingMembership?: any;
+  proratedAmount?: number | null;
 }
 
-const PaymentContentArea: React.FC<PaymentContentAreaProps> = ({
+const PaymentContentArea = ({
   paymentSuccess,
   sessionId,
   paymentCanceled,
@@ -41,61 +75,95 @@ const PaymentContentArea: React.FC<PaymentContentAreaProps> = ({
   handlePaymentError,
   handleSubmit,
   handleCancel,
-  clientSecret
-}) => {
-  const finalPaymentSuccess = paymentSuccess;
-  const finalSessionId = sessionId;
+  clientSecret,
+  existingMembership,
+  proratedAmount
+}: PaymentContentAreaProps) => {
+  const email = localStorage.getItem('signup_email') || '';
   
   return (
     <div className="container-custom">
-      <div className="max-w-xl mx-auto">
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="p-6 bg-brand-500 text-white">
-            <h1 className="text-2xl font-bold">Become a Member</h1>
-            <p className="mt-1 text-white/90">Join our exclusive community for just ${membershipFee.toFixed(2)}/month</p>
-          </div>
+      <Card className="max-w-xl mx-auto">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold">
+            {paymentSuccess ? "Payment Successful!" : "Complete Your Membership"}
+          </CardTitle>
+          <CardDescription>
+            {paymentSuccess 
+              ? "Thank you for your payment. Your membership is being activated." 
+              : `Join our exclusive dining community for $${membershipFee.toFixed(2)}/month`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {networkError && (
+            <Alert variant="destructive">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{networkError}</AlertDescription>
+            </Alert>
+          )}
           
-          <div className="p-6">
-            <PaymentAlerts 
-              paymentSuccess={finalPaymentSuccess}
-              sessionId={finalSessionId}
-              paymentCanceled={paymentCanceled}
-              networkError={networkError}
-              formErrors={formErrors}
-              stripeError={stripeError}
-              validationError={validationError}
+          {validationError && (
+            <Alert variant="destructive">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{validationError}</AlertDescription>
+            </Alert>
+          )}
+          
+          {existingMembership && (
+            <MembershipNotice 
+              existingMembership={existingMembership} 
+              proratedAmount={proratedAmount} 
             />
-            
-            {!finalPaymentSuccess && directClientSecret && (
-              <>
-                <div className="mb-6">
-                  <h3 className="text-lg font-medium mb-4">Complete your membership payment</h3>
-                  <p className="mb-6">You're just one step away from joining our community!</p>
-                  <StripePaymentElement
-                    clientSecret={directClientSecret}
-                    email={localStorage.getItem('signup_email') || 'guest@example.com'}
-                    isProcessing={isProcessing}
-                    onPaymentSuccess={handlePaymentSuccess}
-                    onPaymentError={handlePaymentError}
-                  />
-                </div>
-              </>
-            )}
-            
-            {!finalPaymentSuccess && !directClientSecret && !finalSessionId && (
-              <MembershipPaymentForm
-                membershipFee={membershipFee}
-                onSubmit={handleSubmit}
-                onCancel={handleCancel}
-                isProcessing={isProcessing}
-                clientSecret={clientSecret}
-                onPaymentSuccess={handlePaymentSuccess}
-                onPaymentError={handlePaymentError}
-              />
-            )}
+          )}
+          
+          {paymentSuccess ? (
+            <p className="text-center text-green-500 font-bold">
+              Payment successful!
+            </p>
+          ) : paymentCanceled ? (
+            <p className="text-center text-red-500 font-bold">
+              Payment canceled.
+            </p>
+          ) : directClientSecret ? (
+            <StripePaymentForm
+              clientSecret={directClientSecret}
+              email={email}
+              isProcessing={isProcessing}
+              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentError={handlePaymentError}
+            />
+          ) : clientSecret ? (
+            <StripePaymentForm
+              clientSecret={clientSecret}
+              email={email}
+              isProcessing={isProcessing}
+              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentError={handlePaymentError}
+            />
+          ) : (
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmit({});
+            }}>
+              <button 
+                type="submit" 
+                className="w-full bg-blue-500 text-white py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                disabled={isProcessing}
+              >
+                {isProcessing ? 'Processing...' : 'Subscribe Now'}
+              </button>
+            </form>
+          )}
+          <div className="flex justify-center mt-4">
+            <button 
+              onClick={handleCancel}
+              className="text-gray-500 hover:text-gray-700 focus:outline-none"
+            >
+              Cancel
+            </button>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { MembershipFormValues } from "@/components/membership/MembershipPaymentForm";
@@ -20,6 +19,8 @@ export const useMembershipPayment = () => {
   const [networkError, setNetworkError] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  const [existingMembership, setExistingMembership] = useState(null);
+  const [proratedAmount, setProratedAmount] = useState<number | null>(null);
   
   // Use the refactored hooks
   const { membershipFee, isLoading } = useMembershipConfig();
@@ -33,7 +34,9 @@ export const useMembershipPayment = () => {
     setIsProcessing,
     setNetworkError,
     setClientSecret,
-    setPaymentIntentId
+    setPaymentIntentId,
+    setProratedAmount,
+    setExistingMembership
   });
 
   // Check for stored email when component loads
@@ -87,6 +90,8 @@ export const useMembershipPayment = () => {
     formErrors,
     networkError,
     clientSecret,
+    existingMembership,
+    proratedAmount,
     handleSubmit,
     handleCancel,
     handlePaymentSuccess

@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { stripe } from "../_shared/stripe.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
@@ -377,7 +376,27 @@ serve(async (req) => {
             
           if (paymentError) {
             logStep("Error recording payment", { error: paymentError.message });
-            // Don't fail the whole process for payment record
+            // Try again with RLS bypass approach
+            try {
+              // Construct a direct SQL query to insert the payment record
+              const { data: directPayment, error: directError } = await supabaseClient.rpc(
+                'insert_membership_payment',
+                {
+                  p_membership_id: membership.id,
+                  p_amount: amountPaid / 100,
+                  p_payment_id: paymentId,
+                  p_payment_status: 'succeeded'
+                }
+              );
+              
+              if (directError) {
+                logStep("Direct payment insert also failed", { error: directError.message });
+              } else {
+                logStep("Payment recorded using direct method");
+              }
+            } catch (directErr) {
+              logStep("Error with direct payment insert", { error: directErr.message });
+            }
           } else {
             logStep("Payment recorded successfully", { id: insertedPayment.id });
           }

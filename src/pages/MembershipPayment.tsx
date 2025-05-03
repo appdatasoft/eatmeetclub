@@ -39,6 +39,8 @@ const MembershipPayment = () => {
     formErrors,
     networkError,
     clientSecret,
+    existingMembership,
+    proratedAmount,
     handleSubmit,
     handleCancel,
     handlePaymentSuccess
@@ -135,6 +137,8 @@ const MembershipPayment = () => {
           directClientSecret={directClientSecret}
           isProcessing={isProcessing}
           membershipFee={membershipFee}
+          existingMembership={existingMembership}
+          proratedAmount={proratedAmount}
           handlePaymentSuccess={handlePaymentSuccess}
           handlePaymentError={handlePaymentError}
           handleSubmit={onSubmitWrapper}
