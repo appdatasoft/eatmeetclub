@@ -8,6 +8,8 @@ import SetPassword from "@/pages/SetPassword";
 import BecomeMember from "@/pages/BecomeMember";
 import Index from "@/pages/Index";
 import HowItWorks from "@/pages/HowItWorks";
+import Dashboard from "@/pages/dashboard/Dashboard";
+import PaymentSuccessPage from "@/pages/dashboard/PaymentSuccessPage";
 
 function App() {
   return (
@@ -21,6 +23,10 @@ function App() {
         <Route path="/set-password" element={<SetPassword />} />
         <Route path="/become-member" element={<BecomeMember />} />
         <Route path="/how-it-works" element={<HowItWorks />} />
+        
+        {/* Dashboard routes */}
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard/payment-success" element={<PaymentSuccessPage />} />
         
         {/* Catch-all route */}
         <Route path="*" element={<NotFound />} />

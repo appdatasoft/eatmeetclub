@@ -77,7 +77,8 @@ export const useMembershipSubmission = () => {
         {
           createUser: true,
           sendPasswordEmail: true,
-          sendInvoiceEmail: true
+          sendInvoiceEmail: true,
+          checkExisting: true  // Adding the missing property
         }
       );
       
