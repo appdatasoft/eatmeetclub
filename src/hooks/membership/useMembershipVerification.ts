@@ -19,9 +19,17 @@ export const useMembershipVerification = () => {
     try {
       setIsVerifying(true);
 
+      // Add timestamp to prevent caching
+      const timestamp = new Date().getTime();
+      
       // Get all users from Auth to check if email exists
-      const { data: { users }, error } = await supabase.functions.invoke('check-membership-status', {
-        body: { email }
+      const { data, error } = await supabase.functions.invoke('check-membership-status', {
+        body: { email },
+        headers: {
+          'cache-control': 'no-cache',
+          'pragma': 'no-cache',
+          'expires': '0'
+        }
       });
 
       if (error) {
@@ -30,14 +38,19 @@ export const useMembershipVerification = () => {
       }
 
       // If no users with that email, then user doesn't exist
-      if (!users || users.length === 0) {
+      if (!data.users || data.users.length === 0) {
         return { userExists: false, hasActiveMembership: false, userId: null };
       }
 
       // User exists, now check if they have an active membership
-      const userId = users[0].id;
+      const userId = data.users[0].id;
       const { data: membershipData, error: membershipError } = await supabase.functions.invoke('check-membership-status', {
-        body: { userId }
+        body: { userId },
+        headers: {
+          'cache-control': 'no-cache',
+          'pragma': 'no-cache',
+          'expires': '0'
+        }
       });
 
       if (membershipError) {
@@ -50,7 +63,7 @@ export const useMembershipVerification = () => {
         hasActiveMembership: membershipData?.hasActiveMembership || false,
         userId
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Verification error:', error);
       toast({
         title: "Verification Error",
