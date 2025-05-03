@@ -9,7 +9,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: corsHeaders,
@@ -18,32 +17,24 @@ serve(async (req) => {
   }
 
   try {
-    // Get both Stripe keys from environment
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
     const stripePublishableKey = Deno.env.get("STRIPE_PUBLISHABLE_KEY") || "";
-    
-    // Check if it's a test key based on prefix
-    const isSecretTestMode = stripeSecretKey.startsWith("sk_test_");
-    const isPublishableTestMode = stripePublishableKey.startsWith("pk_test_");
-    
-    // Both keys should be in the same mode (test or live)
-    const isTestMode = isSecretTestMode || isPublishableTestMode;
-    
-    // Log keys partially for debugging (only first few chars)
-    const secretKeyPrefix = stripeSecretKey.substring(0, 8) + "...";
-    const publishableKeyPrefix = stripePublishableKey.substring(0, 8) + "...";
-    
-    console.log("Stripe mode check:", { 
-      isTestMode, 
-      secretKeyPrefix,
-      publishableKeyPrefix,
-      secretKeyMatch: isSecretTestMode === isPublishableTestMode ? "matching" : "mismatched" 
+
+    const isTestSecret = stripeSecretKey.startsWith("sk_test_");
+    const isTestPublic = stripePublishableKey.startsWith("pk_test_");
+    const isTestMode = isTestSecret || isTestPublic;
+
+    console.log("Stripe mode status:", {
+      secretKeyPrefix: stripeSecretKey.substring(0, 8),
+      publicKeyPrefix: stripePublishableKey.substring(0, 8),
+      isTestMode,
+      matched: isTestSecret === isTestPublic
     });
-    
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         isTestMode,
-        key: stripePublishableKey
+        stripePublishableKey,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -51,17 +42,15 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Error checking Stripe mode:", error.message);
-    
-    // Default to test mode in case of errors
+    console.error("Stripe mode check failed:", error.message);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         isTestMode: true,
-        error: "Error determining Stripe mode, defaulting to test mode."
+        error: "Stripe mode verification failed. Using default test mode.",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200, // Return 200 even for errors to prevent client-side crashes
+        status: 200, // don't crash frontend
       }
     );
   }
