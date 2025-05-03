@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +21,7 @@ const SetPassword = () => {
   const [pageTitle, setPageTitle] = useState("Set Your Password");
   const [pageDescription, setPageDescription] = useState("Complete your membership by setting a password for your account");
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
 
   // Get token from query params - can be in either token or access_token parameter
   const token = searchParams.get('token') || searchParams.get('access_token');
@@ -29,12 +29,24 @@ const SetPassword = () => {
   // Get email from query params if available (for the email link flow)
   const email = searchParams.get('email');
 
-  // Check if token is in URL hash (Supabase sometimes puts it there)
+  // Check if tokens are in URL hash (Supabase sometimes puts it there)
   useEffect(() => {
     const hashParams = new URLSearchParams(window.location.hash.slice(1));
-    const hashToken = hashParams.get('access_token');
-    if (hashToken) {
-      setAccessToken(hashToken);
+    const hashAccessToken = hashParams.get('access_token');
+    const hashRefreshToken = hashParams.get('refresh_token');
+
+    if (hashAccessToken) {
+      setAccessToken(hashAccessToken);
+      if (hashRefreshToken) {
+        setRefreshToken(hashRefreshToken);
+        // If we have both tokens, set the session
+        supabase.auth.setSession({
+          access_token: hashAccessToken,
+          refresh_token: hashRefreshToken
+        }).catch(error => {
+          console.error("Error setting session:", error);
+        });
+      }
     } else if (token) {
       setAccessToken(token);
     }
@@ -72,10 +84,12 @@ const SetPassword = () => {
 
       console.log("Attempting to update password with token");
 
-      const { error } = await supabase.auth.updateUser(
-        { password: values.password },
-        { accessToken: accessToken || token } // Use the token from URL or hash
-      );
+      // Use updateUser without the accessToken in options
+      // If we've already set the session above using setSession(), this will work
+      // Otherwise, it will use the token that's part of the current session
+      const { error } = await supabase.auth.updateUser({ 
+        password: values.password 
+      });
 
       if (error) {
         throw error;
