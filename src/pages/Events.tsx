@@ -4,17 +4,20 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import EventFilters from "@/components/events/EventFilters";
 import EventsList from "@/components/events/EventsList";
-import useEvents from "@/hooks/events";  // Updated import path
+import useEvents from "@/hooks/events";
 import useEventFilters from "@/hooks/useEventFilters";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Calendar, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Events = () => {
   const { events, isLoading, fetchError, refreshEvents } = useEvents();
   const { filters, filteredEvents, handleFilterChange } = useEventFilters(events);
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   // Show toast for errors
   useEffect(() => {
@@ -59,11 +62,23 @@ const Events = () => {
       <main className="flex-grow">
         <div className="bg-accent py-12">
           <div className="container-custom">
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">Find Your Next Dining Event</h1>
-            <p className="text-gray-600 max-w-2xl">
-              Browse through our curated selection of dining events. Connect with like-minded
-              individuals over breakfast, lunch, or dinner at top-rated local restaurants.
-            </p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold mb-2">Find Your Next Dining Event</h1>
+                <p className="text-gray-600 max-w-2xl">
+                  Browse through our curated selection of dining events. Connect with like-minded
+                  individuals over breakfast, lunch, or dinner at top-rated local restaurants.
+                </p>
+              </div>
+              {user && (
+                <Button 
+                  onClick={() => navigate("/dashboard/create-event")} 
+                  className="whitespace-nowrap"
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add Event
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -106,13 +121,21 @@ const Events = () => {
               <p className="text-lg text-gray-600">
                 There are currently no published events available.
               </p>
-              <Button 
-                className="mt-4" 
-                variant="outline"
-                onClick={handleRefresh}
-              >
-                Refresh events
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+                {user && (
+                  <Button 
+                    onClick={() => navigate("/dashboard/create-event")}
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Create an event
+                  </Button>
+                )}
+                <Button 
+                  variant="outline"
+                  onClick={handleRefresh}
+                >
+                  Refresh events
+                </Button>
+              </div>
               <div className="mt-6 p-4 bg-gray-50 rounded text-left">
                 <p className="font-medium text-gray-800 mb-2">Debug Information:</p>
                 <ul className="text-sm space-y-1 text-gray-500">
