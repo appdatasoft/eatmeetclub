@@ -29,6 +29,9 @@ export const useWelcomeEmail = () => {
         }
       }
       
+      // Create activation link
+      const activationLink = `${currentOrigin}/set-password?email=${encodeURIComponent(email)}`;
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-custom-email`,
         {
@@ -42,22 +45,19 @@ export const useWelcomeEmail = () => {
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #4a5568;">Welcome to Eat Meet Club, ${name}!</h2>
-                <p>Thank you for becoming a member of our community! We're excited to have you join us.</p>
+                <p>Thank you for becoming a member of our community. We've created an account for you using your email address: <strong>${email}</strong></p>
                 
-                <div style="background-color: #f7fafc; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                  <h3 style="margin-top: 0; color: #4a5568;">One-Step Account Activation</h3>
-                  <p>We've created an account for you using your email address. To activate your account and set your password, please click the button below:</p>
+                <p>To activate your account and set your password, click the button below:</p>
                 
-                  <div style="margin: 30px 0; text-align: center;">
-                    <a href="${currentOrigin}/set-password?email=${encodeURIComponent(email)}" 
-                       style="background-color: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-                       Activate Account
-                    </a>
-                  </div>
-                  
-                  <p style="font-size: 14px; color: #718096;">If the button doesn't work, you can copy and paste this URL into your browser:</p>
-                  <p style="word-break: break-all; font-size: 14px; background-color: #edf2f7; padding: 10px; border-radius: 4px;">${currentOrigin}/set-password?email=${encodeURIComponent(email)}</p>
+                <div style="margin: 30px 0; text-align: center;">
+                  <a href="${activationLink}" 
+                     style="padding: 12px 24px; background: #ff5b2e; color: white; border-radius: 5px; display: inline-block; text-decoration: none; font-weight: bold;">
+                     Activate Account
+                  </a>
                 </div>
+                
+                <p>If the button doesn't work, paste this URL into your browser:</p>
+                <p style="word-break: break-all; font-size: 14px; background-color: #f7fafc; padding: 10px; border-radius: 4px;">${activationLink}</p>
                 
                 ${receiptUrl}
                 
