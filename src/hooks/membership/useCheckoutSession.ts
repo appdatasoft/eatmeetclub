@@ -1,4 +1,3 @@
-
 // src/hooks/membership/useCheckoutSession.ts
 import { useInvoiceEmail } from "./useInvoiceEmail";
 import { useToast } from "@/hooks/use-toast";
