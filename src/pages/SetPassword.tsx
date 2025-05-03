@@ -21,6 +21,7 @@ const SetPassword = () => {
   const [error, setError] = useState<string | null>(null);
   const [pageTitle, setPageTitle] = useState("Set Your Password");
   const [pageDescription, setPageDescription] = useState("Complete your membership by setting a password for your account");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   // Get token from query params - can be in either token or access_token parameter
   const token = searchParams.get('token') || searchParams.get('access_token');
@@ -28,33 +29,44 @@ const SetPassword = () => {
   // Get email from query params if available (for the email link flow)
   const email = searchParams.get('email');
 
+  // Check if token is in URL hash (Supabase sometimes puts it there)
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const hashToken = hashParams.get('access_token');
+    if (hashToken) {
+      setAccessToken(hashToken);
+    } else if (token) {
+      setAccessToken(token);
+    }
+  }, [token]);
+
   // Check if this is an account activation flow
   useEffect(() => {
-    if (!token && email) {
+    if (!accessToken && !token && email) {
       setPageTitle("Activate Your Account");
       setPageDescription("Complete your account setup by creating a password");
     }
-  }, [token, email]);
+  }, [accessToken, token, email]);
 
   useEffect(() => {
-    if (!token && !email) {
+    if (!accessToken && !token && !email) {
       setError("Invalid or missing information. Please use the link from your email.");
       toast({
         title: "Missing information",
         description: "Please use the link from the email to activate your account.",
         variant: "destructive",
       });
-    } else if (!token && email) {
+    } else if (!accessToken && !token && email) {
       console.log("Email provided without token, will initiate account activation process:", email);
     }
-  }, [token, toast, email]);
+  }, [accessToken, token, toast, email]);
 
   const onSubmit = async (values: PasswordFormValues) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      if (!token) {
+      if (!accessToken && !token) {
         throw new Error("Invalid or missing token");
       }
 
@@ -62,10 +74,23 @@ const SetPassword = () => {
 
       const { error } = await supabase.auth.updateUser(
         { password: values.password },
+        { accessToken: accessToken || token } // Use the token from URL or hash
       );
 
       if (error) {
         throw error;
+      }
+
+      // Attempt to sign in user automatically if we have email
+      if (email) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password: values.password,
+        });
+        
+        if (signInError) {
+          console.log("Auto sign-in failed, user will need to log in manually:", signInError.message);
+        }
       }
 
       setSuccess(true);
@@ -115,7 +140,7 @@ const SetPassword = () => {
               
               {success ? (
                 <PasswordSuccessMessage />
-              ) : token ? (
+              ) : (accessToken || token) ? (
                 <PasswordForm onSubmit={onSubmit} isLoading={isLoading} />
               ) : email ? (
                 <PasswordRecoveryHandler userEmail={email} />
