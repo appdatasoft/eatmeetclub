@@ -56,8 +56,6 @@ export const useSignupForm = ({
           },
           // IMPORTANT: Set this to false to disable Supabase's default confirmation email
           emailRedirectTo: `${window.location.origin}/set-password`,
-          // Disable automatic email verification
-          emailConfirmationEnabled: false,
         },
       });
 
