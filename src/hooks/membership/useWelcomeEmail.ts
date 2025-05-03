@@ -13,7 +13,10 @@ export const useWelcomeEmail = () => {
   const sendWelcomeEmail = async (email: string, name: string, sessionId?: string) => {
     try {
       // Get the current origin for generating correct URLs
-      const currentOrigin = window.location.origin;
+      // Never use localhost in production emails - use the actual domain
+      const currentOrigin = window.location.origin.includes('localhost') 
+        ? "https://eatmeetclub.lovable.app" 
+        : window.location.origin;
       
       // If session ID is provided, try to get the receipt URL
       let receiptUrl = "";

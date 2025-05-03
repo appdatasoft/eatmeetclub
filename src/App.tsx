@@ -20,6 +20,7 @@ import ConfigPage from "@/pages/admin/ConfigPage";
 import UsersPage from "@/pages/admin/UsersPage";
 import AdminSettings from "@/pages/dashboard/AdminSettings";
 import AddRestaurant from "@/pages/dashboard/AddRestaurant";
+import Signup from "@/pages/Signup";
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
         <Route path="/" element={<Index />} />
         
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
         <Route path="/membership-payment" element={<MembershipPayment />} />
         <Route path="/set-password" element={<SetPassword />} />
         <Route path="/become-member" element={<BecomeMember />} />

@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast as showToast } from "@/hooks/use-toast";
 import { SignupFormValues } from "../SignupForm";
+import { useWelcomeEmail } from "@/hooks/membership";
 
 interface UseSignupFormProps {
   setIsLoading: (loading: boolean) => void;
@@ -16,6 +17,8 @@ export const useSignupForm = ({
   setShowPaymentForm,
   setIsNotificationSent
 }: UseSignupFormProps) => {
+  // Initialize the welcome email hook
+  const { sendWelcomeEmail } = useWelcomeEmail();
 
   const handleSignupSubmit = async (values: SignupFormValues) => {
     setIsLoading(true);
@@ -43,7 +46,7 @@ export const useSignupForm = ({
         localStorage.setItem('signup_phone', values.phoneNumber);
       }
 
-      // Register the user in Supabase Auth
+      // Register the user in Supabase Auth without email confirmation
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
@@ -51,10 +54,14 @@ export const useSignupForm = ({
           data: {
             phone: values.phoneNumber || null,
           },
+          emailRedirectTo: `${window.location.origin}/set-password`, // Redirect to set password page
         },
       });
 
       if (error) throw error;
+      
+      // Send our custom welcome email instead of using Supabase's default
+      await sendWelcomeEmail(values.email, values.email.split('@')[0] || "Member");
       
       // Verify that we have a session before proceeding
       if (!data.session) {
@@ -91,13 +98,13 @@ export const useSignupForm = ({
         setIsNotificationSent(true);
         showToast({
           title: "Confirmation sent!",
-          description: "We've sent you an email and text confirmation.",
+          description: "We've sent you an email with account activation instructions.",
         });
       }
 
       showToast({
         title: "Registration successful",
-        description: "Your account has been created successfully.",
+        description: "Your account has been created. Check your email to activate it.",
       });
 
       // Proceed to payment form
