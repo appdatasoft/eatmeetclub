@@ -6,7 +6,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Content-Type": "application/json"
 };
 
 serve(async (req) => {
@@ -70,7 +71,7 @@ serve(async (req) => {
         timestamp: new Date().toISOString()
       }), {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: corsHeaders
       });
     }
 
@@ -81,7 +82,7 @@ serve(async (req) => {
       timestamp: new Date().toISOString() 
     }), {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
+      headers: corsHeaders
     });
   } catch (err) {
     console.error("check-stripe-mode error:", err);
@@ -92,7 +93,7 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     }), {
       status: 200, // Return 200 even on error but with fallback data
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
+      headers: corsHeaders
     });
   }
 });

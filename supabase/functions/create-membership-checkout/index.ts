@@ -6,7 +6,8 @@ import Stripe from "https://esm.sh/stripe@12.1.0?target=deno";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Content-Type": "application/json"
 };
 
 serve(async (req) => {
@@ -33,7 +34,7 @@ serve(async (req) => {
         success: false 
       }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: corsHeaders
       });
     }
 
@@ -54,7 +55,7 @@ serve(async (req) => {
         success: false 
       }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: corsHeaders
       });
     }
 
@@ -74,7 +75,7 @@ serve(async (req) => {
         }), 
         {
           status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
+          headers: corsHeaders
         }
       );
     }
@@ -104,8 +105,8 @@ serve(async (req) => {
           quantity: 1
         }
       ],
-      success_url: `${Deno.env.get("SITE_URL")}/membership-payment?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${Deno.env.get("SITE_URL")}/membership-payment?canceled=true`,
+      success_url: `${Deno.env.get("SITE_URL") || "https://eatmeet.club"}/membership-payment?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${Deno.env.get("SITE_URL") || "https://eatmeet.club"}/membership-payment?canceled=true`,
       metadata: {
         user_email: email,
         user_name: name || "",
@@ -129,7 +130,7 @@ serve(async (req) => {
       }),
       { 
         status: 200, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: corsHeaders
       }
     );
   } catch (err) {
@@ -142,7 +143,7 @@ serve(async (req) => {
       }), 
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: corsHeaders
       }
     );
   }

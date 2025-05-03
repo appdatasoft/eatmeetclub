@@ -41,6 +41,14 @@ export const fetchStripeMode = async () => {
     try {
       responseText = await response.text();
       console.log("Raw response:", responseText);
+      
+      // Check if response is HTML (likely an error page)
+      if (responseText.trim().startsWith('<!DOCTYPE') || 
+          responseText.trim().startsWith('<html')) {
+        console.error("Received HTML instead of JSON:", responseText.substring(0, 200));
+        throw new Error("Invalid response format: received HTML instead of JSON");
+      }
+      
       const data = JSON.parse(responseText);
       console.log("Stripe mode data:", data);
       
