@@ -5,20 +5,20 @@ import { useNavigate } from "react-router-dom";
 const Hero = () => {
   const navigate = useNavigate();
 
+  // Simplified navigation handler without async/await
   const handleJoinClick = () => {
     navigate('/become-member');
   };
 
   return (
     <div 
-      className="w-full py-12 md:py-24 relative h-[500px]"
+      className="w-full py-12 md:py-24 relative h-[500px] bg-[#B5642A]"
       style={{ 
-        backgroundImage: `url('/lovable-uploads/37ba24a5-e795-4364-9d0c-e41383e1dc60.png')`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundColor: "#B5642A" // Fallback color that matches the image
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
       }}
     >
+      {/* Overlay for better text readability */}
       <div className="absolute inset-0 bg-black bg-opacity-30"></div>
       
       <div className="container-custom relative z-10 h-full flex items-center">

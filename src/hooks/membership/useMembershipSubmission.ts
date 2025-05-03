@@ -1,9 +1,11 @@
 
+// src/hooks/membership/useMembershipSubmission.ts
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useCheckoutSession } from "./useCheckoutSession";
 import { useMembershipVerification } from "./useMembershipVerification";
+import { MembershipFormValues } from "@/lib/schemas/membership";
 
 export const useMembershipSubmission = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -13,17 +15,12 @@ export const useMembershipSubmission = () => {
   const { createCheckoutSession } = useCheckoutSession();
   const { verifyEmailAndMembershipStatus, handleExistingMember } = useMembershipVerification();
 
-  const handleMembershipSubmit = async (formData: {
-    name: string;
-    email: string;
-    phone: string;
-    address: string;
-  }) => {
+  const handleMembershipSubmit = async (formData: MembershipFormValues) => {
     try {
       setIsLoading(true);
-      
+
       // Store form data in localStorage for access during payment flow
-      localStorage.setItem('signup_name', formData.name);
+      localStorage.setItem('signup_name', `${formData.firstName} ${formData.lastName}`);
       localStorage.setItem('signup_email', formData.email);
       localStorage.setItem('signup_phone', formData.phone);
       localStorage.setItem('signup_address', formData.address);
@@ -38,16 +35,17 @@ export const useMembershipSubmission = () => {
       }
 
       // Step 2: Create checkout session
+      const fullName = `${formData.firstName} ${formData.lastName}`;
       const result = await createCheckoutSession(
         formData.email,
-        formData.name,
+        fullName,
         formData.phone,
         formData.address,
         {
           createUser: !userExists,
           sendPasswordEmail: !userExists,
-          sendInvoiceEmail: true, // Added missing parameter
-          checkExisting: true, // Added missing parameter
+          sendInvoiceEmail: true,
+          checkExisting: true,
         }
       );
 

@@ -18,39 +18,41 @@ export const useMembershipVerification = () => {
   }> => {
     try {
       setIsVerifying(true);
-
-      // Get all users from Auth to check if email exists
-      const { data: { users }, error } = await supabase.functions.invoke('check-membership-status', {
-        body: { email }
+      
+      // Add timestamp to prevent caching
+      const timestamp = new Date().getTime();
+      
+      // Check membership status
+      const { data, error } = await supabase.functions.invoke('check-membership-status', {
+        body: { email, timestamp },
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
 
       if (error) {
-        console.error('Error checking user existence:', error);
-        throw new Error('Failed to verify user status');
-      }
-
-      // If no users with that email, then user doesn't exist
-      if (!users || users.length === 0) {
-        return { userExists: false, hasActiveMembership: false, userId: null };
-      }
-
-      // User exists, now check if they have an active membership
-      const userId = users[0].id;
-      const { data: membershipData, error: membershipError } = await supabase.functions.invoke('check-membership-status', {
-        body: { userId }
-      });
-
-      if (membershipError) {
-        console.error('Error checking membership status:', membershipError);
+        console.error('Error checking membership status:', error);
         throw new Error('Failed to verify membership status');
       }
 
+      // If explicit error or userExists is false, user doesn't exist
+      if (data.error || data.userExists === false) {
+        return { 
+          userExists: false, 
+          hasActiveMembership: false, 
+          userId: null 
+        };
+      }
+
+      // Return the membership status
       return { 
-        userExists: true, 
-        hasActiveMembership: membershipData?.hasActiveMembership || false,
-        userId
+        userExists: data.userExists || false, 
+        hasActiveMembership: data.active || data.hasActiveMembership || false,
+        userId: data.users?.[0]?.id || null
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Verification error:', error);
       toast({
         title: "Verification Error",

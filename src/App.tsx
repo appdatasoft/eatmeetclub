@@ -1,4 +1,5 @@
 
+import { supabase } from "@/lib/supabaseClient";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Login from "@/pages/Login";

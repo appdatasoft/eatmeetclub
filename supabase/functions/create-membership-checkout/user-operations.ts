@@ -1,38 +1,74 @@
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
+// supabase/functions/create-membership-checkout/user-operations.ts
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
 
 /**
- * Functions for handling user operations
+ * Functions for handling user creation and invitation
  */
 export const userOperations = {
   /**
-   * Get user by email or auth token
+   * Find or create a user by email
+   * @returns User ID and whether the user was created
    */
-  getUserByEmailOrToken: async (email: string, authToken: string | null = null) => {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
-    let userId = null;
+  findOrCreateUser: async (
+    supabase: SupabaseClient,
+    email: string, 
+    name: string | null = null, 
+    phone: string | null = null, 
+    address: string | null = null,
+    sendPasswordEmail = true
+  ) => {
+    console.log("Looking for user with email:", email);
     
-    // Try to get user from auth token
-    if (authToken) {
-      try {
-        const { data: userData, error: userError } = await supabaseClient.auth.getUser(authToken);
-        if (!userError && userData?.user) {
-          userId = userData.user.id;
-        }
-      } catch {}
-    }
+    const userResp = await supabase.auth.admin.listUsers();
+    const user = userResp.data.users.find((u) => u.email === email);
 
-    // If no user found by token, try to get user by email
+    let userId = user?.id;
+    let passwordEmailSent = false;
+
+    // Create the user if they don't exist
     if (!userId) {
-      const { data: userList } = await supabaseClient.auth.admin.listUsers();
-      const user = userList.users.find((u) => u.email === email);
-      userId = user?.id || userId;
-    }
+      console.log("User not found, creating new user");
+      const tempPassword = crypto.randomUUID();
+      const { data: newUser, error } = await supabase.auth.admin.createUser({
+        email,
+        email_confirm: true,
+        password: tempPassword,
+        user_metadata: { 
+          full_name: name || email.split('@')[0],
+          phone: phone,
+          address: address
+        }
+      });
+      
+      if (error) {
+        console.error("Error creating user:", error);
+        throw new Error("Failed to create user: " + error.message);
+      }
+      
+      userId = newUser.user?.id;
+      console.log("New user created with ID:", userId);
+      
+      // Send password setup link if requested
+      if (sendPasswordEmail) {
+        try {
+          console.log("Sending password setup email");
+          await supabase.auth.admin.generateLink({
+            type: "recovery",
+            email,
+            options: { redirectTo: "https://www.eatmeetclub.com/set-password" }
+          });
+          passwordEmailSent = true;
+          console.log("Password email sent successfully");
+        } catch (emailError) {
+          console.error("Error sending password email:", emailError);
+        }
+      }
+      
+      return { userId, isNewUser: true, passwordEmailSent };
+    } 
     
-    return userId;
+    console.log("User found:", userId);
+    return { userId, isNewUser: false, passwordEmailSent: false };
   }
 };

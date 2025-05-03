@@ -31,23 +31,46 @@ export const fetchStripeMode = async () => {
       const errorText = await response.text();
       console.warn(`Stripe key fetch failed with status: ${response.status}`, errorText);
       return { 
-        isTestMode: true, // Default to test mode for safety
+        mode: "test", // Default to test mode for safety
         error: `API returned status ${response.status}: ${errorText.substring(0, 100)}`
       };
     }
 
-    const data = await response.json();
-    console.log("Stripe mode data:", data);
-    
-    return { 
-      isTestMode: data.isTestMode ?? true, // Default to test mode if not specified
-      publishableKey: data.key,
-      error: null
-    };
+    // First try to parse as JSON
+    let responseText;
+    try {
+      responseText = await response.text();
+      console.log("Raw response:", responseText);
+      
+      // Check if response is HTML (likely an error page)
+      if (responseText.trim().startsWith('<!DOCTYPE') || 
+          responseText.trim().startsWith('<html')) {
+        console.error("Received HTML instead of JSON:", responseText.substring(0, 200));
+        return { 
+          mode: "test", // Default to test mode on error
+          error: "Received HTML instead of JSON" 
+        };
+      }
+      
+      const data = JSON.parse(responseText);
+      console.log("Stripe mode data:", data);
+      
+      return { 
+        mode: data.mode || "test", // Default to test mode if not specified
+        error: data.error || null
+      };
+    } catch (parseError) {
+      console.error("Error parsing response as JSON:", parseError);
+      console.error("Raw response was:", responseText);
+      return { 
+        mode: "test", // Default to test mode on parse error
+        error: `Failed to parse response: ${responseText?.substring(0, 100)}` 
+      };
+    }
   } catch (error) {
     console.error("Error fetching Stripe mode:", error);
     return { 
-      isTestMode: true, // Default to test mode for safety
+      mode: "test", // Default to test mode for safety
       error: error instanceof Error ? error.message : "Unknown error" 
     };
   }

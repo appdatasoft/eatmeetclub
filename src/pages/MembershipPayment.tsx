@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";

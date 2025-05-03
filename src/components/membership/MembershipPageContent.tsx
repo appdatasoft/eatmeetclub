@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import MembershipSteps from "@/components/membership/MembershipSteps";
 import StripeModeNotification from "@/components/membership/StripeModeNotification";
 import { useStripeMode } from "@/hooks/membership/useStripeMode";
+import { MembershipFormValues } from "@/lib/schemas/membership";
 
 interface MembershipPageContentProps {
-  onSubmit: (values: any) => Promise<void>;
+  onSubmit: (values: MembershipFormValues) => Promise<void>;
   isLoading: boolean;
 }
 

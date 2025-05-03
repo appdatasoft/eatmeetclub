@@ -1,99 +1,92 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
+  try {
+    const { email } = await req.json();
+
+    if (!email) {
+      return new Response(JSON.stringify({ error: "Email is required" }), {
+        status: 400,
+        headers: corsHeaders
+      });
+    }
+
+    // Check if the user has a membership
+    const { data: membership, error } = await supabase
+      .from("memberships")
+      .select("*")
+      .eq("user_email", email)
+      .maybeSingle();
+
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: corsHeaders
+      });
+    }
+
+    // No membership yet
+    if (!membership) {
+      return new Response(JSON.stringify({
+        active: false,
+        remainingDays: 0,
+        proratedAmount: null
+      }), {
+        status: 200,
+        headers: corsHeaders
+      });
+    }
+
+    const isActive = membership.status === "active" && new Date(membership.expires_at) > new Date();
+
+    const today = new Date();
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const daysRemaining = Math.max(0, Math.ceil((endOfMonth.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+    const daysInMonth = endOfMonth.getDate();
+
+    // Fetch admin config for membership fee
+    const { data: config } = await supabase
+      .from("admin_config")
+      .select("membership_fee")
+      .single();
+
+    const membershipFee = config?.membership_fee || 25;
+
+    const proratedAmount = isActive
+      ? 0
+      : parseFloat(((membershipFee * daysRemaining) / daysInMonth).toFixed(2));
+
+    return new Response(JSON.stringify({
+      active: isActive,
+      remainingDays: daysRemaining,
+      proratedAmount
+    }), {
+      status: 200,
+      headers: corsHeaders
+    });
+
+  } catch (err) {
+    console.error("check-membership-status error:", err);
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), {
+      status: 500,
+      headers: corsHeaders
+    });
+  }
+});
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Max-Age": "86400",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
 };
-
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: corsHeaders,
-      status: 204,
-    });
-  }
-
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Parse the request body
-    const { email, userId } = await req.json();
-
-    // If userId is provided, check for active membership
-    if (userId) {
-      console.log("Checking membership status for user ID:", userId);
-      
-      const { data: memberships, error: membershipError } = await supabase
-        .from('memberships')
-        .select('id, status, renewal_at')
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (membershipError) {
-        throw membershipError;
-      }
-
-      // Check if membership exists and is active (not expired)
-      const hasActiveMembership = memberships && 
-        memberships.status === 'active' && 
-        (!memberships.renewal_at || new Date(memberships.renewal_at) > new Date());
-
-      return new Response(
-        JSON.stringify({
-          hasActiveMembership,
-          membership: memberships
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
-      );
-    }
-
-    // If email is provided, check if user exists
-    if (email) {
-      console.log("Checking if user exists with email:", email);
-      const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) {
-        throw authError;
-      }
-
-      // Filter users by email
-      const matchingUsers = users.filter(u => u.email === email);
-
-      return new Response(
-        JSON.stringify({
-          users: matchingUsers,
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
-      );
-    }
-
-    throw new Error("Either email or userId must be provided");
-
-  } catch (error) {
-    console.error("Error in check-membership-status function:", error.message);
-    
-    return new Response(
-      JSON.stringify({
-        error: error.message || "An error occurred while checking membership status",
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      }
-    );
-  }
-});
