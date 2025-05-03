@@ -66,15 +66,18 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             description: "Please wait while we confirm your membership...",
           });
           
-          // Force critical parameters to ensure success
+          // Force critical parameters to ensure success:
+          // 1. createMembershipRecord: true - creates record in memberships table
+          // 2. sendInvoiceEmail: true - sends invoice email
+          // Both processes create the records in the required tables
           const success = await verifyPayment(sessionId, {
             // Force all processes to complete even if earlier steps fail
             forceCreateUser: true,
             sendPasswordEmail: true,
-            createMembershipRecord: true,
-            sendInvoiceEmail: true,
+            createMembershipRecord: true, // Ensures memberships record is created
+            sendInvoiceEmail: true,       // Ensures invoice is sent and payment record is created
             // Use simplified verification as backup if full verification fails
-            simplifiedVerification: true,
+            simplifiedVerification: false,
             // Set retry if first attempt fails
             retry: true,
             maxRetries: 3,
@@ -89,7 +92,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             
             toast({
               title: "Welcome to our membership!",
-              description: "Your account has been activated. Please check your email for login instructions.",
+              description: "Your account has been activated. Please check your email for login instructions and invoice.",
             });
           } else if (verificationAttempts >= 3) {
             setMaxRetriesReached(true);
@@ -103,7 +106,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             
             // Send a direct email manually as fallback
             try {
-              await sendBackupEmail(storedEmail, storedName);
+              await sendBackupEmail(storedEmail, storedName || 'Member');
             } catch (emailErr) {
               console.error("Failed to send backup email:", emailErr);
             }
@@ -146,7 +149,8 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache"
           },
           body: JSON.stringify({
             to: [email],

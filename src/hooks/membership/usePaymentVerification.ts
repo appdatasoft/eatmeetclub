@@ -97,7 +97,8 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "no-cache"
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
           },
           body: JSON.stringify({
             paymentId,
@@ -274,7 +275,8 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "no-cache"
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
           },
           body: JSON.stringify({
             sessionId,
@@ -308,7 +310,9 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
           },
           body: JSON.stringify({
             to: [email],

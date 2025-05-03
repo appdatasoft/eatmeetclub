@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control, pragma, expires",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Max-Age": "86400",
 };
@@ -39,14 +39,15 @@ serve(async (req) => {
       sendPasswordEmail = false,
       createMembershipRecord = false,
       sendInvoiceEmail = false,
-      safeMode = false
+      safeMode = false,
+      forceSend = false
     } = await req.json();
 
     if (!paymentId) throw new Error("No payment ID provided");
     if (!email) throw new Error("No email provided");
     if (!name) throw new Error("No name provided");
 
-    logStep("Verifying payment", { paymentId, email, name, isSubscription, simplifiedVerification, forceCreateUser, sendPasswordEmail, createMembershipRecord, sendInvoiceEmail, safeMode });
+    logStep("Verifying payment", { paymentId, email, name, isSubscription, simplifiedVerification, forceCreateUser, sendPasswordEmail, createMembershipRecord, sendInvoiceEmail, safeMode, forceSend });
 
     // Create Supabase client with service role key to bypass RLS
     const supabaseClient = createClient(
@@ -378,12 +379,12 @@ serve(async (req) => {
             logStep("Error recording payment", { error: paymentError.message });
             // Don't fail the whole process for payment record
           } else {
-            logStep("Payment recorded", { id: insertedPayment.id });
+            logStep("Payment recorded successfully", { id: insertedPayment.id });
           }
         }
 
         // Send invoice email if requested
-        if (sendInvoiceEmail) {
+        if (sendInvoiceEmail || forceSend) {
           try {
             logStep("Sending invoice email");
             await sendInvoiceEmail(paymentId, email, name);
@@ -403,7 +404,7 @@ serve(async (req) => {
             membershipCreated,
             passwordEmailSent,
             invoiceEmailSent,
-            invoiceEmailNeeded: !invoiceEmailSent && sendInvoiceEmail
+            invoiceEmailNeeded: !invoiceEmailSent && (sendInvoiceEmail || forceSend)
           }),
           {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -539,6 +540,7 @@ async function sendWelcomeEmail(email: string, name: string) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Cache-Control": "no-cache"
       },
       body: JSON.stringify({
         to: [email],
@@ -575,11 +577,13 @@ async function sendInvoiceEmail(sessionId: string, email: string, name: string) 
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Cache-Control": "no-cache"
       },
       body: JSON.stringify({
         sessionId,
         email,
-        name
+        name,
+        preventDuplicate: false // Force sending to ensure it's delivered
       }),
     });
     

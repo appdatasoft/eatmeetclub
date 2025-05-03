@@ -17,6 +17,8 @@ export const fetchStripeMode = async () => {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache"
       },
       // Omit credentials to prevent CORS preflight issues with additional headers
       credentials: 'omit'
