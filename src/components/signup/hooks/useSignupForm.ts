@@ -46,7 +46,7 @@ export const useSignupForm = ({
         localStorage.setItem('signup_phone', values.phoneNumber);
       }
 
-      // Register the user in Supabase Auth without email confirmation
+      // Register the user in Supabase Auth WITH EMAIL CONFIRMATION DISABLED
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
@@ -54,13 +54,16 @@ export const useSignupForm = ({
           data: {
             phone: values.phoneNumber || null,
           },
-          emailRedirectTo: `${window.location.origin}/set-password`, // Redirect to set password page
+          // IMPORTANT: Set this to false to disable Supabase's default confirmation email
+          emailRedirectTo: `${window.location.origin}/set-password`,
+          // Disable automatic email verification
+          emailConfirmationEnabled: false,
         },
       });
 
       if (error) throw error;
       
-      // Send our custom welcome email instead of using Supabase's default
+      // Send our custom welcome email - this is the ONLY email that should be sent
       await sendWelcomeEmail(values.email, values.email.split('@')[0] || "Member");
       
       // Verify that we have a session before proceeding

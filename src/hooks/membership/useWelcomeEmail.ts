@@ -48,9 +48,10 @@ export const useWelcomeEmail = () => {
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #4a5568;">Welcome to Eat Meet Club, ${name}!</h2>
-                <p>Thank you for becoming a member of our community. We've created an account for you using your email address: <strong>${email}</strong></p>
                 
-                <p>To activate your account and set your password, click the button below:</p>
+                <p>We're excited to have you as a member of our community.</p>
+                
+                <p>To complete your signup, please activate your account and set your password by clicking the button below:</p>
                 
                 <div style="margin: 30px 0; text-align: center;">
                   <a href="${activationLink}" 
@@ -66,7 +67,7 @@ export const useWelcomeEmail = () => {
                 
                 <div style="margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
                   <p>Looking forward to seeing you at our upcoming dining experiences!</p>
-                  <p>Best regards,<br>The Eat Meet Club Team</p>
+                  <p>Warmly,<br>The Eat Meet Club Team</p>
                 </div>
               </div>
             `,
