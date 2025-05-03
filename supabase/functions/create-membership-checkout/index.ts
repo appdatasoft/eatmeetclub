@@ -3,6 +3,11 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@12.1.0?target=deno";
 
+// Import utility functions
+import { membershipUtils } from "./membership-utils.ts";
+import { userOperations } from "./user-operations.ts";
+import { stripeOperations } from "./stripe-operations.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control",
@@ -143,8 +148,8 @@ serve(async (req) => {
           success: false
         }), 
         {
-          status: 500,
-          headers: corsHeaders
+          headers: corsHeaders,
+          status: 500
         }
       );
     }
@@ -157,8 +162,8 @@ serve(async (req) => {
         success: false
       }), 
       {
-        status: 500,
-        headers: corsHeaders
+        headers: corsHeaders,
+        status: 500
       }
     );
   }
