@@ -1,4 +1,4 @@
-
+// src/hooks/membership/useMembershipSubmission.ts
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +21,7 @@ export const useMembershipSubmission = () => {
   }) => {
     try {
       setIsLoading(true);
-      
+
       // Store form data in localStorage for access during payment flow
       localStorage.setItem('signup_name', formData.name);
       localStorage.setItem('signup_email', formData.email);
@@ -46,8 +46,8 @@ export const useMembershipSubmission = () => {
         {
           createUser: !userExists,
           sendPasswordEmail: !userExists,
-          sendInvoiceEmail: true, // Added missing parameter
-          checkExisting: true, // Added missing parameter
+          sendInvoiceEmail: true,
+          checkExisting: true,
         }
       );
 
