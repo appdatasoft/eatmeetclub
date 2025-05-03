@@ -16,7 +16,8 @@ const MembershipSteps: React.FC<MembershipStepsProps> = ({ onSubmit, isLoading }
   const form = useForm<MembershipFormValues>({
     resolver: zodResolver(membershipFormSchema),
     defaultValues: {
-      name: localStorage.getItem('signup_name') || "",
+      firstName: localStorage.getItem('signup_firstName') || "",
+      lastName: localStorage.getItem('signup_lastName') || "",
       email: localStorage.getItem('signup_email') || "",
       phone: localStorage.getItem('signup_phone') || "",
       address: localStorage.getItem('signup_address') || "",
@@ -35,12 +36,26 @@ const MembershipSteps: React.FC<MembershipStepsProps> = ({ onSubmit, isLoading }
 
           <FormField
             control={form.control}
-            name="name"
+            name="firstName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Full Name</FormLabel>
+                <FormLabel>First Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="John Doe" {...field} />
+                  <Input placeholder="John" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Doe" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
