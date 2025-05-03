@@ -8,7 +8,7 @@ export const useWelcomeEmail = () => {
   const { getInvoiceReceiptUrl } = useInvoiceEmail();
   
   /**
-   * Sends a welcome email to the user with a password reset link
+   * Sends a welcome email to the user with a password setup link that also activates their account
    */
   const sendWelcomeEmail = async (email: string, name: string, sessionId?: string) => {
     try {
@@ -38,23 +38,33 @@ export const useWelcomeEmail = () => {
           },
           body: JSON.stringify({
             to: [email],
-            subject: "Welcome to Eat Meet Club!",
+            subject: "Welcome to Eat Meet Club - Activate Your Account",
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #4a5568;">Welcome to Eat Meet Club, ${name}!</h2>
                 <p>Thank you for becoming a member of our community! We're excited to have you join us.</p>
-                <p>We've created an account for you using your email address. To set your password and access your account, please click the button below:</p>
-                <div style="margin: 30px 0;">
-                  <a href="${currentOrigin}/set-password?email=${encodeURIComponent(email)}" 
-                     style="background-color: #4299e1; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                     Set Your Password
-                  </a>
+                
+                <div style="background-color: #f7fafc; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                  <h3 style="margin-top: 0; color: #4a5568;">One-Step Account Activation</h3>
+                  <p>We've created an account for you using your email address. To activate your account and set your password, please click the button below:</p>
+                
+                  <div style="margin: 30px 0; text-align: center;">
+                    <a href="${currentOrigin}/set-password?email=${encodeURIComponent(email)}" 
+                       style="background-color: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                       Activate Account
+                    </a>
+                  </div>
+                  
+                  <p style="font-size: 14px; color: #718096;">If the button doesn't work, you can copy and paste this URL into your browser:</p>
+                  <p style="word-break: break-all; font-size: 14px; background-color: #edf2f7; padding: 10px; border-radius: 4px;">${currentOrigin}/set-password?email=${encodeURIComponent(email)}</p>
                 </div>
-                <p>If the button doesn't work, you can copy and paste this URL into your browser:</p>
-                <p style="word-break: break-all;">${currentOrigin}/set-password?email=${encodeURIComponent(email)}</p>
+                
                 ${receiptUrl}
-                <p>Looking forward to seeing you at our upcoming dining experiences!</p>
-                <p>Best regards,<br>The Eat Meet Club Team</p>
+                
+                <div style="margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                  <p>Looking forward to seeing you at our upcoming dining experiences!</p>
+                  <p>Best regards,<br>The Eat Meet Club Team</p>
+                </div>
               </div>
             `,
             fromName: "Eat Meet Club",

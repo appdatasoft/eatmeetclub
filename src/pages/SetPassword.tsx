@@ -19,6 +19,8 @@ const SetPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pageTitle, setPageTitle] = useState("Set Your Password");
+  const [pageDescription, setPageDescription] = useState("Complete your membership by setting a password for your account");
 
   // Get token from query params - can be in either token or access_token parameter
   const token = searchParams.get('token') || searchParams.get('access_token');
@@ -26,16 +28,24 @@ const SetPassword = () => {
   // Get email from query params if available (for the email link flow)
   const email = searchParams.get('email');
 
+  // Check if this is an account activation flow
+  useEffect(() => {
+    if (!token && email) {
+      setPageTitle("Activate Your Account");
+      setPageDescription("Complete your account setup by creating a password");
+    }
+  }, [token, email]);
+
   useEffect(() => {
     if (!token && !email) {
-      setError("Invalid or missing reset token. Please use the link from your email.");
+      setError("Invalid or missing information. Please use the link from your email.");
       toast({
-        title: "Missing token",
-        description: "Please use the link from the email to set your password.",
+        title: "Missing information",
+        description: "Please use the link from the email to activate your account.",
         variant: "destructive",
       });
     } else if (!token && email) {
-      console.log("Email provided without token, will initiate password recovery:", email);
+      console.log("Email provided without token, will initiate account activation process:", email);
     }
   }, [token, toast, email]);
 
@@ -61,8 +71,8 @@ const SetPassword = () => {
       setSuccess(true);
       
       toast({
-        title: "Password set successfully!",
-        description: "You can now log in with your new password.",
+        title: "Account activated successfully!",
+        description: "Your account has been activated and you can now log in with your new password.",
       });
       
       // Redirect to login after a short delay
@@ -74,7 +84,7 @@ const SetPassword = () => {
       setError(error.message || "Failed to set password. Please try again.");
       toast({
         title: "Error",
-        description: error.message || "There was a problem setting your password.",
+        description: error.message || "There was a problem activating your account.",
         variant: "destructive",
       });
     } finally {
@@ -89,9 +99,9 @@ const SetPassword = () => {
         <div className="max-w-md w-full">
           <Card className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-2xl">Set Your Password</CardTitle>
+              <CardTitle className="text-2xl">{pageTitle}</CardTitle>
               <CardDescription>
-                Complete your membership by setting a password for your account
+                {pageDescription}
               </CardDescription>
             </CardHeader>
             
