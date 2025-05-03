@@ -38,13 +38,25 @@ serve(async (req) => {
     
     console.log(`Generating magic link for ${email} with redirect to ${redirectUrl}`);
     
+    // Extract the base origin from redirectUrl to ensure we're using a properly formatted URL
+    let redirectTo = redirectUrl;
+    
+    // Ensure the redirect URL is absolute and properly formatted
+    if (!redirectTo.startsWith('http')) {
+      // If not absolute, construct a proper URL using a default domain
+      const defaultDomain = "https://eatmeetclub.lovable.app";
+      redirectTo = `${defaultDomain}${redirectTo.startsWith('/') ? '' : '/'}${redirectTo}`;
+    }
+    
+    console.log(`Using redirect URL: ${redirectTo}`);
+    
     // Generate a signup link (combines email verification and password setup)
     const { data, error } = await supabase.auth.admin.generateLink({
       type: 'signup',
       email: email,
       options: {
         // Use the provided redirect URL or a default
-        emailRedirectTo: redirectUrl || 'https://eatmeetclub.lovable.app/set-password',
+        emailRedirectTo: redirectTo,
       }
     });
     

@@ -44,6 +44,7 @@ export const useWelcomeEmail = () => {
           },
           body: JSON.stringify({
             email,
+            // Explicitly setting the complete URL for the set-password page
             redirectUrl: `${currentOrigin}/set-password`
           }),
         }
@@ -91,7 +92,7 @@ export const useWelcomeEmail = () => {
                   </a>
                 </div>
                 
-                <p>If the button doesn't work, paste this link in your browser:</p>
+                <p>If the button doesn't work, copy and paste this link in your browser:</p>
                 <p style="word-break: break-all; font-size: 14px; background-color: #f7fafc; padding: 10px; border-radius: 4px;">${magicLink}</p>
                 
                 ${receiptUrl}
