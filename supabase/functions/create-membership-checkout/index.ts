@@ -15,7 +15,14 @@ serve(async (req) => {
   }
 
   try {
-    const { email, name, phone, address, stripeMode = "test", amount = 25.0 } = await req.json();
+    const {
+      email,
+      name,
+      phone,
+      address,
+      stripeMode = "test",
+      amount = 25.0
+    } = await req.json();
 
     if (!email) {
       return new Response(
@@ -24,13 +31,21 @@ serve(async (req) => {
       );
     }
 
-    // Initialize Supabase admin client (no JWT required)
+    const siteUrl = Deno.env.get("SITE_URL");
+    if (!siteUrl?.startsWith("http")) {
+      return new Response(
+        JSON.stringify({ error: "SITE_URL must begin with http or https" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Initialize Supabase admin client (no auth required)
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Create Stripe instance
+    // Select Stripe key
     const stripeKey = stripeMode === "live"
       ? Deno.env.get("STRIPE_SECRET_KEY_LIVE")
       : Deno.env.get("STRIPE_SECRET_KEY");
@@ -44,7 +59,7 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2022-11-15" });
 
-    // Create Stripe checkout session
+    // Create Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -62,8 +77,8 @@ serve(async (req) => {
           quantity: 1,
         },
       ],
-      success_url: `${Deno.env.get("SITE_URL")}/membership-confirmed?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${Deno.env.get("SITE_URL")}/membership-payment?canceled=true`,
+      success_url: `${siteUrl}/membership-confirmed?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}/membership-payment?canceled=true`,
       metadata: {
         user_email: email,
         user_name: name || "",
@@ -72,7 +87,7 @@ serve(async (req) => {
       },
     });
 
-    // Create Supabase user using admin API
+    // Create Supabase user via admin API
     const { error: createUserError } = await supabase.auth.admin.createUser({
       email,
       user_metadata: { name, phone, address },
@@ -96,7 +111,7 @@ serve(async (req) => {
       }
     );
   } catch (err) {
-    console.error("❌ Error:", err);
+    console.error("❌ Error creating checkout session:", err);
     return new Response(
       JSON.stringify({
         error: err instanceof Error ? err.message : "Unknown error",
