@@ -1,17 +1,13 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-
 import { membershipFormSchema, MembershipFormValues } from "@/lib/schemas/membership";
-import { createCheckoutSession } from "@/lib/createCheckoutSession";
-
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import MembershipFormFields from "@/components/membership/MembershipFormFields";
 
 const BecomeMember = () => {
   const [isLoading, setIsLoading] = useState(false);
-
   const form = useForm<MembershipFormValues>({
     resolver: zodResolver(membershipFormSchema),
     defaultValues: {
@@ -19,7 +15,6 @@ const BecomeMember = () => {
       lastName: "",
       email: "",
       phone: "",
-      address: "",
     },
   });
 
@@ -29,22 +24,32 @@ const BecomeMember = () => {
     try {
       const fullName = `${values.firstName} ${values.lastName}`;
 
-      const response = await createCheckoutSession({
-        email: values.email,
-        name: fullName,
-        phone: values.phone,
-        address: values.address,
-        stripeMode: "test", // change to "live" in production
+      const res = await fetch("/functions/create-membership-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: values.email,
+          name: fullName,
+          phone: values.phone,
+        }),
       });
 
-      if (response?.url) {
-        window.location.href = response.url; // ✅ redirect to Stripe
+      const raw = await res.text();
+      console.log("🚨 Raw response:", raw);
+
+      const data = JSON.parse(raw);
+
+      if (data?.success && data?.url) {
+        window.location.href = data.url;
+      } else if (data?.redirect) {
+        window.location.href = data.redirect;
       } else {
-        throw new Error(response?.error || "Failed to create Stripe checkout session.");
+        throw new Error(data?.error || "Unexpected error");
       }
     } catch (err: any) {
-      alert(err.message || "An unexpected error occurred.");
-      console.error("BecomeMember error:", err);
+      alert(err.message || "Failed to start checkout.");
     } finally {
       setIsLoading(false);
     }
