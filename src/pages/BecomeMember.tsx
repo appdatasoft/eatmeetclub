@@ -24,17 +24,20 @@ const BecomeMember = () => {
     try {
       const fullName = `${values.firstName} ${values.lastName}`;
 
-      const res = await fetch("/functions/create-membership-checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: values.email,
-          name: fullName,
-          phone: values.phone,
-        }),
-      });
+      const res = await fetch(
+        "https://wocfwpedauuhlrfugxuu.supabase.co/functions/v1/create-membership-checkout",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: values.email,
+            name: fullName,
+            phone: values.phone,
+          }),
+        }
+      );
 
       const raw = await res.text();
       console.log("🚨 Raw response:", raw);
@@ -46,7 +49,7 @@ const BecomeMember = () => {
       } else if (data?.redirect) {
         window.location.href = data.redirect;
       } else {
-        throw new Error(data?.error || "Unexpected error");
+        throw new Error(data?.error || "Unexpected error. Try again.");
       }
     } catch (err: any) {
       alert(err.message || "Failed to start checkout.");
