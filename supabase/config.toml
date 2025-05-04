@@ -1,39 +1,56 @@
-
-# project_id = "wocfwpedauuhlrfugxuu"
+# Project ID (automatically set when you run `supabase init`)
+project_id = "wocfwpedauuhlrfugxuu"
 
 [api]
-enabled = true
 port = 54321
 schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
 
 [db]
 port = 54322
+major_version = 15
 
 [studio]
-enabled = true
 port = 54323
-api_url = "http://localhost"
 
 [inbucket]
-enabled = true
 port = 54324
+smtp_port = 54325
+pop3_port = 54326
 
 [storage]
-enabled = true
+file_size_limit = "50MiB"
 
 [auth]
-enabled = true
-site_url = "http://localhost:3000"
+site_url = "https://www.eatmeetclub.com"
+additional_redirect_urls = ["https://www.eatmeetclub.com"]
+jwt_expiry = 3600
+enable_signup = true
 
-[realtime]
-enabled = true
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
 
-# Below are secrets that should be added to your project
+[analytics]
+enabled = false
+port = 54327
+vector_port = 54328
+
+[functions]
+# 🛒 Create membership flow based on email logic
 [functions.create-membership-checkout]
 verify_jwt = false
 
-[functions.stripe-webhook]
+# 🔍 Fetch stripe mode config
+[functions.check-stripe-mode]
 verify_jwt = false
 
-[functions.verify-membership-payment]
+# ✉️ Welcome email trigger
+[functions.send-welcome-email]
+verify_jwt = false
+
+# 🔁 Stripe webhook handler
+[functions.stripe-webhook]
 verify_jwt = false
