@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { createCheckoutSession } from "@/lib/createCheckoutSession";
 
@@ -16,11 +17,24 @@ export function useCheckoutSession() {
     setError(null);
 
     try {
+      // Add logging to help debug issues
+      console.log("Starting checkout with params:", params);
+      
       const { url, error } = await createCheckoutSession(params);
 
-      if (error) throw new Error(error);
-      if (url) window.location.href = url;
+      if (error) {
+        console.error("Checkout session creation error:", error);
+        throw new Error(error);
+      }
+      
+      if (url) {
+        console.log("Redirecting to checkout URL:", url);
+        window.location.href = url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
     } catch (err: any) {
+      console.error("Checkout error:", err);
       setError(err.message || "An unexpected error occurred.");
     } finally {
       setIsLoading(false);
