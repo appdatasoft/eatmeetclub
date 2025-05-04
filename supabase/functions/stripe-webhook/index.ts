@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.1.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -36,24 +37,51 @@ serve(async (req) => {
           Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
         );
 
-        const { data: userData, error: fetchError } = await supabase.auth.admin.getUserByEmail(email);
+        // Use listUsers and find the user by email
+        const { data: users, error: fetchError } = await supabase.auth.admin.listUsers();
 
         if (fetchError) {
-          console.error("Failed to fetch user:", fetchError);
+          console.error("Failed to fetch users:", fetchError);
         } else {
-          const { error: updateError } = await supabase.auth.admin.updateUserById(userData.user.id, {
-            user_metadata: {
-              ...userData.user.user_metadata,
-              membership_active: true,
-              membership_activated_at: new Date().toISOString(),
-              stripe_session_id: session.id,
-            },
-          });
-
-          if (updateError) {
-            console.error("Failed to update user metadata:", updateError);
+          const user = users.users.find(u => u.email === email);
+          
+          if (!user) {
+            console.error("User not found with email:", email);
           } else {
-            console.log(`✅ Membership activated for: ${email}`);
+            const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
+              user_metadata: {
+                ...user.user_metadata,
+                membership_active: true,
+                membership_activated_at: new Date().toISOString(),
+                stripe_session_id: session.id,
+              },
+            });
+
+            if (updateError) {
+              console.error("Failed to update user metadata:", updateError);
+            } else {
+              console.log(`✅ Membership activated for: ${email}`);
+              
+              // Also create a membership record
+              const { error: membershipError } = await supabase
+                .from('memberships')
+                .insert({
+                  user_id: user.id,
+                  status: 'active',
+                  is_subscription: session.mode === 'subscription',
+                  started_at: new Date().toISOString(),
+                  renewal_at: session.mode === 'subscription' ? 
+                    new Date(Date.now() + 30*24*60*60*1000).toISOString() : null,
+                  last_payment_id: session.id,
+                  subscription_id: session.subscription
+                });
+                
+              if (membershipError) {
+                console.error("Failed to create membership record:", membershipError);
+              } else {
+                console.log("✅ Membership record created successfully");
+              }
+            }
           }
         }
       }
@@ -74,4 +102,3 @@ serve(async (req) => {
     );
   }
 });
-

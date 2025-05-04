@@ -43,17 +43,29 @@ serve(async (req) => {
     if (!stripePriceId) throw new Error("Stripe price ID not set in admin_config");
 
     // 2. Check if user exists
-    const { data: existingUser, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+    // Use the listUsers method instead of getUserByEmail
+    const { data: users, error: userError } = await supabase.auth.admin.listUsers();
+    
+    if (userError) {
+      throw new Error(`Failed to fetch users: ${userError.message}`);
+    }
+    
+    // Find user by email
+    const existingUser = users.users.find(user => user.email === email);
 
     // New User Flow
-    if (userError || !existingUser) {
-      const { error: createError } = await supabase.auth.admin.createUser({
+    if (!existingUser) {
+      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
         email,
         email_confirm: true,
         user_metadata: { name, phone, membership_active: false },
       });
 
-      if (!createError) {
+      if (createError) {
+        throw new Error(`Failed to create user: ${createError.message}`);
+      }
+
+      if (newUser?.user) {
         await supabase.auth.admin.inviteUserByEmail(email);
       }
 
@@ -72,7 +84,7 @@ serve(async (req) => {
     }
 
     // Existing User Flow
-    const metadata = existingUser.user?.user_metadata || {};
+    const metadata = existingUser?.user_metadata || {};
     const membershipActive = metadata.membership_active === true;
 
     if (membershipActive) {
