@@ -1,108 +1,112 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { stripe, corsHeaders, handleCorsOptions, createJsonResponse, createErrorResponse } from "../_shared/stripe.ts";
+import Stripe from "https://esm.sh/stripe@12.1.0?target=deno";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+};
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return handleCorsOptions();
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    // Initialize Supabase client with service role key
+    const { email, name, phone, address, stripeMode = "test", amount = 25.0 } = await req.json();
+
+    if (!email) {
+      return new Response(
+        JSON.stringify({ error: "Missing email", success: false }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Initialize Supabase admin client (no JWT required)
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Parse request body
-    let requestBody;
-    try {
-      requestBody = await req.json();
-    } catch (error) {
-      console.error("Failed to parse request body:", error);
-      return createErrorResponse("Invalid request body", 400);
-    }
-
-    const {
-      email,
-      name,
-      phone,
-      address,
-      amount = 25.0,
-      stripeMode = "test",
-      redirectToCheckout = true
-    } = requestBody;
-
-    if (!email) {
-      return createErrorResponse("Missing email", 400);
-    }
-
-    // Get appropriate Stripe key based on mode
+    // Create Stripe instance
     const stripeKey = stripeMode === "live"
       ? Deno.env.get("STRIPE_SECRET_KEY_LIVE")
       : Deno.env.get("STRIPE_SECRET_KEY");
 
     if (!stripeKey) {
-      return createErrorResponse(`Stripe ${stripeMode} key is not configured`, 500);
+      return new Response(
+        JSON.stringify({ error: "Stripe key not configured", success: false }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    console.log(`Creating checkout session for ${email} with amount ${amount}`);
-    
+    const stripe = new Stripe(stripeKey, { apiVersion: "2022-11-15" });
+
     // Create Stripe checkout session
-    try {
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        mode: "payment",
-        customer_email: email,
-        line_items: [
-          {
-            price_data: {
-              currency: "usd",
-              product_data: {
-                name: "Eat Meet Club Membership",
-                description: "Monthly membership fee"
-              },
-              unit_amount: Math.round(amount * 100)
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      customer_email: email,
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: "Eat Meet Club Membership",
+              description: "Monthly membership fee",
             },
-            quantity: 1
-          }
-        ],
-        success_url: `${Deno.env.get("SITE_URL")}/membership-confirmed?success=true&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${Deno.env.get("SITE_URL")}/membership-payment?canceled=true`,
-        metadata: {
-          user_email: email,
-          user_name: name || "",
-          phone: phone || "",
-          address: address || ""
-        }
-      });
-
-      // Optional: trigger welcome email
-      try {
-        await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-welcome-email`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
+            unit_amount: Math.round(amount * 100),
           },
-          body: JSON.stringify({ email, name })
-        });
-      } catch (err) {
-        console.warn("Welcome email failed:", err);
-      }
+          quantity: 1,
+        },
+      ],
+      success_url: `${Deno.env.get("SITE_URL")}/membership-confirmed?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${Deno.env.get("SITE_URL")}/membership-payment?canceled=true`,
+      metadata: {
+        user_email: email,
+        user_name: name || "",
+        phone: phone || "",
+        address: address || "",
+      },
+    });
 
-      return createJsonResponse({
-        success: true,
-        url: redirectToCheckout ? session.url : null,
-        sessionId: session.id
-      });
-    } catch (stripeError) {
-      console.error("Stripe error:", stripeError);
-      return createErrorResponse(`Stripe error: ${stripeError instanceof Error ? stripeError.message : String(stripeError)}`, 500);
+    // Create Supabase user using admin API
+    const { error: createUserError } = await supabase.auth.admin.createUser({
+      email,
+      user_metadata: { name, phone, address },
+      email_confirm: true,
+    });
+
+    // Send password setup email
+    if (!createUserError) {
+      await supabase.auth.admin.inviteUserByEmail(email);
     }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        url: session.url,
+        sessionId: session.id,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (err) {
-    console.error("Checkout session creation error:", err);
-    return createErrorResponse(err);
+    console.error("❌ Error:", err);
+    return new Response(
+      JSON.stringify({
+        error: err instanceof Error ? err.message : "Unknown error",
+        details: err.toString(),
+        success: false,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });
