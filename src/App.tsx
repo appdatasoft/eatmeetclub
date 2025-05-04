@@ -1,5 +1,4 @@
 
-import { supabase } from "@/lib/supabaseClient";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Login from "@/pages/Login";
@@ -22,8 +21,30 @@ import UsersPage from "@/pages/admin/UsersPage";
 import AdminSettings from "@/pages/dashboard/AdminSettings";
 import AddRestaurant from "@/pages/dashboard/AddRestaurant";
 import Signup from "@/pages/Signup";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 function App() {
+  // Validate Supabase connection on app startup
+  useEffect(() => {
+    // Simple health check to verify Supabase connection
+    const checkSupabaseConnection = async () => {
+      try {
+        // Minimal request to check if Supabase is responding
+        const { error } = await supabase.from('app_config').select('key').limit(1);
+        if (error) {
+          console.error('Supabase connection check failed:', error);
+        } else {
+          console.log('Supabase connection successful');
+        }
+      } catch (err) {
+        console.error('Failed to connect to Supabase:', err);
+      }
+    };
+    
+    checkSupabaseConnection();
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
