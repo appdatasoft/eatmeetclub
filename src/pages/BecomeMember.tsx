@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { membershipFormSchema, MembershipFormValues } from "@/lib/schemas/membership";
 import { createCheckoutSession } from "@/lib/createCheckoutSession";
-import { supabase } from "@/lib/supabaseClient";
 
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
@@ -28,43 +27,24 @@ const BecomeMember = () => {
     setIsLoading(true);
 
     try {
-      // Check if user is logged in
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
-        // If not logged in, send magic link
-        const { error } = await supabase.auth.signInWithOtp({
-          email: values.email,
-          options: {
-            shouldCreateUser: true,
-            emailRedirectTo: "https://www.eatmeetclub.com/membership-confirmed",
-          },
-        });
-
-        if (error) throw new Error("Failed to send login email.");
-        alert("✅ Check your email for a login link. Then return here to complete your payment.");
-        return;
-      }
-
-      // Prepare checkout
       const fullName = `${values.firstName} ${values.lastName}`;
+
       const response = await createCheckoutSession({
         email: values.email,
         name: fullName,
         phone: values.phone,
         address: values.address,
-        stripeMode: "test", // change to "live" when ready
+        stripeMode: "test", // change to "live" in production
       });
 
       if (response?.url) {
-        window.location.href = response.url;
+        window.location.href = response.url; // ✅ redirect to Stripe
       } else {
-        throw new Error(response.error || "Failed to create Stripe checkout session.");
+        throw new Error(response?.error || "Failed to create Stripe checkout session.");
       }
-
     } catch (err: any) {
       alert(err.message || "An unexpected error occurred.");
-      console.error("❌ BecomeMember error:", err);
+      console.error("BecomeMember error:", err);
     } finally {
       setIsLoading(false);
     }
