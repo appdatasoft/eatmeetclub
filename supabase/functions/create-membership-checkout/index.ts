@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@12.1.0?target=deno";
@@ -15,88 +14,79 @@ serve(async (req) => {
   }
 
   try {
-    const {
-      email,
-      name,
-      phone,
-      address,
-      stripeMode = "test",
-      amount = null // Now optional, will fetch from admin_config
-    } = await req.json();
-
-    if (!email) {
-      return new Response(
-        JSON.stringify({ error: "Missing email", success: false }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const siteUrl = Deno.env.get("SITE_URL");
-    if (!siteUrl?.startsWith("http")) {
-      return new Response(
-        JSON.stringify({ error: "SITE_URL must begin with http or https" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Initialize Supabase admin client (no auth required)
+    const { email, name, phone } = await req.json();
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch the membership fee from admin_config
-    let membershipFeeInCents = amount ? Math.round(amount * 100) : null;
-    
-    if (!membershipFeeInCents) {
-      try {
-        // First try admin_config (newer implementation)
-        const { data: adminConfigData } = await supabase
-          .from('admin_config')
-          .select('value')
-          .eq('key', 'membership_fee')
-          .single();
-        
-        if (adminConfigData?.value) {
-          membershipFeeInCents = parseInt(adminConfigData.value, 10);
-        } else {
-          // Fall back to app_config (older implementation)
-          const { data } = await supabase
-            .from('app_config')
-            .select('value')
-            .eq('key', 'MEMBERSHIP_FEE')
-            .single();
-          
-          if (data?.value) {
-            membershipFeeInCents = Math.round(parseFloat(data.value) * 100);
-          } else {
-            // Default if no configuration found
-            membershipFeeInCents = 2500; // $25.00
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching membership fee:", err);
-        membershipFeeInCents = 2500; // Default to $25.00
+    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2022-11-15" });
+
+    const siteUrl = Deno.env.get("SITE_URL")!;
+    const loginUrl = `${siteUrl}/login`;
+
+    // 1. Fetch membership fee and Stripe price ID from admin_config
+    const configKeys = ["membership_fee", "stripe_price_id"];
+    const { data: configData, error: configError } = await supabase
+      .from("admin_config")
+      .select("key, value")
+      .in("key", configKeys);
+
+    if (configError || !configData) {
+      throw new Error("Missing or unreadable admin_config");
+    }
+
+    const config = Object.fromEntries(configData.map((row) => [row.key, row.value]));
+    const membershipFee = parseInt(config["membership_fee"] || "2500", 10);
+    const stripePriceId = config["stripe_price_id"];
+
+    if (!stripePriceId) throw new Error("Stripe price ID not set in admin_config");
+
+    // 2. Check if user exists
+    const { data: existingUser, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+
+    // New User Flow
+    if (userError || !existingUser) {
+      const { error: createError } = await supabase.auth.admin.createUser({
+        email,
+        email_confirm: true,
+        user_metadata: { name, phone, membership_active: false },
+      });
+
+      if (!createError) {
+        await supabase.auth.admin.inviteUserByEmail(email);
       }
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        customer_email: email,
+        line_items: [{ price: stripePriceId, quantity: 1 }],
+        success_url: `${siteUrl}/membership-confirmed?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${siteUrl}/membership-payment?canceled=true`,
+      });
+
+      return new Response(JSON.stringify({ success: true, url: session.url }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Select Stripe key
-    const stripeKey = stripeMode === "live"
-      ? Deno.env.get("STRIPE_SECRET_KEY_LIVE")
-      : Deno.env.get("STRIPE_SECRET_KEY");
+    // Existing User Flow
+    const metadata = existingUser.user?.user_metadata || {};
+    const membershipActive = metadata.membership_active === true;
 
-    if (!stripeKey) {
-      return new Response(
-        JSON.stringify({ error: "Stripe key not configured", success: false }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (membershipActive) {
+      return new Response(JSON.stringify({ redirect: loginUrl, success: false }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const stripe = new Stripe(stripeKey, { apiVersion: "2022-11-15" });
+    // Calculate prorated amount (example logic: 50% if past 15th)
+    const today = new Date().getDate();
+    const proratedAmount = today > 15 ? Math.round(membershipFee / 2) : membershipFee;
 
-    // Create Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
       mode: "payment",
       customer_email: email,
       line_items: [
@@ -104,10 +94,10 @@ serve(async (req) => {
           price_data: {
             currency: "usd",
             product_data: {
-              name: "Eat Meet Club Membership",
-              description: "Monthly membership fee",
+              name: "Prorated Monthly Membership",
+              description: "Partial month membership fee",
             },
-            unit_amount: membershipFeeInCents,
+            unit_amount: proratedAmount,
           },
           quantity: 1,
         },
@@ -116,41 +106,20 @@ serve(async (req) => {
       cancel_url: `${siteUrl}/membership-payment?canceled=true`,
       metadata: {
         user_email: email,
-        user_name: name || "",
-        phone: phone || "",
-        address: address || "",
+        user_name: name,
+        phone,
       },
     });
 
-    // Create Supabase user via admin API
-    const { error: createUserError } = await supabase.auth.admin.createUser({
-      email,
-      user_metadata: { name, phone, address },
-      email_confirm: true,
+    return new Response(JSON.stringify({ success: true, url: session.url }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-
-    // Send password setup email
-    if (!createUserError) {
-      await supabase.auth.admin.inviteUserByEmail(email);
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        url: session.url,
-        sessionId: session.id,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
   } catch (err) {
-    console.error("❌ Error creating checkout session:", err);
+    console.error("❌ create-membership-checkout error:", err);
     return new Response(
       JSON.stringify({
-        error: err instanceof Error ? err.message : "Unknown error",
-        details: err.toString(),
+        error: err instanceof Error ? err.message : "Unexpected error",
         success: false,
       }),
       {
