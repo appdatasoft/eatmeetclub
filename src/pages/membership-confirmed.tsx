@@ -1,9 +1,9 @@
 
 import { useEffect } from "react";
-import { useRouter } from "next/router";
+import { useNavigate } from "react-router-dom";
 
 const MembershipConfirmed = () => {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Optionally clear localStorage or form cache after confirmation
@@ -30,7 +30,7 @@ const MembershipConfirmed = () => {
       </div>
       
       <button 
-        onClick={() => router.push("/events")} 
+        onClick={() => navigate("/events")} 
         className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-6 rounded-full transition-colors mb-4"
       >
         Explore Events
