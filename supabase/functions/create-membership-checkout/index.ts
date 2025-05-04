@@ -21,7 +21,7 @@ serve(async (req) => {
       phone,
       address,
       stripeMode = "test",
-      amount = 25.0
+      amount = null // Now optional, will fetch from admin_config
     } = await req.json();
 
     if (!email) {
@@ -44,6 +44,41 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // Fetch the membership fee from admin_config
+    let membershipFeeInCents = amount ? Math.round(amount * 100) : null;
+    
+    if (!membershipFeeInCents) {
+      try {
+        // First try admin_config (newer implementation)
+        const { data: adminConfigData } = await supabase
+          .from('admin_config')
+          .select('value')
+          .eq('key', 'membership_fee')
+          .single();
+        
+        if (adminConfigData?.value) {
+          membershipFeeInCents = parseInt(adminConfigData.value, 10);
+        } else {
+          // Fall back to app_config (older implementation)
+          const { data } = await supabase
+            .from('app_config')
+            .select('value')
+            .eq('key', 'MEMBERSHIP_FEE')
+            .single();
+          
+          if (data?.value) {
+            membershipFeeInCents = Math.round(parseFloat(data.value) * 100);
+          } else {
+            // Default if no configuration found
+            membershipFeeInCents = 2500; // $25.00
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching membership fee:", err);
+        membershipFeeInCents = 2500; // Default to $25.00
+      }
+    }
 
     // Select Stripe key
     const stripeKey = stripeMode === "live"
@@ -72,7 +107,7 @@ serve(async (req) => {
               name: "Eat Meet Club Membership",
               description: "Monthly membership fee",
             },
-            unit_amount: Math.round(amount * 100),
+            unit_amount: membershipFeeInCents,
           },
           quantity: 1,
         },

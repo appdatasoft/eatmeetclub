@@ -22,67 +22,28 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Check if admin_config table exists
-    let hasTable = false;
-    try {
-      const { error: tableCheckError } = await supabase
-        .from('admin_config')
-        .select('count')
-        .limit(1);
-      
-      hasTable = !tableCheckError;
-    } catch (tableCheckError) {
-      console.log("Error checking admin_config table:", tableCheckError);
-      hasTable = false;
+    // Try to get from admin_config table first (newer implementation)
+    const { data: adminConfigData, error: adminConfigError } = await supabase
+      .from('admin_config')
+      .select('value')
+      .eq('key', 'stripe_mode')
+      .maybeSingle();
+    
+    if (!adminConfigError && adminConfigData?.value) {
+      const mode = adminConfigData.value === 'live' ? 'live' : 'test';
+      return new Response(JSON.stringify({ 
+        mode,
+        source: 'admin_config',
+        timestamp: new Date().toISOString() 
+      }), {
+        status: 200,
+        headers: corsHeaders
+      });
     }
-
-    // Create the table if it doesn't exist
-    if (!hasTable) {
-      try {
-        console.log("Creating admin_config table");
-        const { error: createTableError } = await supabase.query(`
-          CREATE TABLE IF NOT EXISTS public.admin_config (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            key TEXT NOT NULL UNIQUE,
-            value TEXT,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-          );
-          
-          INSERT INTO public.admin_config (key, value)
-          VALUES ('stripe_mode', 'test')
-          ON CONFLICT (key) DO NOTHING;
-        `);
-        
-        if (createTableError) {
-          console.error("Failed to create admin_config table:", createTableError);
-          return new Response(JSON.stringify({ 
-            mode: "test",
-            error: "Failed to create admin_config table",
-            fallback: true,
-            timestamp: new Date().toISOString()
-          }), {
-            status: 200,
-            headers: corsHeaders
-          });
-        }
-      } catch (error) {
-        console.error("Error creating admin_config table:", error);
-        return new Response(JSON.stringify({ 
-          mode: "test",
-          error: "Failed to create admin_config table",
-          fallback: true,
-          timestamp: new Date().toISOString()
-        }), {
-          status: 200,
-          headers: corsHeaders
-        });
-      }
-    }
-
-    // Get Stripe mode from the admin_config table
+    
+    // Fall back to older app_config table if needed
     const { data, error } = await supabase
-      .from("admin_config")
+      .from("app_config")
       .select("value")
       .eq("key", "stripe_mode")
       .maybeSingle();
@@ -106,6 +67,7 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({ 
       mode,
+      source: 'app_config',
       timestamp: new Date().toISOString() 
     }), {
       status: 200,

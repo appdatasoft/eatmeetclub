@@ -8,17 +8,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { supabase } from '@/integrations/supabase/client';
+import { Switch } from '@/components/ui/switch';
 
 interface ConfigFormValues {
   EVENT_CREATION_FEE: string;
   MEMBERSHIP_FEE: string;
+  stripe_mode: 'test' | 'live';
 }
 
 interface ConfigItem {
   id: string;
   key: string;
   value: string;
-  description: string | null;
+  description?: string | null;
 }
 
 const ConfigPage = () => {
@@ -30,6 +32,7 @@ const ConfigPage = () => {
     defaultValues: {
       EVENT_CREATION_FEE: '50',
       MEMBERSHIP_FEE: '25',
+      stripe_mode: 'test',
     }
   });
 
@@ -37,27 +40,81 @@ const ConfigPage = () => {
     const fetchConfigs = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
+        // First get configs from admin_config (new implementation)
+        const { data: adminConfigData, error: adminConfigError } = await supabase
+          .from('admin_config')
+          .select('*');
+        
+        // Then get configs from app_config (old implementation)
+        const { data: appConfigData, error: appConfigError } = await supabase
           .from('app_config')
           .select('*');
         
-        if (error) {
-          throw error;
+        if (adminConfigError && appConfigError) {
+          throw new Error("Failed to load configuration from either table");
         }
         
-        setConfigs(data as ConfigItem[]);
+        // Combine and process the data
+        const combinedConfigs: ConfigItem[] = [];
+        
+        // Process admin_config data (format as needed)
+        if (adminConfigData) {
+          adminConfigData.forEach((item: any) => {
+            combinedConfigs.push({
+              id: item.key,
+              key: item.key,
+              value: item.value,
+              description: null
+            });
+          });
+        }
+        
+        // Process app_config data
+        if (appConfigData) {
+          appConfigData.forEach((item: any) => {
+            combinedConfigs.push({
+              id: item.id,
+              key: item.key,
+              value: item.value,
+              description: item.description
+            });
+          });
+        }
+        
+        setConfigs(combinedConfigs);
         
         // Set form values from fetched data
-        const configMap: Record<string, string> = {};
+        const configMap: Record<string, string> = {
+          EVENT_CREATION_FEE: '50',
+          MEMBERSHIP_FEE: '25',
+          stripe_mode: 'test',
+        };
         
-        // Initialize with default values first
-        configMap['EVENT_CREATION_FEE'] = '50';
-        configMap['MEMBERSHIP_FEE'] = '25';
+        // First set from app_config
+        if (appConfigData) {
+          appConfigData.forEach((item: any) => {
+            if (item.key === 'EVENT_CREATION_FEE' || item.key === 'MEMBERSHIP_FEE') {
+              configMap[item.key] = item.value;
+            }
+          });
+        }
         
-        // Then override with actual values from database
-        data.forEach((item: ConfigItem) => {
-          configMap[item.key] = item.value;
-        });
+        // Then override with admin_config values when available (higher priority)
+        if (adminConfigData) {
+          adminConfigData.forEach((item: any) => {
+            if (item.key === 'membership_fee') {
+              // Convert cents to dollars for display
+              configMap['MEMBERSHIP_FEE'] = (parseInt(item.value, 10) / 100).toString();
+            }
+            if (item.key === 'event_creation_fee') {
+              // Convert cents to dollars for display
+              configMap['EVENT_CREATION_FEE'] = (parseInt(item.value, 10) / 100).toString(); 
+            }
+            if (item.key === 'stripe_mode') {
+              configMap['stripe_mode'] = item.value;
+            }
+          });
+        }
         
         form.reset(configMap as unknown as ConfigFormValues);
       } catch (error: any) {
@@ -85,32 +142,58 @@ const ConfigPage = () => {
         throw new Error("Authentication required");
       }
       
-      // Update event creation fee
-      const { error: eventFeeError } = await supabase
-        .from('app_config')
-        .update({ 
-          value: values.EVENT_CREATION_FEE,
-          updated_by: sessionData.session.user.id,
-          updated_at: new Date().toISOString()
-        })
-        .eq('key', 'EVENT_CREATION_FEE');
+      // Convert dollar amounts to cents for storage in admin_config
+      const membershipFeeCents = Math.round(parseFloat(values.MEMBERSHIP_FEE) * 100);
+      const eventCreationFeeCents = Math.round(parseFloat(values.EVENT_CREATION_FEE) * 100);
       
-      if (eventFeeError) {
-        throw eventFeeError;
+      // Update both tables for compatibility during migration
+      
+      // 1. Update admin_config table (new implementation)
+      const adminConfigUpdates = [
+        { 
+          key: 'membership_fee',
+          value: membershipFeeCents.toString()
+        },
+        { 
+          key: 'event_creation_fee',
+          value: eventCreationFeeCents.toString()
+        },
+        {
+          key: 'stripe_mode',
+          value: values.stripe_mode
+        }
+      ];
+      
+      for (const update of adminConfigUpdates) {
+        const { error } = await supabase
+          .from('admin_config')
+          .upsert(update, { onConflict: 'key' });
+          
+        if (error) throw error;
       }
-
-      // Update or insert membership fee
-      const { error: membershipFeeError } = await supabase
-        .from('app_config')
-        .upsert({ 
+      
+      // 2. Also update app_config table for backward compatibility
+      const appConfigUpdates = [
+        { 
           key: 'MEMBERSHIP_FEE',
           value: values.MEMBERSHIP_FEE,
           updated_by: sessionData.session.user.id,
           updated_at: new Date().toISOString()
-        }, { onConflict: 'key' });
+        },
+        { 
+          key: 'EVENT_CREATION_FEE',
+          value: values.EVENT_CREATION_FEE,
+          updated_by: sessionData.session.user.id,
+          updated_at: new Date().toISOString()
+        }
+      ];
       
-      if (membershipFeeError) {
-        throw membershipFeeError;
+      for (const update of appConfigUpdates) {
+        const { error } = await supabase
+          .from('app_config')
+          .upsert(update, { onConflict: 'key' });
+          
+        if (error) throw error;
       }
       
       toast({
@@ -198,6 +281,31 @@ const ConfigPage = () => {
                         The monthly subscription fee for membership
                       </FormDescription>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="stripe_mode"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">
+                          Live Mode
+                        </FormLabel>
+                        <FormDescription>
+                          Toggle between Stripe test mode and live mode
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value === 'live'}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked ? 'live' : 'test');
+                          }}
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />

@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { fetchStripeMode } from '@/utils/stripeApi';
-import { getStripeMode, isStripeTestMode as getIsStripeTestMode } from '@/utils/getStripeMode';
+import { supabase } from "@/integrations/supabase/client";
+import { getStripeMode } from '@/utils/getStripeMode';
 
 /**
  * Hook to get and manage the current Stripe mode
@@ -23,19 +23,24 @@ export const useStripeMode = () => {
       setIsLoading(true);
       setError(null);
       
-      console.log("Retrying Stripe mode check...");
-      const result = await fetchStripeMode();
+      console.log("Fetching Stripe mode from admin_config...");
+      const { data, error: fetchError } = await supabase
+        .from('admin_config')
+        .select('value')
+        .eq('key', 'stripe_mode')
+        .single();
       
-      if (result.error) {
-        console.warn("Error fetching Stripe mode on retry:", result.error);
-        setError(`Failed to fetch Stripe mode: ${result.error}`);
+      if (fetchError) {
+        console.warn("Error fetching Stripe mode:", fetchError);
+        setError(`Failed to fetch Stripe mode: ${fetchError.message}`);
         // Fall back to local mode
         setMode(getStripeMode());
       } else {
-        console.log("Stripe mode from retry:", result.mode);
-        setMode(result.mode);
+        console.log("Stripe mode from database:", data?.value);
+        const fetchedMode = data?.value === 'live' ? 'live' : 'test';
+        setMode(fetchedMode);
         // Cache the mode in localStorage for offline usage
-        localStorage.setItem('stripe_mode', result.mode);
+        localStorage.setItem('stripe_mode', fetchedMode);
       }
     } catch (err) {
       console.error("Error in retrying Stripe mode check:", err);
@@ -48,38 +53,9 @@ export const useStripeMode = () => {
   }, []);
   
   useEffect(() => {
-    const loadStripeMode = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        console.log("Checking Stripe mode from API...");
-        const result = await fetchStripeMode();
-        
-        if (result.error) {
-          console.warn("Error fetching Stripe mode:", result.error);
-          setError(`Failed to fetch Stripe mode: ${result.error}`);
-          // Fall back to local mode
-          setMode(getStripeMode());
-        } else {
-          console.log("Stripe mode from API:", result.mode);
-          setMode(result.mode);
-          // Cache the mode in localStorage for offline usage
-          localStorage.setItem('stripe_mode', result.mode);
-        }
-      } catch (err) {
-        console.error("Error in useStripeMode:", err);
-        setError(err instanceof Error ? err.message : "Unknown error");
-        // Fall back to local mode
-        setMode(getStripeMode());
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     // Load the stripe mode when the hook is first used
-    loadStripeMode();
-  }, []);
+    handleRetryStripeCheck();
+  }, [handleRetryStripeCheck]);
   
   return { 
     mode, 
