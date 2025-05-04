@@ -1,51 +1,39 @@
-# Unique project identifier
-project_id = "wocfwpedauuhlrfugxuu"
+
+# project_id = "wocfwpedauuhlrfugxuu"
 
 [api]
+enabled = true
 port = 54321
 schemas = ["public", "storage", "graphql_public"]
-extra_search_path = ["public", "extensions"]
-max_rows = 1000
 
 [db]
 port = 54322
-major_version = 15
 
 [studio]
+enabled = true
 port = 54323
+api_url = "http://localhost"
 
 [inbucket]
+enabled = true
 port = 54324
-smtp_port = 54325
-pop3_port = 54326
 
 [storage]
-file_size_limit = "50MiB"
+enabled = true
 
 [auth]
-site_url = "https://www.eatmeetclub.com"
-additional_redirect_urls = ["https://www.eatmeetclub.com"]
-jwt_expiry = 3600
-enable_signup = true
+enabled = true
+site_url = "http://localhost:3000"
 
-[auth.email]
-enable_signup = true
-double_confirm_changes = true
-enable_confirmations = false
+[realtime]
+enabled = true
 
-[analytics]
-enabled = false
-port = 54327
-vector_port = 54328
-
-# 🧠 Edge Function Access Control
-[functions]
+# Below are secrets that should be added to your project
 [functions.create-membership-checkout]
 verify_jwt = false
 
-[functions.check-stripe-mode]
+[functions.stripe-webhook]
 verify_jwt = false
 
-[functions.send-welcome-email]
+[functions.verify-membership-payment]
 verify_jwt = false
-

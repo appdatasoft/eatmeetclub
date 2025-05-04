@@ -1,9 +1,11 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@12.1.0?target=deno";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 
-const stripe = new Stripe(Deno.env.get("STRIPE_WEBHOOK_SECRET")!, {
+// Update to use the STRIPE_SECRET_KEY instead of STRIPE_WEBHOOK_SECRET
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   apiVersion: "2022-11-15",
   typescript: true
 });
@@ -100,6 +102,7 @@ serve(async (req) => {
     event = stripe.webhooks.constructEvent(
       bodyText,
       sig,
+      // Use STRIPE_ENDPOINT_SECRET for webhook verification
       Deno.env.get("STRIPE_ENDPOINT_SECRET")!
     );
   } catch (err) {

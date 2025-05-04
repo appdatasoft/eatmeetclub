@@ -1,4 +1,3 @@
-
 import Stripe from "https://esm.sh/stripe@12.0.0?target=deno";
 
 // Initialize Stripe with the secret key from environment variable
@@ -12,6 +11,27 @@ export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
+};
+
+// Get the Stripe secret key, endpoint secret and other configuration
+export const getStripeConfig = () => {
+  const secretKey = Deno.env.get("STRIPE_SECRET_KEY");
+  const endpointSecret = Deno.env.get("STRIPE_ENDPOINT_SECRET");
+  const publishableKey = Deno.env.get("STRIPE_PUBLISHABLE_KEY");
+  
+  if (!secretKey) {
+    console.warn("STRIPE_SECRET_KEY not found in environment variables");
+  }
+  
+  if (!endpointSecret) {
+    console.warn("STRIPE_ENDPOINT_SECRET not found in environment variables");
+  }
+  
+  return {
+    secretKey,
+    endpointSecret,
+    publishableKey
+  };
 };
 
 // Helper for handling OPTIONS preflight requests
