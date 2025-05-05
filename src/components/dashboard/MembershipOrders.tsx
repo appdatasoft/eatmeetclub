@@ -31,7 +31,7 @@ export function MembershipOrders() {
       setIsLoading(true);
       
       try {
-        // Query that joins membership_payments with memberships and also gets product info if available
+        // Query that joins membership_payments with memberships
         const { data, error } = await supabase
           .from('membership_payments')
           .select(`
@@ -43,10 +43,7 @@ export function MembershipOrders() {
             payment_status,
             memberships!inner (
               user_id,
-              product_id,
-              products:product_id (
-                name
-              )
+              product_id
             )
           `)
           .eq('memberships.user_id', user.id)
@@ -55,18 +52,42 @@ export function MembershipOrders() {
 
         if (error) throw error;
         
-        // Transform data to include product name
+        // Transform data and set up payments array
         const transformedPayments = data.map(payment => ({
           id: payment.id,
           amount: payment.amount,
           created_at: payment.created_at,
           payment_id: payment.payment_id,
           payment_method: payment.payment_method,
-          product_name: payment.memberships.products?.name || 'Membership',
+          product_name: 'Membership', // Default name
           receipt_url: null // Will attempt to fetch this separately
         }));
         
         setPayments(transformedPayments);
+        
+        // For payments that have a product_id, fetch the product name
+        for (const [index, payment] of data.entries()) {
+          if (payment.memberships?.product_id) {
+            try {
+              const { data: productData } = await supabase
+                .from('products')
+                .select('name')
+                .eq('stripe_product_id', payment.memberships.product_id)
+                .maybeSingle();
+                
+              if (productData?.name) {
+                setPayments(prev => 
+                  prev.map((p, i) => 
+                    i === index ? { ...p, product_name: productData.name } : p
+                  )
+                );
+              }
+            } catch (productError) {
+              console.error("Error fetching product:", productError);
+              // Continue without product name
+            }
+          }
+        }
         
         // For each payment with a payment_id, try to get a receipt URL
         for (const payment of transformedPayments) {
