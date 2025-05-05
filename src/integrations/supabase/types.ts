@@ -361,6 +361,39 @@ export type Database = {
           },
         ]
       }
+      products: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          interval: string | null
+          name: string
+          price_cents: number
+          stripe_price_id: string
+          stripe_product_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          interval?: string | null
+          name: string
+          price_cents: number
+          stripe_price_id: string
+          stripe_product_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          interval?: string | null
+          name?: string
+          price_cents?: number
+          stripe_price_id?: string
+          stripe_product_id?: string
+        }
+        Relationships: []
+      }
       restaurants: {
         Row: {
           address: string

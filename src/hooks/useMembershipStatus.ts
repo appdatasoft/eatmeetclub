@@ -10,6 +10,7 @@ export interface Membership {
   started_at: string;
   renewal_at: string | null;
   subscription_id: string | null;
+  product_id?: string | null; // Added this optional field
 }
 
 export interface MembershipResponse {
@@ -62,7 +63,8 @@ export const useMembershipStatus = (): MembershipResponse => {
           is_subscription: data.is_subscription,
           started_at: data.started_at,
           renewal_at: data.renewal_at,
-          subscription_id: data.subscription_id
+          subscription_id: data.subscription_id,
+          product_id: data.product_id // Added this field
         };
         
         setMembership(typedMembership);
