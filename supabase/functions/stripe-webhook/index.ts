@@ -101,6 +101,10 @@ serve(async (req) => {
                 console.log(`Found product ID from session metadata: ${productId}`);
               }
               
+              if (!productId) {
+                console.warn("Could not determine product ID for membership.");
+              }
+              
               // Create a membership record with the product ID
               const { error: membershipError } = await supabase
                 .from('memberships')
@@ -120,6 +124,60 @@ serve(async (req) => {
                 console.error("Failed to create membership record:", membershipError);
               } else {
                 console.log("✅ Membership record created successfully with product ID:", productId);
+                
+                // Also create a payment record
+                try {
+                  const paymentAmount = session.amount_total ? session.amount_total / 100 : 25.00;
+                  
+                  // Get the newly created membership
+                  const { data: membership } = await supabase
+                    .from('memberships')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .eq('last_payment_id', session.id)
+                    .maybeSingle();
+                    
+                  if (membership) {
+                    const { error: paymentError } = await supabase
+                      .from('membership_payments')
+                      .insert({
+                        membership_id: membership.id,
+                        amount: paymentAmount,
+                        payment_id: session.id,
+                        payment_status: 'succeeded'
+                      });
+                      
+                    if (paymentError) {
+                      console.error("Failed to create payment record:", paymentError);
+                    } else {
+                      console.log("✅ Payment record created successfully");
+                      
+                      // Send invoice email
+                      try {
+                        const name = user.user_metadata?.name || email.split('@')[0];
+                        const emailResponse = await fetch(`${Deno.env.get("SITE_URL")}/functions/v1/send-invoice-email`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            sessionId: session.id,
+                            email: email,
+                            name: name
+                          }),
+                        });
+                        
+                        if (emailResponse.ok) {
+                          console.log("✅ Invoice email sent successfully");
+                        } else {
+                          console.error("Failed to send invoice email:", await emailResponse.text());
+                        }
+                      } catch (emailError) {
+                        console.error("Error sending invoice email:", emailError);
+                      }
+                    }
+                  }
+                } catch (paymentError) {
+                  console.error("Error creating payment record:", paymentError);
+                }
               }
             }
           }

@@ -1,10 +1,14 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { stripe } from "../_shared/stripe.ts";
-import { corsHeaders } from "../_shared/cors.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
 serve(async (req) => {
-  // Handle CORS preflight request
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: corsHeaders,
@@ -13,59 +17,70 @@ serve(async (req) => {
   }
 
   try {
-    // Parse the request body to get session ID
     const { sessionId } = await req.json();
-    
+
     if (!sessionId) {
-      throw new Error("No session ID provided");
+      return new Response(
+        JSON.stringify({ error: "Session ID is required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
-    
-    console.log("Getting invoice receipt for session:", sessionId);
-    
-    // Retrieve the checkout session
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    console.log("Session retrieved:", {
-      id: session.id,
-      hasSubscription: !!session.subscription,
-      hasPaymentIntent: !!session.payment_intent
-    });
-    
+
+    // Try to get the receipt URL from different Stripe objects
     let receiptUrl = null;
-    
-    // Get the receipt URL based on session type
-    if (session.subscription) {
-      console.log("Processing subscription payment");
-      const subscriptionId = session.subscription as string;
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      const invoice = await stripe.invoices.retrieve(subscription.latest_invoice as string);
-      receiptUrl = invoice.hosted_invoice_url || null;
-    } else if (session.payment_intent) {
-      console.log("Processing one-time payment");
-      const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent as string);
-      receiptUrl = paymentIntent.charges?.data[0]?.receipt_url || null;
+
+    try {
+      // First, try to retrieve the Checkout Session
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+      if (session.payment_intent) {
+        // If there's a payment intent, get it and then the charge for the receipt
+        const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent as string);
+        
+        if (paymentIntent.latest_charge) {
+          const charge = await stripe.charges.retrieve(paymentIntent.latest_charge as string);
+          receiptUrl = charge.receipt_url;
+        }
+      } else if (session.subscription) {
+        // For subscriptions, get the invoice
+        const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+        
+        // Get the most recent invoice for this subscription
+        const invoices = await stripe.invoices.list({
+          subscription: subscription.id,
+          limit: 1,
+        });
+        
+        if (invoices.data.length > 0) {
+          receiptUrl = invoices.data[0].hosted_invoice_url;
+        }
+      }
+    } catch (error) {
+      console.error("Error retrieving Stripe data:", error);
+      // Continue without receipt URL if there's an error
     }
-    
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        receiptUrl
+      JSON.stringify({ 
+        receiptUrl,
+        success: receiptUrl !== null
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   } catch (error) {
-    console.error("Error in get-invoice-receipt function:", error);
-    
+    console.error("Error getting invoice receipt:", error);
+
     return new Response(
-      JSON.stringify({
-        success: false,
-        message: error.message,
-      }),
+      JSON.stringify({ error: "Failed to get invoice receipt" }),
       {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
       }
     );
   }

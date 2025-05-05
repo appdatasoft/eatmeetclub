@@ -1,4 +1,3 @@
-
 // src/hooks/membership/useCheckoutSession.ts
 import { useInvoiceEmail } from "./useInvoiceEmail";
 import { useToast } from "@/hooks/use-toast";
@@ -39,7 +38,9 @@ export const useCheckoutSession = () => {
       if (membership?.active) {
         toast({
           title: "Already a Member",
-          description: "You already have an active membership. Please log in to continue.",
+          description: membership.productInfo?.name 
+            ? `You already have an active "${membership.productInfo.name}" membership. Please log in to continue.`
+            : "You already have an active membership. Please log in to continue.",
           variant: "default"
         });
         window.location.href = "/login";

@@ -15,6 +15,7 @@ export const useMembershipVerification = () => {
     userExists: boolean; 
     hasActiveMembership: boolean;
     userId: string | null;
+    productInfo?: { name?: string; description?: string; } | null;
   }> => {
     try {
       setIsVerifying(true);
@@ -46,11 +47,12 @@ export const useMembershipVerification = () => {
         };
       }
 
-      // Return the membership status
+      // Return the membership status with product info if available
       return { 
         userExists: data.userExists || false, 
         hasActiveMembership: data.active || data.hasActiveMembership || false,
-        userId: data.users?.[0]?.id || null
+        userId: data.users?.[0]?.id || null,
+        productInfo: data.productInfo || null
       };
     } catch (error: any) {
       console.error('Verification error:', error);
@@ -65,14 +67,16 @@ export const useMembershipVerification = () => {
     }
   };
 
-  const handleExistingMember = (email: string) => {
+  const handleExistingMember = (email: string, productInfo?: { name?: string; description?: string; } | null) => {
     // Store email in local storage for the login form
     localStorage.setItem('loginEmail', email);
     
     // Navigate to login with a message
     toast({
       title: "Active Membership Exists",
-      description: "You already have an active membership. Please log in to access your account.",
+      description: productInfo?.name 
+        ? `You already have an active "${productInfo.name}" membership. Please log in to access your account.` 
+        : "You already have an active membership. Please log in to access your account.",
       duration: 5000,
     });
     
