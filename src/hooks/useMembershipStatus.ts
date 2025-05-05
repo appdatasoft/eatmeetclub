@@ -65,7 +65,7 @@ export const useMembershipStatus = (): MembershipResponse => {
           renewal_at: data.renewal_at,
           subscription_id: data.subscription_id,
           // Safely handle the product_id which might not exist in older records
-          product_id: 'product_id' in data ? data.product_id : null
+          product_id: data.product_id as string | null
         };
         
         setMembership(typedMembership);
