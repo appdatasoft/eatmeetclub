@@ -62,7 +62,46 @@ serve(async (req) => {
             } else {
               console.log(`✅ Membership activated for: ${email}`);
               
-              // Also create a membership record
+              // Extract product information
+              let productId = null;
+              
+              // If this is a subscription, get the product ID from the subscription
+              if (session.subscription) {
+                try {
+                  const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+                  if (subscription.items.data.length > 0) {
+                    const item = subscription.items.data[0];
+                    productId = item.price.product as string;
+                    console.log(`Found product ID from subscription: ${productId}`);
+                  }
+                } catch (subscriptionError) {
+                  console.error("Failed to retrieve subscription details:", subscriptionError);
+                }
+              }
+              
+              // If product ID wasn't found from subscription, check line items
+              if (!productId && session.line_items) {
+                try {
+                  const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+                  if (lineItems.data.length > 0) {
+                    const item = lineItems.data[0];
+                    if (item.price?.product) {
+                      productId = item.price.product as string;
+                      console.log(`Found product ID from line items: ${productId}`);
+                    }
+                  }
+                } catch (lineItemsError) {
+                  console.error("Failed to retrieve line items:", lineItemsError);
+                }
+              }
+              
+              // Also check session metadata for product_id
+              if (!productId && session.metadata?.product_id) {
+                productId = session.metadata.product_id;
+                console.log(`Found product ID from session metadata: ${productId}`);
+              }
+              
+              // Create a membership record with the product ID
               const { error: membershipError } = await supabase
                 .from('memberships')
                 .insert({
@@ -73,13 +112,14 @@ serve(async (req) => {
                   renewal_at: session.mode === 'subscription' ? 
                     new Date(Date.now() + 30*24*60*60*1000).toISOString() : null,
                   last_payment_id: session.id,
-                  subscription_id: session.subscription
+                  subscription_id: session.subscription,
+                  product_id: productId
                 });
                 
               if (membershipError) {
                 console.error("Failed to create membership record:", membershipError);
               } else {
-                console.log("✅ Membership record created successfully");
+                console.log("✅ Membership record created successfully with product ID:", productId);
               }
             }
           }

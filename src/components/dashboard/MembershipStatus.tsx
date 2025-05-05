@@ -5,9 +5,33 @@ import { useMembershipStatus } from "@/hooks/useMembershipStatus";
 import { CalendarCheck, Calendar, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export function MembershipStatus() {
   const { membership, isActive, isLoading } = useMembershipStatus();
+  const [productInfo, setProductInfo] = useState<{ name?: string; description?: string } | null>(null);
+
+  // Fetch product information if we have a product_id
+  useEffect(() => {
+    const fetchProductInfo = async () => {
+      if (membership?.product_id) {
+        const { data, error } = await supabase
+          .from('products')
+          .select('name, description')
+          .eq('stripe_product_id', membership.product_id)
+          .maybeSingle();
+
+        if (!error && data) {
+          setProductInfo(data);
+        }
+      }
+    };
+
+    if (membership?.product_id) {
+      fetchProductInfo();
+    }
+  }, [membership?.product_id]);
 
   if (isLoading) {
     return (
@@ -68,6 +92,15 @@ export function MembershipStatus() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
+        {productInfo && (
+          <div className="bg-white p-3 rounded-md mb-3">
+            <h4 className="font-medium text-sm">{productInfo.name || "Membership Plan"}</h4>
+            {productInfo.description && (
+              <p className="text-xs text-gray-600 mt-1">{productInfo.description}</p>
+            )}
+          </div>
+        )}
+        
         {membership.started_at && (
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Started:</span>
