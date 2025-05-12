@@ -1,10 +1,8 @@
-
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+import MainLayout from "@/components/layout/MainLayout";
 import { CheckCircle2, Calendar, MapPin, Clock, Users, Mail } from "lucide-react";
 
 const TicketSuccess = () => {
@@ -126,8 +124,7 @@ const TicketSuccess = () => {
   }, [sessionId, navigate, toast]);
 
   return (
-    <>
-      <Navbar />
+    <MainLayout>
       <div className="container-custom py-12">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
@@ -219,8 +216,7 @@ const TicketSuccess = () => {
           )}
         </div>
       </div>
-      <Footer />
-    </>
+    </MainLayout>
   );
 };
 

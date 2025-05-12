@@ -3,8 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,8 +54,7 @@ const Register = () => {
   };
 
   return (
-    <>
-      <Navbar />
+    <MainLayout>
       <div className="container-custom py-12 flex justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
@@ -122,8 +120,7 @@ const Register = () => {
           </CardFooter>
         </Card>
       </div>
-      <Footer />
-    </>
+    </MainLayout>
   );
 };
 

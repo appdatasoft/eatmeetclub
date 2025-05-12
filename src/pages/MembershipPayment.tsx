@@ -1,7 +1,7 @@
+
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+import MainLayout from "@/components/layout/MainLayout";
 import { useMembershipPayment } from "@/hooks/useMembershipPayment";
 import PaymentStatusDisplay from "@/components/membership/PaymentStatusDisplay";
 import PaymentVerificationHandler from "@/components/membership/PaymentVerificationHandler";
@@ -75,12 +75,15 @@ const MembershipPayment = () => {
 
   // Show loading state while fetching data
   if (isLoading || isLoadingIntent) {
-    return <PaymentStatusDisplay />;
+    return (
+      <MainLayout>
+        <PaymentStatusDisplay />
+      </MainLayout>
+    );
   }
 
   return (
-    <>
-      <Navbar />
+    <MainLayout>
       <div className="min-h-screen bg-gray-50 py-16 px-4">
         {/* Handle payment verification via URL parameters */}
         {finalSessionId && finalPaymentSuccess && (
@@ -145,8 +148,7 @@ const MembershipPayment = () => {
           clientSecret={clientSecret}
         />
       </div>
-      <Footer />
-    </>
+    </MainLayout>
   );
 };
 
