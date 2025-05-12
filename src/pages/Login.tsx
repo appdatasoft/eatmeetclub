@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import MainLayout from "@/components/layout/MainLayout";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -96,84 +97,88 @@ const Login = () => {
   // If already logged in and still loading, show a spinner
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-500">Verifying your credentials...</p>
+      <MainLayout>
+        <div className="flex min-h-[70vh] items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-500">Verifying your credentials...</p>
+          </div>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   // If already logged in, don't show the login form
-  if (user) return null;
+  if (user) {
+    return <MainLayout><div className="min-h-[70vh]"></div></MainLayout>;
+  }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <div className="m-auto w-full max-w-md p-8 bg-white rounded-xl shadow-lg">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold">Welcome back</h1>
-          <p className="text-gray-600 mt-2">Sign in to your account</p>
-        </div>
-
-        <form onSubmit={handleLoginSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full"
-              placeholder="your@email.com"
-              autoComplete="email"
-            />
+    <MainLayout>
+      <div className="flex min-h-[70vh] py-12">
+        <div className="m-auto w-full max-w-md p-8 bg-white rounded-xl shadow-lg">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold">Welcome back</h1>
+            <p className="text-gray-600 mt-2">Sign in to your account</p>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
-              <Link
-                to="/forgot-password"
-                className="text-sm font-medium text-primary hover:underline"
-              >
-                Forgot password?
-              </Link>
+          <form onSubmit={handleLoginSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full"
+                placeholder="your@email.com"
+                autoComplete="email"
+              />
             </div>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full"
+                placeholder="••••••••"
+                autoComplete="current-password"
+              />
+            </div>
+
+            <Button
+              type="submit"
               className="w-full"
-              placeholder="••••••••"
-              autoComplete="current-password"
-            />
+              disabled={loading}
+            >
+              {loading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center text-sm">
+            <span className="text-gray-600">Don't have an account?</span>{" "}
+            <Link 
+              to="/signup" 
+              className="font-medium text-primary hover:underline"
+              state={{ from: redirectUrl }}
+            >
+              Sign up
+            </Link>
           </div>
-
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={loading}
-          >
-            {loading ? "Signing in..." : "Sign In"}
-          </Button>
-        </form>
-
-        <div className="mt-6 text-center text-sm">
-          <span className="text-gray-600">Don't have an account?</span>{" "}
-          <Link 
-            to="/signup" 
-            className="font-medium text-primary hover:underline"
-            state={{ from: redirectUrl }}
-          >
-            Sign up
-          </Link>
-        </div>
-        
-        {!user && (
+          
           <div className="mt-4 text-center">
             <Link 
               to="/become-member" 
@@ -182,17 +187,17 @@ const Login = () => {
               Become a Member
             </Link>
           </div>
-        )}
-        
-        {redirectUrl && redirectUrl.includes('/event/') && (
-          <div className="mt-6 p-3 bg-amber-50 border border-amber-200 rounded-md">
-            <p className="text-sm text-amber-800">
-              Login to purchase tickets for this event.
-            </p>
-          </div>
-        )}
+          
+          {redirectUrl && redirectUrl.includes('/event/') && (
+            <div className="mt-6 p-3 bg-amber-50 border border-amber-200 rounded-md">
+              <p className="text-sm text-amber-800">
+                Login to purchase tickets for this event.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </MainLayout>
   );
 };
 
