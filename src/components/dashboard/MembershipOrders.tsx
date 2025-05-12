@@ -42,8 +42,7 @@ export function MembershipOrders() {
             payment_method,
             payment_status,
             memberships!inner (
-              user_id,
-              product_id
+              user_id
             )
           `)
           .eq('memberships.user_id', user.id)
@@ -65,22 +64,31 @@ export function MembershipOrders() {
         
         setPayments(transformedPayments);
         
-        // For payments that have a product_id, fetch the product name
+        // For payments that have a payment_id, fetch the product name
         for (const [index, payment] of data.entries()) {
-          if (payment.memberships?.product_id) {
+          if (payment.payment_id) {
             try {
-              const { data: productData } = await supabase
-                .from('products')
-                .select('name')
-                .eq('stripe_product_id', payment.memberships.product_id)
+              // Get the membership associated with this payment
+              const { data: membershipData } = await supabase
+                .from('memberships')
+                .select('subscription_id, last_payment_id')
+                .eq('last_payment_id', payment.payment_id)
                 .maybeSingle();
                 
-              if (productData?.name) {
-                setPayments(prev => 
-                  prev.map((p, i) => 
-                    i === index ? { ...p, product_name: productData.name } : p
-                  )
-                );
+              if (membershipData) {
+                // Try to get product info from products table
+                const { data: productData } = await supabase
+                  .from('products')
+                  .select('name')
+                  .single();
+                  
+                if (productData?.name) {
+                  setPayments(prev => 
+                    prev.map((p, i) => 
+                      i === index ? { ...p, product_name: productData.name } : p
+                    )
+                  );
+                }
               }
             } catch (productError) {
               console.error("Error fetching product:", productError);

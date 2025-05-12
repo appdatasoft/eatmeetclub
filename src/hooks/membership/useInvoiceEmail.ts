@@ -47,7 +47,51 @@ export const useInvoiceEmail = () => {
     }
   };
 
+  // Add the missing getInvoiceReceiptUrl method
+  const getInvoiceReceiptUrl = async (sessionId: string): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('get-invoice-receipt', {
+        body: { sessionId }
+      });
+
+      if (error) {
+        console.error('Error getting invoice receipt URL:', error);
+        return null;
+      }
+
+      return data?.receiptUrl || null;
+    } catch (error) {
+      console.error('Error getting invoice receipt:', error);
+      return null;
+    }
+  };
+
+  // Add the missing sendInvoiceEmail method
+  const sendInvoiceEmail = async (paymentId: string, email: string, name: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-invoice-email', {
+        body: { 
+          sessionId: paymentId,
+          email,
+          name
+        }
+      });
+
+      if (error) {
+        console.error('Error sending invoice email:', error);
+        return false;
+      }
+
+      return data?.success || false;
+    } catch (error) {
+      console.error('Error sending invoice email:', error);
+      return false;
+    }
+  };
+
   return {
-    checkActiveMembership
+    checkActiveMembership,
+    getInvoiceReceiptUrl,
+    sendInvoiceEmail
   };
 };
