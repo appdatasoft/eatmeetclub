@@ -12,16 +12,16 @@ const Hero = () => {
 
   return (
     <div 
-      className="w-full py-12 md:py-24 relative h-[500px] bg-[#B5642A]"
+      className="w-full py-12 md:py-24 relative h-[500px] md:h-[700px] bg-cover bg-center"
       style={{ 
-        backgroundSize: 'cover',
-        backgroundPosition: 'center'
+        backgroundImage:"url('/assets/images/hero-bg.png')"
+
       }}
     >
       {/* Overlay for better text readability */}
-      <div className="absolute inset-0 bg-black bg-opacity-30"></div>
+      <div className="absolute inset-0 bg-black bg-opacity-50"></div>
       
-      <div className="container-custom relative z-10 h-full flex items-center">
+      <div className="container-custom relative z-10 h-full flex items-center justify-center">
         <div className="flex flex-col items-center text-center w-full">
           <h1 className="text-3xl md:text-5xl font-bold text-white mb-3">
             Link Up Over Food <span className="text-white">&</span> Conversation
