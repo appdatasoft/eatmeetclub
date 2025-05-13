@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import EditableText from "@/components/editor/EditableText";
 import { useEditableContent } from "@/components/editor/EditableContentProvider";
 import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const Hero = () => {
   const navigate = useNavigate();
@@ -65,7 +67,7 @@ const Hero = () => {
           <div className="bg-white p-6 rounded-lg max-w-md w-full">
             <h3 className="text-lg font-bold mb-4">Edit Background Image</h3>
             <p className="mb-2 text-sm text-gray-600">Enter the URL for the background image:</p>
-            <input 
+            <Input 
               type="text" 
               className="w-full border p-2 mb-4 rounded" 
               defaultValue={backgroundImage}
