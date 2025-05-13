@@ -22,15 +22,46 @@ export const useBillingData = (userEmail: string | null, isAdmin: boolean) => {
       if (!userEmail) return;
       
       try {
-        // Using RPC to call a database function instead of directly querying a table
-        const { data, error } = await supabase.rpc('get_billing_history', {
-          p_email: isAdmin ? null : userEmail
-        });
+        // Use direct query instead of RPC since the function isn't defined in types
+        let query = supabase
+          .from('membership_payments')
+          .select(`
+            id,
+            amount,
+            payment_id,
+            memberships!inner (
+              id,
+              user_id,
+              started_at,
+              renewal_at,
+              status
+            ),
+            auth.users!inner (
+              email
+            )
+          `);
+        
+        // If not admin, filter to only user's records
+        if (!isAdmin) {
+          query = query.eq('memberships.user_id', userEmail);
+        }
+        
+        const { data, error } = await query;
         
         if (error) {
           console.error("Failed to fetch billing records:", error);
         } else {
-          setRecords(data as BillingRecord[] || []);
+          // Transform the data into the BillingRecord format
+          const formattedRecords: BillingRecord[] = (data || []).map((record: any) => ({
+            id: record.id,
+            email: record.users?.email || "unknown",
+            amount: record.amount,
+            paid_at: record.memberships?.started_at || "",
+            expires_at: record.memberships?.renewal_at || "",
+            receipt_url: record.payment_id ? `https://dashboard.stripe.com/payments/${record.payment_id}` : ""
+          }));
+          
+          setRecords(formattedRecords);
         }
       } catch (err) {
         console.error("Error in billing data fetch:", err);
