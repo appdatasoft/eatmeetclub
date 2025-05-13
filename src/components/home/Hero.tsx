@@ -12,8 +12,8 @@ const Hero = () => {
   const { contentMap, editModeEnabled, handleEdit, handleSave, canEdit } = useEditableContent();
   const [isEditingBackground, setIsEditingBackground] = useState(false);
   
-  // Get background image from content map or use default
-  const backgroundImage = contentMap["hero-background"]?.content || "/assets/images/hero-bg.png";
+  // Get background image from content map or use the uploaded image as default
+  const backgroundImage = contentMap["hero-background"]?.content || "/lovable-uploads/090eb32e-b931-4f8a-a4a5-cf84992c296c.png";
 
   // Handler to open background image editor
   const handleEditBackground = () => {
