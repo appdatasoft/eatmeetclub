@@ -23,7 +23,11 @@ export const EditModeToggle = () => {
             variant={editModeEnabled ? "default" : "outline"}
             size="sm"
             onClick={toggleEditMode}
-            className="fixed bottom-6 right-6 z-50 shadow-md"
+            className={`fixed bottom-6 right-6 z-50 shadow-md ${
+              editModeEnabled 
+                ? "bg-green-600 hover:bg-green-700" 
+                : "bg-white/80 hover:bg-white border-gray-300"
+            }`}
           >
             {editModeEnabled ? (
               <>
