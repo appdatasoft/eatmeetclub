@@ -21,14 +21,22 @@ export const useBillingData = (userEmail: string | null, isAdmin: boolean) => {
     const fetchBillingHistory = async () => {
       if (!userEmail) return;
       
-      const query = supabase.from("billing_history").select("*").order("paid_at", { ascending: false });
-      const { data, error } = isAdmin
-        ? await query
-        : await query.eq("email", userEmail);
-
-      if (error) console.error("Failed to fetch billing records:", error);
-      else setRecords(data || []);
-      setLoading(false);
+      try {
+        // Using RPC to call a database function instead of directly querying a table
+        const { data, error } = await supabase.rpc('get_billing_history', {
+          p_email: isAdmin ? null : userEmail
+        });
+        
+        if (error) {
+          console.error("Failed to fetch billing records:", error);
+        } else {
+          setRecords(data as BillingRecord[] || []);
+        }
+      } catch (err) {
+        console.error("Error in billing data fetch:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchBillingHistory();

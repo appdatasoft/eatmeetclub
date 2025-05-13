@@ -15,25 +15,12 @@ const MembershipFormFields = ({ form, disabled = false }: MembershipFormFieldsPr
     <>
       <FormField
         control={form.control}
-        name="firstName"
+        name="name"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>First Name</FormLabel>
+            <FormLabel>Full Name</FormLabel>
             <FormControl>
-              <Input placeholder="Enter your first name" {...field} disabled={disabled} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name="lastName"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Last Name</FormLabel>
-            <FormControl>
-              <Input placeholder="Enter your last name" {...field} disabled={disabled} />
+              <Input placeholder="Enter your full name" {...field} disabled={disabled} />
             </FormControl>
             <FormMessage />
           </FormItem>

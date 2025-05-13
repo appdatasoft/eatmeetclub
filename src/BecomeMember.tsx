@@ -19,8 +19,7 @@ const BecomeMember = () => {
   const form = useForm<MembershipFormValues>({
     resolver: zodResolver(membershipFormSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
+      name: "",
       email: "",
       phone: "",
       address: "",
@@ -31,11 +30,9 @@ const BecomeMember = () => {
     setIsLoading(true);
 
     try {
-      const fullName = `${values.firstName} ${values.lastName}`;
-
       const response = await createCheckoutSession({
         email: values.email,
-        name: fullName,
+        name: values.name,
         phone: values.phone,
         address: values.address,
         stripeMode: isStripeTestMode ? "test" : "live",
