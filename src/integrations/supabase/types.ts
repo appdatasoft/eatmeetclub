@@ -361,6 +361,42 @@ export type Database = {
           },
         ]
       }
+      page_content: {
+        Row: {
+          content: string
+          content_type: string
+          created_at: string
+          created_by: string | null
+          element_id: string
+          id: string
+          page_path: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          content: string
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          element_id: string
+          id?: string
+          page_path: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          content?: string
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          element_id?: string
+          id?: string
+          page_path?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           created_at: string | null

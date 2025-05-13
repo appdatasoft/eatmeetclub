@@ -1,93 +1,93 @@
-import React from "react";
+
+import EditableText from "@/components/editor/EditableText";
 
 const HowItWorks = () => {
   return (
     <section className="section-padding bg-white">
       <div className="container-custom">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-10 text-[#007c89]">HOW IT WORKS</h2>
+        <div className="text-center mb-10">
+          <EditableText
+            id="how-it-works-title"
+            tag="h2"
+            className="text-3xl font-bold mb-4"
+            defaultContent="How It Works"
+          />
+          <EditableText
+            id="how-it-works-subtitle"
+            tag="p"
+            className="text-gray-600 max-w-2xl mx-auto"
+            defaultContent="See how easy it is to find community dining events or host your own as a restaurant."
+          />
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Step 1 - Closed Envelope Icon */}
-          <div className="flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300">
-            <div className="mb-6 transform transition-transform duration-300 group-hover:scale-105">
-              <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="70" cy="70" r="70" fill="#9FD7D9" fillOpacity="0.6"/>
-                {/* Envelope body */}
-                <rect x="40" y="45" width="60" height="45" rx="2" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
-                {/* Envelope closed flap */}
-                <path d="M40 45L70 65L100 45" stroke="#272163" strokeWidth="4" fill="#FF5F50" strokeLinejoin="round"/>
-              </svg>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-5xl mx-auto">
+          <div className="flex flex-col items-center text-center">
+            <div className="bg-brand-100 rounded-full w-16 h-16 flex items-center justify-center mb-4">
+              <span className="text-brand-500 text-2xl font-bold">1</span>
             </div>
-            <h3 className="text-xl font-bold mb-3 text-[#272163]">
-              Sign up and get invites to upcoming dinners
-            </h3>
-            <p className="text-gray-600">
-              Create your profile and receive personalized invitations to dining events in your area.
-            </p>
+            <EditableText
+              id="step-1-title"
+              tag="h3"
+              className="text-xl font-semibold mb-3"
+              defaultContent="Find an Event"
+            />
+            <EditableText
+              id="step-1-content"
+              tag="p"
+              className="text-gray-600"
+              defaultContent="Browse dining events by location, cuisine, or date. Each event shows details about the restaurant and other attendees."
+            />
           </div>
           
-          {/* Step 2 - Plate with matching fork from logo */}
-          <div className="flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300">
-            <div className="mb-6 transform transition-transform duration-300 group-hover:scale-105">
-              <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="70" cy="70" r="70" fill="#9FD7D9" fillOpacity="0.6"/>
-                {/* Plate - outer circle */}
-                <circle cx="70" cy="70" r="30" fill="#FF5F50" stroke="#272163" strokeWidth="4"/>
-                {/* Plate - inner circle */}
-                <circle cx="70" cy="70" r="22" fill="#fe5641" stroke="#272163" strokeWidth="2"/>
-                {/* Fork on the left - updated to match logo */}
-                <path d="M30 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M20 45L20 70" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M30 45L30 70" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M40 45L40 70" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                {/* Knife on the right */}
-                <path d="M110 45V95" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M110 45L105 65" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-              </svg>
+          <div className="flex flex-col items-center text-center">
+            <div className="bg-brand-100 rounded-full w-16 h-16 flex items-center justify-center mb-4">
+              <span className="text-brand-500 text-2xl font-bold">2</span>
             </div>
-            <h3 className="text-xl font-bold mb-3 text-[#272163]">
-              Share a meal at local spots with fellow members
-            </h3>
-            <p className="text-gray-600">
-              Enjoy curated dining experiences at partner restaurants with like-minded food enthusiasts.
-            </p>
+            <EditableText
+              id="step-2-title"
+              tag="h3"
+              className="text-xl font-semibold mb-3"
+              defaultContent="Reserve Your Spot"
+            />
+            <EditableText
+              id="step-2-content"
+              tag="p"
+              className="text-gray-600"
+              defaultContent="Book your seat with a simple payment process. Each reservation includes your meal and the opportunity to meet new people."
+            />
           </div>
           
-          {/* Step 3 - Smiling face icon with more hair */}
-          <div className="flex flex-col items-center text-center group hover:-translate-y-2 transition-transform duration-300">
-            <div className="mb-6 transform transition-transform duration-300 group-hover:scale-105">
-              <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="70" cy="70" r="70" fill="#9FD7D9" fillOpacity="0.6"/>
-                {/* Face circle */}
-                <circle cx="70" cy="70" r="30" fill="#feb372" stroke="#272163" strokeWidth="4"/>
-                {/* Hair - enhanced with more volume and styling */}
-                <path d="M50 50C40 40 55 30 70 30C85 30 100 40 90 50" fill="#097a90" stroke="#272163" strokeWidth="4"/>
-                <path d="M45 48C45 48 50 38 60 42" stroke="#272163" strokeWidth="3" fill="none"/>
-                <path d="M95 48C95 48 90 38 80 42" stroke="#272163" strokeWidth="3" fill="none"/>
-                {/* Eyes - curved happy eyes */}
-                <path d="M57 60C57 60 60 65 63 60" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M77 60C77 60 80 65 83 60" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-                {/* Smile */}
-                <path d="M60 80C60 80 65 85 80 80" stroke="#272163" strokeWidth="4" strokeLinecap="round"/>
-              </svg>
+          <div className="flex flex-col items-center text-center">
+            <div className="bg-brand-100 rounded-full w-16 h-16 flex items-center justify-center mb-4">
+              <span className="text-brand-500 text-2xl font-bold">3</span>
             </div>
-            <h3 className="text-xl font-bold mb-3 text-[#272163]">
-              Make connections and enjoy great company
-            </h3>
-            <p className="text-gray-600">
-              Build your network, create meaningful relationships, and discover new favorite restaurants.
-            </p>
+            <EditableText
+              id="step-3-title"
+              tag="h3"
+              className="text-xl font-semibold mb-3"
+              defaultContent="Enjoy the Experience"
+            />
+            <EditableText
+              id="step-3-content"
+              tag="p"
+              className="text-gray-600"
+              defaultContent="Arrive at the restaurant, meet fellow diners, enjoy great food, and make connections that last beyond the meal."
+            />
           </div>
         </div>
         
-        <div className="mt-16 text-center">
+        <div className="text-center mt-12">
+          <EditableText
+            id="cta-text"
+            tag="p"
+            className="mb-6 text-lg"
+            defaultContent="Ready to join a community dining event?"
+          />
           <a 
-            href="/signup" 
-            className="inline-block bg-[#ff5f50] text-[#272163] hover:bg-[#ff4c3d] px-10 py-4 text-xl rounded-full transition-colors duration-300 font-bold"
+            href="/events" 
+            className="bg-brand-500 hover:bg-brand-600 text-white font-medium px-6 py-3 rounded-md transition-colors inline-block"
           >
-            BECOME A MEMBER
+            Browse Events
           </a>
         </div>
       </div>
