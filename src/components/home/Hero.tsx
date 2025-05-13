@@ -6,8 +6,16 @@ import { useEditableContent } from "@/components/editor/EditableContentProvider"
 import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pencil, Upload, Image } from "lucide-react";
+import { Pencil, Upload, X } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
 
 const Hero = () => {
   const navigate = useNavigate();
@@ -39,13 +47,6 @@ const Hero = () => {
       setIsUploading(false);
       setUploadProgress(0);
     }
-  };
-
-  // Handler to cancel editing background
-  const handleCancelBackground = () => {
-    setIsEditingBackground(false);
-    setIsUploading(false);
-    setUploadProgress(0);
   };
 
   // Handle file selection
@@ -89,8 +90,15 @@ const Hero = () => {
   };
 
   // Trigger file input click
-  const handleUploadClick = () => {
+  const handleChooseFile = () => {
     fileInputRef.current?.click();
+  };
+
+  // Cancel editing background
+  const handleCancelDialog = () => {
+    setIsEditingBackground(false);
+    setIsUploading(false);
+    setUploadProgress(0);
   };
 
   // Simplified navigation handler without async/await
@@ -116,76 +124,91 @@ const Hero = () => {
         </button>
       )}
 
-      {/* Background image editor modal */}
-      {isEditingBackground && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full">
-            <h3 className="text-lg font-bold mb-4">Edit Background Image</h3>
-            
-            <div className="flex flex-col gap-4">
-              {/* File upload section */}
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                />
-                
-                <button
-                  onClick={handleUploadClick}
-                  className="flex items-center justify-center w-full p-4 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition-colors mb-2"
-                  disabled={isUploading}
-                >
-                  <Upload size={20} className="mr-2" />
-                  {isUploading ? `Uploading... ${uploadProgress}%` : 'Upload New Image'}
-                </button>
-                
-                <p className="text-sm text-gray-500">or</p>
-              </div>
-
-              {/* URL input section */}
-              <div>
-                <Label htmlFor="background-url-input" className="mb-2 block">Enter image URL:</Label>
-                <Input 
-                  type="text" 
-                  className="w-full border p-2 mb-4 rounded" 
-                  defaultValue={backgroundImage}
-                  id="background-url-input"
-                />
-              </div>
+      {/* Background image editor dialog */}
+      <Dialog open={isEditingBackground} onOpenChange={setIsEditingBackground}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit image</DialogTitle>
+            <p className="text-muted-foreground mt-1.5">Update the content and click save when you're done.</p>
+          </DialogHeader>
+          
+          <div className="flex flex-col items-center justify-center py-5">
+            {/* Image preview */}
+            <div className="relative w-full max-w-xs mb-4">
+              <img 
+                src={backgroundImage} 
+                alt="Current background" 
+                className="w-full object-contain rounded-md"
+              />
+              <button
+                onClick={handleChooseFile}
+                className="absolute top-2 right-2 bg-white/80 hover:bg-white p-1.5 rounded-full shadow-sm"
+                title="Edit"
+              >
+                <Pencil size={16} className="text-gray-700" />
+              </button>
             </div>
+            
+            {/* File upload input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleFileChange}
+            />
+            
+            {/* Choose file button */}
+            <button
+              onClick={handleChooseFile}
+              disabled={isUploading}
+              className="flex items-center justify-center w-full max-w-xs py-2.5 px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <Upload size={18} className="mr-2" />
+              Choose File
+            </button>
+            
+            {/* Upload progress indicator */}
+            {isUploading && (
+              <div className="mt-4 w-full max-w-xs">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+                <p className="text-sm text-center mt-1 text-gray-600">
+                  {uploadProgress < 100 ? `Uploading... ${uploadProgress}%` : 'Upload complete!'}
+                </p>
+              </div>
+            )}
+          </div>
 
-            <div className="flex justify-end gap-2 mt-4">
+          <DialogFooter className="sm:justify-between">
+            <DialogClose asChild>
               <Button
-                onClick={handleCancelBackground}
-                className="bg-gray-200 text-gray-800 hover:bg-gray-300"
+                variant="outline"
+                onClick={handleCancelDialog}
                 disabled={isUploading}
               >
                 Cancel
               </Button>
-              <Button
-                onClick={() => {
-                  const input = document.getElementById("background-url-input") as HTMLInputElement;
+            </DialogClose>
+            <Button
+              onClick={() => {
+                const input = document.getElementById("background-url-input") as HTMLInputElement;
+                if (input && input.value) {
                   handleSaveBackground(input.value);
-                }}
-                disabled={isUploading}
-              >
-                Save
-              </Button>
-            </div>
-
-            {isUploading && (
-              <div className="mt-4">
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+                }
+              }}
+              disabled={isUploading}
+              className="bg-green-500 hover:bg-green-600 text-white"
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Overlay for better text readability */}
       <div className="absolute inset-0 bg-black bg-opacity-50"></div>
