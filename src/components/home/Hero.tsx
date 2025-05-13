@@ -15,7 +15,6 @@ const Hero = () => {
       className="w-full py-12 md:py-24 relative h-[500px] md:h-[700px] bg-cover bg-center"
       style={{ 
         backgroundImage:"url('/assets/images/hero-bg.png')"
-
       }}
     >
       {/* Overlay for better text readability */}
