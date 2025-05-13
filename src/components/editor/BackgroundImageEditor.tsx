@@ -1,14 +1,13 @@
 
 import { useState, useRef } from "react";
-import { Pencil, Upload } from "lucide-react";
+import { Upload, Pencil } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { 
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogClose
+  DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -27,12 +26,33 @@ const BackgroundImageEditor = ({
 }: BackgroundImageEditorProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Initialize preview with current image
+  useState(() => {
+    if (isOpen) {
+      setPreviewImage(currentImage);
+    }
+  });
+
+  // Reset state when dialog closes
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setUploadProgress(0);
+      setIsUploading(false);
+    }
+    onOpenChange(open);
+  };
 
   // Handle file selection
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    // Create preview for selected file
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewImage(objectUrl);
     
     try {
       setIsUploading(true);
@@ -61,10 +81,14 @@ const BackgroundImageEditor = ({
       
       setUploadProgress(100);
       
-      // Save the public URL
-      await onSave(publicUrlData.publicUrl);
+      // Save the public URL when save is clicked
+      if (publicUrlData.publicUrl) {
+        // We don't auto-save here, user needs to click save button
+        setPreviewImage(publicUrlData.publicUrl);
+      }
     } catch (error) {
       console.error('Error uploading file:', error);
+    } finally {
       setIsUploading(false);
     }
   };
@@ -74,37 +98,40 @@ const BackgroundImageEditor = ({
     fileInputRef.current?.click();
   };
 
-  // Cancel editing background
-  const handleCancelDialog = () => {
-    onOpenChange(false);
-    setIsUploading(false);
-    setUploadProgress(0);
+  // Handle save button click
+  const handleSave = async () => {
+    if (previewImage) {
+      await onSave(previewImage);
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Edit image</DialogTitle>
-          <p className="text-muted-foreground mt-1.5">Update the content and click save when you're done.</p>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className="bg-white max-w-md p-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-0">
+          <DialogTitle className="text-xl font-semibold">Edit image</DialogTitle>
+          <p className="text-gray-500 mt-1">Update the content and click save when you're done.</p>
         </DialogHeader>
         
-        <div className="flex flex-col items-center justify-center py-5">
+        <div className="px-6 py-4">
           {/* Image preview */}
-          <div className="relative w-full max-w-xs mb-4">
-            <img 
-              src={currentImage} 
-              alt="Current background" 
-              className="w-full object-contain rounded-md"
-            />
-            <button
-              onClick={handleChooseFile}
-              className="absolute top-2 right-2 bg-white/80 hover:bg-white p-1.5 rounded-full shadow-sm"
-              title="Edit"
-            >
-              <Pencil size={16} className="text-gray-700" />
-            </button>
-          </div>
+          {previewImage && (
+            <div className="relative w-full mb-4">
+              <img 
+                src={previewImage} 
+                alt="Preview" 
+                className="w-full aspect-video object-contain rounded-md bg-gray-50"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="absolute top-2 right-2 bg-white/90 hover:bg-white"
+                onClick={handleChooseFile}
+              >
+                <Pencil size={16} className="mr-1" /> Edit
+              </Button>
+            </div>
+          )}
           
           {/* File upload input */}
           <input
@@ -119,16 +146,15 @@ const BackgroundImageEditor = ({
           <button
             onClick={handleChooseFile}
             disabled={isUploading}
-            className="flex items-center justify-center w-full max-w-xs py-2.5 px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex items-center justify-center w-full py-3 px-4 border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            <Upload size={18} className="mr-2" />
-            Choose File
+            <Upload size={18} className="mr-2" /> Choose File
           </button>
           
           {/* Upload progress indicator */}
           {isUploading && (
-            <div className="mt-4 w-full max-w-xs">
-              <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="mt-4 w-full">
+              <div className="w-full bg-gray-100 rounded-full h-2">
                 <div 
                   className="bg-green-500 h-2 rounded-full transition-all duration-300" 
                   style={{ width: `${uploadProgress}%` }}
@@ -141,24 +167,18 @@ const BackgroundImageEditor = ({
           )}
         </div>
 
-        <DialogFooter className="sm:justify-between">
-          <DialogClose asChild>
-            <Button
-              variant="outline"
-              onClick={handleCancelDialog}
-              disabled={isUploading}
-            >
-              Cancel
-            </Button>
-          </DialogClose>
+        <DialogFooter className="p-4 border-t border-gray-100 bg-gray-50">
           <Button
-            onClick={() => {
-              const input = document.getElementById("background-url-input") as HTMLInputElement;
-              if (input && input.value) {
-                onSave(input.value);
-              }
-            }}
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
             disabled={isUploading}
+            className="mr-2"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={isUploading || !previewImage}
             className="bg-green-500 hover:bg-green-600 text-white"
           >
             Save
