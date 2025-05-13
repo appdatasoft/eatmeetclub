@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { EditableContent } from '@/hooks/useInlineEdit';
 import { Button } from '@/components/ui/button';
 import { Pencil, Check, X } from 'lucide-react';
+import { useEditableContent } from './EditableContentProvider';
 
 interface EditableElementProps {
   children: React.ReactNode;
@@ -32,6 +33,7 @@ const EditableElement: React.FC<EditableElementProps> = ({
   const [editedContent, setEditedContent] = useState<string>('');
   const editableRef = useRef<HTMLDivElement>(null);
   const Tag = tag;
+  const { editModeEnabled } = useEditableContent();
   
   useEffect(() => {
     if (isEditing && editableRef.current) {
@@ -74,19 +76,21 @@ const EditableElement: React.FC<EditableElementProps> = ({
   // If not editing, render regular element with edit button for admins
   if (!isEditing) {
     return (
-      <div className="group relative">
+      <div className={`group relative ${editModeEnabled ? 'outline outline-1 outline-dashed outline-blue-300 hover:outline-blue-500' : ''}`}>
         <Tag className={className} id={id}>
           {children}
         </Tag>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={onEdit}
-          aria-label="Edit content"
-        >
-          <Pencil size={16} />
-        </Button>
+        {editModeEnabled && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 hover:bg-white"
+            onClick={onEdit}
+            aria-label="Edit content"
+          >
+            <Pencil size={16} />
+          </Button>
+        )}
       </div>
     );
   }

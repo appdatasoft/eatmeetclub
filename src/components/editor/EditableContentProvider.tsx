@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { EditableContent, useInlineEdit } from '@/hooks/useInlineEdit';
+import { useToast } from '@/hooks/use-toast';
 
 interface EditableContentContextType {
   contentMap: Record<string, EditableContent>;
@@ -12,6 +13,8 @@ interface EditableContentContextType {
   handleCancel: () => void;
   isLoading: boolean;
   canEdit: boolean;
+  editModeEnabled: boolean;
+  toggleEditMode: () => void;
 }
 
 const EditableContentContext = createContext<EditableContentContextType | undefined>(undefined);
@@ -29,6 +32,8 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   const { fetchContent, saveContent, isEditing, setIsEditing, isLoading, canEdit } = useInlineEdit();
   const [contentMap, setContentMap] = useState<Record<string, EditableContent>>({});
   const [currentPath, setCurrentPath] = useState<string>(location.pathname);
+  const [editModeEnabled, setEditModeEnabled] = useState<boolean>(false);
+  const { toast } = useToast();
 
   // Fetch content when the route changes
   useEffect(() => {
@@ -49,6 +54,14 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   };
 
   const handleEdit = (id: string) => {
+    if (!editModeEnabled) {
+      toast({
+        title: "Edit mode is disabled",
+        description: "Please enable edit mode first",
+        variant: "default",
+      });
+      return;
+    }
     setIsEditing(id);
   };
 
@@ -69,6 +82,24 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     setIsEditing(null);
   };
 
+  const toggleEditMode = () => {
+    if (isEditing && editModeEnabled) {
+      // If turning off edit mode while editing, cancel the edit
+      setIsEditing(null);
+    }
+
+    const newMode = !editModeEnabled;
+    setEditModeEnabled(newMode);
+    
+    toast({
+      title: newMode ? "Edit mode enabled" : "Edit mode disabled",
+      description: newMode 
+        ? "You can now edit content by clicking on editable elements" 
+        : "Content is now in view mode",
+      variant: "default",
+    });
+  };
+
   const value = {
     contentMap,
     isEditing,
@@ -77,7 +108,9 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     handleSave,
     handleCancel,
     isLoading,
-    canEdit
+    canEdit,
+    editModeEnabled,
+    toggleEditMode
   };
 
   return (
