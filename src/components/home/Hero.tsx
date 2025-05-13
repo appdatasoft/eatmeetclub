@@ -6,6 +6,7 @@ import { useEditableContent } from "@/components/editor/EditableContentProvider"
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pencil } from "lucide-react";
 
 const Hero = () => {
   const navigate = useNavigate();
@@ -54,10 +55,11 @@ const Hero = () => {
       {/* Background image edit button for admins */}
       {editModeEnabled && canEdit && (
         <button 
-          className="absolute top-2 right-2 bg-white/80 hover:bg-white p-2 rounded-md z-20 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-2 right-2 bg-white/80 hover:bg-white p-2 rounded-full z-20 opacity-0 group-hover:opacity-100 transition-opacity"
           onClick={handleEditBackground}
+          aria-label="Edit Background"
         >
-          Edit Background
+          <Pencil size={18} />
         </button>
       )}
 
