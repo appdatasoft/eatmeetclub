@@ -1,15 +1,12 @@
 
-import { Button } from "@/components/common/Button";
-import { useNavigate } from "react-router-dom";
-import EditableText from "@/components/editor/EditableText";
-import { useEditableContent } from "@/components/editor/EditableContentProvider";
 import { useState } from "react";
 import { Pencil } from "lucide-react";
+import { useEditableContent } from "@/components/editor/EditableContentProvider";
 import BackgroundImageEditor from "@/components/editor/BackgroundImageEditor";
+import HeroContent from "./HeroContent";
 
 const Hero = () => {
-  const navigate = useNavigate();
-  const { contentMap, editModeEnabled, handleEdit, handleSave, canEdit } = useEditableContent();
+  const { contentMap, editModeEnabled, handleSave, canEdit } = useEditableContent();
   const [isEditingBackground, setIsEditingBackground] = useState(false);
   
   // Get background image from content map or use the uploaded image as default
@@ -32,11 +29,6 @@ const Hero = () => {
       });
       setIsEditingBackground(false);
     }
-  };
-
-  // Simplified navigation handler without async/await
-  const handleJoinClick = () => {
-    navigate('/become-member');
   };
 
   return (
@@ -69,36 +61,7 @@ const Hero = () => {
       <div className="absolute inset-0 bg-black bg-opacity-50"></div>
       
       <div className="container-custom relative z-10 h-full flex items-center justify-center">
-        <div className="flex flex-col items-center text-center w-full">
-          <EditableText
-            id="hero-title"
-            tag="h1"
-            className="text-3xl md:text-5xl font-bold text-white mb-3"
-            defaultContent="Link Up Over Food & Conversation"
-          />
-          
-          <EditableText
-            id="hero-description"
-            tag="p"
-            className="text-white text-xl md:text-2xl mb-8 max-w-3xl"
-            defaultContent="Join us for fun social dining where strangers become friends — while helping local businesses and building vibrant local communities."
-          />
-          
-          <EditableText
-            id="hero-button"
-            tag="span"
-            className="hidden"
-            defaultContent="BECOME A MEMBER"
-          >
-            <Button 
-              onClick={handleJoinClick}
-              size="lg" 
-              className="bg-[#FEC6A1] text-[#703E1E] hover:bg-[#FDE1D3] px-10 py-4 text-xl font-bold rounded-full"
-            >
-              {contentMap["hero-button"]?.content || "BECOME A MEMBER"}
-            </Button>
-          </EditableText>
-        </div>
+        <HeroContent />
       </div>
     </div>
   );
