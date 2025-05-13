@@ -1,6 +1,30 @@
+
 import { supabase } from "@/lib/supabaseClient";
 
+/**
+ * Validates email data to prevent undefined placeholders
+ */
+const validateEmailData = (email: string, name?: string): { valid: boolean, email: string, name: string } => {
+  // Sanitize name and email
+  const sanitizedName = (!name || name === "undefined") ? "Member" : name.trim();
+  const isEmailValid = email && email !== "undefined" && email.includes('@');
+  
+  return {
+    valid: isEmailValid,
+    email: isEmailValid ? email : "",
+    name: sanitizedName
+  };
+};
+
 export async function sendWelcomeEmail(email: string, name?: string): Promise<boolean> {
+  // First validate the input data
+  const { valid, email: validEmail, name: validName } = validateEmailData(email, name);
+  
+  if (!valid) {
+    console.error("Invalid email data provided to sendWelcomeEmail:", { email, name });
+    return false;
+  }
+  
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;
 
@@ -15,7 +39,7 @@ export async function sendWelcomeEmail(email: string, name?: string): Promise<bo
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ email, name }),
+    body: JSON.stringify({ email: validEmail, name: validName }),
   });
 
   return res.ok;

@@ -28,6 +28,28 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
   const { sendDirectBackupEmail } = useBackupEmail();
   const { sendWelcomeEmail } = useWelcomeEmail();
 
+  // Helper function to validate stored user data
+  const validateUserData = () => {
+    const storedEmail = localStorage.getItem('signup_email');
+    const storedName = localStorage.getItem('signup_name') || '';
+    
+    // Check for valid email
+    const isEmailValid = storedEmail && 
+                        storedEmail !== 'undefined' && 
+                        storedEmail.includes('@');
+                        
+    // Normalize name if needed
+    const normalizedName = (!storedName || storedName === 'undefined') 
+      ? (storedEmail ? storedEmail.split('@')[0] : 'Member') 
+      : storedName;
+    
+    return {
+      isValid: isEmailValid,
+      email: isEmailValid ? storedEmail : null,
+      name: normalizedName
+    };
+  };
+
   // Effect to verify successful Stripe checkout completion
   useEffect(() => {
     // Only run this check once
@@ -39,18 +61,17 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
         console.log("Starting payment verification with session ID:", sessionId);
         
         try {
-          // Check if we have the required email in localStorage first
-          const storedEmail = localStorage.getItem('signup_email');
-          const storedName = localStorage.getItem('signup_name');
+          // Validate user data from localStorage
+          const { isValid, email, name } = validateUserData();
           
           // Mark email check as done to prevent repeated checks
           setEmailCheckDone(true);
           
-          if (!storedEmail) {
-            console.error("Missing email for payment verification in PaymentVerificationHandler");
+          if (!isValid || !email) {
+            console.error("Missing or invalid email for payment verification in PaymentVerificationHandler");
             toast({
-              title: "Email missing",
-              description: "Unable to find your email. Please try the signup process again.",
+              title: "Email validation failed",
+              description: "Unable to find your valid email. Please try the signup process again.",
               variant: "destructive",
             });
             
@@ -59,10 +80,9 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             return;
           }
           
-          if (!storedName) {
-            console.log("Missing name for payment verification, using email as name");
-            const defaultName = storedEmail.split('@')[0] || 'Member';
-            localStorage.setItem('signup_name', defaultName);
+          // Store validated name if needed
+          if (name !== localStorage.getItem('signup_name')) {
+            localStorage.setItem('signup_name', name);
           }
           
           toast({
@@ -96,7 +116,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             
             // Send welcome email with invoice link
             try {
-              await sendWelcomeEmail(storedEmail, storedName || 'Member', sessionId);
+              await sendWelcomeEmail(email, name, sessionId);
             } catch (welcomeEmailError) {
               console.error("Failed to send welcome email with invoice link:", welcomeEmailError);
             }
@@ -117,9 +137,9 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             
             // Send a direct email manually as fallback
             try {
-              await sendDirectBackupEmail(storedEmail, storedName || 'Member', sessionId);
+              await sendDirectBackupEmail(email, name, sessionId);
               // Also try to send welcome email with invoice link as fallback
-              await sendWelcomeEmail(storedEmail, storedName || 'Member', sessionId);
+              await sendWelcomeEmail(email, name, sessionId);
             } catch (emailErr) {
               console.error("Failed to send backup emails:", emailErr);
             }

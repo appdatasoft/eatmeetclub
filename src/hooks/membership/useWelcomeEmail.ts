@@ -9,10 +9,33 @@ export const useWelcomeEmail = () => {
   const { getInvoiceReceiptUrl } = useInvoiceEmail();
   
   /**
+   * Validates email data to prevent undefined placeholders
+   */
+  const validateEmailData = (email: string, name: string): { valid: boolean, email: string, name: string } => {
+    // Sanitize name and email
+    const sanitizedName = (!name || name === "undefined") ? "Member" : name.trim();
+    const isEmailValid = email && email !== "undefined" && email.includes('@');
+    
+    return {
+      valid: isEmailValid,
+      email: isEmailValid ? email : "",
+      name: sanitizedName
+    };
+  };
+  
+  /**
    * Sends a combined welcome and activation email to the user
    */
   const sendWelcomeEmail = async (email: string, name: string, sessionId?: string) => {
     try {
+      // Validate the data first
+      const { valid, email: validEmail, name: validName } = validateEmailData(email, name);
+      
+      if (!valid) {
+        console.error("Invalid email data for welcome email:", { email, name });
+        return false;
+      }
+      
       // Get the current origin for generating correct URLs
       // Never use localhost in production emails - use the actual domain
       const currentOrigin = window.location.origin.includes('localhost') 
@@ -43,7 +66,7 @@ export const useWelcomeEmail = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            email,
+            email: validEmail,
             // Explicitly setting the complete URL for the set-password page
             redirectUrl: `${currentOrigin}/set-password`
           }),
@@ -62,7 +85,7 @@ export const useWelcomeEmail = () => {
         throw new Error("Failed to generate magic link");
       }
 
-      console.log("Generated magic link for email:", email);
+      console.log("Generated magic link for email:", validEmail);
       
       // Send the branded welcome email with the magic link using our custom email function
       const emailResponse = await fetch(
@@ -73,15 +96,15 @@ export const useWelcomeEmail = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            to: [email],
+            to: [validEmail],
             subject: "Welcome to Eat Meet Club - Activate Your Account",
             fromName: "Eat Meet Club",
             fromEmail: "info@eatmeetclub.com",
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #4a5568;">Welcome to Eat Meet Club, ${name}!</h2>
+                <h2 style="color: #4a5568;">Welcome to Eat Meet Club, ${validName}!</h2>
                 
-                <p>We're thrilled to have you join our community. Your account has been created using <strong>${email}</strong>.</p>
+                <p>We're thrilled to have you join our community. Your account has been created using <strong>${validEmail}</strong>.</p>
                 
                 <p>Click below to activate your account and set your password:</p>
                 

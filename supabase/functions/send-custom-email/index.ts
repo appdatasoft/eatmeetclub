@@ -28,6 +28,25 @@ interface EmailRequest {
   forceSend?: boolean;
 }
 
+// Helper function to check for undefined placeholders in HTML content
+function containsUndefinedPlaceholders(content: string): boolean {
+  // Check for undefined as literal text
+  if (content.includes('undefined undefined') || 
+      content.includes('undefined,') || 
+      content.includes(', undefined') || 
+      content.includes('Phone: undefined')) {
+    return true;
+  }
+  
+  // Look for HTML pattern where undefined might be displayed
+  const undefinedRegex = />\s*undefined\s*</g;
+  if (undefinedRegex.test(content)) {
+    return true;
+  }
+  
+  return false;
+}
+
 // Track sent emails to prevent duplicates during function execution
 const sentEmails = new Map<string, Date>();
 
@@ -57,6 +76,22 @@ serve(async (req) => {
     // Verify we have valid recipients
     if (!to.every(email => email && email.includes('@'))) {
       throw new Error(`Invalid email recipient(s): ${to.join(', ')}`);
+    }
+
+    // Check if email content has undefined placeholders and block sending unless forced
+    if (containsUndefinedPlaceholders(html) && !forceSend) {
+      console.error("Email contains undefined placeholders and will not be sent:", html.substring(0, 200));
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Email contains undefined placeholders and was not sent. Use forceSend:true to override.",
+          containsUndefined: true
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
     }
 
     // Check if this exact email was sent recently (within last 60 seconds)
