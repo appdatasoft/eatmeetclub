@@ -16,7 +16,7 @@ const HowItWorks = () => {
             id="how-it-works-subtitle"
             tag="p"
             className="text-gray-600 max-w-2xl mx-auto"
-            defaultContent="See how easy it is to find community dining events or host your own as a restaurant."
+            defaultContent="See how easy it is to connect with others over delicious food and fun games."
           />
         </div>
         
@@ -29,13 +29,13 @@ const HowItWorks = () => {
               id="step-1-title"
               tag="h3"
               className="text-xl font-semibold mb-3"
-              defaultContent="Find an Event"
+              defaultContent="Find a Game Night"
             />
             <EditableText
               id="step-1-content"
               tag="p"
               className="text-gray-600"
-              defaultContent="Browse dining events by location, cuisine, or date. Each event shows details about the restaurant and other attendees."
+              defaultContent="Discover food & game events by location, cuisine type, or game preferences. See who's coming and what's on the menu."
             />
           </div>
           
@@ -47,13 +47,13 @@ const HowItWorks = () => {
               id="step-2-title"
               tag="h3"
               className="text-xl font-semibold mb-3"
-              defaultContent="Reserve Your Spot"
+              defaultContent="Join the Table"
             />
             <EditableText
               id="step-2-content"
               tag="p"
               className="text-gray-600"
-              defaultContent="Book your seat with a simple payment process. Each reservation includes your meal and the opportunity to meet new people."
+              defaultContent="Reserve your spot with a simple booking. Your seat includes food, games, and a chance to meet new friends with similar interests."
             />
           </div>
           
@@ -65,13 +65,13 @@ const HowItWorks = () => {
               id="step-3-title"
               tag="h3"
               className="text-xl font-semibold mb-3"
-              defaultContent="Enjoy the Experience"
+              defaultContent="Play & Connect"
             />
             <EditableText
               id="step-3-content"
               tag="p"
               className="text-gray-600"
-              defaultContent="Arrive at the restaurant, meet fellow diners, enjoy great food, and make connections that last beyond the meal."
+              defaultContent="Enjoy delicious food, play engaging games, and forge meaningful connections that continue long after the last move is made."
             />
           </div>
         </div>
@@ -81,7 +81,7 @@ const HowItWorks = () => {
             id="cta-text"
             tag="p"
             className="mb-6 text-lg"
-            defaultContent="Ready to join a community dining event?"
+            defaultContent="Ready to link up over food & games?"
           />
           <a 
             href="/events" 
