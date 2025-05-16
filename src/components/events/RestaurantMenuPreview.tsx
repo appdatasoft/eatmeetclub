@@ -25,9 +25,16 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
   const [menuTypes, setMenuTypes] = useState<string[]>([]);
   const { toast } = useToast();
 
+  // For debugging - log the restaurantId
+  console.log("RestaurantMenuPreview - restaurantId:", restaurantId);
+
   useEffect(() => {
     const fetchMenuItems = async () => {
-      if (!restaurantId) return;
+      if (!restaurantId) {
+        console.log("No restaurantId provided to RestaurantMenuPreview");
+        setIsLoading(false);
+        return;
+      }
       
       try {
         setIsLoading(true);
@@ -78,14 +85,13 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
             console.error('Error accessing storage:', storageErr);
           }
           
-          const menuItemType = (item as any).type || 'Other';
-          
+          // Set a default empty string for type since it doesn't exist in the database
           return {
             id: item.id,
             name: item.name,
             description: item.description || '',
             price: item.price,
-            type: menuItemType,
+            type: '', // Set a default empty string since type doesn't exist in the database
             ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : [],
             media: media || []
           } as MenuItem;
@@ -110,6 +116,8 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
 
     if (restaurantId) {
       fetchMenuItems();
+    } else {
+      setIsLoading(false);
     }
   }, [restaurantId, toast]);
 

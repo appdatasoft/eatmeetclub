@@ -23,6 +23,9 @@ const EventHeader: React.FC<EventHeaderProps> = ({
   coverImage = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60"
 }) => {
   const [showMenu, setShowMenu] = useState(false);
+  
+  // For debugging purposes: log the received props
+  console.log("EventHeader props:", { title, restaurantName, restaurantId, isOwner });
 
   return (
     <div className="relative h-64 md:h-96 overflow-hidden">
@@ -33,9 +36,10 @@ const EventHeader: React.FC<EventHeaderProps> = ({
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
       
-      <div className="absolute flex gap-2">
-        {/* Edit Cover button moved to left side */}
-        <div className="absolute top-4 left-4 flex gap-2">
+      {/* Fixed positioning and z-index */}
+      <div className="absolute top-0 left-0 w-full">
+        {/* Edit Cover button on left side */}
+        <div className="absolute top-4 left-4">
           {isOwner && (
             <Button 
               variant="secondary" 
@@ -48,13 +52,13 @@ const EventHeader: React.FC<EventHeaderProps> = ({
           )}
         </div>
         
-        {/* View Menu button stays on the right */}
+        {/* View Menu button always on the right if restaurantId exists */}
         <div className="absolute top-4 right-4">
           {restaurantId && (
             <Button
               variant="secondary"
               size="sm"
-              className="bg-white/90 hover:bg-white text-gray-800"
+              className="bg-white/90 hover:bg-white text-gray-800 z-10"
               onClick={() => setShowMenu(!showMenu)}
             >
               <Book className="h-4 w-4 mr-1" /> {showMenu ? "Hide Menu" : "View Menu"}

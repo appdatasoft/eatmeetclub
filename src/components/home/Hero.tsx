@@ -88,10 +88,10 @@ const Hero = () => {
               style={{ maxHeight: '500px' }}
             />
             
-            {/* Hero image edit button for admins */}
+            {/* Hero image edit button for admins - Fixed to be visible when in edit mode */}
             {editModeEnabled && canEdit && (
               <button 
-                className="absolute top-2 right-2 bg-white/80 hover:bg-white p-2 rounded-full z-20 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-2 right-2 bg-white/80 hover:bg-white p-2 rounded-full z-20 transition-opacity"
                 onClick={handleEditHeroImage}
                 aria-label="Edit Hero Image"
               >
