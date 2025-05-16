@@ -55,25 +55,7 @@ const Hero = () => {
   };
 
   return (
-    <div 
-      className="w-full py-12 md:py-24 relative bg-[#703E1E]/10"
-      style={{ 
-        backgroundImage: editModeEnabled ? `url('${backgroundImage}')` : 'none',
-        backgroundColor: "#FFF5F0",
-        backgroundBlendMode: "multiply"
-      }}
-    >
-      {/* Background image edit button for admins */}
-      {editModeEnabled && canEdit && (
-        <button 
-          className="absolute top-2 right-2 bg-white/80 hover:bg-white p-2 rounded-full z-20 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={handleEditBackground}
-          aria-label="Edit Background"
-        >
-          <Pencil size={18} />
-        </button>
-      )}
-
+    <div className="w-full py-12 md:py-24 relative">
       {/* Background image editor dialog */}
       <BackgroundImageEditor 
         isOpen={isEditingBackground}
