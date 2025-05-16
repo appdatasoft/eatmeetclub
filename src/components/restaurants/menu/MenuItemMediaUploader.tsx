@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Upload, X, Image, Video } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +48,9 @@ const MenuItemMediaUploader: React.FC<MenuItemMediaUploaderProps> = ({
         // Calculate progress based on current file
         setProgress(Math.round((i / files.length) * 100));
         
+        console.log('Uploading file:', file.name);
+        console.log('Storage path:', `menu-items/${fileName}`);
+        
         // Upload file to Supabase storage
         const { data, error } = await supabase.storage
           .from('lovable-uploads')
@@ -57,8 +60,11 @@ const MenuItemMediaUploader: React.FC<MenuItemMediaUploaderProps> = ({
           });
           
         if (error) {
+          console.error('Error uploading file:', error);
           throw error;
         }
+        
+        console.log('Upload successful:', data);
         
         // Get public URL
         const { data: publicUrlData } = supabase.storage
@@ -66,6 +72,7 @@ const MenuItemMediaUploader: React.FC<MenuItemMediaUploaderProps> = ({
           .getPublicUrl(`menu-items/${fileName}`);
           
         if (publicUrlData) {
+          console.log('Public URL:', publicUrlData.publicUrl);
           newMediaItems.push({
             url: publicUrlData.publicUrl,
             type: isVideo ? 'video' : 'image'
@@ -79,13 +86,14 @@ const MenuItemMediaUploader: React.FC<MenuItemMediaUploaderProps> = ({
       toast({
         title: "Files uploaded successfully",
         description: `${files.length} file(s) have been uploaded`,
+        variant: "default",
       });
       
     } catch (error: any) {
       console.error("Error uploading files:", error);
       toast({
         title: "Upload failed",
-        description: error.message,
+        description: error.message || "Failed to upload files",
         variant: "destructive",
       });
     } finally {

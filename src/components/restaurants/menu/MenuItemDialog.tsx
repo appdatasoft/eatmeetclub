@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import MenuItemForm, { MenuItemFormValues } from '@/components/restaurants/menu/MenuItemForm';
 import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
 
@@ -36,6 +36,9 @@ const MenuItemDialog: React.FC<MenuItemDialogProps> = ({
           <DialogTitle className="text-gray-900">
             {currentItem ? 'Edit Menu Item' : 'Add Menu Item'}
           </DialogTitle>
+          <DialogDescription>
+            {currentItem ? 'Update the details of this menu item.' : 'Add a new item to your restaurant menu.'}
+          </DialogDescription>
         </DialogHeader>
         <MenuItemForm
           initialValues={currentItem || undefined}

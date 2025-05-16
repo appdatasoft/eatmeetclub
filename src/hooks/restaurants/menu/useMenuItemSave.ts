@@ -25,21 +25,32 @@ export const useMenuItemSave = (
       // Filter out empty ingredients
       const filteredIngredients = (values.ingredients || []).filter(ing => ing.trim() !== '');
       
+      // Log values for debugging
+      console.log('Saving menu item with values:', values);
+      console.log('Restaurant ID:', restaurantId);
+      console.log('Current item:', currentItem);
+      
       // If we're editing an existing item
       if (currentItem) {
         try {
-          // Update the menu item
-          const { error: updateError } = await supabase
+          // Update the menu item, excluding the type field which doesn't exist in the database
+          const { data, error: updateError } = await supabase
             .from('restaurant_menu_items')
             .update({
               name: values.name,
               description: values.description,
-              price: values.price,
-              type: values.type
+              price: values.price
+              // Omitting the type field as it doesn't exist in the database
             })
-            .eq('id', currentItem.id);
+            .eq('id', currentItem.id)
+            .select();
           
-          if (updateError) throw updateError;
+          if (updateError) {
+            console.error('Error updating menu item data:', updateError);
+            throw updateError;
+          }
+          
+          console.log('Menu item updated successfully:', data);
           
           // First delete all existing ingredients
           const { error: deleteIngredientsError } = await supabase
@@ -47,7 +58,10 @@ export const useMenuItemSave = (
             .delete()
             .eq('menu_item_id', currentItem.id);
             
-          if (deleteIngredientsError) throw deleteIngredientsError;
+          if (deleteIngredientsError) {
+            console.error('Error deleting ingredients:', deleteIngredientsError);
+            throw deleteIngredientsError;
+          }
           
           // Then add the new ingredients
           if (filteredIngredients.length > 0) {
@@ -61,7 +75,10 @@ export const useMenuItemSave = (
               .from('restaurant_menu_ingredients')
               .insert(ingredientsToInsert);
               
-            if (insertIngredientsError) throw insertIngredientsError;
+            if (insertIngredientsError) {
+              console.error('Error inserting ingredients:', insertIngredientsError);
+              throw insertIngredientsError;
+            }
           }
 
           // Update the UI
@@ -73,7 +90,7 @@ export const useMenuItemSave = (
                     name: values.name, 
                     description: values.description || '', 
                     price: values.price, 
-                    type: values.type, 
+                    type: values.type, // Keep this for UI purposes only
                     ingredients: filteredIngredients,
                     media: values.media
                   } 
@@ -86,20 +103,25 @@ export const useMenuItemSave = (
         }
       } else {
         try {
-          // Create a new menu item
+          // Create a new menu item, excluding the type field
           const { data: newItem, error: createError } = await supabase
             .from('restaurant_menu_items')
             .insert({
               restaurant_id: restaurantId,
               name: values.name,
               description: values.description || null,
-              price: values.price,
-              type: values.type
+              price: values.price
+              // Omitting the type field as it doesn't exist in the database
             })
             .select()
             .single();
             
-          if (createError) throw createError;
+          if (createError) {
+            console.error('Error creating menu item:', createError);
+            throw createError;
+          }
+          
+          console.log('New menu item created:', newItem);
           
           if (newItem) {
             // Insert ingredients
@@ -114,7 +136,10 @@ export const useMenuItemSave = (
                 .from('restaurant_menu_ingredients')
                 .insert(ingredientsToInsert);
                 
-              if (insertIngredientsError) throw insertIngredientsError;
+              if (insertIngredientsError) {
+                console.error('Error inserting ingredients:', insertIngredientsError);
+                throw insertIngredientsError;
+              }
             }
             
             // Update the UI
@@ -123,7 +148,7 @@ export const useMenuItemSave = (
               name: values.name,
               description: values.description || '',
               price: values.price,
-              type: values.type,
+              type: values.type, // Keep this for UI purposes only
               ingredients: filteredIngredients,
               media: values.media
             };
@@ -139,6 +164,7 @@ export const useMenuItemSave = (
       toast({
         title: 'Success',
         description: `Menu item ${currentItem ? 'updated' : 'created'} successfully`,
+        variant: 'default'
       });
       
       setIsDialogOpen(false);
