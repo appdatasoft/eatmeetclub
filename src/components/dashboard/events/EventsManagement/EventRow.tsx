@@ -124,15 +124,26 @@ const EventRow = ({ event, onRefresh }: EventRowProps) => {
       <TableCell>{formatDate(event.date)}</TableCell>
       <TableCell>${event.price}</TableCell>
       <TableCell>
-        {event.published ? (
-          <Badge className="bg-green-100 text-green-800">Published</Badge>
-        ) : event.payment_status !== 'completed' ? (
+        {event.payment_status !== 'completed' ? (
           <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-800">
             <AlertTriangle className="h-3 w-3 mr-1" />
             Payment Required
           </Badge>
         ) : (
-          <Badge variant="outline">Draft</Badge>
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={event.published}
+              onCheckedChange={() => handleTogglePublish(event)}
+              disabled={processingEventId === event.id}
+              className={event.published ? "data-[state=checked]:bg-green-600" : ""}
+            />
+            <span className="text-xs font-medium">
+              {event.published ? "Published" : "Draft"}
+            </span>
+            {processingEventId === event.id && (
+              <Loader2 className="h-3 w-3 animate-spin ml-1" />
+            )}
+          </div>
         )}
       </TableCell>
       <TableCell>
@@ -170,15 +181,6 @@ const EventRow = ({ event, onRefresh }: EventRowProps) => {
               <Trash2 className="h-4 w-4 text-red-500" />
             )}
           </Button>
-          
-          <div className="flex items-center" title={event.published ? "Unpublish Event" : "Publish Event"}>
-            <Switch
-              checked={event.published}
-              onCheckedChange={() => handleTogglePublish(event)}
-              disabled={processingEventId === event.id || (event.payment_status !== 'completed' && !event.published)}
-              className={event.published ? "bg-green-600 data-[state=checked]:bg-green-600" : ""}
-            />
-          </div>
         </div>
       </TableCell>
     </TableRow>
