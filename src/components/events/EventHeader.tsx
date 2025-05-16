@@ -1,8 +1,9 @@
 
-import React from "react";
-import { Edit } from "lucide-react";
+import React, { useState } from "react";
+import { Edit, Book } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import RestaurantMenuPreview from "./RestaurantMenuPreview";
 
 interface EventHeaderProps {
   title: string;
@@ -21,6 +22,8 @@ const EventHeader: React.FC<EventHeaderProps> = ({
   onEditCover,
   coverImage = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60"
 }) => {
+  const [showMenu, setShowMenu] = useState(false);
+
   return (
     <div className="relative h-64 md:h-96 overflow-hidden">
       <img
@@ -41,6 +44,17 @@ const EventHeader: React.FC<EventHeaderProps> = ({
         </Button>
       )}
       
+      {restaurantId && (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="absolute top-4 right-20 bg-white/80 hover:bg-white text-gray-800"
+          onClick={() => setShowMenu(!showMenu)}
+        >
+          <Book className="h-4 w-4 mr-1" /> {showMenu ? "Hide Menu" : "View Menu"}
+        </Button>
+      )}
+      
       <div className="absolute bottom-0 left-0 p-6 text-white">
         <h1 className="text-3xl md:text-4xl font-bold mb-1">{title}</h1>
         {restaurantId ? (
@@ -54,6 +68,12 @@ const EventHeader: React.FC<EventHeaderProps> = ({
           <p className="text-lg text-white/90">Hosted by {restaurantName}</p>
         )}
       </div>
+
+      {showMenu && restaurantId && (
+        <div className="absolute top-0 right-0 w-1/2 h-full">
+          <RestaurantMenuPreview restaurantId={restaurantId} />
+        </div>
+      )}
     </div>
   );
 };
