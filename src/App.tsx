@@ -9,6 +9,7 @@ import BecomeMember from "@/pages/BecomeMember";
 import Index from "@/pages/Index";
 import HowItWorks from "@/pages/HowItWorks";
 import Dashboard from "@/pages/dashboard/Dashboard";
+import EventsManagement from "@/pages/dashboard/EventsManagement";
 import CreateEvent from "@/pages/dashboard/CreateEvent";
 import PaymentSuccessPage from "@/pages/dashboard/PaymentSuccessPage";
 import Events from "@/pages/Events";
@@ -73,6 +74,7 @@ function App() {
           
           {/* Dashboard routes */}
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/events" element={<EventsManagement />} />
           <Route path="/dashboard/create-event" element={<CreateEvent />} />
           <Route path="/dashboard/payment-success" element={<PaymentSuccessPage />} />
           <Route path="/dashboard/admin-settings" element={<AdminSettings />} />
