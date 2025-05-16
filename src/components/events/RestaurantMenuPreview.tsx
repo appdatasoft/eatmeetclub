@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { MediaItem } from "@/components/restaurants/menu/MenuItemMediaUploader";
+import MenuItemMedia from "@/components/restaurants/menu/MenuItemMedia";
 
 interface MenuItem {
   id: string;
@@ -10,6 +12,7 @@ interface MenuItem {
   price: number;
   type?: string;
   ingredients?: string[];
+  media?: MediaItem[];
 }
 
 interface RestaurantMenuPreviewProps {
@@ -36,8 +39,9 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
         if (error) throw error;
 
         if (data) {
-          // For each menu item, fetch its ingredients
-          const itemsWithIngredients = await Promise.all(data.map(async (item) => {
+          // For each menu item, fetch its ingredients and media
+          const itemsWithDetails = await Promise.all(data.map(async (item) => {
+            // Fetch ingredients
             const { data: ingredientsData, error: ingredientsError } = await supabase
               .from('restaurant_menu_ingredients')
               .select('name')
@@ -45,22 +49,31 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
               
             if (ingredientsError) throw ingredientsError;
             
+            // Fetch media items
+            const { data: mediaData, error: mediaError } = await supabase
+              .from('restaurant_menu_media')
+              .select('url, type')
+              .eq('menu_item_id', item.id);
+              
+            if (mediaError) throw mediaError;
+            
             return {
               id: item.id,
               name: item.name,
               description: item.description || '',
               price: item.price,
               type: '', // We'll group items by type in UI
-              ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : []
+              ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : [],
+              media: mediaData || []
             } as MenuItem;
           }));
           
           // Group items by type for display
-          const types = [...new Set(itemsWithIngredients.map(item => 
+          const types = [...new Set(itemsWithDetails.map(item => 
             item.type || 'Other'
           ))];
           
-          setMenuItems(itemsWithIngredients);
+          setMenuItems(itemsWithDetails);
           setMenuTypes(types);
         }
       } catch (error: any) {
@@ -115,9 +128,15 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
               <h3 className="font-medium">{item.name}</h3>
               <span className="font-medium">${item.price}</span>
             </div>
+            
             {item.description && (
               <p className="text-sm text-gray-600 mt-1">{item.description}</p>
             )}
+            
+            {item.media && item.media.length > 0 && (
+              <MenuItemMedia media={item.media} className="mt-2" />
+            )}
+            
             {item.ingredients && item.ingredients.length > 0 && (
               <p className="text-xs text-gray-500 mt-1 italic">
                 {item.ingredients.join(', ')}

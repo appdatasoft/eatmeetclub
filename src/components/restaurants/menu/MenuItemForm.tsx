@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { X, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import MenuItemMediaUploader, { MediaItem } from './MenuItemMediaUploader';
 
 export interface MenuItemFormValues {
   name: string;
@@ -13,6 +14,7 @@ export interface MenuItemFormValues {
   price: number;
   type: string;
   ingredients: string[];
+  media?: MediaItem[];
 }
 
 interface MenuItemFormProps {
@@ -20,6 +22,7 @@ interface MenuItemFormProps {
   onSubmit: (values: MenuItemFormValues) => Promise<void>;
   isLoading?: boolean;
   onCancel?: () => void;
+  restaurantId: string;
 }
 
 const MENU_ITEM_TYPES = [
@@ -35,14 +38,16 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
   initialValues, 
   onSubmit, 
   isLoading = false,
-  onCancel 
+  onCancel,
+  restaurantId
 }) => {
   const [formValues, setFormValues] = useState<MenuItemFormValues>(initialValues || {
     name: '',
     description: '',
     price: 0,
     type: '',
-    ingredients: ['']
+    ingredients: [''],
+    media: []
   });
 
   const [ingredientInput, setIngredientInput] = useState('');
@@ -59,6 +64,13 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
     setFormValues(prev => ({
       ...prev,
       type: value
+    }));
+  };
+
+  const handleMediaChange = (media: MediaItem[]) => {
+    setFormValues(prev => ({
+      ...prev,
+      media
     }));
   };
 
@@ -151,6 +163,16 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
           onChange={handleChange}
           required
           className="bg-white border-gray-300"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-gray-900">Images & Videos</Label>
+        <MenuItemMediaUploader 
+          initialMediaItems={formValues.media}
+          onChange={handleMediaChange}
+          restaurantId={restaurantId}
+          menuItemId={initialValues?.name ? initialValues.name.replace(/\s+/g, '-').toLowerCase() : undefined}
         />
       </div>
 

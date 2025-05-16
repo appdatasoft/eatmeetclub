@@ -87,6 +87,7 @@ const RestaurantMenu = () => {
         currentItem={currentItem}
         isSaving={isSaving}
         onSave={handleSaveItem}
+        restaurantId={id || ''}
       />
     </DashboardLayout>
   );

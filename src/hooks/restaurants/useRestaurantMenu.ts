@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
 import { MenuItemFormValues } from '@/components/restaurants/menu/MenuItemForm';
+import { MediaItem } from '@/components/restaurants/menu/MenuItemMediaUploader';
 
 // Define custom types to work with the new tables
 type RestaurantMenuItem = {
@@ -13,10 +14,11 @@ type RestaurantMenuItem = {
   name: string;
   description: string | null;
   price: number;
-  type?: string;  // Made optional since it may not exist in DB yet
+  type?: string;
   created_at: string;
   updated_at: string;
   ingredients?: { name: string }[];
+  media_items?: { url: string; type: string }[];
 }
 
 type MenuIngredient = {
@@ -24,6 +26,15 @@ type MenuIngredient = {
   menu_item_id: string;
   restaurant_id: string;
   name: string;
+  created_at: string;
+}
+
+type MenuMediaItem = {
+  id: string;
+  menu_item_id: string;
+  restaurant_id: string;
+  url: string;
+  type: string;
   created_at: string;
 }
 
@@ -69,8 +80,8 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
         if (menuError) throw menuError;
         
         if (menuData) {
-          // For each menu item, fetch its ingredients
-          const itemsWithIngredients = await Promise.all(menuData.map(async (item) => {
+          // For each menu item, fetch its ingredients and media items
+          const itemsWithDetails = await Promise.all(menuData.map(async (item) => {
             // Fetch ingredients for this menu item
             const { data: ingredientsData, error: ingredientsError } = await supabase
               .from('restaurant_menu_ingredients')
@@ -79,6 +90,14 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
               
             if (ingredientsError) throw ingredientsError;
             
+            // Fetch media items for this menu item
+            const { data: mediaData, error: mediaError } = await supabase
+              .from('restaurant_menu_media')
+              .select('url, type')
+              .eq('menu_item_id', item.id) as { data: MediaItem[] | null; error: any };
+              
+            if (mediaError) throw mediaError;
+            
             // Transform to match our MenuItem interface
             return {
               id: item.id,
@@ -86,11 +105,12 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
               description: item.description || '',
               price: item.price,
               type: item.type || '',
-              ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : []
+              ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : [],
+              media: mediaData || []
             } as MenuItem;
           }));
           
-          setMenuItems(itemsWithIngredients);
+          setMenuItems(itemsWithDetails);
         }
       } catch (error: any) {
         console.error('Error fetching restaurant menu:', error);
@@ -121,7 +141,7 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
     if (!confirm('Are you sure you want to delete this menu item?')) return;
     
     try {
-      // Delete the menu item - the ingredients will be deleted via cascade
+      // Delete the menu item - the ingredients and media items will be deleted via cascade
       const { error } = await supabase
         .from('restaurant_menu_items')
         .delete()
@@ -153,19 +173,19 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
       setIsSaving(true);
       
       // Filter out empty ingredients
-      const filteredIngredients = values.ingredients.filter(ing => ing.trim() !== '');
+      const filteredIngredients = (values.ingredients || []).filter(ing => ing.trim() !== '');
       
       // If we're editing an existing item
       if (currentItem) {
         try {
-          // Update the menu item omitting type field since it doesn't exist in the database
+          // Update the menu item
           const { error: updateError } = await supabase
             .from('restaurant_menu_items')
             .update({
               name: values.name,
               description: values.description,
               price: values.price,
-              // We're not including type here as it's causing the error
+              // Include type if it exists in the database
             })
             .eq('id', currentItem.id);
           
@@ -193,12 +213,45 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
               
             if (insertIngredientsError) throw insertIngredientsError;
           }
+
+          // Handle media items
+          if (values.media && values.media.length > 0) {
+            // First delete existing media items
+            const { error: deleteMediaError } = await supabase
+              .from('restaurant_menu_media')
+              .delete()
+              .eq('menu_item_id', currentItem.id);
+              
+            if (deleteMediaError) throw deleteMediaError;
+            
+            // Then insert new media items
+            const mediaToInsert = values.media.map(media => ({
+              menu_item_id: currentItem.id,
+              url: media.url,
+              type: media.type,
+              restaurant_id: restaurantId
+            }));
+            
+            const { error: insertMediaError } = await supabase
+              .from('restaurant_menu_media')
+              .insert(mediaToInsert);
+              
+            if (insertMediaError) throw insertMediaError;
+          }
           
-          // Update the UI - still include type in the UI even if not in DB
+          // Update the UI
           setMenuItems(prev => 
             prev.map(item => 
               item.id === currentItem.id 
-                ? { ...item, name: values.name, description: values.description || '', price: values.price, type: values.type, ingredients: filteredIngredients } 
+                ? { 
+                    ...item, 
+                    name: values.name, 
+                    description: values.description || '', 
+                    price: values.price, 
+                    type: values.type, 
+                    ingredients: filteredIngredients,
+                    media: values.media
+                  } 
                 : item
             )
           );
@@ -208,7 +261,7 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
         }
       } else {
         try {
-          // Create a new menu item omitting type field
+          // Create a new menu item
           const { data: newItem, error: createError } = await supabase
             .from('restaurant_menu_items')
             .insert({
@@ -216,36 +269,54 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
               name: values.name,
               description: values.description || null,
               price: values.price,
-              // We're not including type here as it's causing the error
+              // Include type if it exists in the database
             })
             .select()
             .single();
             
           if (createError) throw createError;
           
-          if (newItem && filteredIngredients.length > 0) {
-            const ingredientsToInsert = filteredIngredients.map(name => ({
-              menu_item_id: newItem.id,
-              name,
-              restaurant_id: restaurantId
-            }));
-            
-            const { error: insertIngredientsError } = await supabase
-              .from('restaurant_menu_ingredients')
-              .insert(ingredientsToInsert);
-              
-            if (insertIngredientsError) throw insertIngredientsError;
-          }
-          
           if (newItem) {
-            // Update the UI - still include type in the UI even if not in DB
+            // Insert ingredients
+            if (filteredIngredients.length > 0) {
+              const ingredientsToInsert = filteredIngredients.map(name => ({
+                menu_item_id: newItem.id,
+                name,
+                restaurant_id: restaurantId
+              }));
+              
+              const { error: insertIngredientsError } = await supabase
+                .from('restaurant_menu_ingredients')
+                .insert(ingredientsToInsert);
+                
+              if (insertIngredientsError) throw insertIngredientsError;
+            }
+
+            // Insert media items
+            if (values.media && values.media.length > 0) {
+              const mediaToInsert = values.media.map(media => ({
+                menu_item_id: newItem.id,
+                url: media.url,
+                type: media.type,
+                restaurant_id: restaurantId
+              }));
+              
+              const { error: insertMediaError } = await supabase
+                .from('restaurant_menu_media')
+                .insert(mediaToInsert);
+                
+              if (insertMediaError) throw insertMediaError;
+            }
+            
+            // Update the UI
             const newMenuItem: MenuItem = {
               id: newItem.id,
               name: values.name,
               description: values.description || '',
               price: values.price,
-              type: values.type, // Keep type for UI purposes
-              ingredients: filteredIngredients
+              type: values.type,
+              ingredients: filteredIngredients,
+              media: values.media
             };
             
             setMenuItems(prev => [...prev, newMenuItem]);

@@ -10,6 +10,7 @@ interface MenuItemDialogProps {
   currentItem: MenuItem | null;
   isSaving: boolean;
   onSave: (values: MenuItemFormValues) => Promise<void>;
+  restaurantId: string;
 }
 
 const MenuItemDialog: React.FC<MenuItemDialogProps> = ({
@@ -17,7 +18,8 @@ const MenuItemDialog: React.FC<MenuItemDialogProps> = ({
   onClose,
   currentItem,
   isSaving,
-  onSave
+  onSave,
+  restaurantId
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -32,6 +34,7 @@ const MenuItemDialog: React.FC<MenuItemDialogProps> = ({
           onSubmit={onSave}
           isLoading={isSaving}
           onCancel={onClose}
+          restaurantId={restaurantId}
         />
       </DialogContent>
     </Dialog>
