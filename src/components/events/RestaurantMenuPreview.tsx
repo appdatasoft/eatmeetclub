@@ -201,24 +201,67 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
       <div className="space-y-4">
         {menuItems.map((item) => (
           <div key={item.id} className="border-b pb-3">
-            <div className="flex justify-between">
-              <h3 className="font-medium">{item.name}</h3>
-              <span className="font-medium">${item.price.toFixed(2)}</span>
+            <div className="flex">
+              {/* Thumbnail */}
+              {item.media && item.media.length > 0 && (
+                <div className="mr-3">
+                  <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100">
+                    {item.media[0].type === 'image' && (
+                      <img 
+                        src={item.media[0].url} 
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                    {item.media[0].type === 'video' && (
+                      <div className="relative w-full h-full">
+                        <video 
+                          src={item.media[0].url}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                          <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            className="h-5 w-5 text-white"
+                            viewBox="0 0 24 24"
+                          >
+                            <path fill="currentColor" d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18a1 1 0 0 0 0-1.68L9.54 5.98A.998.998 0 0 0 8 6.82z"/>
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Item details */}
+              <div className="flex-1">
+                <div className="flex justify-between">
+                  <h3 className="font-medium">{item.name}</h3>
+                  <span className="font-medium">${item.price.toFixed(2)}</span>
+                </div>
+                
+                {item.description && (
+                  <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                )}
+                
+                {item.ingredients && item.ingredients.length > 0 && (
+                  <p className="text-xs text-gray-500 mt-1 italic">
+                    {item.ingredients.join(', ')}
+                  </p>
+                )}
+                
+                {/* Show "View More" if there are multiple images */}
+                {item.media && item.media.length > 1 && (
+                  <button 
+                    className="text-xs text-primary mt-1 hover:underline"
+                    onClick={() => {}}
+                  >
+                    +{item.media!.length - 1} more photos
+                  </button>
+                )}
+              </div>
             </div>
-            
-            {item.description && (
-              <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-            )}
-            
-            {item.media && item.media.length > 0 && (
-              <MenuItemMedia media={item.media} className="mt-2" />
-            )}
-            
-            {item.ingredients && item.ingredients.length > 0 && (
-              <p className="text-xs text-gray-500 mt-1 italic">
-                {item.ingredients.join(', ')}
-              </p>
-            )}
           </div>
         ))}
       </div>

@@ -26,32 +26,44 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onEdit, onDelete }) =
   return (
     <Card className="overflow-hidden bg-white hover:shadow-md transition-shadow border-gray-200">
       <CardContent className="p-4">
-        <div className="flex justify-between mb-2">
-          <h3 className="font-semibold text-lg">{item.name}</h3>
-          <span className="font-medium">${item.price.toFixed(2)}</span>
-        </div>
-        
-        {item.description && (
-          <p className="text-sm text-gray-600 mb-2">{item.description}</p>
-        )}
-        
-        <MenuItemMedia media={item.media} />
-        
-        {item.ingredients && item.ingredients.length > 0 && (
-          <div className="mt-2">
-            <p className="text-xs text-gray-500 mb-1">Ingredients:</p>
-            <div className="flex flex-wrap gap-1">
-              {item.ingredients.map((ingredient, index) => (
-                <span 
-                  key={index} 
-                  className="inline-block bg-gray-100 px-2 py-1 rounded-full text-xs"
-                >
-                  {ingredient}
-                </span>
-              ))}
+        <div className="flex items-start gap-3">
+          {/* Show thumbnail if available */}
+          {item.media && item.media.length > 0 && (
+            <MenuItemMedia media={item.media} className="mt-0" thumbnailOnly />
+          )}
+          
+          <div className="flex-1">
+            <div className="flex justify-between mb-2">
+              <h3 className="font-semibold text-lg">{item.name}</h3>
+              <span className="font-medium">${item.price.toFixed(2)}</span>
             </div>
+            
+            {item.description && (
+              <p className="text-sm text-gray-600 mb-2">{item.description}</p>
+            )}
+            
+            {/* Only show media gallery if there's more than 1 image or no thumbnail shown yet */}
+            {((!item.media || item.media.length === 0) || item.media.length > 1) && (
+              <MenuItemMedia media={item.media} />
+            )}
+            
+            {item.ingredients && item.ingredients.length > 0 && (
+              <div className="mt-2">
+                <p className="text-xs text-gray-500 mb-1">Ingredients:</p>
+                <div className="flex flex-wrap gap-1">
+                  {item.ingredients.map((ingredient, index) => (
+                    <span 
+                      key={index} 
+                      className="inline-block bg-gray-100 px-2 py-1 rounded-full text-xs"
+                    >
+                      {ingredient}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </CardContent>
       
       <CardFooter className="px-4 pb-4 pt-0 flex justify-end space-x-2">
