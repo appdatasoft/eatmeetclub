@@ -48,6 +48,13 @@ serve(async (req) => {
       redirectTo = `${defaultDomain}${redirectTo.startsWith('/') ? '' : '/'}${redirectTo}`;
     }
     
+    // Ensure the redirect URL includes the /set-password path if it's not already there
+    if (!redirectTo.includes('/set-password')) {
+      // Strip trailing slash if present
+      const baseUrl = redirectTo.endsWith('/') ? redirectTo.slice(0, -1) : redirectTo;
+      redirectTo = `${baseUrl}/set-password`;
+    }
+    
     console.log(`Using redirect URL: ${redirectTo}`);
     
     // Generate a signup link (combines email verification and password setup)
@@ -55,7 +62,7 @@ serve(async (req) => {
       type: 'signup',
       email: email,
       options: {
-        // Use the provided redirect URL or a default
+        // Use the provided redirect URL with the set-password path
         emailRedirectTo: redirectTo,
       }
     });

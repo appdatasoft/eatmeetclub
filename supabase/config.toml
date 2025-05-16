@@ -1,3 +1,4 @@
+
 # Project ID (automatically set when you run `supabase init`)
 project_id = "wocfwpedauuhlrfugxuu"
 
@@ -23,8 +24,8 @@ pop3_port = 54326
 file_size_limit = "50MiB"
 
 [auth]
-site_url = "https://www.eatmeetclub.com"
-additional_redirect_urls = ["https://www.eatmeetclub.com"]
+site_url = "https://www.eatmeetclub.com/set-password"
+additional_redirect_urls = ["https://www.eatmeetclub.com", "https://www.eatmeetclub.com/set-password"]
 jwt_expiry = 3600
 enable_signup = true
 
@@ -53,4 +54,8 @@ verify_jwt = false
 
 # 🔁 Stripe webhook handler
 [functions.stripe-webhook]
+verify_jwt = false
+
+# 🔑 Generate magic link for account activation
+[functions.generate-magic-link]
 verify_jwt = false
