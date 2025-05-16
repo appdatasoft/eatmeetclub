@@ -11,6 +11,7 @@ import RestaurantHeader from "@/components/restaurants/details/RestaurantHeader"
 import RestaurantAbout from "@/components/restaurants/details/RestaurantAbout";
 import RestaurantContact from "@/components/restaurants/details/RestaurantContact";
 import RestaurantEvents from "@/components/restaurants/details/RestaurantEvents";
+import RestaurantMenu from "@/components/restaurants/details/RestaurantMenu";
 import RestaurantDetailsSkeleton from "@/components/restaurants/details/RestaurantDetailsSkeleton";
 import RestaurantErrorState from "@/components/restaurants/details/RestaurantErrorState";
 
@@ -100,6 +101,11 @@ const RestaurantDetailsPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-2">
               <RestaurantAbout restaurant={restaurant} />
+              <RestaurantMenu 
+                restaurantId={restaurant.id} 
+                restaurantName={restaurant.name} 
+                isOwner={isOwner} 
+              />
               <RestaurantEvents restaurantName={restaurant.name} events={events} />
             </div>
 

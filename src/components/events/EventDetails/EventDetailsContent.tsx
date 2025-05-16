@@ -8,9 +8,11 @@ import UnpublishedEventNotice from "./UnpublishedEventNotice";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { EventDetails } from "@/hooks/useEventDetails";
 import RestaurantInfo from "./RestaurantInfo";
-import { BookPlus, Menu, Users } from "lucide-react";
+import { BookPlus, Menu, Utensils, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import RestaurantMenuPreview from "../RestaurantMenuPreview";
 
 interface EventDetailsContentProps {
   event: EventDetails;
@@ -107,6 +109,30 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
                 </Button>
               )}
               
+              {/* View Restaurant Menu button */}
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="mb-4 w-full flex items-center gap-2"
+                  >
+                    <Utensils className="h-4 w-4" />
+                    <span>View Restaurant Menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-full sm:max-w-md md:max-w-lg">
+                  <SheetHeader>
+                    <SheetTitle>Menu: {event.restaurant.name}</SheetTitle>
+                    <SheetDescription>
+                      Browse the restaurant's menu items
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="mt-6 pr-6">
+                    <RestaurantMenuPreview restaurantId={event.restaurant.id} />
+                  </div>
+                </SheetContent>
+              </Sheet>
+              
               {/* Add Menu button - only show if user is logged in and is the owner of the event */}
               {user && isCurrentUserOwner && (
                 <Button 
@@ -115,7 +141,7 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
                   className="mb-4 w-full flex items-center gap-2"
                 >
                   <Menu className="h-4 w-4" />
-                  <span>Add Restaurant Menu</span>
+                  <span>Manage Restaurant Menu</span>
                 </Button>
               )}
               
@@ -134,7 +160,7 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
           )}
 
           {/* Restaurant info */}
-          <div className="mt-4 bg-accent p-4 rounded-lg shadow-sm">
+          <div className="mt-4 bg-white p-4 rounded-lg shadow-sm">
             <h3 className="font-medium mb-2">Hosted at</h3>
             <Link 
               to={`/restaurant/${event.restaurant.id}`} 
@@ -147,7 +173,7 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
 
           {/* Event creator link */}
           {event.user_id && (
-            <div className="mt-4 bg-accent p-4 rounded-lg shadow-sm">
+            <div className="mt-4 bg-white p-4 rounded-lg shadow-sm">
               <h3 className="font-medium mb-2">Event Creator</h3>
               <Link 
                 to={`/user/${event.user_id}`} 
