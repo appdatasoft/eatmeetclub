@@ -23,6 +23,17 @@ export const useEventActions = (
   
   const handleEditEvent = () => {
     if (!event) return;
+    
+    // Check if the event is published
+    if (event.published) {
+      toast({
+        title: "Cannot Edit",
+        description: "Published events cannot be edited. Please unpublish the event first.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     navigate(`/edit-event/${event.id}`);
   };
   

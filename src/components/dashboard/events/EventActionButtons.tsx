@@ -22,6 +22,8 @@ const EventActionButtons = ({ event, onRefresh }: EventActionButtonsProps) => {
             size="sm"
             variant="outline"
             onClick={() => navigate(`/edit-event/${event.id}`)}
+            disabled={event.published}
+            title={event.published ? "Published events cannot be edited" : "Edit event"}
           >
             Edit
           </Button>

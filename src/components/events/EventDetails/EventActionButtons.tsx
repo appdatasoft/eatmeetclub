@@ -50,6 +50,8 @@ const EventActionButtons = ({
           size="sm" 
           className="flex items-center" 
           onClick={onEditEvent}
+          disabled={isPublished}
+          title={isPublished ? "Published events cannot be edited" : "Edit event"}
         >
           <Edit className="h-4 w-4 mr-1" /> Edit
         </Button>

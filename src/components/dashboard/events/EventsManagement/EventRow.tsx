@@ -152,6 +152,8 @@ const EventRow = ({ event, onRefresh }: EventRowProps) => {
             size="sm"
             variant="ghost"
             onClick={() => handleEditEvent(event.id)}
+            disabled={event.published}
+            title={event.published ? "Published events cannot be edited" : "Edit event"}
           >
             <Edit className="h-4 w-4" />
           </Button>
