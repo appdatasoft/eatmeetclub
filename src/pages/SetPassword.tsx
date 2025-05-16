@@ -61,14 +61,12 @@ const SetPasswordPage = () => {
         throw new Error("Invalid password reset link. Please request a new one.");
       }
       
-      // For password recovery flow using the recovery token
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        "", // Email is not required when using a token
-        {
-          token: token,
-          password: values.password
-        }
-      );
+      // Update password using the token
+      const { error } = await supabase.auth.updateUser({
+        password: values.password,
+      }, {
+        emailRedirectTo: window.location.origin
+      });
       
       if (error) {
         throw error;
