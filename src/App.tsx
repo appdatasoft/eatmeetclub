@@ -21,6 +21,7 @@ import ConfigPage from "@/pages/admin/ConfigPage";
 import UsersPage from "@/pages/admin/UsersPage";
 import AdminSettings from "@/pages/dashboard/AdminSettings";
 import AddRestaurant from "@/pages/dashboard/AddRestaurant";
+import EditEvent from "@/pages/EditEvent";
 import Signup from "@/pages/Signup";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,6 +67,7 @@ function App() {
           <Route path="/event/:id" element={<EventDetailsPage />} />
           <Route path="/venues" element={<VenuesPage />} />
           <Route path="/restaurant/:id" element={<RestaurantDetailsPage />} />
+          <Route path="/edit-event/:id" element={<EditEvent />} />
           
           {/* Admin routes */}
           <Route path="/admin" element={<AdminDashboard />} />
