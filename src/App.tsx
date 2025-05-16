@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Login from "@/pages/Login";
@@ -23,6 +22,7 @@ import AdminSettings from "@/pages/dashboard/AdminSettings";
 import AddRestaurant from "@/pages/dashboard/AddRestaurant";
 import EditEvent from "@/pages/EditEvent";
 import Signup from "@/pages/Signup";
+import ForgotPassword from "@/pages/ForgotPassword";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { EditableContentProvider } from "@/components/editor/EditableContentProvider";
@@ -57,6 +57,7 @@ function App() {
           
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/membership-payment" element={<MembershipPayment />} />
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/become-member" element={<BecomeMember />} />
