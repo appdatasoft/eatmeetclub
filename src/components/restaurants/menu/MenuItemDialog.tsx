@@ -21,9 +21,17 @@ const MenuItemDialog: React.FC<MenuItemDialogProps> = ({
   onSave,
   restaurantId
 }) => {
+  // Handle dialog close with confirmation if there are unsaved changes
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      // You could add confirmation here if needed
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[550px] bg-white border-gray-200 shadow-lg">
+    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
+      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto bg-white border-gray-200 shadow-lg">
         <DialogHeader>
           <DialogTitle className="text-gray-900">
             {currentItem ? 'Edit Menu Item' : 'Add Menu Item'}

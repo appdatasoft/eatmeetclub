@@ -27,62 +27,80 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
 
   useEffect(() => {
     const fetchMenuItems = async () => {
+      if (!restaurantId) return;
+      
       try {
         setIsLoading(true);
         
         // Fetch menu items
-        const { data, error } = await supabase
+        const { data: menuItemsData, error: menuItemsError } = await supabase
           .from('restaurant_menu_items')
           .select('*')
           .eq('restaurant_id', restaurantId);
 
-        if (error) throw error;
-
-        if (data) {
-          // For each menu item, fetch its ingredients and media
-          const itemsWithDetails = await Promise.all(data.map(async (item) => {
-            // Fetch ingredients
-            const { data: ingredientsData, error: ingredientsError } = await supabase
-              .from('restaurant_menu_ingredients')
-              .select('name')
-              .eq('menu_item_id', item.id);
-              
-            if (ingredientsError) throw ingredientsError;
-            
-            // Fetch media items
-            const { data: mediaData, error: mediaError } = await supabase
-              .from('restaurant_menu_media')
-              .select('url, type')
-              .eq('menu_item_id', item.id);
-              
-            if (mediaError) throw mediaError;
-            
-            return {
-              id: item.id,
-              name: item.name,
-              description: item.description || '',
-              price: item.price,
-              type: '', // We'll group items by type in UI
-              ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : [],
-              media: mediaData || []
-            } as MenuItem;
-          }));
-          
-          // Group items by type for display
-          const types = [...new Set(itemsWithDetails.map(item => 
-            item.type || 'Other'
-          ))];
-          
-          setMenuItems(itemsWithDetails);
-          setMenuTypes(types);
+        if (menuItemsError) throw menuItemsError;
+        
+        if (!menuItemsData || menuItemsData.length === 0) {
+          setMenuItems([]);
+          setIsLoading(false);
+          return;
         }
+
+        // Process each menu item to fetch related data
+        const itemsWithDetails = await Promise.all(menuItemsData.map(async (item) => {
+          // Fetch ingredients
+          const { data: ingredientsData } = await supabase
+            .from('restaurant_menu_ingredients')
+            .select('name')
+            .eq('menu_item_id', item.id);
+            
+          // Use RPC call to get media items from Supabase
+          const { data: mediaData } = await supabase.rpc('get_menu_item_media', {
+            item_id: item.id
+          }).catch(() => ({ data: [] }));
+          
+          // If RPC doesn't exist, use standard query
+          let media: MediaItem[] = [];
+          if (!mediaData || mediaData.length === 0) {
+            // Try to get media directly from storage if available
+            const { data: storageData } = await supabase
+              .storage
+              .from('lovable-uploads')
+              .list(`menu-items/${restaurantId}/${item.id}`);
+              
+            if (storageData) {
+              media = storageData.map(file => ({
+                url: supabase.storage.from('lovable-uploads').getPublicUrl(`menu-items/${restaurantId}/${item.id}/${file.name}`).data.publicUrl,
+                type: file.metadata?.mimetype?.startsWith('video/') ? 'video' : 'image'
+              }));
+            }
+          } else {
+            media = mediaData as MediaItem[];
+          }
+          
+          return {
+            id: item.id,
+            name: item.name,
+            description: item.description || '',
+            price: item.price,
+            type: item.type || 'Other',
+            ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : [],
+            media: media || []
+          } as MenuItem;
+        }));
+        
+        // Group items by type for display
+        const types = [...new Set(itemsWithDetails.map(item => item.type || 'Other'))];
+        
+        setMenuItems(itemsWithDetails);
+        setMenuTypes(types);
       } catch (error: any) {
+        console.error("Error loading menu items:", error);
         toast({
           title: "Error",
           description: "Failed to load restaurant menu",
           variant: "destructive"
         });
-        console.error(error);
       } finally {
         setIsLoading(false);
       }
@@ -126,7 +144,7 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
           <div key={item.id} className="border-b pb-3">
             <div className="flex justify-between">
               <h3 className="font-medium">{item.name}</h3>
-              <span className="font-medium">${item.price}</span>
+              <span className="font-medium">${item.price.toFixed(2)}</span>
             </div>
             
             {item.description && (

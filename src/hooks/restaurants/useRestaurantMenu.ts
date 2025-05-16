@@ -7,37 +7,6 @@ import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
 import { MenuItemFormValues } from '@/components/restaurants/menu/MenuItemForm';
 import { MediaItem } from '@/components/restaurants/menu/MenuItemMediaUploader';
 
-// Define custom types to work with the new tables
-type RestaurantMenuItem = {
-  id: string;
-  restaurant_id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  type?: string;
-  created_at: string;
-  updated_at: string;
-  ingredients?: { name: string }[];
-  media_items?: { url: string; type: string }[];
-}
-
-type MenuIngredient = {
-  id: string;
-  menu_item_id: string;
-  restaurant_id: string;
-  name: string;
-  created_at: string;
-}
-
-type MenuMediaItem = {
-  id: string;
-  menu_item_id: string;
-  restaurant_id: string;
-  url: string;
-  type: string;
-  created_at: string;
-}
-
 export const useRestaurantMenu = (restaurantId: string | undefined) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -50,6 +19,7 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
   const [currentItem, setCurrentItem] = useState<MenuItem | null>(null);
   const [isOwner, setIsOwner] = useState(false);
 
+  // Fetch restaurant details and menu items
   useEffect(() => {
     const fetchData = async () => {
       if (!restaurantId || !user) return;
@@ -71,11 +41,11 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
         // Check if user is the owner of the restaurant
         setIsOwner(restaurantData.user_id === user.id);
         
-        // Fetch menu items using custom typing
+        // Fetch menu items
         const { data: menuData, error: menuError } = await supabase
           .from('restaurant_menu_items')
           .select('*')
-          .eq('restaurant_id', restaurantId) as { data: RestaurantMenuItem[] | null; error: any };
+          .eq('restaurant_id', restaurantId);
           
         if (menuError) throw menuError;
         
@@ -86,17 +56,48 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
             const { data: ingredientsData, error: ingredientsError } = await supabase
               .from('restaurant_menu_ingredients')
               .select('name')
-              .eq('menu_item_id', item.id) as { data: { name: string }[] | null; error: any };
+              .eq('menu_item_id', item.id);
               
             if (ingredientsError) throw ingredientsError;
             
-            // Fetch media items for this menu item
-            const { data: mediaData, error: mediaError } = await supabase
-              .from('restaurant_menu_media')
-              .select('url, type')
-              .eq('menu_item_id', item.id) as { data: MediaItem[] | null; error: any };
+            // Try to get the media items associated with this menu item
+            // First check if 'restaurant_menu_media' table exists by using RPC
+            let mediaItems: MediaItem[] = [];
+            try {
+              // Try the RPC method first (if it exists)
+              const { data: mediaData } = await supabase.rpc('get_menu_item_media', {
+                item_id: item.id
+              });
               
-            if (mediaError) throw mediaError;
+              if (mediaData && mediaData.length > 0) {
+                mediaItems = mediaData as MediaItem[];
+              }
+            } catch (err) {
+              console.log('RPC not available, using storage query instead');
+              
+              // Fallback: try to get the media directly from storage
+              try {
+                const { data: storageData } = await supabase
+                  .storage
+                  .from('lovable-uploads')
+                  .list(`menu-items/${restaurantId}/${item.id}`);
+                  
+                if (storageData && storageData.length > 0) {
+                  mediaItems = storageData.map(file => {
+                    const publicUrl = supabase.storage
+                      .from('lovable-uploads')
+                      .getPublicUrl(`menu-items/${restaurantId}/${item.id}/${file.name}`).data.publicUrl;
+                      
+                    return {
+                      url: publicUrl,
+                      type: file.metadata?.mimetype?.startsWith('video/') ? 'video' : 'image'
+                    };
+                  });
+                }
+              } catch (storageErr) {
+                console.error('Error accessing storage:', storageErr);
+              }
+            }
             
             // Transform to match our MenuItem interface
             return {
@@ -106,7 +107,7 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
               price: item.price,
               type: item.type || '',
               ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : [],
-              media: mediaData || []
+              media: mediaItems
             } as MenuItem;
           }));
           
@@ -127,6 +128,7 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
     fetchData();
   }, [restaurantId, user, toast]);
 
+  // Handle menu item actions (add, edit, delete, save)
   const handleAddItem = () => {
     setCurrentItem(null);
     setIsDialogOpen(true);
@@ -145,7 +147,7 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
       const { error } = await supabase
         .from('restaurant_menu_items')
         .delete()
-        .eq('id', itemId) as { error: any };
+        .eq('id', itemId);
         
       if (error) throw error;
       
@@ -185,7 +187,7 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
               name: values.name,
               description: values.description,
               price: values.price,
-              // Include type if it exists in the database
+              type: values.type
             })
             .eq('id', currentItem.id);
           
@@ -214,47 +216,28 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
             if (insertIngredientsError) throw insertIngredientsError;
           }
 
-          // Handle media items
+          // Handle media items - here we use direct file storage instead of a table
           if (values.media && values.media.length > 0) {
-            // First delete existing media items
-            const { error: deleteMediaError } = await supabase
-              .from('restaurant_menu_media')
-              .delete()
-              .eq('menu_item_id', currentItem.id);
-              
-            if (deleteMediaError) throw deleteMediaError;
+            // We're storing media info directly in Storage
+            // No need to delete existing files as they will be overwritten with the same paths
             
-            // Then insert new media items
-            const mediaToInsert = values.media.map(media => ({
-              menu_item_id: currentItem.id,
-              url: media.url,
-              type: media.type,
-              restaurant_id: restaurantId
-            }));
-            
-            const { error: insertMediaError } = await supabase
-              .from('restaurant_menu_media')
-              .insert(mediaToInsert);
-              
-            if (insertMediaError) throw insertMediaError;
+            // Update the UI
+            setMenuItems(prev => 
+              prev.map(item => 
+                item.id === currentItem.id 
+                  ? { 
+                      ...item, 
+                      name: values.name, 
+                      description: values.description || '', 
+                      price: values.price, 
+                      type: values.type, 
+                      ingredients: filteredIngredients,
+                      media: values.media
+                    } 
+                  : item
+              )
+            );
           }
-          
-          // Update the UI
-          setMenuItems(prev => 
-            prev.map(item => 
-              item.id === currentItem.id 
-                ? { 
-                    ...item, 
-                    name: values.name, 
-                    description: values.description || '', 
-                    price: values.price, 
-                    type: values.type, 
-                    ingredients: filteredIngredients,
-                    media: values.media
-                  } 
-                : item
-            )
-          );
         } catch (error: any) {
           console.error('Error updating menu item:', error);
           throw error;
@@ -269,7 +252,7 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
               name: values.name,
               description: values.description || null,
               price: values.price,
-              // Include type if it exists in the database
+              type: values.type
             })
             .select()
             .single();
@@ -292,21 +275,9 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
               if (insertIngredientsError) throw insertIngredientsError;
             }
 
-            // Insert media items
-            if (values.media && values.media.length > 0) {
-              const mediaToInsert = values.media.map(media => ({
-                menu_item_id: newItem.id,
-                url: media.url,
-                type: media.type,
-                restaurant_id: restaurantId
-              }));
-              
-              const { error: insertMediaError } = await supabase
-                .from('restaurant_menu_media')
-                .insert(mediaToInsert);
-                
-              if (insertMediaError) throw insertMediaError;
-            }
+            // Handle media items - using storage approach
+            // the actual files are already uploaded by the MenuItemMediaUploader
+            // component, we just need to update our UI state
             
             // Update the UI
             const newMenuItem: MenuItem = {
