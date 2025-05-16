@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -363,9 +362,9 @@ const RestaurantMenu = () => {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
+        <DialogContent className="sm:max-w-[550px] bg-white border-gray-200 shadow-lg">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-gray-900">
               {currentItem ? 'Edit Menu Item' : 'Add Menu Item'}
             </DialogTitle>
           </DialogHeader>

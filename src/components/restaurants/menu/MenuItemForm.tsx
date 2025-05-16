@@ -73,9 +73,9 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 text-gray-900">
       <div className="space-y-2">
-        <Label htmlFor="name">Food Item Name*</Label>
+        <Label htmlFor="name" className="text-gray-900">Food Item Name*</Label>
         <Input
           id="name"
           name="name"
@@ -83,11 +83,12 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
           onChange={handleChange}
           placeholder="e.g., Margherita Pizza"
           required
+          className="bg-white border-gray-300"
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description" className="text-gray-900">Description</Label>
         <Textarea
           id="description"
           name="description"
@@ -95,11 +96,12 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
           onChange={handleChange}
           placeholder="Describe this food item..."
           rows={3}
+          className="bg-white border-gray-300"
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="price">Price*</Label>
+        <Label htmlFor="price" className="text-gray-900">Price*</Label>
         <Input
           id="price"
           name="price"
@@ -109,11 +111,12 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
           value={formValues.price}
           onChange={handleChange}
           required
+          className="bg-white border-gray-300"
         />
       </div>
 
       <div className="space-y-2">
-        <Label>Ingredients</Label>
+        <Label className="text-gray-900">Ingredients</Label>
         <div className="flex flex-wrap gap-2 mb-2">
           {formValues.ingredients.map((ingredient, index) => (
             ingredient.trim() && (
@@ -135,7 +138,7 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
             value={ingredientInput}
             onChange={(e) => setIngredientInput(e.target.value)}
             placeholder="Add an ingredient"
-            className="flex-1"
+            className="flex-1 bg-white border-gray-300"
           />
           <Button 
             type="button" 
