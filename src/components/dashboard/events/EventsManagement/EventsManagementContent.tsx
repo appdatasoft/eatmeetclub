@@ -1,8 +1,9 @@
 
+import { useToast } from "@/hooks/use-toast";
 import { Event } from "./types";
-import LoadingState from "./LoadingState";
-import ErrorState from "./ErrorState";
 import EmptyState from "./EmptyState";
+import ErrorState from "./ErrorState";
+import LoadingState from "./LoadingState";
 import EventsTable from "./EventsTable";
 
 interface EventsManagementContentProps {
@@ -20,6 +21,7 @@ const EventsManagementContent = ({
   onRetry,
   onRefresh
 }: EventsManagementContentProps) => {
+  
   if (isLoading) {
     return <LoadingState />;
   }
@@ -28,11 +30,13 @@ const EventsManagementContent = ({
     return <ErrorState error={error} onRetry={onRetry} />;
   }
 
-  if (events.length === 0) {
+  if (!events || events.length === 0) {
     return <EmptyState />;
   }
 
-  return <EventsTable events={events} onRefresh={onRefresh} />;
+  return (
+    <EventsTable events={events} onRefresh={onRefresh} />
+  );
 };
 
 export default EventsManagementContent;

@@ -8,7 +8,6 @@ import { Check, X, Edit, Eye, Trash2, AlertTriangle, Loader2 } from "lucide-reac
 import { TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Toggle } from "@/components/ui/toggle";
 import { Switch } from "@/components/ui/switch";
 import { Event } from "./types";
 
