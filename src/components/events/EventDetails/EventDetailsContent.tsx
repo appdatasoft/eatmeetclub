@@ -8,7 +8,7 @@ import UnpublishedEventNotice from "./UnpublishedEventNotice";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { EventDetails } from "@/hooks/useEventDetails";
 import RestaurantInfo from "./RestaurantInfo";
-import { BookPlus, Users } from "lucide-react";
+import { BookPlus, Menu, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -50,6 +50,10 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
     } else {
       navigate('/login', { state: { from: location.pathname } });
     }
+  };
+
+  const handleAddMenu = () => {
+    navigate(`/dashboard/restaurant-menu/${event.restaurant.id}?eventId=${event.id}`);
   };
 
   return (
@@ -100,6 +104,18 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
                 >
                   <BookPlus className="h-4 w-4" />
                   <span>Create Memory for this Event</span>
+                </Button>
+              )}
+              
+              {/* Add Menu button - only show if user is logged in and is the owner of the event */}
+              {user && isCurrentUserOwner && (
+                <Button 
+                  onClick={handleAddMenu}
+                  variant="outline" 
+                  className="mb-4 w-full flex items-center gap-2"
+                >
+                  <Menu className="h-4 w-4" />
+                  <span>Add Restaurant Menu</span>
                 </Button>
               )}
               

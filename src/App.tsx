@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Login from "@/pages/Login";
@@ -20,6 +21,7 @@ import ConfigPage from "@/pages/admin/ConfigPage";
 import UsersPage from "@/pages/admin/UsersPage";
 import AdminSettings from "@/pages/dashboard/AdminSettings";
 import AddRestaurant from "@/pages/dashboard/AddRestaurant";
+import RestaurantMenu from "@/pages/dashboard/RestaurantMenu";
 import EditEvent from "@/pages/EditEvent";
 import Signup from "@/pages/Signup";
 import ForgotPassword from "@/pages/ForgotPassword";
@@ -82,6 +84,7 @@ function App() {
           <Route path="/dashboard/payment-success" element={<PaymentSuccessPage />} />
           <Route path="/dashboard/admin-settings" element={<AdminSettings />} />
           <Route path="/dashboard/add-restaurant" element={<AddRestaurant />} />
+          <Route path="/dashboard/restaurant-menu/:id" element={<RestaurantMenu />} />
           
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />
