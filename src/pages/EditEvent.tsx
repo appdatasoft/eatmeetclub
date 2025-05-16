@@ -148,6 +148,10 @@ const EditEvent = () => {
     navigate('/dashboard/add-restaurant');
   };
 
+  const handleCancel = () => {
+    navigate('/dashboard');
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -169,6 +173,7 @@ const EditEvent = () => {
                   onAddRestaurant={handleAddRestaurant}
                   existingEvent={event}
                   submitLabel="Update Event"
+                  onCancel={handleCancel}
                 />
               </CardContent>
             </Card>

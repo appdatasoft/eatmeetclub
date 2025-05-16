@@ -83,8 +83,7 @@ export const useMenuItemsFetch = (restaurantId: string | undefined, userId: stri
               name: item.name,
               description: item.description || '',
               price: item.price,
-              // Fix the type error by checking if type exists or providing a default value
-              type: item.type || '',
+              type: item.type as string || '',
               ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : [],
               media: mediaItems
             } as MenuItem;

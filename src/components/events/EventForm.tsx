@@ -14,6 +14,7 @@ interface EventFormProps {
   onSubmit: (eventDetails: any) => void;
   isLoading: boolean;
   onAddRestaurant: () => void;
+  onCancel?: () => void;
   eventFee?: number;
   existingEvent?: any;
   submitLabel?: string;
@@ -26,6 +27,7 @@ const EventForm: React.FC<EventFormProps> = ({
   onSubmit,
   isLoading,
   onAddRestaurant,
+  onCancel,
   eventFee = 50,
   existingEvent,
   submitLabel = "Add Event"
@@ -131,7 +133,7 @@ const EventForm: React.FC<EventFormProps> = ({
         />
       </div>
       
-      <div>
+      <div className="flex gap-3">
         <Button 
           type="submit" 
           isLoading={isLoading}
@@ -139,6 +141,17 @@ const EventForm: React.FC<EventFormProps> = ({
         >
           {submitLabel}
         </Button>
+
+        {onCancel && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+        )}
       </div>
     </form>
   );
