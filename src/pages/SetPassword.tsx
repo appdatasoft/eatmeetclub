@@ -16,31 +16,24 @@ const SetPasswordPage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
 
+  // Track if we have a valid token
+  const [hasValidToken, setHasValidToken] = useState(false);
+
   useEffect(() => {
     // Set session from URL parameters when component mounts
     const setSessionFromUrl = async () => {
-      const accessToken = searchParams.get("access_token");
-      const refreshToken = searchParams.get("refresh_token");
       const token = searchParams.get("token");
       const type = searchParams.get("type");
       
       console.log("URL parameters:", { 
-        hasAccessToken: !!accessToken, 
-        hasRefreshToken: !!refreshToken,
         hasToken: !!token,
         type
       });
       
-      // For email confirmation links
-      if (accessToken && refreshToken) {
-        console.log("Setting session from access/refresh tokens");
-        await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        return true;
-      }
-      
       // For password recovery links
       if (token && type === "recovery") {
-        console.log("Received recovery token");
+        console.log("Received recovery token, marking as valid");
+        setHasValidToken(true);
         return true;
       }
       
@@ -60,7 +53,23 @@ const SetPasswordPage = () => {
     
     try {
       console.log("Updating password");
-      const { error } = await supabase.auth.updateUser({ password: values.password });
+      
+      const token = searchParams.get("token");
+      const type = searchParams.get("type");
+      
+      if (!token || type !== "recovery") {
+        throw new Error("Invalid password reset link. Please request a new one.");
+      }
+      
+      // For password recovery flow, we need to use updateUserWithRecoveryToken
+      const { error } = await supabase.auth.updateUser({
+        password: values.password
+      }, {
+        authOverride: {
+          action: "resetPassword",
+          token: token
+        }
+      });
       
       if (error) {
         throw error;
@@ -105,11 +114,18 @@ const SetPasswordPage = () => {
 
           {isSuccess ? (
             <PasswordSuccessMessage />
-          ) : (
+          ) : hasValidToken ? (
             <PasswordForm
               onSubmit={handleSetPassword}
               isLoading={isSettingPassword}
             />
+          ) : (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Invalid or expired password reset link. Please request a new one.
+              </AlertDescription>
+            </Alert>
           )}
         </div>
       </div>
