@@ -45,53 +45,102 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
           .select('*')
           .eq('restaurant_id', restaurantId);
 
-        if (menuItemsError) throw menuItemsError;
+        if (menuItemsError) {
+          console.error("Error fetching menu items:", menuItemsError);
+          throw menuItemsError;
+        }
         
         if (!menuItemsData || menuItemsData.length === 0) {
+          console.log("No menu items found for restaurant:", restaurantId);
           setMenuItems([]);
           setIsLoading(false);
           return;
         }
 
+        console.log("Found menu items:", menuItemsData.length);
+
         // Process each menu item to fetch related data
         const itemsWithDetails = await Promise.all(menuItemsData.map(async (item) => {
           // Fetch ingredients
-          const { data: ingredientsData } = await supabase
+          const { data: ingredientsData, error: ingredientsError } = await supabase
             .from('restaurant_menu_ingredients')
             .select('name')
             .eq('menu_item_id', item.id);
             
+          if (ingredientsError) {
+            console.error("Error fetching ingredients:", ingredientsError);
+          }
+          
           // Try to get media directly from storage
           let media: MediaItem[] = [];
           try {
-            const { data: storageData } = await supabase
+            // First try folder path with restaurant ID and item ID
+            const folderPath = `menu-items/${restaurantId}/${item.id}`;
+            console.log("Checking storage path:", folderPath);
+            
+            const { data: storageData, error: storageError } = await supabase
               .storage
               .from('lovable-uploads')
-              .list(`menu-items/${restaurantId}/${item.id}`);
+              .list(folderPath);
+              
+            if (storageError) {
+              console.error("Error listing files:", storageError);
+            }
               
             if (storageData && storageData.length > 0) {
+              console.log("Found files in storage:", storageData.length);
               media = storageData.map(file => {
                 const publicUrl = supabase.storage
                   .from('lovable-uploads')
-                  .getPublicUrl(`menu-items/${restaurantId}/${item.id}/${file.name}`).data.publicUrl;
+                  .getPublicUrl(`${folderPath}/${file.name}`).data.publicUrl;
                   
                 return {
                   url: publicUrl,
                   type: file.metadata?.mimetype?.startsWith('video/') ? 'video' : 'image'
                 };
               });
+            } else {
+              // Try alternate path format
+              const altPath = `menu-items/${item.id}-`;
+              console.log("Checking alternate storage path:", altPath);
+              
+              const { data: altData, error: altError } = await supabase
+                .storage
+                .from('lovable-uploads')
+                .list('menu-items', {
+                  prefix: `${item.id}-`
+                });
+                
+              if (altError) {
+                console.error("Error listing alternate files:", altError);
+              }
+                
+              if (altData && altData.length > 0) {
+                console.log("Found files in alternate storage:", altData.length);
+                media = altData.map(file => {
+                  const publicUrl = supabase.storage
+                    .from('lovable-uploads')
+                    .getPublicUrl(`menu-items/${file.name}`).data.publicUrl;
+                    
+                  return {
+                    url: publicUrl,
+                    type: file.metadata?.mimetype?.startsWith('video/') ? 'video' : 'image'
+                  };
+                });
+              }
             }
           } catch (storageErr) {
             console.error('Error accessing storage:', storageErr);
           }
           
-          // Set a default empty string for type since it doesn't exist in the database
+          console.log(`Menu item ${item.id} has ${media.length} media items`);
+          
           return {
             id: item.id,
             name: item.name,
             description: item.description || '',
             price: item.price,
-            type: '', // Set a default empty string since type doesn't exist in the database
+            type: '', // This doesn't exist in the database schema
             ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : [],
             media: media || []
           } as MenuItem;
@@ -123,7 +172,7 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
 
   if (isLoading) {
     return (
-      <div className="bg-white/90 h-full p-4 overflow-y-auto">
+      <div className="bg-white h-full p-4 overflow-y-auto">
         <div className="animate-pulse space-y-2">
           <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
           {[1, 2, 3].map((i) => (
@@ -139,7 +188,7 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
 
   if (menuItems.length === 0) {
     return (
-      <div className="bg-white/90 h-full p-4 overflow-y-auto">
+      <div className="bg-white h-full p-4 overflow-y-auto">
         <h2 className="text-xl font-semibold mb-4">Menu</h2>
         <p className="text-gray-600">No menu items available for this restaurant.</p>
       </div>
@@ -147,7 +196,7 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
   }
 
   return (
-    <div className="bg-white/90 h-full p-4 overflow-y-auto">
+    <div className="bg-white h-full p-4 overflow-y-auto">
       <h2 className="text-xl font-semibold mb-4">Menu</h2>
       <div className="space-y-4">
         {menuItems.map((item) => (

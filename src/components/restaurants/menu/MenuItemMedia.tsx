@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { MediaItem } from './MenuItemMediaUploader';
-import { Image, Video } from 'lucide-react';
+import { Image, Video, X } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 interface MenuItemMediaProps {
   media?: MediaItem[];
@@ -9,13 +10,27 @@ interface MenuItemMediaProps {
 }
 
 const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "" }) => {
+  const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+
   if (!media || media.length === 0) return null;
+  
+  const handleMediaClick = (item: MediaItem) => {
+    setSelectedMedia(item);
+  };
+
+  const handleCloseDialog = () => {
+    setSelectedMedia(null);
+  };
   
   return (
     <div className={`mt-2 ${className}`}>
       <div className="flex overflow-x-auto space-x-2 pb-2">
         {media.map((item, index) => (
-          <div key={index} className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden bg-gray-100 relative">
+          <div 
+            key={index} 
+            className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden bg-gray-100 relative cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => handleMediaClick(item)}
+          >
             {item.url && item.type === 'image' ? (
               <img 
                 src={item.url} 
@@ -40,6 +55,35 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "" }) 
           </div>
         ))}
       </div>
+
+      {/* Full-size Media Dialog */}
+      <Dialog open={!!selectedMedia} onOpenChange={handleCloseDialog}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] p-0 overflow-hidden bg-white">
+          <div className="relative">
+            {selectedMedia?.type === 'image' && selectedMedia.url && (
+              <img 
+                src={selectedMedia.url} 
+                alt="Menu item full view" 
+                className="w-full max-h-[80vh] object-contain"
+              />
+            )}
+            {selectedMedia?.type === 'video' && selectedMedia.url && (
+              <video 
+                src={selectedMedia.url}
+                controls
+                className="w-full max-h-[80vh] object-contain"
+                autoPlay
+              />
+            )}
+            <button 
+              className="absolute top-2 right-2 bg-white/80 rounded-full p-1 hover:bg-white"
+              onClick={handleCloseDialog}
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
