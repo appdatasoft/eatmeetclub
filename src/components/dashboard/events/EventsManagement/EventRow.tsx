@@ -135,7 +135,10 @@ const EventRow = ({ event, onRefresh }: EventRowProps) => {
               checked={event.published}
               onCheckedChange={() => handleTogglePublish(event)}
               disabled={processingEventId === event.id}
-              className={event.published ? "data-[state=checked]:bg-green-600" : ""}
+              className={event.published 
+                ? "data-[state=checked]:bg-green-600" 
+                : "data-[state=unchecked]:bg-gray-300"
+              }
             />
             <span className="text-xs font-medium">
               {event.published ? "Published" : "Draft"}
