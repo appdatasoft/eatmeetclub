@@ -7,13 +7,15 @@ import FeaturedEvents from "@/components/home/FeaturedEvents";
 import Testimonials from "@/components/home/Testimonials";
 import CallToAction from "@/components/home/CallToAction";
 import { useEditableContent } from "@/components/editor/EditableContentProvider";
+import EditModeToggle from "@/components/editor/EditModeToggle";
 
 const Index = () => {
-  const { isLoading } = useEditableContent();
+  const { isLoading, canEdit } = useEditableContent();
   
   return (
     <div className="flex flex-col min-h-screen w-full">
       <Navbar />
+      {canEdit && <EditModeToggle />}
       <main className="flex-grow w-full">
         {isLoading ? (
           <div className="h-[500px] md:h-[700px] flex items-center justify-center bg-gray-200">

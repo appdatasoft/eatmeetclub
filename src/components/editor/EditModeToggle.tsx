@@ -9,8 +9,8 @@ export const EditModeToggle = () => {
   if (!canEdit) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
-      <div className="flex items-center">
+    <div className="w-full bg-gray-50 py-2 border-b border-gray-200">
+      <div className="container-custom flex justify-end items-center">
         {editModeEnabled && <span className="mr-3 text-gray-700 font-medium">Admin Tools:</span>}
         <button
           onClick={toggleEditMode}

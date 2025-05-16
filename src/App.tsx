@@ -24,7 +24,6 @@ import Signup from "@/pages/Signup";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { EditableContentProvider } from "@/components/editor/EditableContentProvider";
-import EditModeToggle from "@/components/editor/EditModeToggle";
 
 function App() {
   // Validate Supabase connection on app startup
@@ -82,7 +81,6 @@ function App() {
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-        <EditModeToggle />
         <Toaster />
       </EditableContentProvider>
     </BrowserRouter>
