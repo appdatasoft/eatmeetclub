@@ -33,28 +33,34 @@ const EventHeader: React.FC<EventHeaderProps> = ({
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
       
-      <div className="absolute top-4 right-4 flex gap-2">
-        {isOwner && (
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            className="bg-white/90 hover:bg-white text-gray-800 z-10"
-            onClick={onEditCover}
-          >
-            <Edit className="h-4 w-4 mr-1" /> Edit Cover
-          </Button>
-        )}
+      <div className="absolute flex gap-2">
+        {/* Edit Cover button moved to left side */}
+        <div className="absolute top-4 left-4 flex gap-2">
+          {isOwner && (
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              className="bg-white/90 hover:bg-white text-gray-800 z-10"
+              onClick={onEditCover}
+            >
+              <Edit className="h-4 w-4 mr-1" /> Edit Cover
+            </Button>
+          )}
+        </div>
         
-        {restaurantId && (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="bg-white/90 hover:bg-white text-gray-800"
-            onClick={() => setShowMenu(!showMenu)}
-          >
-            <Book className="h-4 w-4 mr-1" /> {showMenu ? "Hide Menu" : "View Menu"}
-          </Button>
-        )}
+        {/* View Menu button stays on the right */}
+        <div className="absolute top-4 right-4">
+          {restaurantId && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="bg-white/90 hover:bg-white text-gray-800"
+              onClick={() => setShowMenu(!showMenu)}
+            >
+              <Book className="h-4 w-4 mr-1" /> {showMenu ? "Hide Menu" : "View Menu"}
+            </Button>
+          )}
+        </div>
       </div>
       
       <div className="absolute bottom-0 left-0 p-6 text-white">
