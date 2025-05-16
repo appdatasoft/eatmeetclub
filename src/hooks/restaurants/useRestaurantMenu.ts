@@ -13,7 +13,7 @@ type RestaurantMenuItem = {
   name: string;
   description: string | null;
   price: number;
-  type: string;
+  type?: string;  // Made optional since it may not exist in DB yet
   created_at: string;
   updated_at: string;
   ingredients?: { name: string }[];
@@ -157,92 +157,102 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
       
       // If we're editing an existing item
       if (currentItem) {
-        // Update the menu item
-        const { error: updateError } = await supabase
-          .from('restaurant_menu_items')
-          .update({
-            name: values.name,
-            description: values.description,
-            price: values.price,
-            type: values.type
-          })
-          .eq('id', currentItem.id) as { error: any };
+        try {
+          // Update the menu item omitting type field since it doesn't exist in the database
+          const { error: updateError } = await supabase
+            .from('restaurant_menu_items')
+            .update({
+              name: values.name,
+              description: values.description,
+              price: values.price,
+              // We're not including type here as it's causing the error
+            })
+            .eq('id', currentItem.id);
           
-        if (updateError) throw updateError;
-        
-        // First delete all existing ingredients
-        const { error: deleteIngredientsError } = await supabase
-          .from('restaurant_menu_ingredients')
-          .delete()
-          .eq('menu_item_id', currentItem.id) as { error: any };
+          if (updateError) throw updateError;
           
-        if (deleteIngredientsError) throw deleteIngredientsError;
-        
-        // Then add the new ingredients
-        if (filteredIngredients.length > 0) {
-          const ingredientsToInsert = filteredIngredients.map(name => ({
-            menu_item_id: currentItem.id,
-            name,
-            restaurant_id: restaurantId
-          }));
-          
-          const { error: insertIngredientsError } = await supabase
+          // First delete all existing ingredients
+          const { error: deleteIngredientsError } = await supabase
             .from('restaurant_menu_ingredients')
-            .insert(ingredientsToInsert) as { error: any };
+            .delete()
+            .eq('menu_item_id', currentItem.id);
             
-          if (insertIngredientsError) throw insertIngredientsError;
+          if (deleteIngredientsError) throw deleteIngredientsError;
+          
+          // Then add the new ingredients
+          if (filteredIngredients.length > 0) {
+            const ingredientsToInsert = filteredIngredients.map(name => ({
+              menu_item_id: currentItem.id,
+              name,
+              restaurant_id: restaurantId
+            }));
+            
+            const { error: insertIngredientsError } = await supabase
+              .from('restaurant_menu_ingredients')
+              .insert(ingredientsToInsert);
+              
+            if (insertIngredientsError) throw insertIngredientsError;
+          }
+          
+          // Update the UI - still include type in the UI even if not in DB
+          setMenuItems(prev => 
+            prev.map(item => 
+              item.id === currentItem.id 
+                ? { ...item, name: values.name, description: values.description || '', price: values.price, type: values.type, ingredients: filteredIngredients } 
+                : item
+            )
+          );
+        } catch (error: any) {
+          console.error('Error updating menu item:', error);
+          throw error;
         }
-        
-        // Update the UI
-        setMenuItems(prev => 
-          prev.map(item => 
-            item.id === currentItem.id 
-              ? { ...item, ...values, ingredients: filteredIngredients } 
-              : item
-          )
-        );
       } else {
-        // Create a new menu item
-        const { data: newItem, error: createError } = await supabase
-          .from('restaurant_menu_items')
-          .insert({
-            restaurant_id: restaurantId,
-            name: values.name,
-            description: values.description || null,
-            price: values.price,
-            type: values.type
-          })
-          .select()
-          .single() as { data: RestaurantMenuItem | null; error: any };
-          
-        if (createError) throw createError;
-        
-        if (newItem && filteredIngredients.length > 0) {
-          const ingredientsToInsert = filteredIngredients.map(name => ({
-            menu_item_id: newItem.id,
-            name,
-            restaurant_id: restaurantId
-          }));
-          
-          const { error: insertIngredientsError } = await supabase
-            .from('restaurant_menu_ingredients')
-            .insert(ingredientsToInsert) as { error: any };
+        try {
+          // Create a new menu item omitting type field
+          const { data: newItem, error: createError } = await supabase
+            .from('restaurant_menu_items')
+            .insert({
+              restaurant_id: restaurantId,
+              name: values.name,
+              description: values.description || null,
+              price: values.price,
+              // We're not including type here as it's causing the error
+            })
+            .select()
+            .single();
             
-          if (insertIngredientsError) throw insertIngredientsError;
-        }
-        
-        if (newItem) {
-          // Update the UI
-          const newMenuItem: MenuItem = {
-            id: newItem.id,
-            name: values.name,
-            description: values.description || '',
-            price: values.price,
-            type: values.type,
-            ingredients: filteredIngredients
-          };
+          if (createError) throw createError;
           
-          setMenuItems(prev => [...prev, newMenuItem]);
+          if (newItem && filteredIngredients.length > 0) {
+            const ingredientsToInsert = filteredIngredients.map(name => ({
+              menu_item_id: newItem.id,
+              name,
+              restaurant_id: restaurantId
+            }));
+            
+            const { error: insertIngredientsError } = await supabase
+              .from('restaurant_menu_ingredients')
+              .insert(ingredientsToInsert);
+              
+            if (insertIngredientsError) throw insertIngredientsError;
+          }
+          
+          if (newItem) {
+            // Update the UI - still include type in the UI even if not in DB
+            const newMenuItem: MenuItem = {
+              id: newItem.id,
+              name: values.name,
+              description: values.description || '',
+              price: values.price,
+              type: values.type, // Keep type for UI purposes
+              ingredients: filteredIngredients
+            };
+            
+            setMenuItems(prev => [...prev, newMenuItem]);
+          }
+        } catch (error: any) {
+          console.error('Error creating menu item:', error);
+          throw error;
         }
       }
       
