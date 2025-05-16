@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { MediaItem } from './MenuItemMediaUploader';
 import { Image, Video, X } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription } from '@/components/ui/dialog';
 
 interface MenuItemMediaProps {
   media?: MediaItem[];
@@ -58,7 +58,10 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "" }) 
 
       {/* Full-size Media Dialog */}
       <Dialog open={!!selectedMedia} onOpenChange={handleCloseDialog}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] p-0 overflow-hidden bg-white">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] p-0 overflow-hidden bg-white border border-gray-200">
+          <DialogDescription className="sr-only">
+            Full view of menu item image or video
+          </DialogDescription>
           <div className="relative">
             {selectedMedia?.type === 'image' && selectedMedia.url && (
               <img 
@@ -76,7 +79,7 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "" }) 
               />
             )}
             <button 
-              className="absolute top-2 right-2 bg-white/80 rounded-full p-1 hover:bg-white"
+              className="absolute top-2 right-2 bg-white rounded-full p-1 hover:bg-gray-100"
               onClick={handleCloseDialog}
             >
               <X className="h-5 w-5" />
