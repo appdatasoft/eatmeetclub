@@ -5,11 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { X, Plus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export interface MenuItemFormValues {
   name: string;
   description: string;
   price: number;
+  type: string;
   ingredients: string[];
 }
 
@@ -19,6 +21,15 @@ interface MenuItemFormProps {
   isLoading?: boolean;
   onCancel?: () => void;
 }
+
+const MENU_ITEM_TYPES = [
+  "Appetizer",
+  "Main Course",
+  "Side Dish",
+  "Dessert",
+  "Beverage",
+  "Special"
+];
 
 const MenuItemForm: React.FC<MenuItemFormProps> = ({ 
   initialValues, 
@@ -30,6 +41,7 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
     name: '',
     description: '',
     price: 0,
+    type: '',
     ingredients: ['']
   });
 
@@ -40,6 +52,13 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
     setFormValues(prev => ({
       ...prev,
       [name]: name === 'price' ? parseFloat(value) || 0 : value
+    }));
+  };
+
+  const handleTypeChange = (value: string) => {
+    setFormValues(prev => ({
+      ...prev,
+      type: value
     }));
   };
 
@@ -85,6 +104,26 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
           required
           className="bg-white border-gray-300"
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="type" className="text-gray-900">Type*</Label>
+        <Select
+          value={formValues.type}
+          onValueChange={handleTypeChange}
+          required
+        >
+          <SelectTrigger className="bg-white border-gray-300">
+            <SelectValue placeholder="Select a type" />
+          </SelectTrigger>
+          <SelectContent>
+            {MENU_ITEM_TYPES.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">

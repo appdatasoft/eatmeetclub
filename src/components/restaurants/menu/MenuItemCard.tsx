@@ -3,13 +3,14 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash } from 'lucide-react';
+import { Edit, Trash2 } from 'lucide-react';
 
 export interface MenuItem {
   id: string;
   name: string;
   description: string;
   price: number;
+  type: string;
   ingredients: string[];
 }
 
@@ -24,7 +25,14 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onEdit, onDelete }) =
     <Card className="w-full">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
-          <CardTitle className="mr-2">{item.name}</CardTitle>
+          <div>
+            <CardTitle className="mr-2">{item.name}</CardTitle>
+            {item.type && (
+              <Badge variant="outline" className="text-xs mt-1">
+                {item.type}
+              </Badge>
+            )}
+          </div>
           <div className="text-base font-bold text-primary">${item.price.toFixed(2)}</div>
         </div>
       </CardHeader>
@@ -47,7 +55,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onEdit, onDelete }) =
           <Edit className="h-4 w-4" />
         </Button>
         <Button variant="ghost" size="sm" onClick={() => onDelete(item.id)}>
-          <Trash className="h-4 w-4 text-destructive" />
+          <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
       </CardFooter>
     </Card>

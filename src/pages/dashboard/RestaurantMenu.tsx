@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +18,7 @@ type RestaurantMenuItem = {
   name: string;
   description: string | null;
   price: number;
+  type: string;
   created_at: string;
   updated_at: string;
   ingredients?: { name: string }[];
@@ -29,6 +31,9 @@ type MenuIngredient = {
   name: string;
   created_at: string;
 }
+
+// Update your database schema to include the new type field
+// ALTER TABLE restaurant_menu_items ADD COLUMN type TEXT;
 
 const RestaurantMenu = () => {
   const { id } = useParams<{ id: string }>();
@@ -71,7 +76,8 @@ const RestaurantMenu = () => {
         // Fetch menu items using custom typing
         const { data: menuData, error: menuError } = await supabase
           .from('restaurant_menu_items')
-          .select('*') as { data: RestaurantMenuItem[] | null; error: any };
+          .select('*')
+          .eq('restaurant_id', id) as { data: RestaurantMenuItem[] | null; error: any };
           
         if (menuError) throw menuError;
         
@@ -81,7 +87,8 @@ const RestaurantMenu = () => {
             // Fetch ingredients for this menu item
             const { data: ingredientsData, error: ingredientsError } = await supabase
               .from('restaurant_menu_ingredients')
-              .select('name') as { data: { name: string }[] | null; error: any };
+              .select('name')
+              .eq('menu_item_id', item.id) as { data: { name: string }[] | null; error: any };
               
             if (ingredientsError) throw ingredientsError;
             
@@ -91,6 +98,7 @@ const RestaurantMenu = () => {
               name: item.name,
               description: item.description || '',
               price: item.price,
+              type: item.type || '',
               ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : []
             } as MenuItem;
           }));
@@ -168,7 +176,8 @@ const RestaurantMenu = () => {
           .update({
             name: values.name,
             description: values.description,
-            price: values.price
+            price: values.price,
+            type: values.type
           })
           .eq('id', currentItem.id) as { error: any };
           
@@ -213,7 +222,8 @@ const RestaurantMenu = () => {
             restaurant_id: id,
             name: values.name,
             description: values.description || null,
-            price: values.price
+            price: values.price,
+            type: values.type
           })
           .select()
           .single() as { data: RestaurantMenuItem | null; error: any };
@@ -241,6 +251,7 @@ const RestaurantMenu = () => {
             name: values.name,
             description: values.description || '',
             price: values.price,
+            type: values.type,
             ingredients: filteredIngredients
           };
           
@@ -372,7 +383,7 @@ const RestaurantMenu = () => {
             initialValues={currentItem || undefined}
             onSubmit={handleSaveItem}
             isLoading={isSaving}
-            onCancel={handleDialogClose}
+            onCancel={() => setIsDialogOpen(false)}
           />
         </DialogContent>
       </Dialog>
