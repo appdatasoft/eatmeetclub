@@ -83,7 +83,7 @@ export const useMenuItemsFetch = (restaurantId: string | undefined, userId: stri
               name: item.name,
               description: item.description || '',
               price: item.price,
-              type: item.type as string || '',
+              type: item.type || '',
               ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : [],
               media: mediaItems
             } as MenuItem;
