@@ -205,32 +205,7 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
               {/* Thumbnail */}
               {item.media && item.media.length > 0 && (
                 <div className="mr-3">
-                  <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100">
-                    {item.media[0].type === 'image' && (
-                      <img 
-                        src={item.media[0].url} 
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                    {item.media[0].type === 'video' && (
-                      <div className="relative w-full h-full">
-                        <video 
-                          src={item.media[0].url}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                          <svg 
-                            xmlns="http://www.w3.org/2000/svg" 
-                            className="h-5 w-5 text-white"
-                            viewBox="0 0 24 24"
-                          >
-                            <path fill="currentColor" d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18a1 1 0 0 0 0-1.68L9.54 5.98A.998.998 0 0 0 8 6.82z"/>
-                          </svg>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <MenuItemMedia media={item.media} className="mt-0" thumbnailOnly />
                 </div>
               )}
               
