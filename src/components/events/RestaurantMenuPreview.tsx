@@ -104,11 +104,12 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
               const altPath = `menu-items/${item.id}-`;
               console.log("Checking alternate storage path:", altPath);
               
+              // Fix: Remove the 'prefix' property which isn't in the SearchOptions type
               const { data: altData, error: altError } = await supabase
                 .storage
                 .from('lovable-uploads')
                 .list('menu-items', {
-                  prefix: `${item.id}-`
+                  search: `${item.id}-`
                 });
                 
               if (altError) {
