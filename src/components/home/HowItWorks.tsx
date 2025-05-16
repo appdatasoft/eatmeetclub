@@ -29,13 +29,13 @@ const HowItWorks = () => {
               id="step-1-title"
               tag="h3"
               className="text-xl font-semibold mb-3"
-              defaultContent="Find a Game Night"
+              defaultContent="Buy Ticket"
             />
             <EditableText
               id="step-1-content"
               tag="p"
               className="text-gray-600"
-              defaultContent="Discover food & game events by location, cuisine type, or game preferences. See who's coming and what's on the menu."
+              defaultContent="Purchase your ticket to upcoming food & game events. Each ticket includes access to the venue, delicious food, and exciting games."
             />
           </div>
           
@@ -47,13 +47,13 @@ const HowItWorks = () => {
               id="step-2-title"
               tag="h3"
               className="text-xl font-semibold mb-3"
-              defaultContent="Join the Table"
+              defaultContent="Play Game"
             />
             <EditableText
               id="step-2-content"
               tag="p"
               className="text-gray-600"
-              defaultContent="Reserve your spot with a simple booking. Your seat includes food, games, and a chance to meet new friends with similar interests."
+              defaultContent="Enjoy an evening of food and interactive gameplay. Experience various games while connecting with like-minded people in a relaxed atmosphere."
             />
           </div>
           
@@ -65,13 +65,13 @@ const HowItWorks = () => {
               id="step-3-title"
               tag="h3"
               className="text-xl font-semibold mb-3"
-              defaultContent="Play & Connect"
+              defaultContent="Build Local Community"
             />
             <EditableText
               id="step-3-content"
               tag="p"
               className="text-gray-600"
-              defaultContent="Enjoy delicious food, play engaging games, and forge meaningful connections that continue long after the last move is made."
+              defaultContent="Create lasting connections in your neighborhood. Turn strangers into friends and establish a vibrant local community centered around shared interests."
             />
           </div>
         </div>
