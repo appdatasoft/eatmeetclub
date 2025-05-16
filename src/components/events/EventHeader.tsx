@@ -33,27 +33,29 @@ const EventHeader: React.FC<EventHeaderProps> = ({
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
       
-      {isOwner && (
-        <Button 
-          variant="secondary" 
-          size="sm" 
-          className="absolute top-4 right-4 bg-white/80 hover:bg-white text-gray-800"
-          onClick={onEditCover}
-        >
-          <Edit className="h-4 w-4 mr-1" /> Edit Cover
-        </Button>
-      )}
-      
-      {restaurantId && (
-        <Button
-          variant="secondary"
-          size="sm"
-          className="absolute top-4 right-20 bg-white/80 hover:bg-white text-gray-800"
-          onClick={() => setShowMenu(!showMenu)}
-        >
-          <Book className="h-4 w-4 mr-1" /> {showMenu ? "Hide Menu" : "View Menu"}
-        </Button>
-      )}
+      <div className="absolute top-4 right-4 flex gap-2">
+        {isOwner && (
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className="bg-white/90 hover:bg-white text-gray-800 z-10"
+            onClick={onEditCover}
+          >
+            <Edit className="h-4 w-4 mr-1" /> Edit Cover
+          </Button>
+        )}
+        
+        {restaurantId && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="bg-white/90 hover:bg-white text-gray-800"
+            onClick={() => setShowMenu(!showMenu)}
+          >
+            <Book className="h-4 w-4 mr-1" /> {showMenu ? "Hide Menu" : "View Menu"}
+          </Button>
+        )}
+      </div>
       
       <div className="absolute bottom-0 left-0 p-6 text-white">
         <h1 className="text-3xl md:text-4xl font-bold mb-1">{title}</h1>
@@ -76,7 +78,7 @@ const EventHeader: React.FC<EventHeaderProps> = ({
             variant="ghost" 
             size="sm"
             onClick={() => setShowMenu(false)}
-            className="absolute top-2 right-2 rounded-full p-1 bg-white/80 hover:bg-white text-gray-800"
+            className="absolute top-2 right-2 rounded-full p-1 bg-white/90 hover:bg-white text-gray-800"
           >
             <X className="h-4 w-4" />
           </Button>
