@@ -1,10 +1,10 @@
 
 import { useState } from "react";
-import { Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Event } from "./types";
+import { Loader2 } from "lucide-react";
 
 interface EventPublishControlsProps {
   event: Event;
@@ -63,22 +63,21 @@ const EventPublishControls = ({ event, onRefresh }: EventPublishControlsProps) =
   };
 
   return (
-    <Button
-      size="icon"
-      variant={event.published ? "outline" : "default"}
-      onClick={() => handlePublishToggle(event)}
-      disabled={publishingEventId === event.id}
-      className={event.published ? "border-orange-200 text-orange-700 hover:bg-orange-50 h-8 w-8" : "bg-green-600 hover:bg-green-700 h-8 w-8"}
-      title={event.published ? "Unpublish Event" : "Publish Event"}
-    >
-      {publishingEventId === event.id ? (
-        <div className="h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin"></div>
-      ) : event.published ? (
-        <X className="h-4 w-4" />
-      ) : (
-        <Check className="h-4 w-4" />
+    <div className="relative">
+      {publishingEventId === event.id && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-10">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
       )}
-    </Button>
+      
+      <Switch
+        checked={event.published}
+        onCheckedChange={() => handlePublishToggle(event)}
+        disabled={publishingEventId === event.id || (event.payment_status !== 'completed' && !event.published)}
+        className={event.published ? "data-[state=checked]:bg-green-600" : ""}
+        title={event.published ? "Unpublish Event" : "Publish Event"}
+      />
+    </div>
   );
 };
 

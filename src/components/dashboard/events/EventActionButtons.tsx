@@ -15,7 +15,7 @@ const EventActionButtons = ({ event, onRefresh }: EventActionButtonsProps) => {
   return (
     <div>
       {event.payment_status === 'completed' ? (
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
           <EventPublishControls event={event} onRefresh={onRefresh} />
           
           <Button

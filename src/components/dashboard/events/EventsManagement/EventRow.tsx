@@ -8,6 +8,8 @@ import { Check, X, Edit, Eye, Trash2, AlertTriangle, Loader2 } from "lucide-reac
 import { TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Toggle } from "@/components/ui/toggle";
+import { Switch } from "@/components/ui/switch";
 import { Event } from "./types";
 
 interface EventRowProps {
@@ -169,21 +171,15 @@ const EventRow = ({ event, onRefresh }: EventRowProps) => {
               <Trash2 className="h-4 w-4 text-red-500" />
             )}
           </Button>
-          <Button
-            size="sm"
-            variant={event.published ? "outline" : "default"}
-            className={event.published ? "border-orange-200 text-orange-700 hover:bg-orange-50" : ""}
-            onClick={() => handleTogglePublish(event)}
-            disabled={processingEventId === event.id}
-          >
-            {processingEventId === event.id ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : event.published ? (
-              <X className="h-4 w-4" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-          </Button>
+          
+          <div className="flex items-center" title={event.published ? "Unpublish Event" : "Publish Event"}>
+            <Switch
+              checked={event.published}
+              onCheckedChange={() => handleTogglePublish(event)}
+              disabled={processingEventId === event.id || (event.payment_status !== 'completed' && !event.published)}
+              className={event.published ? "bg-green-600 data-[state=checked]:bg-green-600" : ""}
+            />
+          </div>
         </div>
       </TableCell>
     </TableRow>
