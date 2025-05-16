@@ -83,7 +83,7 @@ export const useMenuItemsFetch = (restaurantId: string | undefined, userId: stri
               name: item.name,
               description: item.description || '',
               price: item.price,
-              type: item.type || '',
+              type: '', // Set a default empty string since type doesn't exist in the database
               ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : [],
               media: mediaItems
             } as MenuItem;
