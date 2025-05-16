@@ -54,36 +54,38 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuPreviewProps> = ({ restauran
             .select('name')
             .eq('menu_item_id', item.id);
             
-          // Use RPC call to get media items from Supabase
-          const { data: mediaData } = await supabase.rpc('get_menu_item_media', {
-            item_id: item.id
-          }).catch(() => ({ data: [] }));
-          
-          // If RPC doesn't exist, use standard query
+          // Try to get media directly from storage
           let media: MediaItem[] = [];
-          if (!mediaData || mediaData.length === 0) {
-            // Try to get media directly from storage if available
+          try {
             const { data: storageData } = await supabase
               .storage
               .from('lovable-uploads')
               .list(`menu-items/${restaurantId}/${item.id}`);
               
-            if (storageData) {
-              media = storageData.map(file => ({
-                url: supabase.storage.from('lovable-uploads').getPublicUrl(`menu-items/${restaurantId}/${item.id}/${file.name}`).data.publicUrl,
-                type: file.metadata?.mimetype?.startsWith('video/') ? 'video' : 'image'
-              }));
+            if (storageData && storageData.length > 0) {
+              media = storageData.map(file => {
+                const publicUrl = supabase.storage
+                  .from('lovable-uploads')
+                  .getPublicUrl(`menu-items/${restaurantId}/${item.id}/${file.name}`).data.publicUrl;
+                  
+                return {
+                  url: publicUrl,
+                  type: file.metadata?.mimetype?.startsWith('video/') ? 'video' : 'image'
+                };
+              });
             }
-          } else {
-            media = mediaData as MediaItem[];
+          } catch (storageErr) {
+            console.error('Error accessing storage:', storageErr);
           }
+          
+          const menuItemType = (item as any).type || 'Other';
           
           return {
             id: item.id,
             name: item.name,
             description: item.description || '',
             price: item.price,
-            type: item.type || 'Other',
+            type: menuItemType,
             ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : [],
             media: media || []
           } as MenuItem;
