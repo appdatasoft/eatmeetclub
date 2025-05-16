@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Edit, Book } from "lucide-react";
+import { Edit, Book, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import RestaurantMenuPreview from "./RestaurantMenuPreview";
@@ -72,6 +72,14 @@ const EventHeader: React.FC<EventHeaderProps> = ({
       {showMenu && restaurantId && (
         <div className="absolute top-0 right-0 w-1/2 h-full">
           <RestaurantMenuPreview restaurantId={restaurantId} />
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => setShowMenu(false)}
+            className="absolute top-2 right-2 rounded-full p-1 bg-white/80 hover:bg-white text-gray-800"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       )}
     </div>
