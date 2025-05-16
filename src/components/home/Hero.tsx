@@ -4,6 +4,7 @@ import { Pencil } from "lucide-react";
 import { useEditableContent } from "@/components/editor/EditableContentProvider";
 import BackgroundImageEditor from "@/components/editor/BackgroundImageEditor";
 import HeroContent from "./HeroContent";
+import DiningScene from "@/assets/dining-scene.svg";
 
 const Hero = () => {
   const { contentMap, editModeEnabled, handleSave, canEdit } = useEditableContent();
@@ -33,9 +34,11 @@ const Hero = () => {
 
   return (
     <div 
-      className={`w-full py-12 md:py-24 relative h-[500px] md:h-[700px] bg-cover bg-center ${editModeEnabled ? 'group' : ''}`}
+      className="w-full py-12 md:py-24 relative bg-[#703E1E]/10"
       style={{ 
-        backgroundImage: `url('${backgroundImage}')`
+        backgroundImage: editModeEnabled ? `url('${backgroundImage}')` : 'none',
+        backgroundOpacity: 0.1,
+        backgroundBlendMode: "multiply"
       }}
     >
       {/* Background image edit button for admins */}
@@ -56,12 +59,24 @@ const Hero = () => {
         currentImage={backgroundImage}
         onSave={handleSaveBackground}
       />
-
-      {/* Overlay for better text readability */}
-      <div className="absolute inset-0 bg-black bg-opacity-50"></div>
       
-      <div className="container-custom relative z-10 h-full flex items-center justify-center">
-        <HeroContent />
+      <div className="container-custom relative z-10 mx-auto">
+        <div className="flex flex-col-reverse md:flex-row items-center justify-between gap-8">
+          {/* Left Column - Content */}
+          <div className="w-full md:w-1/2">
+            <HeroContent />
+          </div>
+          
+          {/* Right Column - Image */}
+          <div className="w-full md:w-1/2 flex justify-center">
+            <img 
+              src={contentMap["hero-image"]?.content || DiningScene} 
+              alt="People dining together" 
+              className="max-w-full h-auto rounded-lg shadow-xl"
+              style={{ maxHeight: '500px' }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

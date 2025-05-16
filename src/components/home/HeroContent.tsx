@@ -14,19 +14,19 @@ const HeroContent = () => {
   };
 
   return (
-    <div className="flex flex-col items-center text-center w-full">
+    <div className="flex flex-col text-left w-full">
       <EditableText
         id="hero-title"
         tag="h1"
-        className="text-3xl md:text-5xl font-bold text-white mb-3"
-        defaultContent="Link Up Over Food & Conversation"
+        className="text-3xl md:text-5xl font-bold text-[#703E1E] mb-3"
+        defaultContent="Link Up Over Food & Games"
       />
       
       <EditableText
         id="hero-description"
         tag="p"
-        className="text-white text-xl md:text-2xl mb-8 max-w-3xl"
-        defaultContent="Join us for fun social dining where strangers become friends — while helping local businesses and building vibrant local communities."
+        className="text-[#703E1E] text-xl md:text-2xl mb-8"
+        defaultContent="Where strangers become friends over great food and good vibes."
       />
       
       <EditableText

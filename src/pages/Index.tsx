@@ -18,7 +18,7 @@ const Index = () => {
       {canEdit && <EditModeToggle />}
       <main className="flex-grow w-full">
         {isLoading ? (
-          <div className="h-[500px] md:h-[700px] flex items-center justify-center bg-gray-200">
+          <div className="py-12 md:py-24 flex items-center justify-center bg-gray-200">
             <p>Loading content...</p>
           </div>
         ) : (
