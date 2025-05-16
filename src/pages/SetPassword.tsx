@@ -2,56 +2,116 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import MainLayout from "@/components/layout/MainLayout";
+import { PasswordForm, PasswordFormValues, PasswordSuccessMessage } from "@/components/auth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const SetPasswordPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [password, setPassword] = useState("");
-  const [isSetting, setIsSetting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [isSettingPassword, setIsSettingPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const accessToken = searchParams.get("access_token");
-    const refreshToken = searchParams.get("refresh_token");
-    if (accessToken && refreshToken) {
-      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-    }
+    // Set session from URL parameters when component mounts
+    const setSessionFromUrl = async () => {
+      const accessToken = searchParams.get("access_token");
+      const refreshToken = searchParams.get("refresh_token");
+      const token = searchParams.get("token");
+      const type = searchParams.get("type");
+      
+      console.log("URL parameters:", { 
+        hasAccessToken: !!accessToken, 
+        hasRefreshToken: !!refreshToken,
+        hasToken: !!token,
+        type
+      });
+      
+      // For email confirmation links
+      if (accessToken && refreshToken) {
+        console.log("Setting session from access/refresh tokens");
+        await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        return true;
+      }
+      
+      // For password recovery links
+      if (token && type === "recovery") {
+        console.log("Received recovery token");
+        return true;
+      }
+      
+      return false;
+    };
+    
+    setSessionFromUrl().then(validSession => {
+      if (!validSession) {
+        setError("Invalid or expired password reset link. Please request a new one.");
+      }
+    });
   }, [searchParams]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSetting(true);
-    setMessage(null);
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) {
-      setMessage(error.message);
-    } else {
-      setMessage("Password set successfully! Redirecting to login...");
-      setTimeout(() => navigate("/login"), 3000);
+  const handleSetPassword = async (values: PasswordFormValues) => {
+    setIsSettingPassword(true);
+    setError(null);
+    
+    try {
+      console.log("Updating password");
+      const { error } = await supabase.auth.updateUser({ password: values.password });
+      
+      if (error) {
+        throw error;
+      }
+      
+      console.log("Password updated successfully");
+      setIsSuccess(true);
+      toast({
+        title: "Password set successfully",
+        description: "You can now log in with your new password.",
+      });
+    } catch (err: any) {
+      console.error("Error setting password:", err);
+      setError(err.message || "Failed to set password. Please try again.");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to set password. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSettingPassword(false);
     }
-    setIsSetting(false);
   };
 
   return (
     <MainLayout>
-      <div className="p-6 max-w-md mx-auto">
-        <h2 className="text-xl font-bold mb-4">Set Your Password</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            type="password"
-            placeholder="New password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <Button type="submit" disabled={isSetting} className="w-full">
-            {isSetting ? "Setting..." : "Save Password"}
-          </Button>
-        </form>
-        {message && <p className="mt-4 text-center text-sm text-gray-600">{message}</p>}
+      <div className="flex min-h-[70vh] py-12">
+        <div className="m-auto w-full max-w-md p-8 bg-white rounded-xl shadow-lg">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold">Set New Password</h1>
+            <p className="text-gray-600 mt-2">
+              Please create a secure password for your account.
+            </p>
+          </div>
+
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {isSuccess ? (
+            <PasswordSuccessMessage />
+          ) : (
+            <PasswordForm
+              onSubmit={handleSetPassword}
+              isLoading={isSettingPassword}
+            />
+          )}
+        </div>
       </div>
     </MainLayout>
   );
