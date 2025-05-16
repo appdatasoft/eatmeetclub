@@ -1,8 +1,7 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { PasswordRecoveryHandler } from "@/components/auth";
 import MainLayout from "@/components/layout/MainLayout";
-import { Alert, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 

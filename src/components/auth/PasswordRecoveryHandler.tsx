@@ -23,6 +23,7 @@ const emailSchema = z.object({
 const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userEmail }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
   
   const form = useForm({
@@ -34,6 +35,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
 
   const handleSendPasswordSetupEmail = async (formData: { email: string }) => {
     setIsSubmitting(true);
+    setErrorMessage(null);
     const email = formData.email || userEmail;
     
     if (!email) {
@@ -47,20 +49,25 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
     }
     
     try {
+      console.log("Sending password reset email to:", email);
+      
       // Use password recovery method for simplicity, since it doesn't require session
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error, data } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/set-password`,
       });
+      
+      console.log("Reset password response:", { error, data });
       
       if (error) throw error;
       
       setIsSuccess(true);
       toast({
         title: "Reset Link Sent",
-        description: `We've sent a password reset link to ${email}. Please check your inbox.`,
+        description: `We've sent a password reset link to ${email}. Please check your inbox (and spam folder).`,
       });
     } catch (error: any) {
       console.error("Error sending password reset email:", error);
+      setErrorMessage(error.message || "Failed to send reset email. Please try again later.");
       toast({
         title: "Error",
         description: error.message || "Failed to send reset email. Please try again later.",
@@ -77,7 +84,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
         <CheckCircle className="h-4 w-4 text-green-500" />
         <AlertDescription className="text-green-800">
           We've sent a password reset link to <strong>{userEmail || form.getValues().email}</strong>. 
-          Please check your inbox and follow the instructions to set your password.
+          Please check your inbox (and spam/junk folder). If you don't see it within a few minutes, please try again.
         </AlertDescription>
       </Alert>
     );
@@ -92,6 +99,13 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
             : "Enter your email address to receive a password reset link."}
         </AlertDescription>
       </Alert>
+      
+      {errorMessage && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSendPasswordSetupEmail)} className="space-y-4">
