@@ -24,6 +24,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   const { toast } = useToast();
   
   const form = useForm({
@@ -36,6 +37,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
   const handleSendPasswordSetupEmail = async (formData: { email: string }) => {
     setIsSubmitting(true);
     setErrorMessage(null);
+    setDebugInfo(null);
     const email = formData.email || userEmail;
     
     if (!email) {
@@ -50,13 +52,31 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
     
     try {
       console.log("Sending password reset email to:", email);
+      console.log("Reset email redirect URL:", `${window.location.origin}/set-password`);
+      console.log("Supabase URL being used:", supabase.supabaseUrl);
       
       // Use password recovery method for simplicity, since it doesn't require session
       const { error, data } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/set-password`,
       });
       
-      console.log("Reset password response:", { error, data });
+      // Log detailed response from Supabase
+      console.log("Reset password response:", { 
+        error, 
+        data,
+        timestamp: new Date().toISOString(),
+        requestUrl: `${supabase.supabaseUrl}/auth/v1/recover`,
+        hostEnvironment: window.location.hostname,
+        browserInfo: navigator.userAgent
+      });
+      
+      // Store debug info that can be displayed in the UI
+      setDebugInfo({
+        timestamp: new Date().toISOString(),
+        resetRequestSent: !error,
+        redirectUrl: `${window.location.origin}/set-password`,
+        supabaseEndpoint: `${supabase.supabaseUrl}/auth/v1/recover`
+      });
       
       if (error) throw error;
       
@@ -80,13 +100,27 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
 
   if (isSuccess) {
     return (
-      <Alert className="bg-green-50 border-green-200">
-        <CheckCircle className="h-4 w-4 text-green-500" />
-        <AlertDescription className="text-green-800">
-          We've sent a password reset link to <strong>{userEmail || form.getValues().email}</strong>. 
-          Please check your inbox (and spam/junk folder). If you don't see it within a few minutes, please try again.
-        </AlertDescription>
-      </Alert>
+      <div className="space-y-4">
+        <Alert className="bg-green-50 border-green-200">
+          <CheckCircle className="h-4 w-4 text-green-500" />
+          <AlertDescription className="text-green-800">
+            We've sent a password reset link to <strong>{userEmail || form.getValues().email}</strong>. 
+            Please check your inbox (and spam/junk folder). If you don't see it within a few minutes, please try again.
+          </AlertDescription>
+        </Alert>
+        
+        {debugInfo && (
+          <Alert>
+            <AlertDescription className="text-xs font-mono">
+              <div className="font-semibold mb-1">Debug information:</div>
+              <div>Timestamp: {debugInfo.timestamp}</div>
+              <div>Reset request sent: {debugInfo.resetRequestSent ? "Yes" : "No"}</div>
+              <div>Redirect URL: {debugInfo.redirectUrl}</div>
+              <div>Supabase endpoint: {debugInfo.supabaseEndpoint}</div>
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
     );
   }
 
@@ -144,6 +178,17 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
           </Button>
         </form>
       </Form>
+      
+      <div className="text-xs text-gray-500 mt-4">
+        <p>
+          If you don't receive the email within a few minutes:
+        </p>
+        <ul className="list-disc pl-5 mt-2">
+          <li>Check your spam or junk folder</li>
+          <li>Verify that you entered the correct email address</li>
+          <li>Check if your email provider is blocking emails from Supabase</li>
+        </ul>
+      </div>
     </div>
   );
 };
