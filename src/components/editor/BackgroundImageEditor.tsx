@@ -10,6 +10,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface BackgroundImageEditorProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ const BackgroundImageEditor = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   // Initialize preview with current image
   useState(() => {
@@ -63,6 +65,8 @@ const BackgroundImageEditor = ({
       const fileName = `${Math.random().toString(36).substring(2, 15)}-${Date.now()}.${fileExt}`;
       const filePath = `hero-backgrounds/${fileName}`;
       
+      console.log("Starting upload to bucket: lovable-uploads, path:", filePath);
+      
       // Upload file to Supabase storage
       const { data, error } = await supabase.storage
         .from('lovable-uploads')
@@ -71,7 +75,17 @@ const BackgroundImageEditor = ({
           upsert: true,
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error uploading file:', error);
+        toast({
+          title: "Upload failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
+      
+      console.log("Upload successful, getting public URL");
       setUploadProgress(80);
       
       // Get public URL for the uploaded file
@@ -85,9 +99,15 @@ const BackgroundImageEditor = ({
       if (publicUrlData.publicUrl) {
         // We don't auto-save here, user needs to click save button
         setPreviewImage(publicUrlData.publicUrl);
+        console.log("Generated public URL:", publicUrlData.publicUrl);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading file:', error);
+      toast({
+        title: "Upload failed",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
     } finally {
       setIsUploading(false);
     }
@@ -101,7 +121,20 @@ const BackgroundImageEditor = ({
   // Handle save button click
   const handleSave = async () => {
     if (previewImage) {
-      await onSave(previewImage);
+      try {
+        await onSave(previewImage);
+        toast({
+          title: "Background updated",
+          description: "Your changes have been saved successfully",
+        });
+      } catch (error: any) {
+        console.error('Error saving image:', error);
+        toast({
+          title: "Save failed",
+          description: error.message || "An unexpected error occurred",
+          variant: "destructive",
+        });
+      }
     }
   };
 
