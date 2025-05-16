@@ -53,7 +53,6 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
     try {
       console.log("Sending password reset email to:", email);
       console.log("Reset email redirect URL:", `${window.location.origin}/set-password`);
-      console.log("Supabase URL being used:", supabase.supabaseUrl);
       
       // Use password recovery method for simplicity, since it doesn't require session
       const { error, data } = await supabase.auth.resetPasswordForEmail(email, {
@@ -65,7 +64,6 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
         error, 
         data,
         timestamp: new Date().toISOString(),
-        requestUrl: `${supabase.supabaseUrl}/auth/v1/recover`,
         hostEnvironment: window.location.hostname,
         browserInfo: navigator.userAgent
       });
@@ -74,8 +72,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
       setDebugInfo({
         timestamp: new Date().toISOString(),
         resetRequestSent: !error,
-        redirectUrl: `${window.location.origin}/set-password`,
-        supabaseEndpoint: `${supabase.supabaseUrl}/auth/v1/recover`
+        redirectUrl: `${window.location.origin}/set-password`
       });
       
       if (error) throw error;
@@ -116,7 +113,6 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
               <div>Timestamp: {debugInfo.timestamp}</div>
               <div>Reset request sent: {debugInfo.resetRequestSent ? "Yes" : "No"}</div>
               <div>Redirect URL: {debugInfo.redirectUrl}</div>
-              <div>Supabase endpoint: {debugInfo.supabaseEndpoint}</div>
             </AlertDescription>
           </Alert>
         )}
