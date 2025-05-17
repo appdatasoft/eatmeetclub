@@ -9,7 +9,7 @@ interface MenuItemDialogProps {
   onClose: () => void;
   currentItem: MenuItem | null;
   isSaving: boolean;
-  onSave: (values: MenuItemFormValues) => Promise<void>;
+  onSave: (values: MenuItemFormValues) => Promise<boolean | void>;
   restaurantId: string;
 }
 
@@ -42,9 +42,7 @@ const MenuItemDialog: React.FC<MenuItemDialogProps> = ({
         </DialogHeader>
         <MenuItemForm
           initialValues={currentItem || undefined}
-          onSubmit={async (values) => {
-            await onSave(values);
-          }}
+          onSubmit={onSave}
           isLoading={isSaving}
           onCancel={onClose}
           restaurantId={restaurantId}

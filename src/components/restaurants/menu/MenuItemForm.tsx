@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import MenuItemMediaUploader from './MenuItemMediaUploader';
 import { MediaItem } from './types/mediaTypes';
 
 export interface MenuItemFormValues {
+  id?: string; // Add the ID property
   name: string;
   description: string;
   price: number;
