@@ -24,11 +24,18 @@ const MediaImage: React.FC<MediaImageProps> = ({ url, alt, className = "", onCli
     setHasError(true);
   };
   
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+  
   return (
-    <>
+    <div className="relative w-full h-full">
       {/* Loading state */}
       {!isLoaded && !hasError && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
           <span className="text-xs text-gray-500">Loading</span>
         </div>
       )}
@@ -37,19 +44,24 @@ const MediaImage: React.FC<MediaImageProps> = ({ url, alt, className = "", onCli
       <img 
         src={url} 
         alt={alt} 
-        className={`w-full h-full object-cover transition-opacity ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        className={`w-full h-full object-cover transition-opacity ${isLoaded ? 'opacity-100' : 'opacity-0'} ${className}`}
         onLoad={handleImageLoad}
         onError={handleImageError}
         onClick={onClick}
+        onKeyDown={onClick ? handleKeyDown : undefined}
+        tabIndex={onClick ? 0 : -1}
+        role={onClick ? "button" : undefined}
+        aria-label={onClick ? `View ${alt}` : undefined}
       />
       
       {/* Error state */}
       {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Image className="h-5 w-5 text-gray-400" />
+        <div className="absolute inset-0 flex items-center justify-center" aria-label="Image failed to load">
+          <Image className="h-5 w-5 text-gray-400" aria-hidden="true" />
+          <span className="sr-only">Image could not be loaded</span>
         </div>
       )}
-    </>
+    </div>
   );
 };
 

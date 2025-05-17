@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription } from '@/components/ui/dialog';
 import { MediaItem } from '../types/mediaTypes';
@@ -12,13 +12,33 @@ interface MediaDialogProps {
 }
 
 const MediaDialog: React.FC<MediaDialogProps> = ({ mediaItem, onClose }) => {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  
+  // Focus trap
+  useEffect(() => {
+    if (mediaItem) {
+      setTimeout(() => {
+        closeButtonRef.current?.focus();
+      }, 100);
+    }
+  }, [mediaItem]);
+  
   if (!mediaItem) return null;
+  
+  // Determine a descriptive title based on the media type
+  const dialogTitle = mediaItem.type === 'image' ? 'Image Preview' : 'Video Preview';
   
   return (
     <Dialog open={!!mediaItem} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] p-0 overflow-hidden bg-white border border-gray-200">
+      <DialogContent 
+        className="sm:max-w-3xl max-h-[90vh] p-0 overflow-hidden bg-white border border-gray-200"
+        aria-labelledby="media-dialog-title"
+      >
+        <h2 id="media-dialog-title" className="sr-only">{dialogTitle}</h2>
         <DialogDescription className="sr-only">
-          Full view of menu item image or video
+          {mediaItem.type === 'image' ? 
+            'Full view of menu item image. Press Escape key to close.' : 
+            'Full view of menu item video. Press Escape key to close.'}
         </DialogDescription>
         <div className="relative">
           {mediaItem.type === 'image' && mediaItem.url && (
@@ -37,10 +57,12 @@ const MediaDialog: React.FC<MediaDialogProps> = ({ mediaItem, onClose }) => {
             />
           )}
           <button 
+            ref={closeButtonRef}
             className="absolute top-2 right-2 bg-white rounded-full p-1 hover:bg-gray-100"
             onClick={onClose}
+            aria-label="Close dialog"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
       </DialogContent>

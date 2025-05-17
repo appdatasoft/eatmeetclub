@@ -37,9 +37,12 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "", th
           
           {/* Show gallery indicator if there are multiple items */}
           {media.length > 1 && (
-            <div className="absolute bottom-0 right-0 bg-black/60 text-white text-xs px-1 rounded-tl-md flex items-center">
-              <GalleryHorizontal className="h-3 w-3 mr-1" />
-              {media.length}
+            <div 
+              className="absolute bottom-0 right-0 bg-black/60 text-white text-xs px-1 rounded-tl-md flex items-center"
+              aria-label={`${media.length} media items available`}
+            >
+              <GalleryHorizontal className="h-3 w-3 mr-1" aria-hidden="true" />
+              <span>{media.length}</span>
             </div>
           )}
         </div>
@@ -55,7 +58,10 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "", th
   
   // Regular gallery view for multiple media items
   return (
-    <div className={`mt-2 ${className}`}>
+    <div 
+      className={`mt-2 ${className}`}
+      aria-label="Menu item media gallery"
+    >
       <MediaGallery
         media={media}
         onSelectMedia={handleMediaClick}

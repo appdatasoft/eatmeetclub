@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Video } from 'lucide-react';
+import { Volume } from 'lucide-react';
 
 interface MediaVideoProps {
   url: string;
@@ -17,6 +17,13 @@ const MediaVideo: React.FC<MediaVideoProps> = ({
   showControls = false,
   autoPlay = false
 }) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <div className="relative w-full h-full">
       <video 
@@ -25,10 +32,19 @@ const MediaVideo: React.FC<MediaVideoProps> = ({
         controls={showControls}
         autoPlay={autoPlay}
         onClick={onClick}
+        onKeyDown={onClick ? handleKeyDown : undefined}
+        tabIndex={onClick ? 0 : -1}
+        aria-label="Menu item video"
+        playsInline
+        muted={!showControls}
+        loop={!showControls}
       />
       {!showControls && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-          <Video className="h-5 w-5 text-white" />
+        <div 
+          className="absolute inset-0 flex items-center justify-center bg-black/30"
+          aria-hidden="true"
+        >
+          <Volume className="h-5 w-5 text-white" />
         </div>
       )}
     </div>
