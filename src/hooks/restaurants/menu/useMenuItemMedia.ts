@@ -39,7 +39,7 @@ export const useMenuItemMedia = () => {
             
             return {
               url: publicUrl,
-              type: isVideo ? 'video' : 'image',
+              type: isVideo ? 'video' as const : 'image' as const,
               id: file.name // Include filename as ID to help with deletion
             };
           });
@@ -87,7 +87,7 @@ export const useMenuItemMedia = () => {
               
               return {
                 url: publicUrl,
-                type: isVideo ? 'video' : 'image',
+                type: isVideo ? 'video' as const : 'image' as const,
                 id: file.name // Include filename as ID
               };
             });
