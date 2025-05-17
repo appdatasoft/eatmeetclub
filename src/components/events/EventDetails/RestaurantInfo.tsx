@@ -29,7 +29,7 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({
       <div className="flex items-center mb-4">
         <div className="relative">
           <Avatar className="w-12 h-12 mr-4">
-            {isValidRestaurant && logoUrl ? (
+            {logoUrl ? (
               <AvatarImage 
                 src={logoUrl} 
                 alt={restaurantName} 

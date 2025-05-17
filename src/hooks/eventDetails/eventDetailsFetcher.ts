@@ -30,7 +30,8 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
           zipcode,
           description,
           phone,
-          website
+          website,
+          logo_url
         )
       `)
       .eq("id", eventId)
@@ -65,7 +66,8 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
         zipcode: eventData.restaurants.zipcode || "",
         description: eventData.restaurants.description || "",
         phone: eventData.restaurants.phone || "",
-        website: eventData.restaurants.website || ""
+        website: eventData.restaurants.website || "",
+        logo_url: eventData.restaurants.logo_url || ""
       } : {
         id: "unknown",
         name: "Unknown Restaurant",
@@ -75,7 +77,8 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
         zipcode: "",
         description: "",
         phone: "",
-        website: ""
+        website: "",
+        logo_url: ""
       },
       tickets_sold: eventData.tickets_sold || 0,
       user_id: eventData.user_id,

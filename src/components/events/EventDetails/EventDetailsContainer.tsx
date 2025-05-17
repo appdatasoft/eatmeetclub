@@ -54,6 +54,7 @@ const EventDetailsContainer: React.FC<EventDetailsContainerProps> = ({
         id={restaurant.id}
         name={restaurant.name} 
         description={restaurant.description}
+        logoUrl={restaurant.logo_url}
       />
       {!isCurrentUserOwner && !isMobile && (
         <div className="mt-6 flex justify-end">

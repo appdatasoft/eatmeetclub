@@ -9,6 +9,7 @@ export interface Restaurant {
   description: string;
   phone?: string;
   website?: string;
+  logo_url?: string;
 }
 
 export interface EventDetails {
