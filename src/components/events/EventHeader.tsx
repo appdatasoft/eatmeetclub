@@ -4,6 +4,7 @@ import { Edit, Book, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import RestaurantMenuPreview from "./RestaurantMenuPreview";
+import SupabaseImage from "@/components/common/SupabaseImage";
 
 interface EventHeaderProps {
   title: string;
@@ -29,7 +30,7 @@ const EventHeader: React.FC<EventHeaderProps> = ({
 
   return (
     <div className="relative h-64 md:h-96 overflow-hidden">
-      <img
+      <SupabaseImage
         src={coverImage}
         alt={title}
         className="w-full h-full object-cover"

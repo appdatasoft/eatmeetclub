@@ -32,16 +32,10 @@ const MediaImage: React.FC<MediaImageProps> = ({ url, alt, className = "", onCli
   
   const handleImageError = () => {
     console.error(`Image error: ${currentUrl}`);
-    setHasError(true);
-  };
-
-  const handleRetry = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering onClick if this is inside a clickable area
     
+    // Try with cache-busting parameter automatically if under max retries
     if (retryCount < maxRetries) {
-      console.log(`Retrying image load for ${currentUrl}, attempt ${retryCount + 1}`);
-      setHasError(false);
-      setIsLoaded(false);
+      console.log(`Auto-retrying image load for ${currentUrl}, attempt ${retryCount + 1}`);
       setRetryCount(prev => prev + 1);
       
       // Force browser to re-fetch the image by adding a timestamp parameter
@@ -52,8 +46,26 @@ const MediaImage: React.FC<MediaImageProps> = ({ url, alt, className = "", onCli
       
       setCurrentUrl(newUrl);
     } else {
+      setHasError(true);
       console.error(`Maximum retry attempts (${maxRetries}) reached for ${url}`);
     }
+  };
+
+  const handleRetry = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering onClick if this is inside a clickable area
+    
+    console.log(`Manual retry for image ${url}, resetting retries`);
+    setHasError(false);
+    setIsLoaded(false);
+    setRetryCount(0);
+      
+    // Force browser to re-fetch the image by adding a timestamp parameter
+    const timestamp = Date.now();
+    const newUrl = url.includes('?') 
+      ? `${url}&cache=${timestamp}` 
+      : `${url}?cache=${timestamp}`;
+    
+    setCurrentUrl(newUrl);
   };
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -95,17 +107,15 @@ const MediaImage: React.FC<MediaImageProps> = ({ url, alt, className = "", onCli
           <ImageOff className="h-6 w-6 text-gray-400 mb-2" aria-hidden="true" />
           <span className="text-sm text-gray-500 mb-2">Failed to load image</span>
           
-          {retryCount < maxRetries && (
-            <button 
-              type="button"
-              onClick={handleRetry}
-              className="flex items-center text-xs bg-white hover:bg-gray-50 text-gray-700 px-3 py-1 rounded border shadow-sm transition-colors"
-              aria-label="Retry loading the image"
-            >
-              <RefreshCcw className="h-3 w-3 mr-1" aria-hidden="true" /> 
-              Retry
-            </button>
-          )}
+          <button 
+            type="button"
+            onClick={handleRetry}
+            className="flex items-center text-xs bg-white hover:bg-gray-50 text-gray-700 px-3 py-1 rounded border shadow-sm transition-colors"
+            aria-label="Retry loading the image"
+          >
+            <RefreshCcw className="h-3 w-3 mr-1" aria-hidden="true" /> 
+            Retry
+          </button>
           <span className="sr-only">Image could not be loaded</span>
         </div>
       )}
