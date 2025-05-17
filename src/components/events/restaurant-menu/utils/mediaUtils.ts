@@ -35,11 +35,13 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
                 .from('lovable-uploads')
                 .getPublicUrl(filePath).data.publicUrl;
                 
+              // Fixed type issue by ensuring it's explicitly "video" or "image"
               const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+              const fileType: "video" | "image" = isVideo ? "video" : "image";
               
               return {
                 url: publicUrl,
-                type: isVideo ? 'video' : 'image'
+                type: fileType
               };
             });
             
@@ -77,11 +79,13 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
               .from('lovable-uploads')
               .getPublicUrl(filePath).data.publicUrl;
               
+            // Fixed type issue by ensuring it's explicitly "video" or "image"
             const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+            const fileType: "video" | "image" = isVideo ? "video" : "image";
             
             return {
               url: publicUrl,
-              type: isVideo ? 'video' : 'image'
+              type: fileType
             };
           });
           
@@ -97,14 +101,14 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
     console.log(`No media found for ${item.name}, using fallback image`);
     return [{
       url: getStaticFallbackImage(item.name),
-      type: 'image'
+      type: "image" as const
     }];
     
   } catch (error) {
     console.error('Error in fetchMenuItemMedia:', error);
     return [{
       url: getStaticFallbackImage(item.name),
-      type: 'image'
+      type: "image" as const
     }];
   }
 }
