@@ -7,7 +7,7 @@ import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
 import { useMenuItems } from '@/hooks/restaurants/menu/useMenuItems';
 import { useRestaurantFetch } from '@/hooks/restaurants/useRestaurantFetch';
 import { useMenuItemDialog } from '@/hooks/restaurants/menu/useMenuItemDialog';
-import { useMenuItemSave } from '@/hooks/restaurants/menu/useMenuItemSave';
+import { createMenuItem, updateMenuItem } from '@/hooks/restaurants/menu/utils/menuItemCrud';
 import { useMenuItemDelete } from '@/hooks/restaurants/menu/useMenuItemDelete';
 import { MenuItemFormValues } from '@/components/restaurants/menu/MenuItemForm';
 
@@ -51,9 +51,9 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
       // Filter out empty ingredients
       const filteredIngredients = (item.ingredients || []).filter(ing => ing.trim() !== '');
       
-      // Use the appropriate save function based on whether this is a new item or an update
+      // Use the imported create/update functions directly
       if (isNewItem) {
-        const result = await useMenuItemSave.createMenuItem(
+        const result = await createMenuItem(
           restaurantId,
           item,
           filteredIngredients,
@@ -67,7 +67,7 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
           return true;
         }
       } else if (currentItem) {
-        const result = await useMenuItemSave.updateMenuItem(
+        const result = await updateMenuItem(
           restaurantId,
           currentItem.id,
           item,

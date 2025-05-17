@@ -10,7 +10,7 @@ import MenuItemMediaUploader from './MenuItemMediaUploader';
 import { MediaItem } from './types/mediaTypes';
 
 export interface MenuItemFormValues {
-  id?: string; // Add the ID property
+  id?: string;
   name: string;
   description: string;
   price: number;
@@ -21,7 +21,7 @@ export interface MenuItemFormValues {
 
 interface MenuItemFormProps {
   initialValues?: MenuItemFormValues;
-  onSubmit: (values: MenuItemFormValues) => Promise<void>;
+  onSubmit: (values: MenuItemFormValues) => Promise<boolean | void>;
   isLoading?: boolean;
   onCancel?: () => void;
   restaurantId: string;
