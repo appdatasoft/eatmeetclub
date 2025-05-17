@@ -9,6 +9,7 @@ export interface MenuItem {
   type?: string;
   ingredients?: string[];
   media?: MediaItem[];
+  restaurant_id?: string;
 }
 
 export interface RestaurantMenuProps {

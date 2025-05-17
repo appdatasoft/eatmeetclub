@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { MediaItem } from "@/components/restaurants/menu/MenuItemMediaUploader";
 
@@ -140,7 +139,7 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
       console.error('Error checking restaurant directory:', error);
     }
     
-    // If all methods failed, return empty array instead of fallback
+    // If all methods failed, return empty array
     console.log(`No media found for ${item.name}`);
     return [];
     
