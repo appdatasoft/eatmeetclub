@@ -43,6 +43,7 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
     }
     
     console.log("Event data received:", data);
+    console.log("Restaurant data:", data.restaurants);
 
     // Transform the data to match the EventDetails interface
     const eventDetails: EventDetails = {
@@ -53,14 +54,22 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       time: data.time,
       price: data.price,
       capacity: data.capacity,
-      restaurant: {
-        id: data.restaurants?.id,
-        name: data.restaurants?.name || "Unknown Restaurant",
-        address: data.restaurants?.address || "",
-        city: data.restaurants?.city || "",
-        state: data.restaurants?.state || "",
-        zipcode: data.restaurants?.zipcode || "",
-        description: data.restaurants?.description || "",
+      restaurant: data.restaurants ? {
+        id: data.restaurants.id,
+        name: data.restaurants.name || "Unknown Restaurant",
+        address: data.restaurants.address || "",
+        city: data.restaurants.city || "",
+        state: data.restaurants.state || "",
+        zipcode: data.restaurants.zipcode || "",
+        description: data.restaurants.description || "",
+      } : {
+        id: "unknown",
+        name: "Unknown Restaurant",
+        address: "",
+        city: "",
+        state: "",
+        zipcode: "",
+        description: "",
       },
       tickets_sold: data.tickets_sold || 0,
       user_id: data.user_id,

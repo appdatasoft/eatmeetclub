@@ -1,6 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
+import { Building } from "lucide-react";
 
 interface RestaurantInfoProps {
   id?: string;
@@ -9,19 +10,25 @@ interface RestaurantInfoProps {
 }
 
 const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }) => {
+  console.log("RestaurantInfo props:", { id, name, description });
+  
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <h2 className="text-xl font-semibold mb-4">About the Restaurant</h2>
       <div className="flex items-center mb-4">
-        <div className="w-12 h-12 rounded-full bg-gray-200 mr-4 overflow-hidden">
-          <img 
-            src="https://images.unsplash.com/photo-1581954548122-53a79ddb74f9?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&q=80" 
-            alt={name} 
-            className="w-full h-full object-cover"
-          />
+        <div className="w-12 h-12 rounded-full bg-gray-200 mr-4 overflow-hidden flex items-center justify-center">
+          {id && id !== "unknown" ? (
+            <img 
+              src="https://images.unsplash.com/photo-1581954548122-53a79ddb74f9?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&q=80" 
+              alt={name} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <Building className="h-6 w-6 text-gray-400" />
+          )}
         </div>
         <div>
-          {id ? (
+          {id && id !== "unknown" ? (
             <Link to={`/restaurant/${id}`} className="font-medium hover:text-primary hover:underline">
               {name}
             </Link>
@@ -37,7 +44,7 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }
           Our restaurant has been serving the community with a commitment to quality and hospitality.`}
       </p>
       
-      {id && (
+      {id && id !== "unknown" && (
         <Link 
           to={`/restaurant/${id}`}
           className="text-primary hover:underline font-medium"

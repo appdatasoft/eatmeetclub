@@ -25,6 +25,9 @@ const EventDetailsContainer: React.FC<EventDetailsContainerProps> = ({
 }) => {
   const isMobile = useIsMobile();
   
+  // Log restaurant data for debugging
+  console.log("Restaurant data in EventDetailsContainer:", event.restaurant);
+  
   return (
     <div className="lg:col-span-2">
       <EventInfo 
@@ -37,9 +40,9 @@ const EventDetailsContainer: React.FC<EventDetailsContainerProps> = ({
         ticketsPercentage={ticketsPercentage}
       />
       <RestaurantInfo 
-        id={event.restaurant.id}
-        name={event.restaurant.name} 
-        description={event.restaurant.description}
+        id={event.restaurant?.id}
+        name={event.restaurant?.name || "Unknown Restaurant"} 
+        description={event.restaurant?.description}
       />
       {!isCurrentUserOwner && !isMobile && (
         <div className="mt-6 flex justify-end">

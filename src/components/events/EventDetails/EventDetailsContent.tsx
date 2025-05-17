@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -36,6 +37,8 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  
+  console.log("EventDetailsContent received event:", event);
   
   // Ensure restaurant info is available
   const restaurant = event.restaurant || { 
