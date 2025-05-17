@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { render, screen, fireEvent } from '@/lib/test-setup';
 import { describe, it, expect, vi } from 'vitest';
@@ -66,7 +65,7 @@ vi.mock('./MenuItemMediaUploader', () => ({
     <div data-testid="media-uploader">
       <button 
         data-testid="add-media" 
-        onClick={() => onChange([...(initialMediaItems || []), { url: 'test.jpg', type: 'image' }])} 
+        onClick={() => onChange([...(initialMediaItems || []), { id: 'test-id', url: 'test.jpg', type: 'image' }])} 
       />
     </div>
   )
