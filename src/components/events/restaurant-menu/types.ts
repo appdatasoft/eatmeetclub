@@ -15,3 +15,7 @@ export interface MenuItem {
   ingredients?: string[];
   media?: MediaItem[];
 }
+
+export interface RestaurantMenuProps {
+  restaurantId: string;
+}
