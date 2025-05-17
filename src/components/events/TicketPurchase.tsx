@@ -1,12 +1,12 @@
 
 import React, { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
-import { useCheckoutSession } from '@/hooks/membership/useCheckoutSession'
+import { useCheckoutSession } from '@/hooks/useCheckoutSession'
 
-interface TicketPurchaseProps {
-  eventId: string
-  ticketPrice: number
-  ticketsRemaining: number
+export interface TicketPurchaseProps {
+  eventId: string;
+  ticketPrice: number;
+  ticketsRemaining: number;
 }
 
 export const TicketPurchase: React.FC<TicketPurchaseProps> = ({

@@ -1,21 +1,25 @@
+
 import React, { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
-import { useCheckoutSession } from '@/hooks/membership/useCheckoutSession'
+import { useCheckoutSession } from '@/hooks/useCheckoutSession'
 
 interface TicketPurchaseProps {
-  eventId: string
-  ticketPrice: number
-  ticketsRemaining: number
+  price: number;
+  ticketsRemaining: number;
+  onBuyTickets: (ticketCount: number) => void;
+  isPaymentProcessing: boolean;
+  isLoggedIn: boolean;
 }
 
 export const TicketPurchase: React.FC<TicketPurchaseProps> = ({
-  eventId,
-  ticketPrice,
+  price,
   ticketsRemaining,
+  onBuyTickets,
+  isPaymentProcessing,
+  isLoggedIn
 }) => {
   const [ticketCount, setTicketCount] = useState(1)
   const { toast } = useToast()
-  const { startCheckout, loading } = useCheckoutSession()
 
   const handleIncrease = () => {
     if (ticketCount < ticketsRemaining) {
@@ -30,18 +34,10 @@ export const TicketPurchase: React.FC<TicketPurchaseProps> = ({
   }
 
   const handleBuy = () => {
-    startCheckout({
-      eventId,
-      quantity: ticketCount,
-    }).catch(() => {
-      toast({
-        title: 'Checkout failed. Please try again.',
-        variant: 'destructive',
-      })
-    })
+    onBuyTickets(ticketCount);
   }
 
-  const subtotal = ticketPrice * ticketCount
+  const subtotal = price * ticketCount
   const serviceFee = +(subtotal * 0.05).toFixed(2)
   const total = +(subtotal + serviceFee).toFixed(2)
 
@@ -52,7 +48,7 @@ export const TicketPurchase: React.FC<TicketPurchaseProps> = ({
       <div className="border-b pb-4 mb-4">
         <div className="flex justify-between items-center mb-2">
           <span className="text-gray-600">Ticket Price</span>
-          <span className="font-medium">${ticketPrice.toFixed(2)}/person</span>
+          <span className="font-medium">${price.toFixed(2)}/person</span>
         </div>
       </div>
 
@@ -120,10 +116,10 @@ export const TicketPurchase: React.FC<TicketPurchaseProps> = ({
 
       <button
         onClick={handleBuy}
-        disabled={loading}
+        disabled={isPaymentProcessing}
         className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none bg-primary text-white hover:bg-primary/90 h-11 rounded-md px-8 w-full"
       >
-        {loading ? (
+        {isPaymentProcessing ? (
           <>
             <svg
               className="lucide lucide-loader-circle mr-2 h-4 w-4 animate-spin"
@@ -152,3 +148,5 @@ export const TicketPurchase: React.FC<TicketPurchaseProps> = ({
     </div>
   )
 }
+
+export default TicketPurchase

@@ -34,7 +34,7 @@ describe('RestaurantMenuPreview', () => {
       }),
     }))
 
-    const { container } = renderWithTheme(<RestaurantMenuPreview />)
+    const { container } = renderWithTheme(<RestaurantMenuPreview restaurantId="test-id" />)
     expect(container).toHaveTextContent(/loading/i)
   })
 
@@ -47,7 +47,7 @@ describe('RestaurantMenuPreview', () => {
       }),
     }))
 
-    renderWithTheme(<RestaurantMenuPreview />)
+    renderWithTheme(<RestaurantMenuPreview restaurantId="test-id" />)
     expect(screen.getByText(/no menu items/i)).toBeInTheDocument()
   })
 
@@ -68,7 +68,7 @@ describe('RestaurantMenuPreview', () => {
       }),
     }))
 
-    renderWithTheme(<RestaurantMenuPreview />)
+    renderWithTheme(<RestaurantMenuPreview restaurantId="test-id" />)
     expect(screen.getByText(/doro wat/i)).toBeInTheDocument()
   })
 
@@ -81,7 +81,7 @@ describe('RestaurantMenuPreview', () => {
       }),
     }))
 
-    renderWithTheme(<RestaurantMenuPreview />)
+    renderWithTheme(<RestaurantMenuPreview restaurantId="test-id" />)
 
     expect(toastMock.toast).toHaveBeenCalledWith({
       title: 'Failed to load menu.',

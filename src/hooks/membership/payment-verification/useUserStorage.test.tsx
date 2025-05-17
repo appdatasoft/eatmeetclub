@@ -4,17 +4,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
-import { useUserStorage } from '../useUserStorage'
+import { useUserStorage } from './useUserStorage'
 
 let container: HTMLElement
 let root: ReturnType<typeof createRoot>
 
-const TestComponent = ({ email }: { email?: string }) => {
-  const user = useUserStorage()
+const TestComponent = () => {
+  const userStorage = useUserStorage()
+  const userDetails = userStorage.getUserDetails();
+  
   return (
     <div>
-      <div data-testid="name">{user.name}</div>
-      <div data-testid="email">{user.email}</div>
+      <div data-testid="name">{userDetails.name}</div>
+      <div data-testid="email">{userDetails.email}</div>
     </div>
   )
 }
