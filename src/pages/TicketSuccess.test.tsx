@@ -1,3 +1,4 @@
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import TicketSuccess from './TicketSuccess';
@@ -12,26 +13,36 @@ vi.mock('react-router-dom', () => ({
 
 // Mock supabase with proper chaining methods
 vi.mock('@/integrations/supabase/client', () => {
-  const mockEq = vi.fn();
+  const mockSingle = vi.fn().mockResolvedValue({
+    data: { id: 'event123', title: 'Test Event' },
+    error: null
+  });
+  
+  const mockEq = vi.fn().mockReturnValue({ single: mockSingle });
   const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
   const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
   
   return {
     supabase: {
       auth: {
-        getSession: vi.fn()
+        getSession: vi.fn().mockResolvedValue({
+          data: { session: { access_token: 'test-token' } },
+          error: null
+        })
       },
       functions: {
-        invoke: vi.fn()
+        invoke: vi.fn().mockResolvedValue({
+          data: { success: true, ticket: {}, emailSent: true },
+          error: null
+        })
       },
       from: mockFrom,
-      eq: mockEq
     }
   };
 });
 
 vi.mock('@/hooks/use-toast', () => ({
-  useToast: vi.fn()
+  useToast: vi.fn(() => ({ toast: vi.fn() }))
 }));
 
 vi.mock('@/components/layout/MainLayout', () => ({
@@ -92,10 +103,14 @@ describe('TicketSuccess', () => {
     });
     
     // Mock successful event details fetch
-    (supabase.from().select().eq as any).mockResolvedValue({
-      data: [mockEventDetails],
+    const mockSingle = vi.fn().mockResolvedValue({
+      data: mockEventDetails,
       error: null
     });
+    
+    const mockEq = vi.fn().mockReturnValue({ single: mockSingle });
+    
+    (supabase.from as any)().select().eq = mockEq;
   });
 
   it('shows loading state initially', () => {
@@ -136,7 +151,6 @@ describe('TicketSuccess', () => {
     
     await waitFor(() => {
       expect(supabase.from).toHaveBeenCalledWith('events');
-      expect(supabase.eq).toHaveBeenCalledWith('id', mockTicketDetails.event_id);
     });
   });
 

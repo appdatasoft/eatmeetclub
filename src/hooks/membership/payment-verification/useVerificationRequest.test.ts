@@ -24,7 +24,7 @@ describe('useVerificationRequest', () => {
   it('should send verification request successfully', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: vi.fn().mockResolvedValueOnce({ success: true, userId: 'user_123' })
+      json: () => Promise.resolve({ success: true, userId: 'user_123' })
     } as unknown as Response);
     
     const { result } = renderHook(() => useVerificationRequest());
@@ -68,8 +68,10 @@ describe('useVerificationRequest', () => {
   it('should handle verification request failure', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
-      json: vi.fn().mockResolvedValueOnce({ success: false, message: 'Verification failed' })
-    });
+      status: 400,
+      statusText: 'Bad Request',
+      json: () => Promise.resolve({ success: false, message: 'Verification failed' })
+    } as unknown as Response);
     
     const { result } = renderHook(() => useVerificationRequest());
     

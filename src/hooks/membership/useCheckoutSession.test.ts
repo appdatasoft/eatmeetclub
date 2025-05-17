@@ -18,7 +18,7 @@ interface CheckoutResponse {
 
 // Mock the actual implementation
 vi.mock('./useCheckoutSession', () => ({
-  useCheckoutSession: vi.fn().mockImplementation(() => ({
+  useCheckoutSession: vi.fn(() => ({
     createCheckoutSession: vi.fn()
   }))
 }));
@@ -53,7 +53,7 @@ describe('useCheckoutSession', () => {
       checkExisting: true
     };
     
-    let response: CheckoutResponse;
+    let response: CheckoutResponse | undefined;
     await act(async () => {
       response = await result.current.createCheckoutSession(
         'test@example.com', 
@@ -72,8 +72,8 @@ describe('useCheckoutSession', () => {
       options
     );
     
-    expect(response.success).toBe(true);
-    expect(response.url).toBe('https://checkout.stripe.com/test');
+    expect(response?.success).toBe(true);
+    expect(response?.url).toBe('https://checkout.stripe.com/test');
   });
   
   it('should handle errors properly', async () => {
@@ -92,7 +92,7 @@ describe('useCheckoutSession', () => {
       checkExisting: true
     };
     
-    let response: CheckoutResponse;
+    let response: CheckoutResponse | undefined;
     await act(async () => {
       response = await result.current.createCheckoutSession(
         'test@example.com', 
@@ -103,7 +103,7 @@ describe('useCheckoutSession', () => {
       );
     });
     
-    expect(response.success).toBe(false);
-    expect(response.error).toBe(errorMessage);
+    expect(response?.success).toBe(false);
+    expect(response?.error).toBe(errorMessage);
   });
 });
