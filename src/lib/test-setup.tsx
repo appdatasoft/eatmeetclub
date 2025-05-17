@@ -3,6 +3,7 @@ import React, { ReactNode } from 'react';
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from "@/components/theme-provider";
+import '@testing-library/jest-dom';
 
 // Create a custom render function that includes providers needed for components
 export function renderWithProviders(ui: React.ReactElement, options = {}) {
