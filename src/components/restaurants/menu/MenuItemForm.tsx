@@ -74,7 +74,7 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 text-gray-900">
+    <form onSubmit={handleSubmit} className="space-y-4 text-gray-900" role="form">
       <BasicDetails 
         name={formValues.name}
         description={formValues.description}
