@@ -144,6 +144,25 @@ export const generateAlternativeUrls = (
     
     // Try with restaurants folder
     urls.push(`${baseStorageUrl}/restaurants/${restaurantId}/menu/${itemId}.${ext}`);
+    
+    // Based on your storage structure, let's try the pattern we see in your bucket
+    urls.push(`${baseStorageUrl}/menu-items/${itemId}/${itemId}.${ext}`);
+    urls.push(`${baseStorageUrl}/${itemId}/${itemId}.${ext}`);
+    
+    // Try files with name pattern matching food items
+    if (itemId.includes('rice') || itemId.toLowerCase().includes('rice')) {
+      urls.push(`${baseStorageUrl}/rice/rice.${ext}`);
+      urls.push(`${baseStorageUrl}/rice/rice-1.${ext}`);
+    }
+    
+    if (itemId.includes('doro') || itemId.toLowerCase().includes('doro')) {
+      urls.push(`${baseStorageUrl}/doro-wot/doro-wot.${ext}`);
+      urls.push(`${baseStorageUrl}/doro-wot/doro.${ext}`);
+    }
+    
+    // Try direct files in bucket root
+    urls.push(`${baseStorageUrl}/rice.${ext}`);
+    urls.push(`${baseStorageUrl}/doro-wot.${ext}`);
   });
   
   return urls.map(url => addCacheBuster(url));
@@ -154,8 +173,8 @@ export const generateAlternativeUrls = (
  * @returns A placeholder URL string
  */
 export const getDefaultFoodPlaceholder = (): string => {
-  // Return a static public URL that we know works (avoiding Supabase storage for fallback)
-  return "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop&w=500&h=500";
+  // Use a simple colored background instead of an external image
+  return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' text-anchor='middle' dominant-baseline='middle' fill='%23888'%3ENo Image%3C/text%3E%3C/svg%3E";
 };
 
 /**
@@ -168,18 +187,75 @@ export const findWorkingImageUrl = async (
   restaurantId: string, 
   itemId: string
 ): Promise<string | null> => {
-  const urls = generateAlternativeUrls(restaurantId, itemId);
-  
-  console.log(`Attempting to find working image for item ${itemId} with ${urls.length} alternatives`);
-  
-  // Check the first few URLs more quickly with HEAD requests
-  for (let i = 0; i < Math.min(urls.length, 4); i++) {
-    const exists = await checkStorageUrlExists(urls[i]);
-    if (exists) {
-      console.log(`Found working image URL: ${urls[i]}`);
-      return urls[i];
+  try {
+    console.log(`Finding image for item: ${itemId}`);
+    
+    // Try the menu-items folder structure first (most likely to have the images)
+    const { data: folderFiles } = await supabase
+      .storage
+      .from('lovable-uploads')
+      .list(`menu-items/${itemId}`);
+      
+    if (folderFiles && folderFiles.length > 0) {
+      // Get the first file in the folder
+      const firstFile = folderFiles[0];
+      if (!firstFile.name.endsWith('/')) {
+        // It's a file, not a directory
+        console.log(`Found file directly in menu-items/${itemId}: ${firstFile.name}`);
+        const filePath = `menu-items/${itemId}/${firstFile.name}`;
+        const url = supabase.storage.from('lovable-uploads').getPublicUrl(filePath).data.publicUrl;
+        return addCacheBuster(url);
+      }
     }
+    
+    // Try direct named folders like "rice" or "doro-wot"
+    // Check for common food names in your bucket
+    const foodNames = ["rice", "doro-wot"];
+    for (const foodName of foodNames) {
+      if (itemId.toLowerCase().includes(foodName) || 
+          foodName.toLowerCase().includes(itemId.toLowerCase())) {
+        
+        const { data: foodFiles } = await supabase
+          .storage
+          .from('lovable-uploads')
+          .list(foodName);
+          
+        if (foodFiles && foodFiles.length > 0) {
+          // Find the first image file
+          const imageFile = foodFiles.find(file => !file.name.endsWith('/'));
+          if (imageFile) {
+            console.log(`Found file in ${foodName} folder: ${imageFile.name}`);
+            const filePath = `${foodName}/${imageFile.name}`;
+            const url = supabase.storage.from('lovable-uploads').getPublicUrl(filePath).data.publicUrl;
+            return addCacheBuster(url);
+          }
+        }
+      }
+    }
+    
+    // If still not found, fall back to checking URLs directly
+    const urls = generateAlternativeUrls(restaurantId, itemId);
+    
+    console.log(`Attempting to find working image for item ${itemId} with ${urls.length} alternatives`);
+    
+    // Check the first few URLs more quickly with HEAD requests
+    for (let i = 0; i < Math.min(urls.length, 8); i++) {
+      const exists = await checkStorageUrlExists(urls[i]);
+      if (exists) {
+        console.log(`Found working image URL: ${urls[i]}`);
+        return urls[i];
+      }
+    }
+    
+    // If all alternatives failed, return null but log the issue
+    console.log(`No working image found for ${itemId} after checking all alternatives`);
+    return null;
+    
+  } catch (error) {
+    console.error(`Error in findWorkingImageUrl for item ${itemId}:`, error);
+    return null;
   }
-  
-  return null;
 };
+
+// Import here to avoid circular dependencies
+import { supabase } from '@/lib/supabaseClient';

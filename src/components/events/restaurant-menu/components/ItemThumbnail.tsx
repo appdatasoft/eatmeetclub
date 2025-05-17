@@ -38,6 +38,13 @@ const ItemThumbnail: React.FC<ItemThumbnailProps> = ({
       setRetryCount(prevCount => prevCount + 1);
     }
   };
+
+  // Log the media URL for debugging
+  useEffect(() => {
+    if (primaryImage) {
+      console.log(`ItemThumbnail rendering for ${itemName} with URL:`, primaryImage.url);
+    }
+  }, [primaryImage, itemName]);
   
   return (
     <div 

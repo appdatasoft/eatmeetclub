@@ -10,14 +10,64 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
   let media: MediaItem[] = [];
   console.log(`Fetching media for menu item: ${itemId} in restaurant: ${restaurantId}`);
   
+  // First, try direct food-named folders which is what we saw in storage
+  const foodItems = ["rice", "doro-wot"];
+  let mediaFound = false;
+  
+  for (const foodItem of foodItems) {
+    if (itemId.toLowerCase().includes(foodItem.toLowerCase()) || 
+        foodItem.toLowerCase().includes(itemId.toLowerCase())) {
+      try {
+        console.log(`Checking direct folder for ${foodItem}`);
+        const { data: files, error } = await supabase
+          .storage
+          .from('lovable-uploads')
+          .list(foodItem);
+          
+        if (!error && files && files.length > 0) {
+          const imageFiles = files.filter(file => !file.name.endsWith('/'));
+          
+          if (imageFiles.length > 0) {
+            console.log(`Found ${imageFiles.length} files in direct folder ${foodItem}`);
+            
+            const mediaItems = imageFiles.map(file => {
+              const filePath = `${foodItem}/${file.name}`;
+              const publicUrl = supabase.storage
+                .from('lovable-uploads')
+                .getPublicUrl(filePath).data.publicUrl;
+                
+              const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+              
+              // Add cache buster parameter to the URL
+              const urlWithCache = addCacheBuster(publicUrl);
+              
+              return {
+                url: urlWithCache,
+                type: isVideo ? 'video' as const : 'image' as const,
+                id: filePath // Store full path for deletion capabilities
+              };
+            });
+            
+            if (mediaItems.length > 0) {
+              console.log(`Successfully mapped ${mediaItems.length} media items`);
+              return mediaItems;
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`Error accessing direct folder ${foodItem}:`, err);
+      }
+    }
+  }
+  
   // Paths to check, in order of priority
   const pathsToCheck = [
-    // 1. Restaurant & item specific (most precise)
-    `menu-items/${restaurantId}/${itemId}`,
-    // 2. Item name-based paths
+    // 1. Item-specific (most likely location)
     `menu-items/${itemId}`,
-    // 3. Root folder paths with item prefix
-    `menu-items`,
+    // 2. Restaurant & item specific 
+    `menu-items/${restaurantId}/${itemId}`,
+    // 3. Just the item ID as a root folder
+    `${itemId}`,
     // 4. Restaurant folder (might contain item-specific files)
     `menu-items/${restaurantId}`
   ];
@@ -45,14 +95,7 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
       const relevantFiles = files.filter(file => {
         // Skip directories
         if (file.name.endsWith('/')) return false;
-        
-        // Match based on item ID in filename
-        const matchesId = file.name.includes(itemId);
-        
-        // Include all files in item-specific directories
-        const isInItemDir = path.includes(itemId);
-        
-        return matchesId || isInItemDir || path === `menu-items/${restaurantId}/${itemId}`;
+        return true; // Include all files in the path
       });
       
       if (relevantFiles.length > 0) {
@@ -100,39 +143,6 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
         type: 'image',
         id: workingUrl.split('?')[0] // Store the URL without query params as ID
       }];
-    } else {
-      console.log(`Testing alternative URLs for item ${itemId}`);
-      
-      // Generate a list of possible URLs to try
-      const alternativeUrls = generateAlternativeUrls(restaurantId, itemId);
-      console.log(`Trying ${alternativeUrls.length} alternative URL patterns for item ${itemId}`);
-      
-      // Check each URL with a HEAD request (this approach is more efficient than actually trying to render the images)
-      const urlChecks = alternativeUrls.slice(0, 5).map(async (url) => {
-        // Only check first 5 to avoid too many requests
-        try {
-          const response = await fetch(url, { method: 'HEAD' });
-          if (response.ok) {
-            return url;
-          }
-          return null;
-        } catch (_) {
-          return null;
-        }
-      });
-      
-      // Wait for all HEAD requests to complete
-      const validUrls = (await Promise.all(urlChecks)).filter(Boolean) as string[];
-      
-      if (validUrls.length > 0) {
-        console.log(`Found ${validUrls.length} valid direct URL(s) for item ${itemId}:`, validUrls[0]);
-        
-        return validUrls.map(url => ({
-          url,
-          type: 'image',
-          id: url.split('?')[0] // Store the URL without query params as ID
-        }));
-      }
     }
   } catch (err) {
     console.error('Error in fallback URL check:', err);

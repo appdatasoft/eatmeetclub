@@ -3,6 +3,7 @@ import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { MenuItem } from "../types";
+import { ImageOff, Film } from "lucide-react";
 
 interface MediaGalleryDialogProps {
   item: MenuItem;
@@ -34,8 +35,11 @@ const MediaGalleryDialog: React.FC<MediaGalleryDialogProps> = ({ item, open, onO
                           className="max-h-[60vh] object-contain rounded-md mx-auto"
                           onError={(e) => {
                             console.error(`Gallery image error for ${item.name} (${idx}):`, media.url);
-                            // Replace with error UI instead of a placeholder image
+                            // Create error message element
                             const target = e.currentTarget;
+                            target.style.display = 'none';
+                            
+                            // Create error element
                             const container = target.parentElement;
                             if (container) {
                               // Create error message element
@@ -43,13 +47,13 @@ const MediaGalleryDialog: React.FC<MediaGalleryDialogProps> = ({ item, open, onO
                               errorDiv.className = "flex flex-col items-center justify-center h-[40vh] w-full";
                               errorDiv.innerHTML = `
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-8 w-8 text-gray-400 mb-2">
-                                  <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
-                                  <circle cx="12" cy="13" r="3"></circle>
-                                  <line x1="4.5" y1="19.5" x2="19.5" y2="4.5"></line>
+                                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+                                  <circle cx="9" cy="9" r="2"></circle>
+                                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
                                 </svg>
                                 <span class="text-gray-500">Image failed to load</span>
                               `;
-                              container.replaceChild(errorDiv, target);
+                              container.appendChild(errorDiv);
                             }
                           }}
                         />
@@ -62,6 +66,8 @@ const MediaGalleryDialog: React.FC<MediaGalleryDialogProps> = ({ item, open, onO
                         onError={(e) => {
                           console.error(`Gallery video error for ${item.name} (${idx}):`, media.url);
                           const target = e.currentTarget as HTMLVideoElement;
+                          target.style.display = 'none';
+                          
                           const container = target.parentElement;
                           if (container) {
                             // Create error message element
@@ -75,7 +81,7 @@ const MediaGalleryDialog: React.FC<MediaGalleryDialogProps> = ({ item, open, onO
                               </svg>
                               <span class="text-gray-500">Video failed to load</span>
                             `;
-                            container.replaceChild(errorDiv, target);
+                            container.appendChild(errorDiv);
                           }
                         }}
                       />
