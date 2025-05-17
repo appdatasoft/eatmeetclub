@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import EventFilters from "@/components/events/EventFilters";
@@ -18,6 +18,7 @@ const Events = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Show toast for errors
   useEffect(() => {
@@ -31,13 +32,17 @@ const Events = () => {
     }
   }, [fetchError, toast]);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     console.log("Manual refresh triggered");
-    refreshEvents();
+    setIsRefreshing(true);
+    
     toast({
       title: "Refreshing events",
       description: "Looking for new events..."
     });
+    
+    await refreshEvents();
+    setIsRefreshing(false);
   };
 
   return (
@@ -73,40 +78,15 @@ const Events = () => {
             onFilterChange={handleFilterChange} 
           />
 
-          {/* Loading state */}
-          {isLoading && (
-            <div className="text-center py-8">
-              <div className="inline-block animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-              <p className="text-lg text-gray-600 mt-4">Loading events...</p>
-            </div>
-          )}
-
-          {/* Error state */}
-          {!isLoading && fetchError && (
-            <div className="text-center py-8 bg-red-50 border border-red-100 rounded-lg p-4">
-              <h3 className="text-lg font-medium text-red-800">Error loading events</h3>
-              <p className="text-red-600 mt-2">{fetchError}</p>
-              <Button 
-                className="mt-4" 
-                variant="outline"
-                onClick={handleRefresh}
-              >
-                Try Again
-              </Button>
-            </div>
-          )}
-
-          {/* Events list - only render when not loading and no errors */}
-          {!isLoading && !fetchError && (
-            <EventsList 
-              events={filteredEvents} 
-              isLoading={false} 
-              error={null} 
-            />
-          )}
+          {/* Display the events list conditionally */}
+          <EventsList 
+            events={isLoading ? [] : filteredEvents} 
+            isLoading={isLoading || isRefreshing} 
+            error={fetchError} 
+          />
           
           {/* Empty state - only show when data loaded successfully but no events found */}
-          {!isLoading && !fetchError && events.length === 0 && (
+          {!isLoading && !isRefreshing && !fetchError && events.length === 0 && (
             <div className="text-center mt-8 bg-blue-50 border border-blue-100 rounded-lg p-6">
               <p className="text-lg text-gray-600">
                 There are currently no published events available.
@@ -122,8 +102,9 @@ const Events = () => {
                 <Button 
                   variant="outline"
                   onClick={handleRefresh}
+                  disabled={isRefreshing}
                 >
-                  Refresh events
+                  {isRefreshing ? "Refreshing..." : "Refresh events"}
                 </Button>
               </div>
             </div>

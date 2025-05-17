@@ -10,12 +10,6 @@ interface EventsListProps {
 }
 
 const EventsList = ({ events, isLoading, error }: EventsListProps) => {
-  console.log("EventsList rendering with:", { 
-    eventsCount: events?.length, 
-    isLoading, 
-    hasError: !!error 
-  });
-
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -66,4 +60,5 @@ const EventsList = ({ events, isLoading, error }: EventsListProps) => {
   );
 };
 
+// Using React.memo to prevent unnecessary re-renders
 export default React.memo(EventsList);
