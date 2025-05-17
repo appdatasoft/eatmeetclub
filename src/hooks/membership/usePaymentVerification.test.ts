@@ -122,12 +122,27 @@ describe('usePaymentVerification', () => {
     
     mockSendVerificationRequest.mockRejectedValueOnce(new Error('Verification failed'));
     mockHandleSimplifiedVerification.mockResolvedValueOnce(true);
+    mockSendVerificationRequest.mockResolvedValueOnce({ success: true });
     
     const { result } = renderHook(() => usePaymentVerification({ setIsProcessing: mockSetIsProcessing }));
     
     const success = await result.current.verifyPayment('payment_123', { retry: true });
     
-    expect(mockHandleSimplifiedVerification).toHaveBeenCalled();
+    expect(mockHandleSimplifiedVerification).toHaveBeenCalledWith(
+      'payment_123',
+      'test@example.com',
+      'Test User'
+    );
+    expect(mockSendVerificationRequest).toHaveBeenCalledWith(
+      'payment_123',
+      'test@example.com',
+      'Test User',
+      expect.objectContaining({
+        simplifiedVerification: true,
+        safeMode: true,
+        forceSendEmails: true
+      })
+    );
     expect(mockClearUserDetails).toHaveBeenCalled();
     expect(success).toBe(true);
   });

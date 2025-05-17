@@ -34,6 +34,13 @@ export const useVerificationRequest = (): VerificationRequestResult => {
     setState({ ...state, isVerifying: true });
     
     try {
+      // Increment attempt counter
+      setVerificationAttempts(prevAttempts => prevAttempts + 1);
+      
+      // Log the verification attempt
+      console.log(`Attempt ${verificationAttempts + 1} to verify payment: ${paymentId}`);
+      console.log("Verification options:", options);
+      
       // Implementation would go here
       // This is just a stub for now
       return { success: true };
