@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { EventDetails } from "@/types/event";
+import { EventDetails } from "@/hooks/types/eventTypes";
 
 export const useEventActions = (
   event: EventDetails | null,
@@ -20,6 +20,7 @@ export const useEventActions = (
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditCoverDialogOpen, setIsEditCoverDialogOpen] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   
   const handleEditEvent = () => {
     if (!event) return;
@@ -131,7 +132,9 @@ export const useEventActions = (
   
   // Handle ticket purchase for non-logged in users
   const handleTicketPurchase = (ticketCount: number) => {
-    if (!event) return;
+    if (!event) return 0;
+    
+    setIsPaymentProcessing(true);
     
     if (!user) {
       // Store event ID and ticket count in local storage
@@ -148,7 +151,8 @@ export const useEventActions = (
       });
       
       navigate('/login', { state: { from: location.pathname } });
-      return;
+      setIsPaymentProcessing(false);
+      return 0;
     }
     
     // If user is logged in, let EventDetailsPage handle the purchase
@@ -166,6 +170,7 @@ export const useEventActions = (
     handleEditCover,
     handleSaveCover,
     handleDeleteEvent,
-    handleTicketPurchase
+    handleTicketPurchase,
+    isPaymentProcessing
   };
 };

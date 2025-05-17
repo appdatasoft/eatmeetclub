@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import EventDetailsContainer from "./EventDetailsContainer";
 import { TicketPurchase } from "@/components/events/TicketPurchase";
 import EventActionButtons from "./EventActionButtons";
-import { EventDetails } from "@/types/event";
+import { EventDetails } from "@/hooks/types/eventTypes";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EventDetailsContentProps {
@@ -38,7 +38,9 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   
-  const locationStr = `${event.restaurant.address}, ${event.restaurant.city}, ${event.restaurant.state} ${event.restaurant.zipcode}`;
+  // Ensure restaurant info is available
+  const restaurant = event.restaurant || { address: '', city: '', state: '', zipcode: '' };
+  const locationStr = `${restaurant.address}, ${restaurant.city}, ${restaurant.state} ${restaurant.zipcode}`;
 
   return (
     <div className="container-custom py-4 md:py-8">
@@ -72,6 +74,8 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
               eventId={event.id}
               ticketPrice={event.price}
               ticketsRemaining={ticketsRemaining} 
+              isProcessing={isPaymentProcessing}
+              onPurchase={handleTicketPurchase}
             />
           )}
           
