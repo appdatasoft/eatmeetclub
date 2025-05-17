@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Login from "@/pages/Login";
@@ -9,6 +8,7 @@ import BecomeMember from "@/pages/BecomeMember";
 import Index from "@/pages/Index";
 import HowItWorks from "@/pages/HowItWorks";
 import Vision from "@/pages/Vision";
+import Mission from "@/pages/Mission";
 import Dashboard from "@/pages/dashboard/Dashboard";
 import EventsManagement from "@/pages/dashboard/EventsManagement";
 import CreateEvent from "@/pages/dashboard/CreateEvent";
@@ -66,6 +66,7 @@ function App() {
           <Route path="/become-member" element={<BecomeMember />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/vision" element={<Vision />} />
+          <Route path="/mission" element={<Mission />} />
           
           {/* New routes for events and venues */}
           <Route path="/events" element={<Events />} />
