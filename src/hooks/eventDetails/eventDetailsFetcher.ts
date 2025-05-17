@@ -1,11 +1,15 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { EventDetails } from "../types/eventTypes";
+import { toast } from "@/hooks/use-toast";
 
+/**
+ * Fetch detailed event data including restaurant information
+ */
 export const fetchEventDetails = async (eventId: string): Promise<EventDetails> => {
   console.log("Fetching event details for ID:", eventId);
   
-  const { data, error } = await supabase
+  const { data, error: fetchError } = await supabase
     .from("events")
     .select(`
       *,
@@ -22,9 +26,9 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
     .eq("id", eventId)
     .single();
 
-  if (error) {
-    console.error("Error fetching event details:", error);
-    throw error;
+  if (fetchError) {
+    console.error("Error fetching event details:", fetchError);
+    throw new Error(fetchError.message || "Failed to load event details");
   }
 
   if (!data) {
@@ -60,44 +64,28 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
   return eventDetails;
 };
 
+/**
+ * Check if the current user is the owner of the event
+ */
 export const checkEventOwnership = async (eventId: string): Promise<boolean> => {
-  // Get the current user session
-  const { data: { session } } = await supabase.auth.getSession();
-  const currentUserId = session?.user?.id;
-  
-  if (!currentUserId) {
-    return false;
-  }
-  
-  const { data, error } = await supabase
-    .from("events")
-    .select("user_id")
-    .eq("id", eventId)
-    .single();
-
-  if (error || !data) {
-    return false;
-  }
-
-  return data.user_id === currentUserId;
-};
-
-export const getTicketsSoldCount = async (eventId: string): Promise<number> => {
-  const { data, error } = await supabase
-    .from('tickets')
-    .select('quantity')
-    .eq('event_id', eventId)
-    .eq('payment_status', 'completed');
+  try {
+    // First get the current user (if logged in)
+    const { data: { session } } = await supabase.auth.getSession();
+    const currentUserId = session?.user?.id;
+    console.log("Current user ID:", currentUserId);
     
-  if (error) {
-    console.error("Error fetching tickets:", error);
-    return 0;
+    if (!currentUserId) return false;
+    
+    // Get event owner info
+    const { data } = await supabase
+      .from("events")
+      .select("user_id")
+      .eq("id", eventId)
+      .single();
+      
+    return data?.user_id === currentUserId;
+  } catch (err) {
+    console.error("Error checking event ownership:", err);
+    return false;
   }
-  
-  // Calculate total tickets sold
-  if (!data || data.length === 0) {
-    return 0;
-  }
-  
-  return data.reduce((total, ticket) => total + ticket.quantity, 0);
 };

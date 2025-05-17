@@ -3,12 +3,17 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { EventDetails } from "@/types/event";
+import { useEventDataFetch } from "./events/useEventDataFetch";
+import { useEventOwnership } from "./events/useEventOwnership";
 
 export const useEventFetching = (eventId?: string) => {
   const { toast } = useToast();
   const [event, setEvent] = useState<EventDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isCurrentUserOwner, setIsCurrentUserOwner] = useState(false);
+
+  // Use specialized hooks to fetch data and check ownership
+  const { fetchEventWithDetails } = useEventDataFetch(toast);
+  const { checkOwnership, isCurrentUserOwner, setIsCurrentUserOwner } = useEventOwnership();
 
   const fetchEventDetails = useCallback(async () => {
     if (!eventId) return;
@@ -16,63 +21,18 @@ export const useEventFetching = (eventId?: string) => {
     try {
       setLoading(true);
       
-      // First get the current user (if logged in)
-      const { data: { session } } = await supabase.auth.getSession();
-      const currentUserId = session?.user?.id;
+      // Fetch the event data
+      const eventData = await fetchEventWithDetails(eventId);
       
-      // Fetch event data with restaurant details
-      const { data, error } = await supabase
-        .from('events')
-        .select('*, restaurant:restaurants(*)')
-        .eq('id', eventId)
-        .single();
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Count tickets sold for this event
-      const { data: ticketsData, error: ticketsError } = await supabase
-        .from('tickets')
-        .select('quantity')
-        .eq('event_id', eventId)
-        .eq('payment_status', 'completed');
+      if (eventData) {
+        setEvent(eventData);
         
-      if (ticketsError) {
-        console.error("Error fetching tickets:", ticketsError);
-      }
-      
-      // Calculate total tickets sold
-      let ticketsSold = 0;
-      if (ticketsData && ticketsData.length > 0) {
-        ticketsSold = ticketsData.reduce((total, ticket) => total + ticket.quantity, 0);
-      }
-        
-      // Format the event data
-      if (data) {
-        // Format the date to a more readable format
-        const formattedDate = new Date(data.date).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-        
-        setEvent({
-          ...data,
-          date: formattedDate,
-          tickets_sold: ticketsSold
-        });
-        
-        // Check if the current user is the owner of this event
-        if (currentUserId && data.user_id === currentUserId) {
-          setIsCurrentUserOwner(true);
-        } else {
-          setIsCurrentUserOwner(false);
-        }
+        // Check if current user is the owner
+        const isOwner = await checkOwnership(eventData.user_id);
+        setIsCurrentUserOwner(isOwner);
       }
     } catch (error) {
-      console.error("Error fetching event details:", error);
+      console.error("Error in fetchEventDetails:", error);
       toast({
         title: "Error",
         description: "Failed to load event details",
@@ -81,7 +41,7 @@ export const useEventFetching = (eventId?: string) => {
     } finally {
       setLoading(false);
     }
-  }, [eventId, toast]);
+  }, [eventId, fetchEventWithDetails, checkOwnership, toast, setIsCurrentUserOwner]);
 
   useEffect(() => {
     fetchEventDetails();

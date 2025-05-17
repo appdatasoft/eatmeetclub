@@ -2,14 +2,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
-import { MediaItem } from '@/components/restaurants/menu';
 import { useMenuItemMedia } from '@/hooks/restaurants/menu/useMenuItemMedia';
+import { useMenuItemsProcessor } from './useMenuItemsProcessor';
 
 export const useMenuItems = (restaurantId: string | undefined) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { fetchMediaForMenuItem, fetchIngredientsForMenuItem } = useMenuItemMedia();
+  const { processMenuItems } = useMenuItemsProcessor(fetchMediaForMenuItem, fetchIngredientsForMenuItem);
 
   useEffect(() => {
     const fetchMenuItems = async () => {
@@ -33,31 +34,10 @@ export const useMenuItems = (restaurantId: string | undefined) => {
 
         if (menuData && menuData.length > 0) {
           console.log(`Found ${menuData.length} menu items`);
-
-          // Process menu items with media and ingredients
-          const processedItems = await Promise.all(menuData.map(async (item) => {
-            console.log(`Processing menu item: ${item.name} (${item.id})`);
-            
-            // Fetch media for this item using our improved hook
-            const media = await fetchMediaForMenuItem(restaurantId, item.id);
-            console.log(`Retrieved ${media?.length || 0} media items for ${item.name}`);
-            
-            // Fetch ingredients for this item
-            const ingredients = await fetchIngredientsForMenuItem(item.id);
-            console.log(`Retrieved ${ingredients?.length || 0} ingredients for ${item.name}`);
-
-            return {
-              id: item.id,
-              name: item.name,
-              description: item.description || '',
-              price: item.price,
-              type: 'Other', // Default type
-              ingredients,
-              media
-            };
-          }));
-
-          setMenuItems(processedItems);
+          
+          // Process the menu items with the dedicated processor
+          const processed = await processMenuItems(menuData, restaurantId);
+          setMenuItems(processed);
         } else {
           console.log('No menu items found');
           setMenuItems([]);
@@ -71,7 +51,7 @@ export const useMenuItems = (restaurantId: string | undefined) => {
     };
 
     fetchMenuItems();
-  }, [restaurantId]);
+  }, [restaurantId, processMenuItems]);
 
   return { menuItems, setMenuItems, isLoading, error };
 };
