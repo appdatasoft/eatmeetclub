@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { MediaItem } from "@/components/restaurants/menu/MenuItemMediaUploader";
 
@@ -25,15 +26,17 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
         
         // Look for files containing the item ID or restaurant ID
         const itemId = item.id.toLowerCase();
+        const restaurantIdLower = restaurantId.toLowerCase();
         const matchingFiles = rootFiles.filter(file => 
           !file.name.endsWith('/') && (
             file.name.toLowerCase().includes(itemId) ||
+            file.name.toLowerCase().includes(restaurantIdLower) ||
             (item.name && file.name.toLowerCase().includes(item.name.toLowerCase().replace(/\s+/g, '-')))
           )
         );
         
         if (matchingFiles.length > 0) {
-          console.log(`Found ${matchingFiles.length} matching files in root directory`);
+          console.log(`Found ${matchingFiles.length} matching files in root directory for ${item.name}`);
           const media = matchingFiles.map(file => {
             const filePath = `menu-items/${file.name}`;
             const publicUrl = supabase.storage
@@ -50,6 +53,8 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
             };
           });
           
+          // Log what was found
+          console.log(`Returning ${media.length} media items for ${item.name}:`, media);
           return media;
         }
       }
@@ -92,6 +97,7 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
               };
             });
             
+            console.log(`Returning ${media.length} media items for ${item.name}:`, media);
             return media;
           }
         }
@@ -130,6 +136,7 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
             };
           });
           
+          console.log(`Returning ${media.length} restaurant images as fallback`);
           // If we found files in the restaurant directory, just return the first few
           // as generic item images
           return media.slice(0, 3);
