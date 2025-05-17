@@ -56,12 +56,16 @@ const RestaurantLogoUploader = ({
       const { data: { publicUrl } } = supabase.storage
         .from('lovable-uploads')
         .getPublicUrl(filePath);
+      
+      // Create a placeholder menu item ID - this is required by the schema but we're using this for a logo
+      const placeholderMenuItemId = '00000000-0000-0000-0000-000000000000';
         
       // Save the URL to the restaurant_menu_media table
       const { error: dbError } = await supabase
         .from('restaurant_menu_media')
         .insert({
           restaurant_id: restaurantId,
+          menu_item_id: placeholderMenuItemId, // Add required field
           url: publicUrl,
           media_type: 'image',
           storage_path: filePath
