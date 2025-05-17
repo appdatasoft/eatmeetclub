@@ -3,14 +3,13 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { SignupFormValues } from "@/components/signup/SignupForm";
+import SignupForm, { SignupFormValues } from "@/components/signup/SignupForm";
 import Navbar from "@/components/layout/Navbar";
 import useSignupActions from "@/hooks/signup/useSignupActions";
 import { PaymentVerification } from "@/components/signup/PaymentVerification";
 import AuthHeader from "@/components/signup/AuthHeader";
 import PaymentCanceledAlert from "@/components/signup/PaymentCanceledAlert";
 import PaymentSuccessAlert from "@/components/signup/PaymentSuccessAlert";
-import SignupForm from "@/components/signup/SignupForm";
 import useAuth from "@/hooks/useAuth";
 import Footer from "@/components/layout/Footer";
 
