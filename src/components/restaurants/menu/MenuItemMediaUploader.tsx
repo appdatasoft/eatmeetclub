@@ -1,24 +1,13 @@
 
 import React, { useState } from "react";
-import { Upload, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { MediaItem, MediaUploaderProps } from "./types/mediaTypes";
+import { uploadFileToStorage, deleteFileFromStorage, extractPathFromUrl } from "./utils/uploadUtils";
+import MediaPreview from "./MediaPreview";
+import UploadButton from "./UploadButton";
+import ProgressBar from "./ProgressBar";
 
-export interface MediaItem {
-  url: string;
-  type: "image" | "video";
-  id?: string; // File name or identifier to help with deletion
-}
-
-interface MenuItemMediaUploaderProps {
-  initialMediaItems?: MediaItem[];
-  onChange: (mediaItems: MediaItem[]) => void;
-  restaurantId: string;
-  menuItemId?: string;
-}
-
-const MenuItemMediaUploader: React.FC<MenuItemMediaUploaderProps> = ({
+const MenuItemMediaUploader: React.FC<MediaUploaderProps> = ({
   initialMediaItems = [],
   onChange,
   restaurantId,
@@ -41,52 +30,13 @@ const MenuItemMediaUploader: React.FC<MenuItemMediaUploaderProps> = ({
       
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const fileExt = file.name.split('.').pop();
-        const isVideo = file.type.startsWith('video/');
-        
-        // Always use both restaurantId and menuItemId in the storage path to ensure proper organization
-        const folderPath = menuItemId 
-          ? `menu-items/${restaurantId}/${menuItemId}` 
-          : `menu-items/${restaurantId}/temp`;
-          
-        console.log(`Using storage path: ${folderPath}`);
-        
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
-        const filePath = `${folderPath}/${fileName}`;
         
         // Calculate progress based on current file
         setProgress(Math.round((i / files.length) * 100));
         
-        console.log('Uploading file:', file.name);
-        console.log('Storage path:', filePath);
-        
-        // Upload file to Supabase storage
-        const { data, error } = await supabase.storage
-          .from('lovable-uploads')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false,
-          });
-          
-        if (error) {
-          console.error('Error uploading file:', error);
-          throw error;
-        }
-        
-        console.log('Upload successful:', data);
-        
-        // Get public URL
-        const { data: publicUrlData } = supabase.storage
-          .from('lovable-uploads')
-          .getPublicUrl(filePath);
-          
-        if (publicUrlData) {
-          console.log('Public URL:', publicUrlData.publicUrl);
-          newMediaItems.push({
-            url: publicUrlData.publicUrl,
-            type: isVideo ? 'video' : 'image',
-            id: filePath // Store the full path for easy deletion
-          });
+        const mediaItem = await uploadFileToStorage(file, restaurantId, menuItemId);
+        if (mediaItem) {
+          newMediaItems.push(mediaItem);
         }
       }
       
@@ -121,30 +71,16 @@ const MenuItemMediaUploader: React.FC<MenuItemMediaUploaderProps> = ({
     // Always try to use the stored ID (which should be the full path)
     const filePath = item.id || extractPathFromUrl(item.url);
     
-    // Only try to delete from storage if we have a valid path
     if (filePath) {
-      try {
-        console.log(`Attempting to delete file: ${filePath}`);
-        
-        const { error } = await supabase.storage
-          .from('lovable-uploads')
-          .remove([filePath]);
-          
-        if (error) {
-          console.error('Error deleting file from storage:', error);
-          toast({
-            title: "Error removing file",
-            description: error.message || "Could not remove file from storage",
-            variant: "destructive",
-          });
-        } else {
-          console.log('File successfully deleted from storage');
-        }
-      } catch (err) {
-        console.error('Error in delete operation:', err);
+      const deleted = await deleteFileFromStorage(filePath);
+      
+      if (!deleted) {
+        toast({
+          title: "Error removing file",
+          description: "Could not remove file from storage",
+          variant: "destructive",
+        });
       }
-    } else {
-      console.warn('No valid file path found for deletion');
     }
     
     // Remove from UI regardless of storage deletion success
@@ -159,57 +95,9 @@ const MenuItemMediaUploader: React.FC<MenuItemMediaUploaderProps> = ({
     });
   };
   
-  // Helper to extract path from public URL
-  const extractPathFromUrl = (url: string): string | null => {
-    try {
-      // Extract the path portion from the URL
-      const match = url.match(/\/storage\/v1\/object\/public\/lovable-uploads\/(.+)/);
-      if (match && match[1]) {
-        return decodeURIComponent(match[1]);
-      }
-      return null;
-    } catch (err) {
-      console.error('Error extracting path from URL:', err);
-      return null;
-    }
-  };
-  
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {mediaItems.map((item, index) => (
-          <div key={index} className="relative group">
-            {item.type === 'image' ? (
-              <div className="w-24 h-24 border rounded-md overflow-hidden bg-gray-100">
-                <img 
-                  src={item.url} 
-                  alt="Menu item" 
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    console.error(`Image failed to load: ${item.url}`);
-                    e.currentTarget.src = "/placeholder.svg";
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="w-24 h-24 border rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
-                <video 
-                  src={item.url} 
-                  className="w-full h-full object-cover"
-                  controls
-                />
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => removeMediaItem(index)}
-              className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        ))}
-      </div>
+      <MediaPreview mediaItems={mediaItems} onRemove={removeMediaItem} />
       
       <div>
         <input
@@ -220,30 +108,10 @@ const MenuItemMediaUploader: React.FC<MenuItemMediaUploaderProps> = ({
           onChange={handleFileSelect}
           multiple
         />
-        <label htmlFor="media-upload">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isUploading}
-            className="w-full"
-            asChild
-          >
-            <div className="flex items-center justify-center cursor-pointer">
-              <Upload className="mr-2 h-4 w-4" />
-              {isUploading ? "Uploading..." : "Upload Images/Videos"}
-            </div>
-          </Button>
-        </label>
+        <UploadButton isUploading={isUploading} inputId="media-upload" />
       </div>
       
-      {isUploading && (
-        <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-          <div 
-            className="bg-blue-600 h-2.5 rounded-full" 
-            style={{ width: `${progress}%` }}
-          ></div>
-        </div>
-      )}
+      <ProgressBar progress={progress} isVisible={isUploading} />
     </div>
   );
 };
