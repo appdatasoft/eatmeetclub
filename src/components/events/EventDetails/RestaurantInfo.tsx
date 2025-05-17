@@ -36,7 +36,7 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({
                 className="object-cover"
               />
             ) : (
-              <AvatarFallback>
+              <AvatarFallback data-testid="avatar-fallback">
                 <Building className="h-6 w-6 text-gray-400" />
               </AvatarFallback>
             )}
