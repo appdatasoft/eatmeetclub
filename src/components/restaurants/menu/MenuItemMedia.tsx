@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { MediaItem } from './types/mediaTypes';
-import { GalleryHorizontal, ArrowLeft, ArrowRight } from 'lucide-react';
+import { GalleryHorizontal, ArrowLeft, ArrowRight, Film } from 'lucide-react';
 import MediaThumbnail from './media/MediaThumbnail';
 import MediaGallery from './media/MediaGallery';
 import MediaDialog from './media/MediaDialog';

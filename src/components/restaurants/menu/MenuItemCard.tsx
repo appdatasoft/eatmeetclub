@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash, Image } from 'lucide-react';
+import { Edit, Trash, Image, ArrowLeft, ArrowRight } from 'lucide-react';
 import { MediaItem } from './types/mediaTypes';
 import MenuItemMedia from './MenuItemMedia';
 import MediaDialog from './media/MediaDialog';
