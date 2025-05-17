@@ -103,3 +103,37 @@ export const checkStorageUrlExists = async (url: string): Promise<boolean> => {
     return false;
   }
 };
+
+/**
+ * Generates alternative URL patterns to try for a given item ID
+ * @param restaurantId The restaurant ID
+ * @param itemId The menu item ID
+ * @returns Array of possible URL patterns to try
+ */
+export const generateAlternativeUrls = (
+  restaurantId: string,
+  itemId: string
+): string[] => {
+  const bucket = 'lovable-uploads';
+  const baseStorageUrl = `https://wocfwpedauuhlrfugxuu.supabase.co/storage/v1/object/public/${bucket}`;
+  const extensions = ['jpg', 'jpeg', 'png', 'webp'];
+  
+  const urls: string[] = [];
+  
+  // Try different patterns with different extensions
+  extensions.forEach(ext => {
+    // Direct ID as filename
+    urls.push(`${baseStorageUrl}/${itemId}.${ext}`);
+    
+    // ID in restaurant-specific folder
+    urls.push(`${baseStorageUrl}/menu-items/${restaurantId}/${itemId}.${ext}`);
+    
+    // ID in general menu-items folder
+    urls.push(`${baseStorageUrl}/menu-items/${itemId}.${ext}`);
+    
+    // Combined restaurant and item IDs
+    urls.push(`${baseStorageUrl}/${restaurantId}-${itemId}.${ext}`);
+  });
+  
+  return urls.map(url => addCacheBuster(url));
+};

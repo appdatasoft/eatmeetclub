@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { MediaItem } from "@/components/restaurants/menu";
-import { addCacheBuster } from '@/utils/supabaseStorage';
+import { addCacheBuster, generateAlternativeUrls } from '@/utils/supabaseStorage';
 
 /**
  * Fetches media items for a specific menu item from storage
@@ -25,6 +25,7 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
   // Try each path until we find media
   for (const path of pathsToCheck) {
     try {
+      console.log(`Checking directory path: ${path}`);
       const { data: files, error } = await supabase
         .storage
         .from('lovable-uploads')
@@ -86,34 +87,40 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
     }
   }
   
-  // If no media found, try with fallback approach
+  // Try direct file URLs as a fallback approach
   try {
-    // Create some test paths for direct uploads without folders
-    const possibleFilePaths = [
-      `${itemId}.jpg`,
-      `${itemId}.png`,
-      `${itemId}.jpeg`,
-      `${restaurantId}-${itemId}.jpg`
-    ];
+    // Generate a list of possible URLs to try
+    const alternativeUrls = generateAlternativeUrls(restaurantId, itemId);
+    console.log(`Trying ${alternativeUrls.length} alternative URL patterns for item ${itemId}`);
     
-    for (const filePath of possibleFilePaths) {
-      const { data } = supabase.storage
-        .from('lovable-uploads')
-        .getPublicUrl(filePath);
-      
-      if (data && data.publicUrl) {
-        const urlWithCache = addCacheBuster(data.publicUrl);
-        console.log(`Found direct file access for ${filePath}: ${urlWithCache}`);
-        
-        return [{
-          url: urlWithCache,
-          type: 'image',
-          id: filePath
-        }];
+    // Check each URL with a HEAD request 
+    // (this approach is more efficient than actually trying to render the images)
+    const urlChecks = alternativeUrls.map(async (url) => {
+      try {
+        const response = await fetch(url, { method: 'HEAD' });
+        if (response.ok) {
+          return url;
+        }
+        return null;
+      } catch (_) {
+        return null;
       }
+    });
+    
+    // Wait for all HEAD requests to complete
+    const validUrls = (await Promise.all(urlChecks)).filter(Boolean) as string[];
+    
+    if (validUrls.length > 0) {
+      console.log(`Found ${validUrls.length} valid direct URL(s) for item ${itemId}:`, validUrls[0]);
+      
+      return validUrls.map(url => ({
+        url,
+        type: 'image',
+        id: url.split('?')[0] // Store the URL without query params as ID
+      }));
     }
   } catch (err) {
-    console.error('Error in fallback file path check:', err);
+    console.error('Error in fallback URL check:', err);
   }
   
   // Return empty array if no media found

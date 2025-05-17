@@ -1,5 +1,7 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { MediaItem } from "@/components/restaurants/menu";
+import { addCacheBuster, generateAlternativeUrls } from "@/utils/supabaseStorage";
 
 /**
  * Fetches media items for a specific menu item from various possible storage paths
@@ -41,7 +43,7 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
             const fileType: "video" | "image" = isVideo ? "video" : "image";
             
             return {
-              url: publicUrl,
+              url: addCacheBuster(publicUrl),
               type: fileType,
               id: filePath // Store path for deletion capabilities
             };
@@ -77,7 +79,7 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
             const fileType: "video" | "image" = isVideo ? "video" : "image";
             
             return {
-              url: publicUrl,
+              url: addCacheBuster(publicUrl),
               type: fileType,
               id: filePath
             };
@@ -88,7 +90,39 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
       console.error(`Error checking fallback path ${fallbackPath}:`, error);
     }
     
-    // If no media found, return empty array rather than placeholder
+    // Try direct file URLs as a last resort
+    try {
+      // Generate list of possible direct URLs
+      const alternativeUrls = generateAlternativeUrls(restaurantId, item.id);
+      console.log(`Trying ${alternativeUrls.length} alternative URL patterns for ${item.name}`);
+      
+      // Check each URL with HEAD request
+      const urlChecks = alternativeUrls.slice(0, 4).map(async (url) => { 
+        // Only check first 4 to avoid too many requests
+        try {
+          const response = await fetch(url, { method: 'HEAD' });
+          return response.ok ? url : null;
+        } catch (_) {
+          return null;
+        }
+      });
+      
+      const validUrls = (await Promise.all(urlChecks)).filter(Boolean) as string[];
+      
+      if (validUrls.length > 0) {
+        console.log(`Found ${validUrls.length} valid direct URLs for item ${item.id}`, validUrls[0]);
+        
+        return validUrls.map(url => ({
+          url,
+          type: 'image',
+          id: url.split('?')[0] // Store the URL without query params as ID
+        }));
+      }
+    } catch (err) {
+      console.error(`Error in alternative URL check for ${item.name}:`, err);
+    }
+    
+    // If no media found, return empty array
     console.log(`No media found for ${item.name} after all attempts`);
     return [];
     

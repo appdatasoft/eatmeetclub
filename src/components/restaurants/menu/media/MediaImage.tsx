@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ImageOff, RefreshCcw } from 'lucide-react';
 import { addCacheBuster } from '@/utils/supabaseStorage';
 
@@ -14,33 +14,44 @@ const MediaImage: React.FC<MediaImageProps> = ({ url, alt, className = "", onCli
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [currentUrl, setCurrentUrl] = useState(url);
+  const [currentUrl, setCurrentUrl] = useState("");
   const maxRetries = 3;
+  const mountedRef = useRef(true);
   
-  // Reset states when URL changes
+  // Reset states when URL changes and generate cache-busted URL immediately
   useEffect(() => {
-    setCurrentUrl(addCacheBuster(url));
+    const bustersUrl = addCacheBuster(url);
+    setCurrentUrl(bustersUrl);
     setIsLoaded(false);
     setHasError(false);
     setRetryCount(0);
+    
+    return () => {
+      mountedRef.current = false;
+    };
   }, [url]);
   
   const handleImageLoad = () => {
+    if (!mountedRef.current) return;
+    console.log(`Image loaded successfully: ${currentUrl}`);
     setIsLoaded(true);
     setHasError(false);
   };
   
   const handleImageError = () => {
+    if (!mountedRef.current) return;
+    
     // Try with cache-busting parameter automatically if under max retries
     if (retryCount < maxRetries) {
       const nextRetryCount = retryCount + 1;
       setRetryCount(nextRetryCount);
       
-      // Force browser to re-fetch the image by adding a timestamp parameter
+      // Generate a completely new URL with timestamp to force browser to re-fetch
       const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 8);
       const newUrl = url.includes('?') 
-        ? `${url}&cache=${timestamp}&retry=${nextRetryCount}` 
-        : `${url}?cache=${timestamp}&retry=${nextRetryCount}`;
+        ? `${url}&t=${timestamp}&r=${randomString}&retry=${nextRetryCount}` 
+        : `${url}?t=${timestamp}&r=${randomString}&retry=${nextRetryCount}`;
       
       console.log(`Auto-retrying image load (${nextRetryCount}/${maxRetries}): ${newUrl}`);
       setCurrentUrl(newUrl);
@@ -59,9 +70,10 @@ const MediaImage: React.FC<MediaImageProps> = ({ url, alt, className = "", onCli
       
     // Force browser to re-fetch the image with a fresh timestamp
     const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 7);
     const newUrl = url.includes('?') 
-      ? `${url}&cache=${timestamp}&manual=true` 
-      : `${url}?cache=${timestamp}&manual=true`;
+      ? `${url}&t=${timestamp}&r=${random}&manual=true` 
+      : `${url}?t=${timestamp}&r=${random}&manual=true`;
     
     console.log(`Manual retry for image: ${newUrl}`);
     setCurrentUrl(newUrl);
