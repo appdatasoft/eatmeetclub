@@ -1,6 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { MediaItem } from "@/components/restaurants/menu/MenuItemMediaUploader";
+import { MediaItem } from "@/components/restaurants/menu";
 
 /**
  * Fetches media items for a specific menu item from various possible storage paths

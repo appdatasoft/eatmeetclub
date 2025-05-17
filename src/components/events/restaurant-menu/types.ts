@@ -1,5 +1,5 @@
 
-import { MediaItem } from "@/components/restaurants/menu/MenuItemMediaUploader";
+import { MediaItem } from "@/components/restaurants/menu";
 
 export interface MenuItem {
   id: string;

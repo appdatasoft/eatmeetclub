@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +5,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { X, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import MenuItemMediaUploader, { MediaItem } from './MenuItemMediaUploader';
+import MenuItemMediaUploader from './MenuItemMediaUploader';
+import { MediaItem } from './types/mediaTypes';
 
 export interface MenuItemFormValues {
   name: string;

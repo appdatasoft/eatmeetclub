@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MediaItem } from './MenuItemMediaUploader';
+import { MediaItem } from './types/mediaTypes';
 import { Image, Video, X, GalleryHorizontal } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription } from '@/components/ui/dialog';
 

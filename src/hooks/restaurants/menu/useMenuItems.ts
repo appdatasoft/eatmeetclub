@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
-import { MediaItem } from '@/components/restaurants/menu/MenuItemMediaUploader';
+import { MediaItem } from '@/components/restaurants/menu';
 import { useMenuItemMedia } from '@/hooks/restaurants/menu/useMenuItemMedia';
 
 export const useMenuItems = (restaurantId: string | undefined) => {
