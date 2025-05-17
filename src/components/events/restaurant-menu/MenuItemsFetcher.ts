@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MenuItem } from "./types";
@@ -62,11 +63,15 @@ export const useMenuItemsFetcher = (restaurantId: string): FetcherResult => {
           // Try to get media items with better error handling
           let media: MediaItem[] = [];
           
-          // Try multiple potential storage paths
+          // Try multiple potential storage paths with more specific search patterns
           const storagePaths = [
-            `menu-items/${restaurantId}/${item.id}`, // Primary path
-            `menu-items/${item.id}`, // Alternate path without restaurant
-            `menu-items` // Root path to search by prefix
+            // Direct item paths
+            `menu-items/${restaurantId}/${item.id}`,
+            `menu-items/${item.id}`,
+            // File naming patterns
+            `menu-items/${restaurantId}-${item.id}`,
+            // Root path for prefix search
+            `menu-items`
           ];
           
           for (const path of storagePaths) {
@@ -74,13 +79,14 @@ export const useMenuItemsFetcher = (restaurantId: string): FetcherResult => {
               console.log(`Checking for media in path: ${path}`);
               
               let storageData;
-              // If checking root path, use search
+              // If checking root path, use search with prefix matching
               if (path === 'menu-items') {
                 const { data, error } = await supabase
                   .storage
                   .from('lovable-uploads')
                   .list(path, {
-                    search: `${item.id}-`
+                    limit: 10,
+                    search: `${item.id}`
                   });
                 storageData = data;
                 
@@ -93,32 +99,82 @@ export const useMenuItemsFetcher = (restaurantId: string): FetcherResult => {
                   .list(path);
                 storageData = data;
                 
-                if (error) console.error(`Error listing ${path}:`, error);
+                if (error) {
+                  // Non-critical error, just log it
+                  console.log(`Directory ${path} might not exist:`, error.message);
+                  continue;
+                }
               }
               
               if (storageData && storageData.length > 0) {
                 console.log(`Found ${storageData.length} files in ${path}`);
                 
-                media = storageData.map(file => {
-                  const filePath = path === 'menu-items' 
-                    ? `${path}/${file.name}` 
-                    : `${path}/${file.name}`;
+                media = storageData
+                  .filter(file => !file.name.endsWith('/')) // Filter out folder names
+                  .map(file => {
+                    const filePath = path === 'menu-items' 
+                      ? `${path}/${file.name}` 
+                      : `${path}/${file.name}`;
+                      
+                    const publicUrl = supabase.storage
+                      .from('lovable-uploads')
+                      .getPublicUrl(filePath).data.publicUrl;
                     
-                  const publicUrl = supabase.storage
-                    .from('lovable-uploads')
-                    .getPublicUrl(filePath).data.publicUrl;
-                  
-                  return {
-                    url: publicUrl,
-                    type: file.metadata?.mimetype?.startsWith('video/') ? 'video' : 'image'
-                  };
-                });
+                    // Check if the file is an image or video based on file extension
+                    const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+                    
+                    return {
+                      url: publicUrl,
+                      type: isVideo ? 'video' : 'image'
+                    };
+                  });
                 
                 // If we found media, break the loop
-                if (media.length > 0) break;
+                if (media.length > 0) {
+                  console.log(`Using media from path: ${path}`);
+                  break;
+                }
               }
             } catch (storageErr) {
               console.error(`Error accessing storage path ${path}:`, storageErr);
+            }
+          }
+          
+          // Try direct filename matching if we still don't have media
+          if (media.length === 0) {
+            try {
+              // Try to find any file that contains the menu item id in its name
+              const { data: listData } = await supabase
+                .storage
+                .from('lovable-uploads')
+                .list('menu-items');
+                
+              if (listData) {
+                const matchingFiles = listData.filter(file => 
+                  file.name.includes(item.id) || 
+                  file.name.includes(item.name.toLowerCase().replace(/\s+/g, '-'))
+                );
+                
+                if (matchingFiles.length > 0) {
+                  console.log(`Found ${matchingFiles.length} files with matching name pattern for item ${item.id}`);
+                  
+                  media = matchingFiles.map(file => {
+                    const filePath = `menu-items/${file.name}`;
+                    const publicUrl = supabase.storage
+                      .from('lovable-uploads')
+                      .getPublicUrl(filePath).data.publicUrl;
+                      
+                    const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+                    
+                    return {
+                      url: publicUrl,
+                      type: isVideo ? 'video' : 'image'
+                    };
+                  });
+                }
+              }
+            } catch (err) {
+              console.error("Error with direct filename matching:", err);
             }
           }
           

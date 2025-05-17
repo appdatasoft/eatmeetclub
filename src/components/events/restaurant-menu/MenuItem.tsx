@@ -1,20 +1,38 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { MenuItem } from "./types";
 import MenuItemMedia from "@/components/restaurants/menu/MenuItemMedia";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface MenuItemProps {
   item: MenuItem;
 }
 
 const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
+  
+  const hasMedia = item.media && item.media.length > 0;
+  
   return (
     <div className="border-b pb-3">
       <div className="flex">
         {/* Thumbnail - always show at least a placeholder */}
         <div className="mr-3">
-          {item.media && item.media.length > 0 ? (
-            <MenuItemMedia media={item.media} className="mt-0" thumbnailOnly />
+          {hasMedia ? (
+            <div 
+              className="w-16 h-16 rounded-md overflow-hidden cursor-pointer"
+              onClick={() => setShowAllPhotos(true)}
+            >
+              <img 
+                src={item.media[0].url} 
+                alt={item.name} 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.onerror = null; 
+                  e.currentTarget.src = "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop";
+                }}
+              />
+            </div>
           ) : (
             <div className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center">
               <span className="text-gray-400 text-xs">No image</span>
@@ -40,16 +58,49 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
           )}
           
           {/* Show "View More" if there are multiple images */}
-          {item.media && item.media.length > 1 && (
+          {hasMedia && item.media.length > 1 && (
             <button 
               className="text-xs text-primary mt-1 hover:underline"
-              onClick={() => {}}
+              onClick={() => setShowAllPhotos(true)}
             >
-              +{item.media!.length - 1} more photos
+              +{item.media.length - 1} more photos
             </button>
           )}
         </div>
       </div>
+      
+      {/* Full Media Gallery Dialog */}
+      <Dialog open={showAllPhotos} onOpenChange={setShowAllPhotos}>
+        <DialogContent className="sm:max-w-3xl">
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">{item.name}</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {hasMedia && item.media.map((media, idx) => (
+                <div key={idx} className="rounded-md overflow-hidden">
+                  {media.type === 'image' ? (
+                    <img 
+                      src={media.url} 
+                      alt={`${item.name} photo ${idx+1}`} 
+                      className="w-full h-64 object-cover"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop";
+                      }}
+                    />
+                  ) : (
+                    <video 
+                      src={media.url} 
+                      controls
+                      className="w-full h-64 object-cover"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
