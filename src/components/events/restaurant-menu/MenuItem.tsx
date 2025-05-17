@@ -182,4 +182,3 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
 };
 
 export default MenuItemComponent;
-
