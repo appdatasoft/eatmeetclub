@@ -57,7 +57,7 @@ const EventHeader: React.FC<EventHeaderProps> = ({
         
         {/* View Menu button only for logged-in users */}
         <div className="absolute top-4 right-4">
-          {restaurantId && restaurantId !== "unknown" && user && (
+          {restaurantId && restaurantId !== "unknown" && (
             <Button
               variant="secondary"
               size="sm"
