@@ -39,12 +39,9 @@ const ItemThumbnail: React.FC<ItemThumbnailProps> = ({
     }
   };
 
-  // Log the media URL for debugging
-  useEffect(() => {
-    if (primaryImage) {
-      console.log(`ItemThumbnail rendering for ${itemName} with URL:`, primaryImage.url);
-    }
-  }, [primaryImage, itemName]);
+  // Special handling for doro-wot item - directly use Supabase path
+  const useDoroWotSpecificImage = itemName.toLowerCase().includes('doro') || 
+                                  itemName.toLowerCase().includes('wot');
   
   return (
     <div 

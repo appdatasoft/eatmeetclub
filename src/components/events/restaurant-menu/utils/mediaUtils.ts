@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { MediaItem } from "@/components/restaurants/menu";
 import { addCacheBuster, generateAlternativeUrls, findWorkingImageUrl, getDefaultFoodPlaceholder } from "@/utils/supabaseStorage";
@@ -21,51 +20,90 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
       }];
     }
 
-    // First check if this matches one of our known food items
-    const foodItems = ["rice", "doro-wot"];
-    for (const foodItem of foodItems) {
-      if (item.name.toLowerCase().includes(foodItem) || 
-          foodItem.toLowerCase().includes(item.name.toLowerCase())) {
-        try {
-          console.log(`Checking direct folder for ${foodItem}`);
-          const { data: files, error } = await supabase
-            .storage
-            .from('lovable-uploads')
-            .list(foodItem);
+    // Check if this is the doro-wot item
+    if (item.name.toLowerCase().includes('doro') || 
+        item.name.toLowerCase().includes('wot') || 
+        item.id.toLowerCase().includes('doro')) {
+      try {
+        console.log('Found doro-wot item, fetching specific images from doro-wot folder');
+        
+        const { data: files, error } = await supabase
+          .storage
+          .from('lovable-uploads')
+          .list('doro-wot');
+          
+        if (!error && files && files.length > 0) {
+          const imageFiles = files.filter(file => !file.name.endsWith('/') && 
+            (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png')));
+          
+          if (imageFiles.length > 0) {
+            console.log(`Found ${imageFiles.length} doro-wot images in storage`);
             
-          if (!error && files && files.length > 0) {
-            const imageFiles = files.filter(file => !file.name.endsWith('/'));
+            const mediaItems = imageFiles.map(file => {
+              const filePath = `doro-wot/${file.name}`;
+              const publicUrl = supabase.storage
+                .from('lovable-uploads')
+                .getPublicUrl(filePath).data.publicUrl;
+                
+              // Add cache buster parameter to the URL
+              const urlWithCache = addCacheBuster(publicUrl);
+              
+              return {
+                url: urlWithCache,
+                type: 'image' as const,
+                id: filePath
+              };
+            });
             
-            if (imageFiles.length > 0) {
-              console.log(`Found ${imageFiles.length} files in direct folder ${foodItem}`);
-              
-              const mediaItems = imageFiles.map(file => {
-                const filePath = `${foodItem}/${file.name}`;
-                const publicUrl = supabase.storage
-                  .from('lovable-uploads')
-                  .getPublicUrl(filePath).data.publicUrl;
-                  
-                const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
-                
-                // Add cache buster parameter to the URL
-                const urlWithCache = addCacheBuster(publicUrl);
-                
-                return {
-                  url: urlWithCache,
-                  type: isVideo ? 'video' as const : 'image' as const,
-                  id: filePath // Store full path for deletion capabilities
-                };
-              });
-              
-              if (mediaItems.length > 0) {
-                console.log(`Successfully mapped ${mediaItems.length} media items`);
-                return mediaItems;
-              }
-            }
+            console.log('Successfully found doro-wot images:', mediaItems);
+            return mediaItems;
           }
-        } catch (err) {
-          console.error(`Error accessing direct folder ${foodItem}:`, err);
         }
+      } catch (err) {
+        console.error('Error fetching doro-wot specific images:', err);
+      }
+    }
+
+    // Check if this is the rice item
+    if (item.name.toLowerCase().includes('rice') || 
+        item.id.toLowerCase().includes('rice')) {
+      try {
+        console.log('Found rice item, fetching specific images from rice folder');
+        
+        const { data: files, error } = await supabase
+          .storage
+          .from('lovable-uploads')
+          .list('rice');
+          
+        if (!error && files && files.length > 0) {
+          const imageFiles = files.filter(file => !file.name.endsWith('/') && 
+            (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png')));
+          
+          if (imageFiles.length > 0) {
+            console.log(`Found ${imageFiles.length} rice images in storage`);
+            
+            const mediaItems = imageFiles.map(file => {
+              const filePath = `rice/${file.name}`;
+              const publicUrl = supabase.storage
+                .from('lovable-uploads')
+                .getPublicUrl(filePath).data.publicUrl;
+                
+              // Add cache buster parameter to the URL
+              const urlWithCache = addCacheBuster(publicUrl);
+              
+              return {
+                url: urlWithCache,
+                type: 'image' as const,
+                id: filePath
+              };
+            });
+            
+            console.log('Successfully found rice images:', mediaItems);
+            return mediaItems;
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching rice specific images:', err);
       }
     }
     
