@@ -1,5 +1,6 @@
 
 import React from "react";
+import { Calendar, Clock, MapPin } from "lucide-react";
 
 interface EventInfoProps {
   description: string;
@@ -28,9 +29,7 @@ const EventInfo: React.FC<EventInfoProps> = ({
       <div className="flex flex-wrap gap-6 mb-6">
         <div className="flex items-center">
           <div className="bg-amber-100 p-2 rounded-full mr-3">
-            <svg className="w-5 h-5 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+            <Calendar className="w-5 h-5 text-amber-600" />
           </div>
           <div>
             <p className="text-sm text-gray-500">Date</p>
@@ -40,9 +39,7 @@ const EventInfo: React.FC<EventInfoProps> = ({
         
         <div className="flex items-center">
           <div className="bg-purple-100 p-2 rounded-full mr-3">
-            <svg className="w-5 h-5 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <Clock className="w-5 h-5 text-purple-600" />
           </div>
           <div>
             <p className="text-sm text-gray-500">Time</p>
@@ -50,16 +47,13 @@ const EventInfo: React.FC<EventInfoProps> = ({
           </div>
         </div>
         
-        <div className="flex items-center">
+        <div className="flex items-start">
           <div className="bg-blue-100 p-2 rounded-full mr-3">
-            <svg className="w-5 h-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            <MapPin className="w-5 h-5 text-blue-600" />
           </div>
           <div>
             <p className="text-sm text-gray-500">Location</p>
-            <p className="font-medium">{location}</p>
+            <p className="font-medium">{location || "Address not available"}</p>
           </div>
         </div>
       </div>

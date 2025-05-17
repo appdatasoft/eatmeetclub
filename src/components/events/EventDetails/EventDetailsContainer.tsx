@@ -37,6 +37,7 @@ const EventDetailsContainer: React.FC<EventDetailsContainerProps> = ({
         ticketsPercentage={ticketsPercentage}
       />
       <RestaurantInfo 
+        id={event.restaurant.id}
         name={event.restaurant.name} 
         description={event.restaurant.description}
       />

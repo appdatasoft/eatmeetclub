@@ -3,6 +3,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import SupabaseImage from "@/components/common/SupabaseImage";
+import { MapPin, Store } from "lucide-react";
 
 export interface EventCardProps {
   id: string;
@@ -73,20 +74,26 @@ const EventCard: React.FC<EventCardProps> = ({
           </h3>
         </Link>
 
-        {restaurantId ? (
-          <Link 
-            to={`/restaurant/${restaurantId}`}
-            className="text-sm font-medium text-primary hover:underline"
-          >
-            {restaurantName}
-          </Link>
-        ) : (
-          <p className="text-sm font-medium text-primary">{restaurantName}</p>
-        )}
+        <div className="flex items-center mt-2 text-sm text-gray-600">
+          <Store className="h-3.5 w-3.5 mr-1 text-primary" />
+          {restaurantId ? (
+            <Link 
+              to={`/restaurant/${restaurantId}`}
+              className="font-medium text-primary hover:underline"
+            >
+              {restaurantName}
+            </Link>
+          ) : (
+            <span className="font-medium text-primary">{restaurantName}</span>
+          )}
+        </div>
 
-        <div className="mt-3 space-y-1">
+        <div className="mt-3 space-y-2">
           <p className="text-sm text-gray-600">{date} • {time}</p>
-          <p className="text-sm text-gray-600">{location}</p>
+          <div className="flex items-start">
+            <MapPin className="h-3.5 w-3.5 mr-1 mt-0.5 flex-shrink-0 text-gray-500" />
+            <p className="text-sm text-gray-600">{location}</p>
+          </div>
         </div>
       </CardContent>
 
