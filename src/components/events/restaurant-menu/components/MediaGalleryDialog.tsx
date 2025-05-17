@@ -99,17 +99,17 @@ const MediaGalleryDialog: React.FC<MediaGalleryDialogProps> = ({ item, open, onO
               </CarouselContent>
             </Carousel>
             
-            {/* Navigation controls below the image */}
+            {/* Navigation controls below the image with clear labels */}
             {item.media && item.media.length > 1 && (
               <div className="flex justify-center items-center mt-4 gap-4">
                 <button 
                   onClick={() => {
                     setActiveIndex((prev) => (prev - 1 + item.media.length) % item.media.length);
                   }}
-                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md px-3 py-1 flex items-center transition-colors"
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md px-4 py-2 flex items-center transition-colors"
                   aria-label="Previous image"
                 >
-                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  <ArrowLeft className="h-4 w-4 mr-2" />
                   <span>Previous</span>
                 </button>
                 
@@ -121,11 +121,11 @@ const MediaGalleryDialog: React.FC<MediaGalleryDialogProps> = ({ item, open, onO
                   onClick={() => {
                     setActiveIndex((prev) => (prev + 1) % item.media.length);
                   }}
-                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md px-3 py-1 flex items-center transition-colors"
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md px-4 py-2 flex items-center transition-colors"
                   aria-label="Next image"
                 >
                   <span>Next</span>
-                  <ArrowRight className="h-4 w-4 ml-1" />
+                  <ArrowRight className="h-4 w-4 ml-2" />
                 </button>
               </div>
             )}

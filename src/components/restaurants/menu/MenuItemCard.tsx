@@ -34,7 +34,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onEdit, onDelete }) =
         <div className="flex items-start gap-3">
           {/* Show thumbnail if available */}
           {hasMedia && (
-            <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+            <div className="w-16 h-16 flex-shrink-0">
               <MenuItemMedia media={item.media} className="mt-0" thumbnailOnly />
             </div>
           )}

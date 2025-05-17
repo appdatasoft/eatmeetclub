@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { MediaItem } from "../types";
-import { GalleryHorizontal, ImageOff, Film, ArrowLeft, ArrowRight } from "lucide-react";
+import { ImageOff, Film, ArrowLeft, ArrowRight } from "lucide-react";
 
 interface ItemThumbnailProps {
   media: MediaItem[];
@@ -32,7 +32,6 @@ const ItemThumbnail: React.FC<ItemThumbnailProps> = ({ media, name, onClick }) =
     return (
       <div 
         className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center"
-        onClick={onClick}
       >
         <ImageOff className="h-5 w-5 text-gray-400" />
       </div>
@@ -41,6 +40,7 @@ const ItemThumbnail: React.FC<ItemThumbnailProps> = ({ media, name, onClick }) =
   
   return (
     <div className="flex flex-col">
+      {/* Thumbnail - only trigger popup when directly clicked */}
       <div 
         className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 cursor-pointer"
         onClick={onClick}
@@ -83,30 +83,32 @@ const ItemThumbnail: React.FC<ItemThumbnailProps> = ({ media, name, onClick }) =
       
       {/* Media count indicator for multiple media */}
       {hasMultipleMedia && (
-        <div className="text-[10px] text-gray-500 text-center mt-1">
+        <div className="text-[10px] text-gray-500 text-center mt-1 mb-1">
           {activeIndex + 1}/{media.length}
         </div>
       )}
       
-      {/* Navigation arrows below the thumbnail */}
+      {/* Navigation arrows below the thumbnail with text labels */}
       {hasMultipleMedia && (
-        <div className="flex justify-center gap-1 mt-1">
+        <div className="flex justify-between gap-1 mt-1 text-xs">
           <button 
             type="button"
             onClick={(e) => handleNavigate('prev', e)}
-            className="bg-gray-100 text-gray-600 rounded p-0.5 hover:bg-gray-200 transition-colors"
+            className="flex-1 bg-gray-100 text-gray-600 rounded py-0.5 px-1 hover:bg-gray-200 transition-colors text-[10px] flex items-center justify-center"
             aria-label="Previous image"
           >
-            <ArrowLeft className="h-2.5 w-2.5" />
+            <ArrowLeft className="h-2.5 w-2.5 mr-0.5" />
+            <span>Prev</span>
           </button>
           
           <button 
             type="button"
             onClick={(e) => handleNavigate('next', e)}
-            className="bg-gray-100 text-gray-600 rounded p-0.5 hover:bg-gray-200 transition-colors"
+            className="flex-1 bg-gray-100 text-gray-600 rounded py-0.5 px-1 hover:bg-gray-200 transition-colors text-[10px] flex items-center justify-center"
             aria-label="Next image"
           >
-            <ArrowRight className="h-2.5 w-2.5" />
+            <span>Next</span>
+            <ArrowRight className="h-2.5 w-2.5 ml-0.5" />
           </button>
         </div>
       )}
