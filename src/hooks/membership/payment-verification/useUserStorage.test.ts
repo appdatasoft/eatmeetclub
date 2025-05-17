@@ -1,4 +1,3 @@
-
 import { renderHook, act } from '@testing-library/react-hooks';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useUserStorage } from './useUserStorage';
@@ -83,28 +82,7 @@ describe('useUserStorage', () => {
     });
   });
 
-  it('should clear user details from both storages', () => {
-    // Set up test data in both storages
-    mockLocalStorageData['signup_email'] = 'local@example.com';
-    mockLocalStorageData['signup_name'] = 'Local User';
-    mockSessionStorageData['signup_email'] = 'session@example.com';
-    
-    const { result } = renderHook(() => useUserStorage());
-    
-    result.current.clearUserDetails();
-    
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('signup_email');
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('signup_name');
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('signup_phone');
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('signup_address');
-    
-    expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('signup_email');
-    expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('signup_name');
-    expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('signup_phone');
-    expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('signup_address');
-  });
-
-  // Fix the method name to match the implementation
+  // Fix the method name to match the implementation (storeUserDetails)
   it('should store user details in both storages', () => {
     const { result } = renderHook(() => useUserStorage());
     

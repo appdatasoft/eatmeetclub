@@ -1,4 +1,3 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import TicketSuccess from './TicketSuccess';
@@ -97,7 +96,7 @@ describe('TicketSuccess', () => {
     });
     
     // Mock successful event details fetch
-    const mockEq = supabase.from("").select("").eq;
+    const mockEq = supabase.eq;
     mockEq.mockResolvedValue({
       data: mockEventDetails,
       error: null

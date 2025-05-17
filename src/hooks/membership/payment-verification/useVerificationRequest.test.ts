@@ -7,7 +7,7 @@ import { useVerificationRequest } from './useVerificationRequest';
 global.fetch = vi.fn();
 
 describe('useVerificationRequest', () => {
-  const mockFetch = global.fetch as vi.Mock;
+  const mockFetch = global.fetch as vi.MockedFunction<typeof fetch>;
   
   beforeEach(() => {
     vi.clearAllMocks();

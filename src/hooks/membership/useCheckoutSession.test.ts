@@ -1,184 +1,109 @@
-
-import { renderHook } from '@testing-library/react-hooks';
-import { useCheckoutSession } from './useCheckoutSession';
-import { useInvoiceEmail } from './useInvoiceEmail';
-import { useToast } from '@/hooks/use-toast';
-import { useStripeMode } from './useStripeMode';
+import { renderHook, act } from '@testing-library/react-hooks';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// Mock dependencies
-vi.mock('./useInvoiceEmail', () => ({
-  useInvoiceEmail: vi.fn()
-}));
-
-vi.mock('@/hooks/use-toast', () => ({
-  useToast: vi.fn()
-}));
-
-vi.mock('./useStripeMode', () => ({
-  useStripeMode: vi.fn()
-}));
+import { useCheckoutSession } from './useCheckoutSession';
 
 // Mock fetch
 global.fetch = vi.fn();
-global.window = Object.create(window);
-Object.defineProperty(window, 'location', {
-  value: {
-    href: ''
-  },
-  writable: true
-});
 
 describe('useCheckoutSession', () => {
-  const mockToast = { toast: vi.fn() };
-  const mockCheckActiveMembership = vi.fn();
-  const mockStripeMode = { mode: 'test' };
-  const mockFetch = global.fetch as vi.Mock;
-
+  const mockFetch = global.fetch as vi.MockedFunction<typeof fetch>;
+  
   beforeEach(() => {
     vi.clearAllMocks();
-    (useToast as any).mockReturnValue(mockToast);
-    (useInvoiceEmail as any).mockReturnValue({ 
-      checkActiveMembership: mockCheckActiveMembership 
-    });
-    (useStripeMode as any).mockReturnValue(mockStripeMode);
-    window.location.href = '';
   });
 
-  it('should return createCheckoutSession function', () => {
-    const { result } = renderHook(() => useCheckoutSession());
+  it('should return loading state initially', () => {
+    mockFetch.mockImplementationOnce(() => 
+      new Promise(resolve => setTimeout(() => resolve({
+        ok: true,
+        json: () => Promise.resolve({ url: 'https://checkout.stripe.com/test' })
+      }), 100))
+    );
     
-    expect(typeof result.current.createCheckoutSession).toBe('function');
+    const { result } = renderHook(() => useCheckoutSession({ priceId: 'price_123', quantity: 1 }));
+    
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.checkoutUrl).toBe(null);
+    expect(result.current.error).toBe(null);
   });
-
-  it('should check for active membership before creating checkout', async () => {
-    mockCheckActiveMembership.mockResolvedValueOnce(null);
-    
-    const mockResponse = {
+  
+  it('should fetch checkout URL', async () => {
+    mockFetch.mockResolvedValueOnce({
       ok: true,
-      status: 200,
-      text: vi.fn().mockResolvedValueOnce(JSON.stringify({ success: true, url: 'https://stripe.com/checkout' }))
-    };
-    
-    mockFetch.mockResolvedValueOnce(mockResponse);
-    
-    const { result } = renderHook(() => useCheckoutSession());
-    
-    const response = await result.current.createCheckoutSession('test@example.com', 'Test User', '123456', '123 Test St', {
-      createUser: true,
-      sendPasswordEmail: true,
-      sendInvoiceEmail: true,
-      checkExisting: true
+      json: () => Promise.resolve({ url: 'https://checkout.stripe.com/test' })
     });
     
-    expect(mockCheckActiveMembership).toHaveBeenCalledWith('test@example.com');
-    expect(mockFetch).toHaveBeenCalled();
-    expect(response.success).toBe(true);
-    expect(response.url).toBe('https://stripe.com/checkout');
-    expect(window.location.href).toBe('https://stripe.com/checkout');
+    const { result, waitForNextUpdate } = renderHook(() => useCheckoutSession({ priceId: 'price_123', quantity: 1 }));
+    
+    await waitForNextUpdate();
+    
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.checkoutUrl).toBe('https://checkout.stripe.com/test');
+    expect(result.current.error).toBe(null);
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
-
-  it('should redirect to login if active membership already exists', async () => {
-    // Mock that user has active membership
-    mockCheckActiveMembership.mockResolvedValueOnce({ 
-      active: true,
-      productInfo: { name: 'Premium' }
-    });
-    
-    global.window.location.href = '';
-    
-    const { result } = renderHook(() => useCheckoutSession());
-    
-    const response = await result.current.createCheckoutSession('test@example.com', 'Test User', null, null, {
-      createUser: true,
-      sendPasswordEmail: true,
-      sendInvoiceEmail: true,
-      checkExisting: true
-    });
-    
-    expect(mockCheckActiveMembership).toHaveBeenCalledWith('test@example.com');
-    expect(mockFetch).not.toHaveBeenCalled();
-    expect(mockToast.toast).toHaveBeenCalledWith(expect.objectContaining({ 
-      title: 'Already a Member'
-    }));
-    expect(window.location.href).toBe('/login');
-    expect(response.success).toBe(false);
-  });
-
-  it('should handle fetch errors during checkout creation', async () => {
-    mockCheckActiveMembership.mockResolvedValueOnce(null);
-    
-    // Mock fetch error
+  
+  it('should handle fetch error', async () => {
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
     
-    const { result } = renderHook(() => useCheckoutSession());
+    const { result, waitForNextUpdate } = renderHook(() => useCheckoutSession({ priceId: 'price_123', quantity: 1 }));
     
-    const response = await result.current.createCheckoutSession('test@example.com', 'Test User', null, null, {
-      createUser: true,
-      sendPasswordEmail: true,
-      sendInvoiceEmail: true,
-      checkExisting: true
-    });
+    await waitForNextUpdate();
     
-    expect(mockToast.toast).toHaveBeenCalledWith(expect.objectContaining({ 
-      title: 'Error',
-      variant: 'destructive'
-    }));
-    expect(response.success).toBe(false);
-    expect(response.error).toBe('Network error');
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.checkoutUrl).toBe(null);
+    expect(result.current.error).toBe('Network error');
   });
-
-  it('should handle non-200 response from checkout endpoint', async () => {
-    mockCheckActiveMembership.mockResolvedValueOnce(null);
-    
-    const mockResponse = {
+  
+  it('should handle API error response', async () => {
+    mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
-      text: vi.fn().mockResolvedValueOnce(JSON.stringify({ error: 'Server error' })),
-      headers: {
-        get: vi.fn().mockReturnValue('application/json')
-      }
-    };
-    
-    mockFetch.mockResolvedValueOnce(mockResponse);
-    
-    const { result } = renderHook(() => useCheckoutSession());
-    
-    const response = await result.current.createCheckoutSession('test@example.com', 'Test User', null, null, {
-      createUser: true,
-      sendPasswordEmail: true,
-      sendInvoiceEmail: true,
-      checkExisting: true
+      statusText: 'Internal Server Error'
     });
     
-    expect(response.success).toBe(false);
-    expect(response.error).toBe('Server error');
+    const { result, waitForNextUpdate } = renderHook(() => useCheckoutSession({ priceId: 'price_123', quantity: 1 }));
+    
+    await waitForNextUpdate();
+    
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.checkoutUrl).toBe(null);
+    expect(result.current.error).toContain('Failed to create checkout session');
   });
-
-  it('should handle invalid JSON response', async () => {
-    mockCheckActiveMembership.mockResolvedValueOnce(null);
+  
+  it('should retry on error if retryCount is less than maxRetries', async () => {
+    // First call fails
+    mockFetch.mockRejectedValueOnce(new Error('Network error'));
     
-    const mockResponse = {
+    const { result, waitForNextUpdate } = renderHook(() => useCheckoutSession({ priceId: 'price_123', quantity: 1 }));
+    
+    await waitForNextUpdate();
+    
+    // Verify the first error state
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.checkoutUrl).toBe(null);
+    expect(result.current.error).toBe('Network error');
+    
+    // Setup second attempt to succeed
+    mockFetch.mockResolvedValueOnce({
       ok: true,
-      status: 200,
-      text: vi.fn().mockResolvedValueOnce('Not a valid JSON'),
-      headers: {
-        get: vi.fn().mockReturnValue('application/json')
-      }
-    };
-    
-    mockFetch.mockResolvedValueOnce(mockResponse);
-    
-    const { result } = renderHook(() => useCheckoutSession());
-    
-    const response = await result.current.createCheckoutSession('test@example.com', 'Test User', null, null, {
-      createUser: true,
-      sendPasswordEmail: true,
-      sendInvoiceEmail: true,
-      checkExisting: true
+      json: () => Promise.resolve({ url: 'https://checkout.stripe.com/retry_success' })
     });
     
-    expect(response.success).toBe(false);
-    expect(response.error).toContain('Server returned invalid JSON');
+    // Trigger retry
+    act(() => {
+      result.current.retry();
+    });
+    
+    // Should be loading again
+    expect(result.current.isLoading).toBe(true);
+    
+    await waitForNextUpdate();
+    
+    // Should now have the URL
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.checkoutUrl).toBe('https://checkout.stripe.com/retry_success');
+    expect(result.current.error).toBe(null);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });

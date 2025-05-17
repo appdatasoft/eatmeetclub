@@ -40,7 +40,7 @@ describe('useStripeMode', () => {
 
   it('should fetch Stripe mode from admin_config', async () => {
     // Mock successful response
-    const mockSingle = supabase.from("").select("").eq("", "").single;
+    const mockSingle = supabase.from("").select("").eq("").single;
     mockSingle.mockResolvedValueOnce({
       data: { value: 'live' },
       error: null
@@ -61,10 +61,8 @@ describe('useStripeMode', () => {
 
   it('should handle errors when fetching Stripe mode', async () => {
     // Mock error response
-    (supabase.from as any).mockReturnThis();
-    (supabase.select as any).mockReturnThis();
-    (supabase.eq as any).mockReturnThis();
-    (supabase.single as any).mockResolvedValueOnce({
+    const mockSingle = supabase.from("").select("").eq("").single;
+    mockSingle.mockResolvedValueOnce({
       data: null,
       error: { message: 'Failed to fetch Stripe mode' }
     });
@@ -80,10 +78,8 @@ describe('useStripeMode', () => {
 
   it('should retry fetching Stripe mode when handleRetryStripeCheck is called', async () => {
     // First mock an error
-    (supabase.from as any).mockReturnThis();
-    (supabase.select as any).mockReturnThis();
-    (supabase.eq as any).mockReturnThis();
-    (supabase.single as any).mockResolvedValueOnce({
+    const mockSingle = supabase.from("").select("").eq("").single;
+    mockSingle.mockResolvedValueOnce({
       data: null,
       error: { message: 'Failed to fetch Stripe mode' }
     });
@@ -95,7 +91,7 @@ describe('useStripeMode', () => {
     expect(result.current.stripeCheckError).toBe('Failed to fetch Stripe mode');
     
     // Mock successful response for retry
-    (supabase.single as any).mockResolvedValueOnce({
+    mockSingle.mockResolvedValueOnce({
       data: { value: 'live' },
       error: null
     });
