@@ -1,18 +1,12 @@
 
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
-import EventDetailsContainer from "./EventDetailsContainer";
-import { TicketPurchase } from "./TicketPurchase";
-import EventActionButtons from "./EventActionButtons";
-import UnpublishedEventNotice from "./UnpublishedEventNotice";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { EventDetails } from "@/types/event";
-import RestaurantInfo from "./RestaurantInfo";
-import { BookPlus, Menu, Utensils, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import RestaurantMenuPreview from "../RestaurantMenuPreview";
+import { useNavigate } from "react-router-dom";
+import EventDetailsContainer from "./EventDetailsContainer";
+import { TicketPurchase } from "@/components/events/TicketPurchase";
+import EventActionButtons from "./EventActionButtons";
+import { EventDetails } from "@/types/event";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EventDetailsContentProps {
   event: EventDetails;
@@ -46,18 +40,6 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
   
   const locationStr = `${event.restaurant.address}, ${event.restaurant.city}, ${event.restaurant.state} ${event.restaurant.zipcode}`;
 
-  const handleCreateMemory = () => {
-    if (user) {
-      navigate(`/dashboard/create-memory?event=${event.id}&restaurant=${event.restaurant.id}`);
-    } else {
-      navigate('/login', { state: { from: location.pathname } });
-    }
-  };
-
-  const handleAddMenu = () => {
-    navigate(`/dashboard/restaurant-menu/${event.restaurant.id}?eventId=${event.id}`);
-  };
-
   return (
     <div className="container-custom py-4 md:py-8">
       {canEditEvent && (
@@ -86,101 +68,27 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
         {/* Ticket purchase sidebar */}
         <div className="lg:col-span-1">
           {event.published && (
-            <>
-              <div className="mb-4 flex justify-between items-center">
-                <div className="flex items-center gap-1">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Attendees</span>
-                </div>
-                <Badge variant="outline" className="bg-primary/10 text-primary">
-                  {event.tickets_sold || 0} / {event.capacity}
-                </Badge>
-              </div>
-              
-              {/* Create Memory button - only for logged in users */}
-              {user && (
-                <Button 
-                  onClick={handleCreateMemory}
-                  variant="outline" 
-                  className="mb-4 w-full flex items-center gap-2"
-                >
-                  <BookPlus className="h-4 w-4" />
-                  <span>Create Memory for this Event</span>
-                </Button>
-              )}
-              
-              {/* View Restaurant Menu button - Available for all users */}
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="mb-4 w-full flex items-center gap-2"
-                  >
-                    <Utensils className="h-4 w-4" />
-                    <span>View Restaurant Menu</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent className="w-full sm:max-w-md md:max-w-lg">
-                  <SheetHeader>
-                    <SheetTitle>Menu: {event.restaurant.name}</SheetTitle>
-                    <SheetDescription>
-                      Browse the restaurant's menu items
-                    </SheetDescription>
-                  </SheetHeader>
-                  <div className="mt-6 pr-6">
-                    <RestaurantMenuPreview restaurantId={event.restaurant.id} />
-                  </div>
-                </SheetContent>
-              </Sheet>
-              
-              {/* Add Menu button - only show if user is logged in and is the owner of the event */}
-              {user && isCurrentUserOwner && (
-                <Button 
-                  onClick={handleAddMenu}
-                  variant="outline" 
-                  className="mb-4 w-full flex items-center gap-2"
-                >
-                  <Menu className="h-4 w-4" />
-                  <span>Manage Restaurant Menu</span>
-                </Button>
-              )}
-              
-              <TicketPurchase 
-                price={event.price}
-                ticketsRemaining={ticketsRemaining}
-                onBuyTickets={handleTicketPurchase}
-                isPaymentProcessing={isPaymentProcessing}
-                isLoggedIn={!!user}
-              />
-            </>
+            <TicketPurchase
+              eventId={event.id}
+              ticketPrice={event.price}
+              ticketsRemaining={ticketsRemaining} 
+            />
           )}
           
           {!event.published && canEditEvent && (
-            <UnpublishedEventNotice />
-          )}
-
-          {/* Restaurant info */}
-          <div className="mt-4 bg-white p-4 rounded-lg shadow-sm">
-            <h3 className="font-medium mb-2">Hosted at</h3>
-            <Link 
-              to={`/restaurant/${event.restaurant.id}`} 
-              className="text-primary hover:underline font-medium block"
-            >
-              {event.restaurant.name}
-            </Link>
-            <p className="text-sm mt-1">{locationStr}</p>
-          </div>
-
-          {/* Event creator link */}
-          {event.user_id && (
-            <div className="mt-4 bg-white p-4 rounded-lg shadow-sm">
-              <h3 className="font-medium mb-2">Event Creator</h3>
-              <Link 
-                to={`/user/${event.user_id}`} 
-                className="text-primary hover:underline font-medium"
+            <div className="bg-white p-6 rounded-lg shadow-sm sticky top-24">
+              <div className="mb-4 text-amber-600 font-medium">⚠️ This event is not published</div>
+              <p className="text-gray-600 mb-4">
+                This event is currently in draft mode and is only visible to you and admins.
+                Publish your event to make it available to the public.
+              </p>
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={() => navigate('/dashboard')}
               >
-                View Creator Profile
-              </Link>
+                Back to Dashboard
+              </Button>
             </div>
           )}
         </div>

@@ -1,11 +1,11 @@
-import { useParams, useNavigate } from "react-router-dom";
+
+import { useParams } from "react-router-dom";
 import { useEventDetails } from "@/hooks/useEventDetails";
 import { useAuth } from "@/hooks/useAuth";
 import { useEventAccess } from "@/hooks/useEventAccess";
 import { useEventActions } from "@/hooks/useEventActions";
 import { useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
-import { useEventPaymentHandler } from "@/hooks/event-payment/useEventPaymentHandler";
 
 // Layout components
 import Navbar from "@/components/layout/Navbar";
@@ -16,15 +16,12 @@ import EventDetailsContent from "@/components/events/EventDetails/EventDetailsCo
 // Event components
 import EventSkeleton from "@/components/events/EventDetails/EventSkeleton";
 import EventNotFound from "@/components/events/EventDetails/EventNotFound";
-import EventAccessControl from "@/components/events/EventDetails/EventAccessControl";
 import DeleteEventDialog from "@/components/events/EventDetails/DeleteEventDialog";
 import EditCoverDialog from "@/components/events/EventDetails/EditCoverDialog";
-import EventAttendees from "@/components/events/EventDetails/EventAttendees";
 
 const EventDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { user, isAdmin } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   
   const { 
     event, 
@@ -35,11 +32,6 @@ const EventDetailsPage = () => {
     isCurrentUserOwner, 
     refreshEventDetails 
   } = useEventDetails(id);
-  
-  // Log the event details for debugging
-  useEffect(() => {
-    console.log("Event details loaded:", { event, isLoading, error });
-  }, [event, isLoading, error]);
   
   // Show error toast if there's an error
   useEffect(() => {
@@ -70,13 +62,8 @@ const EventDetailsPage = () => {
   
   // Process ticket purchase when user is logged in
   const processTicketPurchase = (ticketCount: number) => {
-    console.log("Process ticket purchase called:", ticketCount);
     if (user) {
-      console.log("User is logged in, processing purchase");
       handleBuyTickets(ticketCount);
-    } else {
-      console.log("User is not logged in, redirecting to login");
-      // This should be handled by the TicketPurchase component now
     }
   };
   
@@ -99,7 +86,7 @@ const EventDetailsPage = () => {
     return (
       <>
         <Navbar />
-        <EventNotFound error={error} />
+        <EventNotFound />
         <Footer />
       </>
     );
@@ -110,7 +97,10 @@ const EventDetailsPage = () => {
     return (
       <>
         <Navbar />
-        <EventAccessControl isPublished={false} />
+        <div className="container-custom py-8 text-center">
+          <h1 className="text-2xl font-bold mb-4">Event Not Available</h1>
+          <p className="mb-6">This event is not currently published.</p>
+        </div>
         <Footer />
       </>
     );
@@ -146,13 +136,6 @@ const EventDetailsPage = () => {
           isPaymentProcessing={isPaymentProcessing}
           user={user}
         />
-        
-        {/* Show Event Attendees */}
-        {id && (
-          <div className="container-custom py-4 md:pb-8">
-            <EventAttendees eventId={id} />
-          </div>
-        )}
       </div>
       <Footer />
       

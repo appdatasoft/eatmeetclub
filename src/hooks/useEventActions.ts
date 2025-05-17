@@ -4,8 +4,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { EventDetails } from "@/types/event";
-import { useEventManagement } from "./events/useEventManagement";
-import { useEventCoverImage } from "./events/useEventCoverImage";
 
 export const useEventActions = (
   event: EventDetails | null,
@@ -20,26 +18,116 @@ export const useEventActions = (
   // State
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditCoverDialogOpen, setIsEditCoverDialogOpen] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
   
-  // Extract event management functionality to dedicated hook
-  const { handleEditEvent, handleDeleteEvent } = useEventManagement(
-    event,
-    refreshEventDetails,
-    canEditEvent,
-    navigate,
-    isDeleting,
-    setIsDeleting,
-    setIsDeleteDialogOpen
-  );
+  const handleEditEvent = () => {
+    if (!event) return;
+    navigate(`/edit-event/${event.id}`);
+  };
   
-  // Extract cover image functionality to dedicated hook
-  const {
-    isEditCoverDialogOpen,
-    setIsEditCoverDialogOpen,
-    isUploadingCover,
-    handleEditCover,
-    handleSaveCover
-  } = useEventCoverImage(event, refreshEventDetails);
+  const handleEditCover = () => {
+    setIsEditCoverDialogOpen(true);
+  };
+  
+  const handleSaveCover = async (coverFile: File) => {
+    if (!event) return;
+    
+    try {
+      setIsUploadingCover(true);
+      
+      // Generate a unique file path for the image
+      const fileExt = coverFile.name.split('.').pop();
+      const filePath = `${event.id}/${Date.now()}.${fileExt}`;
+      
+      // Upload the file to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('event-covers')
+        .upload(filePath, coverFile);
+      
+      if (uploadError) {
+        throw uploadError;
+      }
+      
+      // Get the public URL for the uploaded image
+      const { data: publicUrlData } = supabase.storage
+        .from('event-covers')
+        .getPublicUrl(filePath);
+      
+      const publicUrl = publicUrlData.publicUrl;
+      
+      // Update the event with the new cover image URL
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({ cover_image: publicUrl })
+        .eq('id', event.id);
+      
+      if (updateError) {
+        throw updateError;
+      }
+      
+      // Refresh the event details to show the updated image
+      await refreshEventDetails();
+      
+      toast({
+        title: "Cover Updated",
+        description: "Event cover image has been updated successfully",
+      });
+      
+      setIsEditCoverDialogOpen(false);
+    } catch (error: any) {
+      console.error("Error uploading cover image:", error);
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload cover image",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploadingCover(false);
+    }
+  };
+  
+  const handleDeleteEvent = async () => {
+    if (!event) return;
+    
+    // Check if user can delete this event
+    if (!canEditEvent) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to delete this event",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', event.id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Event Deleted",
+        description: "Event has been successfully deleted",
+      });
+      
+      // Navigate back to events list
+      navigate('/dashboard');
+    } catch (error: any) {
+      console.error("Error deleting event:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete event",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
   
   // Handle ticket purchase for non-logged in users
   const handleTicketPurchase = (ticketCount: number) => {
