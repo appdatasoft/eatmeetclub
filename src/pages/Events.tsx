@@ -20,7 +20,7 @@ const Events = () => {
   const navigate = useNavigate();
   const [isManuallyRefreshing, setIsManuallyRefreshing] = useState(false);
   
-  // Show toast for errors
+  // Show toast for errors - only once per error
   useEffect(() => {
     if (fetchError) {
       toast({
@@ -33,7 +33,7 @@ const Events = () => {
   }, [fetchError, toast]);
 
   const handleRefresh = async () => {
-    if (isManuallyRefreshing) return; // Prevent multiple refreshes
+    if (isManuallyRefreshing || isLoading) return; // Prevent multiple refreshes
     
     console.log("Manual refresh triggered");
     setIsManuallyRefreshing(true);
@@ -46,7 +46,12 @@ const Events = () => {
     try {
       await refreshEvents();
     } finally {
-      setIsManuallyRefreshing(false);
+      // Add a small delay before removing loading state to avoid flickering
+      setTimeout(() => {
+        if (isManuallyRefreshing) {
+          setIsManuallyRefreshing(false);
+        }
+      }, 500);
     }
   };
 

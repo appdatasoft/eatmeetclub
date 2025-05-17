@@ -10,6 +10,7 @@ export const useEvents = () => {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
   const initialLoadComplete = useRef(false);
+  const refreshInProgressRef = useRef(false);
 
   const { fetchPublishedEvents } = useEventsAPI();
   const { subscribeToEventChanges } = useEventSubscription();
@@ -24,11 +25,17 @@ export const useEvents = () => {
   };
 
   const refreshEvents = useCallback(async () => {
-    if (!isMountedRef.current) return;
+    if (!isMountedRef.current || refreshInProgressRef.current) {
+      console.log("Skipping refresh - component unmounted or refresh already in progress");
+      return;
+    }
 
     try {
-      setIsLoading(true);
+      refreshInProgressRef.current = true;
+      setIsLoading(prevIsLoading => !initialLoadComplete.current || prevIsLoading);
       setFetchError(null);
+      
+      console.log("Refreshing events data...");
       const newEvents = await fetchPublishedEvents();
 
       if (isMountedRef.current) {
@@ -42,39 +49,48 @@ export const useEvents = () => {
       }
     } catch (error: any) {
       if (isMountedRef.current) {
+        console.error("Error refreshing events:", error);
         setFetchError(error.message || "Unknown error");
       }
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false);
         initialLoadComplete.current = true;
+        refreshInProgressRef.current = false;
       }
     }
-  }, [fetchPublishedEvents]);
+  }, [fetchPublishedEvents, events]);
 
   // Separate effect for initial load
   useEffect(() => {
+    console.log("Initial setup of events hook");
     isMountedRef.current = true;
     
+    // Only load on initial mount
     if (!initialLoadComplete.current) {
+      console.log("Performing initial events load");
       refreshEvents();
     }
     
     return () => {
+      console.log("Cleaning up events hook");
       isMountedRef.current = false;
     };
   }, [refreshEvents]);
   
-  // Separate effect for subscription
+  // Separate effect for subscription - only set up once
   useEffect(() => {
+    console.log("Setting up events subscription");
+    
     const unsubscribe = subscribeToEventChanges(() => {
-      if (isMountedRef.current && initialLoadComplete.current) {
-        console.log("Event change detected via subscription");
+      if (isMountedRef.current && initialLoadComplete.current && !refreshInProgressRef.current) {
+        console.log("Event change detected via subscription, triggering refresh");
         refreshEvents();
       }
     });
 
     return () => {
+      console.log("Removing events subscription");
       unsubscribe();
     };
   }, [subscribeToEventChanges, refreshEvents]);

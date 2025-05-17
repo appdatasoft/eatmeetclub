@@ -8,20 +8,21 @@ export const useEventsAPI = () => {
   const [isFetching, setIsFetching] = useState(false);
   const fetchPromiseRef = useRef<Promise<EventCardProps[]> | null>(null);
   const lastFetchTimeRef = useRef<number>(0);
-  const cacheDuration = 30000; // 30 seconds cache
+  const cacheDuration = 60000; // Increased to 60 seconds cache to reduce network calls
+  const cachedEventsRef = useRef<EventCardProps[] | null>(null);
 
   const fetchPublishedEvents = async () => {
     const now = Date.now();
     
-    // If we recently fetched data and have a cached promise, return it
-    if (isFetching && fetchPromiseRef.current) {
-      console.log("Already fetching events, returning existing promise");
-      return fetchPromiseRef.current;
+    // If we have cached data and it's still fresh, return it immediately
+    if (cachedEventsRef.current && now - lastFetchTimeRef.current < cacheDuration) {
+      console.log("Using cached events data, age:", (now - lastFetchTimeRef.current) / 1000, "seconds");
+      return cachedEventsRef.current;
     }
     
-    // Implement request debouncing
-    if (now - lastFetchTimeRef.current < cacheDuration && fetchPromiseRef.current) {
-      console.log("Using cached events data");
+    // If we're already fetching data, return the existing promise
+    if (isFetching && fetchPromiseRef.current) {
+      console.log("Already fetching events, returning existing promise");
       return fetchPromiseRef.current;
     }
     
@@ -52,6 +53,7 @@ export const useEventsAPI = () => {
         
         if (!rawEvents || rawEvents.length === 0) {
           console.log("No events found in database");
+          cachedEventsRef.current = [];
           return [];
         }
         
@@ -60,6 +62,9 @@ export const useEventsAPI = () => {
         // Transform data to match EventCardProps format
         const formattedEvents = mapToEventCardProps(rawEvents);
         console.log(`Final formatted events: ${formattedEvents.length} events`);
+        
+        // Update the cache with new data
+        cachedEventsRef.current = formattedEvents;
         
         return formattedEvents;
       })();
