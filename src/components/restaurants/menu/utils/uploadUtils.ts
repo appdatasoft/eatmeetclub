@@ -51,7 +51,8 @@ export const uploadFileToStorage = async (
       console.log('Public URL:', publicUrlData.publicUrl);
       
       // Store media info in database
-      if (menuItemId) {
+      if (menuItemId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(menuItemId)) {
+        // Only proceed with database insert if menuItemId is a valid UUID
         const mediaType = isVideo ? 'video' : 'image';
         
         const { data: mediaRecord, error: mediaError } = await supabase
@@ -72,6 +73,8 @@ export const uploadFileToStorage = async (
         } else {
           console.log("Media record stored with ID:", mediaRecord.id);
         }
+      } else if (menuItemId) {
+        console.log("Skipping database record - invalid UUID format for menu item ID:", menuItemId);
       }
       
       return {

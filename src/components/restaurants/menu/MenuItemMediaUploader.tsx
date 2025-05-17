@@ -18,6 +18,12 @@ const MenuItemMediaUploader: React.FC<MediaUploaderProps> = ({
   const [progress, setProgress] = useState(0);
   const { toast } = useToast();
   
+  // Ensure we're using the actual UUID, not a slug derived from the name
+  const actualItemId = typeof menuItemId === 'string' && 
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(menuItemId) 
+      ? menuItemId 
+      : undefined;
+  
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -34,7 +40,8 @@ const MenuItemMediaUploader: React.FC<MediaUploaderProps> = ({
         // Calculate progress based on current file
         setProgress(Math.round((i / files.length) * 100));
         
-        const mediaItem = await uploadFileToStorage(file, restaurantId, menuItemId);
+        // Pass the actual UUID if available, otherwise use the name as a folder path only
+        const mediaItem = await uploadFileToStorage(file, restaurantId, actualItemId);
         if (mediaItem) {
           newMediaItems.push(mediaItem);
         }

@@ -92,7 +92,7 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
           initialMediaItems={formValues.media}
           onChange={handleMediaChange}
           restaurantId={restaurantId}
-          menuItemId={initialValues?.name ? initialValues.name.replace(/\s+/g, '-').toLowerCase() : undefined}
+          menuItemId={initialValues?.id} // Pass the actual UUID instead of a name slug
         />
       </div>
 
