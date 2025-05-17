@@ -38,10 +38,6 @@ const ItemThumbnail: React.FC<ItemThumbnailProps> = ({
       setRetryCount(prevCount => prevCount + 1);
     }
   };
-
-  // Special handling for doro-wot item - directly use Supabase path
-  const useDoroWotSpecificImage = itemName.toLowerCase().includes('doro') || 
-                                  itemName.toLowerCase().includes('wot');
   
   return (
     <div 
@@ -76,7 +72,7 @@ const ItemThumbnail: React.FC<ItemThumbnailProps> = ({
               setImageLoaded(true);
               setImageError(false);
             }}
-            onError={(e) => {
+            onError={() => {
               console.error(`Image error for ${itemName}:`, primaryImage.url);
               setImageError(true);
               setImageLoaded(false);

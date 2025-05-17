@@ -16,6 +16,7 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, onOpenGallery }) => {
   
   // Check if item has media
   const hasMedia = item.media && item.media.length > 0;
+  const hasMultipleMedia = hasMedia && item.media!.length > 1;
   
   return (
     <div className="flex-grow">
@@ -34,17 +35,17 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, onOpenGallery }) => {
         </p>
       )}
       
-      {hasMedia && item.media!.length > 1 && (
+      {hasMultipleMedia && (
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onOpenGallery();
           }}
-          className="text-xs text-primary-600 mt-2 hover:underline"
+          className="text-xs text-primary-600 mt-2 hover:underline flex items-center"
           aria-label="View all images"
         >
-          {item.media!.length} photos
+          <span>{item.media!.length} photos</span>
         </button>
       )}
     </div>

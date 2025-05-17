@@ -10,28 +10,36 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
   let media: MediaItem[] = [];
   console.log(`Fetching media for menu item: ${itemId} in restaurant: ${restaurantId}`);
   
-  // First, try direct food-named folders which is what we saw in storage
-  const foodItems = ["rice", "doro-wot"];
-  let mediaFound = false;
+  // Common food items with direct folders in storage
+  const commonFoodItems = [
+    {name: "doro-wot", keywords: ["doro", "wot"]},
+    {name: "rice", keywords: ["rice"]},
+    {name: "injera", keywords: ["injera"]},
+    {name: "tibs", keywords: ["tibs"]},
+    {name: "kitfo", keywords: ["kitfo"]},
+    {name: "misir", keywords: ["misir"]}
+  ];
   
-  for (const foodItem of foodItems) {
-    if (itemId.toLowerCase().includes(foodItem.toLowerCase()) || 
-        foodItem.toLowerCase().includes(itemId.toLowerCase())) {
+  // Check if this item matches any common food item
+  for (const food of commonFoodItems) {
+    if (food.keywords.some(keyword => 
+        itemId.toLowerCase().includes(keyword.toLowerCase()) || 
+        keyword.toLowerCase().includes(itemId.toLowerCase()))) {
       try {
-        console.log(`Checking direct folder for ${foodItem}`);
+        console.log(`Checking direct folder for ${food.name}`);
         const { data: files, error } = await supabase
           .storage
           .from('lovable-uploads')
-          .list(foodItem);
+          .list(food.name);
           
         if (!error && files && files.length > 0) {
           const imageFiles = files.filter(file => !file.name.endsWith('/'));
           
           if (imageFiles.length > 0) {
-            console.log(`Found ${imageFiles.length} files in direct folder ${foodItem}`);
+            console.log(`Found ${imageFiles.length} files in direct folder ${food.name}`);
             
             const mediaItems = imageFiles.map(file => {
-              const filePath = `${foodItem}/${file.name}`;
+              const filePath = `${food.name}/${file.name}`;
               const publicUrl = supabase.storage
                 .from('lovable-uploads')
                 .getPublicUrl(filePath).data.publicUrl;
@@ -55,7 +63,7 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
           }
         }
       } catch (err) {
-        console.error(`Error accessing direct folder ${foodItem}:`, err);
+        console.error(`Error accessing direct folder ${food.name}:`, err);
       }
     }
   }

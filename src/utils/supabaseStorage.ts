@@ -120,6 +120,34 @@ export const generateAlternativeUrls = (
   
   const urls: string[] = [];
   
+  // Check for common food items
+  const commonFoodItems = [
+    {name: "doro-wot", keywords: ["doro", "wot"]},
+    {name: "rice", keywords: ["rice"]},
+    {name: "injera", keywords: ["injera"]},
+    {name: "tibs", keywords: ["tibs"]},
+    {name: "kitfo", keywords: ["kitfo"]},
+    {name: "misir", keywords: ["misir"]}
+  ];
+  
+  // Add common food items first
+  for (const food of commonFoodItems) {
+    if (food.keywords.some(keyword => 
+        itemId.toLowerCase().includes(keyword.toLowerCase()) || 
+        keyword.toLowerCase().includes(itemId.toLowerCase()))) {
+      extensions.forEach(ext => {
+        urls.push(`${baseStorageUrl}/${food.name}/${food.name}.${ext}`);
+        urls.push(`${baseStorageUrl}/${food.name}/main.${ext}`);
+        urls.push(`${baseStorageUrl}/${food.name}/image.${ext}`);
+        urls.push(`${baseStorageUrl}/${food.name}/1.${ext}`);
+        
+        // Try with item name too
+        const formattedFoodName = food.name.replace('-', '');
+        urls.push(`${baseStorageUrl}/${food.name}/${formattedFoodName}.${ext}`);
+      });
+    }
+  }
+  
   // Try different patterns with different extensions
   extensions.forEach(ext => {
     // Direct ID as filename
@@ -148,21 +176,6 @@ export const generateAlternativeUrls = (
     // Based on your storage structure, let's try the pattern we see in your bucket
     urls.push(`${baseStorageUrl}/menu-items/${itemId}/${itemId}.${ext}`);
     urls.push(`${baseStorageUrl}/${itemId}/${itemId}.${ext}`);
-    
-    // Try files with name pattern matching food items
-    if (itemId.includes('rice') || itemId.toLowerCase().includes('rice')) {
-      urls.push(`${baseStorageUrl}/rice/rice.${ext}`);
-      urls.push(`${baseStorageUrl}/rice/rice-1.${ext}`);
-    }
-    
-    if (itemId.includes('doro') || itemId.toLowerCase().includes('doro')) {
-      urls.push(`${baseStorageUrl}/doro-wot/doro-wot.${ext}`);
-      urls.push(`${baseStorageUrl}/doro-wot/doro.${ext}`);
-    }
-    
-    // Try direct files in bucket root
-    urls.push(`${baseStorageUrl}/rice.${ext}`);
-    urls.push(`${baseStorageUrl}/doro-wot.${ext}`);
   });
   
   return urls.map(url => addCacheBuster(url));
@@ -190,6 +203,48 @@ export const findWorkingImageUrl = async (
   try {
     console.log(`Finding image for item: ${itemId}`);
     
+    // Common food items with direct folders in storage
+    const commonFoodItems = [
+      {name: "doro-wot", keywords: ["doro", "wot"]},
+      {name: "rice", keywords: ["rice"]},
+      {name: "injera", keywords: ["injera"]},
+      {name: "tibs", keywords: ["tibs"]},
+      {name: "kitfo", keywords: ["kitfo"]},
+      {name: "misir", keywords: ["misir"]}
+    ];
+    
+    // Check if this item matches any common food item
+    for (const food of commonFoodItems) {
+      if (food.keywords.some(keyword => 
+          itemId.toLowerCase().includes(keyword.toLowerCase()) || 
+          keyword.toLowerCase().includes(itemId.toLowerCase()))) {
+        try {
+          console.log(`Checking direct folder for ${food.name}`);
+          const { data: files, error } = await supabase
+            .storage
+            .from('lovable-uploads')
+            .list(food.name);
+            
+          if (!error && files && files.length > 0) {
+            // Find the first image file
+            const imageFile = files.find(file => 
+              !file.name.endsWith('/') && 
+              (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png') || file.name.endsWith('.webp'))
+            );
+            
+            if (imageFile) {
+              console.log(`Found file in ${food.name} folder: ${imageFile.name}`);
+              const filePath = `${food.name}/${imageFile.name}`;
+              const url = supabase.storage.from('lovable-uploads').getPublicUrl(filePath).data.publicUrl;
+              return addCacheBuster(url);
+            }
+          }
+        } catch (err) {
+          console.error(`Error checking ${food.name} folder:`, err);
+        }
+      }
+    }
+    
     // Try the menu-items folder structure first (most likely to have the images)
     const { data: folderFiles } = await supabase
       .storage
@@ -198,38 +253,17 @@ export const findWorkingImageUrl = async (
       
     if (folderFiles && folderFiles.length > 0) {
       // Get the first file in the folder
-      const firstFile = folderFiles[0];
-      if (!firstFile.name.endsWith('/')) {
+      const firstFile = folderFiles.find(file => 
+        !file.name.endsWith('/') && 
+        (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png') || file.name.endsWith('.webp'))
+      );
+      
+      if (firstFile) {
         // It's a file, not a directory
         console.log(`Found file directly in menu-items/${itemId}: ${firstFile.name}`);
         const filePath = `menu-items/${itemId}/${firstFile.name}`;
         const url = supabase.storage.from('lovable-uploads').getPublicUrl(filePath).data.publicUrl;
         return addCacheBuster(url);
-      }
-    }
-    
-    // Try direct named folders like "rice" or "doro-wot"
-    // Check for common food names in your bucket
-    const foodNames = ["rice", "doro-wot"];
-    for (const foodName of foodNames) {
-      if (itemId.toLowerCase().includes(foodName) || 
-          foodName.toLowerCase().includes(itemId.toLowerCase())) {
-        
-        const { data: foodFiles } = await supabase
-          .storage
-          .from('lovable-uploads')
-          .list(foodName);
-          
-        if (foodFiles && foodFiles.length > 0) {
-          // Find the first image file
-          const imageFile = foodFiles.find(file => !file.name.endsWith('/'));
-          if (imageFile) {
-            console.log(`Found file in ${foodName} folder: ${imageFile.name}`);
-            const filePath = `${foodName}/${imageFile.name}`;
-            const url = supabase.storage.from('lovable-uploads').getPublicUrl(filePath).data.publicUrl;
-            return addCacheBuster(url);
-          }
-        }
       }
     }
     

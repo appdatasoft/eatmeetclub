@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { MediaItem } from "@/components/restaurants/menu";
 import { addCacheBuster, generateAlternativeUrls, findWorkingImageUrl, getDefaultFoodPlaceholder } from "@/utils/supabaseStorage";
@@ -20,27 +21,43 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
       }];
     }
 
-    // Check if this is the doro-wot item
-    if (item.name.toLowerCase().includes('doro') || 
-        item.name.toLowerCase().includes('wot') || 
-        item.id.toLowerCase().includes('doro')) {
+    // Check common food items with known direct folders
+    const commonFoodItems = [
+      {name: "doro-wot", keywords: ["doro", "wot"]},
+      {name: "rice", keywords: ["rice"]},
+      {name: "injera", keywords: ["injera"]},
+      {name: "tibs", keywords: ["tibs"]},
+      {name: "kitfo", keywords: ["kitfo"]},
+      {name: "misir", keywords: ["misir"]}
+    ];
+    
+    // Check if this item matches any common food item
+    const matchedFoodItem = commonFoodItems.find(food => 
+      food.keywords.some(keyword => 
+        item.name.toLowerCase().includes(keyword.toLowerCase()) || 
+        item.id.toLowerCase().includes(keyword.toLowerCase())
+      )
+    );
+    
+    if (matchedFoodItem) {
+      const folderName = matchedFoodItem.name;
       try {
-        console.log('Found doro-wot item, fetching specific images from doro-wot folder');
+        console.log(`Found potential match for ${item.name}, checking ${folderName} folder`);
         
         const { data: files, error } = await supabase
           .storage
           .from('lovable-uploads')
-          .list('doro-wot');
+          .list(folderName);
           
         if (!error && files && files.length > 0) {
           const imageFiles = files.filter(file => !file.name.endsWith('/') && 
             (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png')));
           
           if (imageFiles.length > 0) {
-            console.log(`Found ${imageFiles.length} doro-wot images in storage`);
+            console.log(`Found ${imageFiles.length} images in ${folderName} folder`);
             
             const mediaItems = imageFiles.map(file => {
-              const filePath = `doro-wot/${file.name}`;
+              const filePath = `${folderName}/${file.name}`;
               const publicUrl = supabase.storage
                 .from('lovable-uploads')
                 .getPublicUrl(filePath).data.publicUrl;
@@ -55,130 +72,59 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
               };
             });
             
-            console.log('Successfully found doro-wot images:', mediaItems);
+            console.log(`Successfully found ${folderName} images:`, mediaItems);
             return mediaItems;
           }
         }
       } catch (err) {
-        console.error('Error fetching doro-wot specific images:', err);
+        console.error(`Error fetching ${folderName} specific images:`, err);
       }
     }
-
-    // Check if this is the rice item
-    if (item.name.toLowerCase().includes('rice') || 
-        item.id.toLowerCase().includes('rice')) {
+    
+    // Try multiple possible paths in order of priority
+    const pathsToTry = [
+      `${item.id}`, // Direct folder with item ID
+      `menu-items/${item.id}`, // Menu items subfolder
+      `menu-items/${restaurantId}/${item.id}`, // Restaurant specific menu item
+      `restaurants/${restaurantId}/menu/${item.id}` // Alternative structure
+    ];
+    
+    // Try each path until we find media
+    for (const path of pathsToTry) {
       try {
-        console.log('Found rice item, fetching specific images from rice folder');
-        
-        const { data: files, error } = await supabase
-          .storage
+        console.log(`Checking path: ${path}`);
+        const { data: files, error } = await supabase.storage
           .from('lovable-uploads')
-          .list('rice');
+          .list(path);
           
         if (!error && files && files.length > 0) {
-          const imageFiles = files.filter(file => !file.name.endsWith('/') && 
-            (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png')));
+          // Filter out directories and get valid media files
+          const mediaFiles = files.filter(file => !file.name.endsWith('/'));
           
-          if (imageFiles.length > 0) {
-            console.log(`Found ${imageFiles.length} rice images in storage`);
+          if (mediaFiles.length > 0) {
+            console.log(`Found ${mediaFiles.length} files in path ${path}`);
             
-            const mediaItems = imageFiles.map(file => {
-              const filePath = `rice/${file.name}`;
+            return mediaFiles.map(file => {
+              const filePath = `${path}/${file.name}`;
               const publicUrl = supabase.storage
                 .from('lovable-uploads')
                 .getPublicUrl(filePath).data.publicUrl;
                 
-              // Add cache buster parameter to the URL
-              const urlWithCache = addCacheBuster(publicUrl);
+              // Determine if video based on file extension
+              const isVideo = file.name.match(/\.(mp4|webm|mov|avi|wmv)$/i) !== null;
+              const fileType: "video" | "image" = isVideo ? "video" : "image";
               
               return {
-                url: urlWithCache,
-                type: 'image' as const,
+                url: addCacheBuster(publicUrl),
+                type: fileType,
                 id: filePath
               };
             });
-            
-            console.log('Successfully found rice images:', mediaItems);
-            return mediaItems;
           }
         }
-      } catch (err) {
-        console.error('Error fetching rice specific images:', err);
+      } catch (error) {
+        console.error(`Error checking path ${path}:`, error);
       }
-    }
-    
-    // Main path - try the item's ID directly as a folder name
-    const primaryPath = `${item.id}`;
-    try {
-      console.log(`Checking primary path: ${primaryPath}`);
-      const { data: files, error } = await supabase.storage
-        .from('lovable-uploads')
-        .list(primaryPath);
-        
-      if (!error && files && files.length > 0) {
-        // Filter out directories and get valid media files
-        const mediaFiles = files.filter(file => !file.name.endsWith('/'));
-        
-        if (mediaFiles.length > 0) {
-          console.log(`Found ${mediaFiles.length} files in primary path ${primaryPath}`);
-          
-          return mediaFiles.map(file => {
-            const filePath = `${primaryPath}/${file.name}`;
-            const publicUrl = supabase.storage
-              .from('lovable-uploads')
-              .getPublicUrl(filePath).data.publicUrl;
-              
-            // Determine if video based on file extension
-            const isVideo = file.name.match(/\.(mp4|webm|mov|avi|wmv)$/i) !== null;
-            const fileType: "video" | "image" = isVideo ? "video" : "image";
-            
-            return {
-              url: addCacheBuster(publicUrl),
-              type: fileType,
-              id: filePath
-            };
-          });
-        }
-      }
-    } catch (error) {
-      console.error(`Error checking primary path ${primaryPath}:`, error);
-    }
-    
-    // Secondary path - try menu-items folder 
-    const secondaryPath = `menu-items/${item.id}`;
-    try {
-      console.log(`Checking secondary path: ${secondaryPath}`);
-      const { data: files, error } = await supabase.storage
-        .from('lovable-uploads')
-        .list(secondaryPath);
-        
-      if (!error && files && files.length > 0) {
-        // Filter out directories and get valid media files
-        const mediaFiles = files.filter(file => !file.name.endsWith('/'));
-        
-        if (mediaFiles.length > 0) {
-          console.log(`Found ${mediaFiles.length} files in secondary path ${secondaryPath}`);
-          
-          return mediaFiles.map(file => {
-            const filePath = `${secondaryPath}/${file.name}`;
-            const publicUrl = supabase.storage
-              .from('lovable-uploads')
-              .getPublicUrl(filePath).data.publicUrl;
-              
-            // Determine if video based on file extension
-            const isVideo = file.name.match(/\.(mp4|webm|mov|avi|wmv)$/i) !== null;
-            const fileType: "video" | "image" = isVideo ? "video" : "image";
-            
-            return {
-              url: addCacheBuster(publicUrl),
-              type: fileType,
-              id: filePath
-            };
-          });
-        }
-      }
-    } catch (error) {
-      console.error(`Error checking secondary path ${secondaryPath}:`, error);
     }
     
     // Try to find a working image URL as fallback
