@@ -7,6 +7,7 @@ import { MediaItem } from "@/components/restaurants/menu/MenuItemMediaUploader";
  */
 export async function fetchMenuItemMedia(restaurantId: string, item: { id: string, name: string }): Promise<MediaItem[]> {
   let media: MediaItem[] = [];
+  console.log(`Starting fetchMenuItemMedia for ${item.name} (${item.id})`);
   
   // First check for media in item-specific directories
   const storagePaths = [
@@ -76,7 +77,7 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
       } else if (listData && listData.length > 0) {
         console.log(`Found ${listData.length} total files in menu-items directory`);
         
-        // Log to help with debugging
+        // Enhanced logging for debugging
         console.log("Matching against:", item.name.toLowerCase());
         console.log("All files:", listData.map(f => f.name));
         

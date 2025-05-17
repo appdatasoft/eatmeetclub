@@ -23,6 +23,7 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
       
       try {
         setIsLoading(true);
+        console.log("Fetching menu items for restaurant:", restaurantId);
         
         // Fetch menu items
         const { data: menuItemsData, error: menuItemsError } = await supabase
@@ -49,13 +50,10 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
           // Fetch ingredients
           const ingredients = await fetchMenuItemIngredients(item.id);
           
-          // Try to get media items with better error handling
+          // Fetch media items with better error handling
+          console.log(`Fetching media for item: ${item.name} (${item.id})`);
           const media = await fetchMenuItemMedia(restaurantId, item);
-          
-          console.log(`Menu item ${item.id} (${item.name}) has ${media.length} media items`);
-          if (media.length > 0) {
-            console.log(`First media URL: ${media[0].url}`);
-          }
+          console.log(`Media fetched for ${item.name}: ${media.length} items`);
           
           return {
             id: item.id,
@@ -67,6 +65,13 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
             media: media
           } as MenuItem;
         }));
+        
+        // Add debugging log to check media loading for each item
+        console.log("Items with media loaded:", itemsWithDetails.map(i => ({
+          name: i.name,
+          mediaCount: i.media?.length || 0,
+          firstImage: i.media && i.media.length > 0 ? i.media[0].url : 'none'
+        })));
         
         // Group items by type for display
         const types = [...new Set(itemsWithDetails.map(item => item.type || 'Other'))];

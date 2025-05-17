@@ -17,12 +17,13 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
   
   const hasMedia = item.media && item.media.length > 0;
 
-  // Debug logging for media
+  // Enhanced debug logging for media
   useEffect(() => {
     console.log(`MenuItem component for ${item.name}:`, {
       hasMedia,
       firstMediaUrl: hasMedia ? item.media[0].url : 'none',
-      mediaCount: hasMedia ? item.media.length : 0
+      mediaCount: hasMedia ? item.media.length : 0,
+      itemDetails: item
     });
   }, [item, hasMedia]);
 
@@ -30,6 +31,7 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
   useEffect(() => {
     setImageLoaded(false);
     setImageError(false);
+    setRetryCount(0);
   }, [item.media]);
   
   const handleRetryImage = () => {
@@ -180,3 +182,4 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
 };
 
 export default MenuItemComponent;
+
