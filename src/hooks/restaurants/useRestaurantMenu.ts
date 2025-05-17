@@ -10,7 +10,7 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
   const { user } = useAuth();
   
   // Use the separate hooks
-  const { restaurant, menuItems, isLoading, isOwner, setMenuItems } = 
+  const { restaurant, menuItems, isLoading, isOwner, setMenuItems, error } = 
     useMenuItemsFetch(restaurantId, user?.id);
     
   const {
@@ -49,6 +49,7 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
     isDialogOpen,
     currentItem,
     isOwner,
+    error,
     handleAddItem,
     handleEditItem,
     handleDeleteItem,

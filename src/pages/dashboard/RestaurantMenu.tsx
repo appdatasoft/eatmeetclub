@@ -23,6 +23,7 @@ const RestaurantMenu = () => {
     isDialogOpen,
     currentItem,
     isOwner,
+    error,
     handleAddItem,
     handleEditItem,
     handleDeleteItem,
@@ -40,6 +41,16 @@ const RestaurantMenu = () => {
 
   if (isLoading) {
     return <MenuLoadingState />;
+  }
+  
+  if (error) {
+    return (
+      <MenuErrorState 
+        title="Error Loading Menu"
+        description={error}
+        onBack={goBack}
+      />
+    );
   }
 
   if (!restaurant) {
