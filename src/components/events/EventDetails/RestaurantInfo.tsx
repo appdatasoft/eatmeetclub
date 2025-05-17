@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 interface RestaurantInfoProps {
   id?: string;
   name: string;
-  description?: string;
+  description: string;
 }
 
 const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }) => {
