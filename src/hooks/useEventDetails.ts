@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
@@ -42,14 +43,14 @@ export const useEventDetails = (eventId: string | undefined) => {
         setError(error.message);
       } else if (data) {
         // Create a default restaurant object if one is not returned
-        const restaurantData: Restaurant = data.restaurant && typeof data.restaurant === 'object' ? {
-          id: data.restaurant?.id || 'unknown',
-          name: data.restaurant?.name || 'Unknown Restaurant',
-          address: data.restaurant?.address || '',
-          city: data.restaurant?.city || '',
-          state: data.restaurant?.state || '',
-          zipcode: data.restaurant?.zipcode || '',
-          description: data.restaurant?.description || ''
+        const restaurantData: Restaurant = data.restaurant ? {
+          id: data.restaurant.id || 'unknown',
+          name: data.restaurant.name || 'Unknown Restaurant',
+          address: data.restaurant.address || '',
+          city: data.restaurant.city || '',
+          state: data.restaurant.state || '',
+          zipcode: data.restaurant.zipcode || '',
+          description: data.restaurant.description || ''
         } : {
           id: 'unknown',
           name: 'Unknown Restaurant',
