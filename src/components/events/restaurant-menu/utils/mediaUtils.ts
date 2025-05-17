@@ -1,30 +1,51 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { MenuItem, MediaItem } from '../types';
+import { MediaItem } from '../types';
 
+/**
+ * Fetches media items for a specific menu item
+ */
 export const fetchMenuItemMedia = async (
   restaurantId: string,
-  menuItem: MenuItem
+  menuItemId: string
 ): Promise<MediaItem[]> => {
   try {
-    // In a real implementation, we would query the database for media
-    // This is a simplified mock implementation
-    return [];
-  } catch (error) {
-    console.error('Error fetching menu item media:', error);
+    const { data, error } = await supabase
+      .from('restaurant_menu_media')
+      .select('*')
+      .eq('menu_item_id', menuItemId)
+      .eq('restaurant_id', restaurantId);
+    
+    if (error) throw error;
+    
+    return data.map(item => ({
+      id: item.id,
+      url: item.url,
+      type: item.media_type as 'image' | 'video'
+    })) || [];
+  } catch (err) {
+    console.error('Error fetching media for menu item:', err);
     return [];
   }
 };
 
+/**
+ * Fetches ingredient list for a specific menu item
+ */
 export const fetchMenuItemIngredients = async (
   menuItemId: string
 ): Promise<string[]> => {
   try {
-    // In a real implementation, we would query the database for ingredients
-    // This is a simplified mock implementation
-    return [];
-  } catch (error) {
-    console.error('Error fetching menu item ingredients:', error);
+    const { data, error } = await supabase
+      .from('restaurant_menu_ingredients')
+      .select('name')
+      .eq('menu_item_id', menuItemId);
+    
+    if (error) throw error;
+    
+    return data.map(item => item.name) || [];
+  } catch (err) {
+    console.error('Error fetching ingredients for menu item:', err);
     return [];
   }
 };

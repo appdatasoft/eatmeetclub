@@ -1,27 +1,19 @@
 
 import React from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 
 const LoadingSkeleton = () => {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-4 mb-6">
-        <Skeleton className="h-8 w-36" />
-      </div>
-      
-      {/* Generate multiple skeleton items */}
-      {Array.from({ length: 5 }).map((_, index) => (
+    <div className="space-y-8 py-4">
+      {[1, 2, 3].map((item) => (
         <div 
-          key={index} 
-          className="flex items-center space-x-4 p-4 border rounded-md"
+          key={item}
           data-testid="loading-skeleton-item"
+          className="flex flex-col gap-4 animate-pulse"
         >
-          <Skeleton className="h-14 w-14 rounded-md" />
-          <div className="space-y-2 flex-1">
-            <Skeleton className="h-4 w-1/3" />
-            <Skeleton className="h-3 w-2/3" />
-          </div>
-          <Skeleton className="h-4 w-8" />
+          <div className="h-8 bg-gray-200 rounded-md w-2/3"></div>
+          <div className="h-4 bg-gray-200 rounded-md w-full"></div>
+          <div className="h-4 bg-gray-200 rounded-md w-4/5"></div>
+          <div className="h-6 bg-gray-200 rounded-md w-1/4"></div>
         </div>
       ))}
     </div>
