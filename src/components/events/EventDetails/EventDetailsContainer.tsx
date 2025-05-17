@@ -3,7 +3,7 @@ import React from "react";
 import EventInfo from "./EventInfo";
 import RestaurantInfo from "./RestaurantInfo";
 import QRCode from "./QRCode";
-import { EventDetails } from "@/hooks/useEventDetails";
+import { EventDetails } from "@/types/event";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EventDetailsContainerProps {

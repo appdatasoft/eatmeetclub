@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,13 +6,20 @@ import { useNavigate } from "react-router-dom";
 import { EventDetails } from "@/types/event";
 import { createTicketPayment } from "./paymentAPI";
 
-export const useEventPaymentHandler = (event: EventDetails | null) => {
+export interface EventPaymentHandlerResponse {
+  isPaymentProcessing: boolean;
+  handleBuyTickets: (ticketCount: number) => Promise<void>;
+}
+
+export const useEventPaymentHandler = (
+  event: EventDetails | null
+): EventPaymentHandlerResponse => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
 
-  const handleBuyTickets = async (quantity: number) => {
+  const handleBuyTickets = async (ticketCount: number) => {
     if (!event) {
       toast({
         title: "Error",
@@ -27,7 +33,7 @@ export const useEventPaymentHandler = (event: EventDetails | null) => {
       // Store event ID and ticket count in local storage for post-login redirect
       localStorage.setItem('pendingTicketPurchase', JSON.stringify({
         eventId: event.id,
-        ticketCount: quantity,
+        ticketCount: ticketCount,
         redirectPath: `/event/${event.id}`
       }));
       
@@ -47,7 +53,7 @@ export const useEventPaymentHandler = (event: EventDetails | null) => {
       
       // Calculate service fee (5% of total)
       const unitPrice = event.price;
-      const subtotal = unitPrice * quantity;
+      const subtotal = unitPrice * ticketCount;
       const serviceFee = subtotal * 0.05; // 5% service fee
       const totalAmount = subtotal + serviceFee;
       
@@ -55,13 +61,13 @@ export const useEventPaymentHandler = (event: EventDetails | null) => {
       localStorage.setItem('ticketDetails', JSON.stringify({
         eventId: event.id,
         eventTitle: event.title,
-        quantity: quantity,
+        quantity: ticketCount,
         unitPrice: event.price,
         serviceFee: serviceFee,
         totalAmount: totalAmount
       }));
       
-      const paymentResult = await createTicketPayment(event.id, quantity, user.id);
+      const paymentResult = await createTicketPayment(event.id, ticketCount, user.id);
       
       if (paymentResult.url) {
         // Redirect to the payment page

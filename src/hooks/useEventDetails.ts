@@ -1,30 +1,9 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useEventPaymentHandler } from "./event-payment/useEventPaymentHandler";
-
-interface EventDetails {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  price: number;
-  capacity: number;
-  user_id: string;
-  published: boolean;
-  restaurant: {
-    id: string;
-    name: string;
-    address: string;
-    city: string;
-    state: string;
-    zipcode: string;
-    description: string;
-  };
-  cover_image?: string;
-  tickets_sold?: number;
-}
+import { EventDetails } from "@/types/event";
 
 export const useEventDetails = (eventId: string | undefined) => {
   const [event, setEvent] = useState<EventDetails | null>(null);
@@ -63,7 +42,22 @@ export const useEventDetails = (eventId: string | undefined) => {
       if (error) {
         setError(error.message);
       } else if (data) {
-        setEvent(data);
+        // Ensure data conforms to EventDetails type
+        const eventData: EventDetails = {
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          date: data.date,
+          time: data.time,
+          price: data.price,
+          capacity: data.capacity,
+          user_id: data.user_id,
+          published: data.published,
+          restaurant: data.restaurant,
+          cover_image: data.cover_image,
+          tickets_sold: data.tickets_sold
+        };
+        setEvent(eventData);
         setError(null);
       } else {
         setError('Event not found');

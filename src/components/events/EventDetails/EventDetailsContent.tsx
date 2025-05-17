@@ -6,7 +6,7 @@ import TicketPurchase from "./TicketPurchase";
 import EventActionButtons from "./EventActionButtons";
 import UnpublishedEventNotice from "./UnpublishedEventNotice";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { EventDetails } from "@/hooks/useEventDetails";
+import { EventDetails } from "@/types/event";
 import RestaurantInfo from "./RestaurantInfo";
 import { BookPlus, Menu, Utensils, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { EventDetails } from "@/hooks/useEventDetails";
+import { EventDetails } from "@/types/event";
 import { useEventManagement } from "./events/useEventManagement";
 import { useEventCoverImage } from "./events/useEventCoverImage";
 
