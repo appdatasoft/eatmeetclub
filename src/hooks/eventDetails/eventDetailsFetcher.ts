@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { EventDetails } from "../types/eventTypes";
 import { toast } from "@/hooks/use-toast";
@@ -19,7 +18,7 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
     // First get event data
     const { data: eventData, error: eventError } = await supabase
       .from("events")
-      .select("*")
+      .select("*, restaurants(*)")
       .eq("id", eventId)
       .single();
 
@@ -34,26 +33,6 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
     
     console.log("Event data received:", eventData);
     
-    // Now fetch restaurant data using restaurant_id from events table
-    let restaurantData = null;
-    if (eventData.restaurant_id) {
-      const { data: restaurant, error: restaurantError } = await supabase
-        .from("restaurants")
-        .select("*")
-        .eq("id", eventData.restaurant_id)
-        .single();
-        
-      if (restaurantError) {
-        console.error("Error fetching restaurant:", restaurantError);
-        // Don't throw here, just log the error and continue with null restaurant
-      } else {
-        restaurantData = restaurant;
-        console.log("Restaurant data successfully fetched:", restaurantData);
-      }
-    } else {
-      console.warn("No restaurant_id found for event:", eventId);
-    }
-
     // Transform the data to match the EventDetails interface
     const eventDetails: EventDetails = {
       id: eventData.id,
@@ -63,14 +42,14 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       time: eventData.time,
       price: eventData.price,
       capacity: eventData.capacity,
-      restaurant: restaurantData ? {
-        id: restaurantData.id,
-        name: restaurantData.name || "Unknown Restaurant",
-        address: restaurantData.address || "",
-        city: restaurantData.city || "",
-        state: restaurantData.state || "",
-        zipcode: restaurantData.zipcode || "",
-        description: restaurantData.description || "",
+      restaurant: eventData.restaurants ? {
+        id: eventData.restaurants.id,
+        name: eventData.restaurants.name || "Unknown Restaurant",
+        address: eventData.restaurants.address || "",
+        city: eventData.restaurants.city || "",
+        state: eventData.restaurants.state || "",
+        zipcode: eventData.restaurants.zipcode || "",
+        description: eventData.restaurants.description || "",
       } : {
         id: "unknown",
         name: "Unknown Restaurant",
@@ -85,6 +64,15 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       cover_image: eventData.cover_image,
       published: eventData.published,
     };
+
+    // Log the transformed data to verify restaurant description is included
+    console.log("Transformed event details:", {
+      ...eventDetails,
+      restaurant: {
+        ...eventDetails.restaurant,
+        description: eventDetails.restaurant.description
+      }
+    });
 
     return eventDetails;
   } catch (error) {

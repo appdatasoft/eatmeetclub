@@ -62,7 +62,7 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }
     fetchRestaurantImage();
   }, [id, isValidRestaurant]);
   
-  // Add debugging to confirm props including description are received
+  // Add detailed debugging to confirm props including description are received
   console.log("RestaurantInfo props:", { id, name, description, isValidRestaurant, imageUrl, restaurantDescription });
   
   return (
