@@ -104,11 +104,10 @@ describe('useUserStorage', () => {
     expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('signup_address');
   });
 
-  // Fix the incorrect method name issue
+  // Fix the method name to match the implementation
   it('should store user details in both storages', () => {
     const { result } = renderHook(() => useUserStorage());
     
-    // Add the missing storeUserDetails method in the test
     act(() => {
       result.current.storeUserDetails({
         email: 'new@example.com',

@@ -47,7 +47,7 @@ describe('PaymentVerificationHandler', () => {
       writable: true
     });
     
-    // Mock usePaymentVerification hook
+    // Mock usePaymentVerification hook with proper boolean values for boolean properties
     mockedUsePaymentVerification.mockReturnValue({
       verifyPayment: mockVerifyPayment,
       retryVerification: mockRetryVerification,
@@ -88,7 +88,7 @@ describe('PaymentVerificationHandler', () => {
     mockedUsePaymentVerification.mockReturnValue({
       verifyPayment: mockVerifyPayment,
       retryVerification: mockRetryVerification,
-      isProcessing: true,
+      isProcessing: true, // Boolean, not Mock
       verificationError: 'Test error',
       verificationStatus: 'error',
       navigateAfterSuccess: mockNavigate
@@ -117,7 +117,7 @@ describe('PaymentVerificationHandler', () => {
     mockedUsePaymentVerification.mockReturnValue({
       verifyPayment: mockVerifyPayment,
       retryVerification: mockRetryVerification,
-      isProcessing: false,
+      isProcessing: false, // Boolean, not Mock
       verificationError: null,
       verificationStatus: 'success',
       navigateAfterSuccess: mockNavigate
@@ -144,7 +144,7 @@ describe('PaymentVerificationHandler', () => {
     mockedUsePaymentVerification.mockReturnValue({
       verifyPayment: mockVerifyPayment,
       retryVerification: mockRetryVerification,
-      isProcessing: false,
+      isProcessing: false, // Boolean, not Mock
       verificationError: null,
       verificationStatus: 'success',
       navigateAfterSuccess: mockNavigate

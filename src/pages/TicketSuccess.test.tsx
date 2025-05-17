@@ -11,19 +11,29 @@ vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn()
 }));
 
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    auth: {
-      getSession: vi.fn()
-    },
-    functions: {
-      invoke: vi.fn()
-    },
-    from: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis()
-  }
-}));
+// Mock supabase with proper chaining methods
+vi.mock('@/integrations/supabase/client', () => {
+  const mockFrom = vi.fn();
+  const mockSelect = vi.fn();
+  const mockEq = vi.fn();
+  
+  mockFrom.mockReturnValue({ select: mockSelect });
+  mockSelect.mockReturnValue({ eq: mockEq });
+  
+  return {
+    supabase: {
+      auth: {
+        getSession: vi.fn()
+      },
+      functions: {
+        invoke: vi.fn()
+      },
+      from: mockFrom,
+      select: mockSelect,
+      eq: mockEq
+    }
+  };
+});
 
 vi.mock('@/hooks/use-toast', () => ({
   useToast: vi.fn()
@@ -87,7 +97,8 @@ describe('TicketSuccess', () => {
     });
     
     // Mock successful event details fetch
-    (supabase.eq as any).mockResolvedValue({
+    const mockEq = supabase.from("").select("").eq;
+    mockEq.mockResolvedValue({
       data: mockEventDetails,
       error: null
     });

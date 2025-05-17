@@ -4,15 +4,26 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useStripeMode } from './useStripeMode';
 import { supabase } from '@/integrations/supabase/client';
 
-// Mock the Supabase client
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    single: vi.fn()
-  }
-}));
+// Mock the Supabase client properly with a chain-able API
+vi.mock('@/integrations/supabase/client', () => {
+  const mockFrom = vi.fn();
+  const mockSelect = vi.fn();
+  const mockEq = vi.fn();
+  const mockSingle = vi.fn();
+  
+  mockFrom.mockReturnValue({ select: mockSelect });
+  mockSelect.mockReturnValue({ eq: mockEq });
+  mockEq.mockReturnValue({ single: mockSingle });
+  
+  return {
+    supabase: {
+      from: mockFrom,
+      select: mockSelect,
+      eq: mockEq,
+      single: mockSingle
+    }
+  };
+});
 
 describe('useStripeMode', () => {
   beforeEach(() => {
@@ -29,10 +40,8 @@ describe('useStripeMode', () => {
 
   it('should fetch Stripe mode from admin_config', async () => {
     // Mock successful response
-    (supabase.from as any).mockReturnThis();
-    (supabase.select as any).mockReturnThis();
-    (supabase.eq as any).mockReturnThis();
-    (supabase.single as any).mockResolvedValueOnce({
+    const mockSingle = supabase.from("").select("").eq("", "").single;
+    mockSingle.mockResolvedValueOnce({
       data: { value: 'live' },
       error: null
     });

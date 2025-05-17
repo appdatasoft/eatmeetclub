@@ -28,6 +28,7 @@ vi.mock('@/integrations/supabase/client', () => ({
 }));
 
 describe('useEventPaymentHandler', () => {
+  // Fix the Restaurant type by using a proper structure without id property if not needed
   const mockEvent: EventDetails = {
     id: 'event123',
     title: 'Test Event',
@@ -37,7 +38,6 @@ describe('useEventPaymentHandler', () => {
     user_id: 'user123',
     published: true,
     restaurant: {
-      id: 'rest1',
       name: 'Test Restaurant',
       address: '123 Test St',
       city: 'Test City'
