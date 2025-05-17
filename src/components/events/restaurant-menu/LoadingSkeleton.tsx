@@ -1,16 +1,29 @@
 
 import React from "react";
-import MenuItemSkeleton from "./MenuItemSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const LoadingSkeleton: React.FC = () => {
+const LoadingSkeleton = () => {
   return (
-    <div className="bg-white h-full p-4 overflow-y-auto">
-      <div className="animate-pulse space-y-2">
-        <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-        {[1, 2, 3].map((i) => (
-          <MenuItemSkeleton key={i} />
-        ))}
+    <div className="space-y-4">
+      <div className="flex items-center space-x-4 mb-6">
+        <Skeleton className="h-8 w-36" />
       </div>
+      
+      {/* Generate multiple skeleton items */}
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div 
+          key={index} 
+          className="flex items-center space-x-4 p-4 border rounded-md"
+          data-testid="loading-skeleton-item"
+        >
+          <Skeleton className="h-14 w-14 rounded-md" />
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-3 w-2/3" />
+          </div>
+          <Skeleton className="h-4 w-8" />
+        </div>
+      ))}
     </div>
   );
 };

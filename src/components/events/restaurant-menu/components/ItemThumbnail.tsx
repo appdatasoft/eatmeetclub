@@ -32,6 +32,7 @@ const ItemThumbnail: React.FC<ItemThumbnailProps> = ({ media, name, onClick }) =
     return (
       <div 
         className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center"
+        data-testid="no-media-icon"
       >
         <ImageOff className="h-5 w-5 text-gray-400" />
       </div>
@@ -71,11 +72,11 @@ const ItemThumbnail: React.FC<ItemThumbnailProps> = ({ media, name, onClick }) =
         ) : (
           currentMedia.url ? (
             <div className="relative w-full h-full flex items-center justify-center bg-gray-800">
-              <Film className="h-4 w-4 text-white" />
+              <Film className="h-4 w-4 text-white" data-testid="video-icon" />
             </div>
           ) : (
             <div className="flex items-center justify-center h-full w-full">
-              <Film className="h-4 w-4 text-gray-400" />
+              <Film className="h-4 w-4 text-gray-400" data-testid="video-icon" />
             </div>
           )
         )}

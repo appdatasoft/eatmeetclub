@@ -1,8 +1,9 @@
 
-import { MediaItem as RestaurantMediaItem } from "@/components/restaurants/menu";
-
-// Re-export the MediaItem type to make it available for components
-export type MediaItem = RestaurantMediaItem;
+export interface MediaItem {
+  id: string;
+  url: string;
+  type: 'image' | 'video';
+}
 
 export interface MenuItem {
   id: string;
@@ -10,11 +11,7 @@ export interface MenuItem {
   description?: string;
   price: number;
   type?: string;
+  restaurant_id: string;
   ingredients?: string[];
   media?: MediaItem[];
-  restaurant_id?: string;
-}
-
-export interface RestaurantMenuProps {
-  restaurantId: string;
 }

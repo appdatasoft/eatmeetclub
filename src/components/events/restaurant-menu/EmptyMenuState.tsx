@@ -1,11 +1,20 @@
 
 import React from "react";
+import { Utensils } from "lucide-react";
 
-const EmptyMenuState: React.FC = () => {
+const EmptyMenuState = () => {
   return (
-    <div className="bg-white h-full p-4 overflow-y-auto">
-      <h2 className="text-xl font-semibold mb-4">Menu</h2>
-      <p className="text-gray-600">No menu items available for this restaurant.</p>
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div 
+        className="bg-gray-100 p-4 rounded-full mb-4"
+        data-testid="empty-menu-icon"
+      >
+        <Utensils className="h-8 w-8 text-gray-400" />
+      </div>
+      <h3 className="text-lg font-medium mb-2">No menu items available</h3>
+      <p className="text-gray-500 max-w-md">
+        This restaurant hasn't added any menu items yet.
+      </p>
     </div>
   );
 };
