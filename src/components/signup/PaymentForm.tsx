@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
@@ -38,8 +37,13 @@ const PaymentForm = ({
   isSubscription = false,
   requireAllFields = false
 }: PaymentFormProps) => {
+  // Create a full name from firstName and lastName
+  const fullName = userDetails.firstName && userDetails.lastName 
+    ? `${userDetails.firstName} ${userDetails.lastName}`
+    : "";
+
   const [formData, setFormData] = useState({
-    name: userDetails.name || "",
+    name: fullName,
     email: userDetails.email || "",
     phone: userDetails.phoneNumber || "",
     address: userDetails.address || "",
@@ -55,7 +59,7 @@ const PaymentForm = ({
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(validationSchema),
     defaultValues: {
-      name: userDetails.name || "",
+      name: fullName,
       email: userDetails.email || "",
       phone: userDetails.phoneNumber || "",
       address: userDetails.address || "",
