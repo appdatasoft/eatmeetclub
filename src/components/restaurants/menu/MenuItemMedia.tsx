@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { MediaItem } from './MenuItemMediaUploader';
-import { Image, Video, X } from 'lucide-react';
+import { Image, Video, X, GalleryHorizontal } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription } from '@/components/ui/dialog';
 
 interface MenuItemMediaProps {
@@ -28,7 +28,7 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "", th
     return (
       <div className={`${className}`}>
         <div 
-          className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 cursor-pointer"
+          className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 cursor-pointer relative"
           onClick={() => handleMediaClick(media[0])}
         >
           {media[0].url && media[0].type === 'image' ? (
@@ -50,6 +50,14 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "", th
           ) : (
             <div className="flex items-center justify-center h-full w-full bg-gray-100">
               <Image className="h-6 w-6 text-gray-400" />
+            </div>
+          )}
+          
+          {/* Show gallery indicator if there are multiple items */}
+          {media.length > 1 && (
+            <div className="absolute bottom-0 right-0 bg-black/60 text-white text-xs px-1 rounded-tl-md flex items-center">
+              <GalleryHorizontal className="h-3 w-3 mr-1" />
+              {media.length}
             </div>
           )}
         </div>
@@ -89,6 +97,7 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "", th
     );
   }
   
+  // Regular gallery view for multiple media items
   return (
     <div className={`mt-2 ${className}`}>
       <div className="flex overflow-x-auto space-x-2 pb-2">

@@ -42,11 +42,6 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onEdit, onDelete }) =
               <p className="text-sm text-gray-600 mb-2">{item.description}</p>
             )}
             
-            {/* Only show media gallery if there's more than 1 image or no thumbnail shown yet */}
-            {((!item.media || item.media.length === 0) || item.media.length > 1) && (
-              <MenuItemMedia media={item.media} />
-            )}
-            
             {item.ingredients && item.ingredients.length > 0 && (
               <div className="mt-2">
                 <p className="text-xs text-gray-500 mb-1">Ingredients:</p>

@@ -2,19 +2,21 @@
 import React, { useState, useEffect } from "react";
 import { MenuItem } from "./types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Image, ImageOff } from "lucide-react";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { Image, ImageOff, GalleryHorizontal } from "lucide-react";
 
 interface MenuItemProps {
   item: MenuItem;
 }
 
 const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
-  const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   
   const hasMedia = item.media && item.media.length > 0;
+  const hasMultipleMedia = hasMedia && item.media.length > 1;
 
   // Reset image states when media changes
   useEffect(() => {
@@ -49,7 +51,7 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
         <div className="mr-3">
           <div 
             className="w-16 h-16 rounded-md overflow-hidden cursor-pointer relative bg-gray-100"
-            onClick={() => hasMedia && setShowAllPhotos(true)}
+            onClick={() => hasMedia && setShowGallery(true)}
           >
             {hasMedia ? (
               <>
@@ -97,6 +99,14 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
                     <span className="text-gray-400 text-xs">Tap to retry</span>
                   </div>
                 )}
+                
+                {/* Show gallery indicator if there are multiple images */}
+                {hasMultipleMedia && imageLoaded && (
+                  <div className="absolute bottom-0 right-0 bg-black/60 text-white text-xs px-1 rounded-tl-md flex items-center">
+                    <GalleryHorizontal className="h-3 w-3 mr-1" />
+                    {item.media.length}
+                  </div>
+                )}
               </>
             ) : (
               // No media available
@@ -124,51 +134,56 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
             </p>
           )}
           
-          {/* Show "View More" if there are multiple images */}
-          {hasMedia && item.media.length > 1 && (
+          {/* Show "View Gallery" if there are multiple images */}
+          {hasMultipleMedia && (
             <button 
-              className="text-xs text-primary mt-1 hover:underline"
-              onClick={() => setShowAllPhotos(true)}
+              className="text-xs text-primary mt-1 hover:underline flex items-center"
+              onClick={() => setShowGallery(true)}
             >
-              +{item.media.length - 1} more photos
+              <GalleryHorizontal className="h-3 w-3 mr-1" />
+              View gallery
             </button>
           )}
         </div>
       </div>
       
-      {/* Full Media Gallery Dialog - Fixed with DialogTitle for accessibility */}
-      <Dialog open={showAllPhotos} onOpenChange={setShowAllPhotos}>
+      {/* Image Gallery Dialog */}
+      <Dialog open={showGallery} onOpenChange={setShowGallery}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-medium">{item.name}</DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {hasMedia && item.media.map((media, idx) => (
-                <div key={idx} className="rounded-md overflow-hidden">
-                  {media.type === 'image' ? (
-                    <img 
-                      src={media.url} 
-                      alt={`${item.name} photo ${idx+1}`} 
-                      className="w-full h-64 object-cover"
-                      onError={(e) => {
-                        console.error(`Gallery image error for ${item.name} (${idx}):`, media.url);
-                        e.currentTarget.src = getPlaceholderImage();
-                        e.currentTarget.onerror = null; // Prevent infinite error loops
-                      }}
-                    />
-                  ) : (
-                    <video 
-                      src={media.url} 
-                      controls
-                      className="w-full h-64 object-cover"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+          {hasMedia && (
+            <Carousel className="w-full">
+              <CarouselContent>
+                {item.media.map((media, idx) => (
+                  <CarouselItem key={idx}>
+                    <div className="flex items-center justify-center p-1">
+                      {media.type === 'image' ? (
+                        <img 
+                          src={media.url} 
+                          alt={`${item.name} photo ${idx+1}`} 
+                          className="max-h-[60vh] object-contain rounded-md"
+                          onError={(e) => {
+                            console.error(`Gallery image error for ${item.name} (${idx}):`, media.url);
+                            e.currentTarget.src = getPlaceholderImage();
+                            e.currentTarget.onerror = null; // Prevent infinite error loops
+                          }}
+                        />
+                      ) : (
+                        <video 
+                          src={media.url} 
+                          controls
+                          className="max-h-[60vh] object-contain rounded-md"
+                        />
+                      )}
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+          )}
         </DialogContent>
       </Dialog>
     </div>
