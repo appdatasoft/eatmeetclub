@@ -1,6 +1,6 @@
 
 import { renderHook, act } from '@testing-library/react-hooks';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { useCheckoutSession } from './useCheckoutSession';
 
 interface CheckoutOptions {
@@ -18,9 +18,9 @@ interface CheckoutResponse {
 
 // Mock the actual implementation
 vi.mock('./useCheckoutSession', () => ({
-  useCheckoutSession: vi.fn(() => ({
+  useCheckoutSession: () => ({
     createCheckoutSession: vi.fn()
-  }))
+  })
 }));
 
 // Mock fetch
@@ -28,7 +28,7 @@ global.fetch = vi.fn();
 
 describe('useCheckoutSession', () => {
   const mockFetch = global.fetch as vi.MockedFunction<typeof fetch>;
-  const mockImplementation = useCheckoutSession as vi.Mock;
+  const mockImplementation = useCheckoutSession as unknown as vi.Mock;
   const mockCreateCheckoutSession = vi.fn();
   
   beforeEach(() => {
