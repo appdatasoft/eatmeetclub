@@ -1,11 +1,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react-hooks';
-import { useEventPaymentHandler } from './useEventPaymentHandler';
+import { useEventPaymentHandler } from '../useEventPaymentHandler';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { EventDetails } from '@/types/event';
+import { createMockEvent, createMockLocalStorage, setupWindowLocation } from './test-utils';
 
 // Mock dependencies
 vi.mock('@/hooks/use-toast', () => ({
@@ -27,46 +27,11 @@ vi.mock('@/integrations/supabase/client', () => ({
   }
 }));
 
-describe('useEventPaymentHandler', () => {
-  // Fix the Restaurant type by adding all required properties
-  const mockEvent: EventDetails = {
-    id: 'event123',
-    title: 'Test Event',
-    description: 'Test Description',
-    price: 25,
-    capacity: 100,
-    user_id: 'user123',
-    published: true,
-    restaurant: {
-      id: 'rest123', // Add the missing required id property
-      name: 'Test Restaurant',
-      address: '123 Test St',
-      city: 'Test City',
-      state: 'Test State',
-      zipcode: '12345',
-      description: 'Test Description'
-    },
-    date: '2023-06-15',
-    time: '19:00'
-  };
-
+describe('useEventPaymentHandler payment processing', () => {
+  const mockEvent = createMockEvent();
   const mockToast = { toast: vi.fn() };
   const mockNavigate = vi.fn();
-  const mockLocalStorage = (() => {
-    let store: Record<string, string> = {};
-    return {
-      getItem: vi.fn((key: string) => store[key] || null),
-      setItem: vi.fn((key: string, value: string) => {
-        store[key] = value.toString();
-      }),
-      removeItem: vi.fn((key: string) => {
-        delete store[key];
-      }),
-      clear: vi.fn(() => {
-        store = {};
-      }),
-    };
-  })();
+  const mockLocalStorage = createMockLocalStorage();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -93,55 +58,8 @@ describe('useEventPaymentHandler', () => {
       data: { url: 'https://checkout.stripe.com/test-session' }
     });
     
-    // Mock location.href
-    Object.defineProperty(window, 'location', {
-      value: {
-        href: ''
-      },
-      writable: true
-    });
-  });
-
-  it('should initialize with default state', () => {
-    const { result } = renderHook(() => useEventPaymentHandler(mockEvent));
-    
-    expect(result.current.isPaymentProcessing).toBe(false);
-    expect(typeof result.current.handleBuyTickets).toBe('function');
-  });
-
-  it('should show error toast when event is null', async () => {
-    const { result } = renderHook(() => useEventPaymentHandler(null));
-    
-    await act(async () => {
-      await result.current.handleBuyTickets(2);
-    });
-    
-    expect(mockToast.toast).toHaveBeenCalledWith({
-      title: 'Error',
-      description: 'Event details not available',
-      variant: 'destructive'
-    });
-  });
-
-  it('should redirect to login when user is not authenticated', async () => {
-    // Mock no active session
-    (supabase.auth.getSession as any).mockResolvedValue({
-      data: { session: null }
-    });
-    
-    const { result } = renderHook(() => useEventPaymentHandler(mockEvent));
-    
-    await act(async () => {
-      await result.current.handleBuyTickets(2);
-    });
-    
-    expect(mockToast.toast).toHaveBeenCalledWith({
-      title: 'Authentication Required',
-      description: 'Please log in to purchase tickets',
-      variant: 'default'
-    });
-    expect(mockLocalStorage.setItem).toHaveBeenCalledTimes(2); // Redirect and pending purchase
-    expect(mockNavigate).toHaveBeenCalledWith('/login');
+    // Setup mock window.location
+    setupWindowLocation();
   });
 
   it('should create a payment session with correct data', async () => {
