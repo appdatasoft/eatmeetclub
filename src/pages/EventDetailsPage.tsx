@@ -1,5 +1,6 @@
+
 import { useParams } from "react-router-dom";
-import { useEventDetails } from "@/hooks/useEventDetails";
+import { useEventFetch } from "@/hooks/eventDetails";
 import { useAuth } from "@/hooks/useAuth";
 import { useEventAccess } from "@/hooks/useEventAccess";
 import { useEventActions } from "@/hooks/useEventActions";
@@ -26,11 +27,9 @@ const EventDetailsPage = () => {
     event, 
     isLoading, 
     error,
-    isPaymentProcessing, 
-    handleBuyTickets, 
     isCurrentUserOwner, 
     refreshEventDetails 
-  } = useEventDetails(id);
+  } = useEventFetch(id);
   
   // Show error toast if there's an error that's not a "not found" error
   useEffect(() => {
@@ -56,13 +55,14 @@ const EventDetailsPage = () => {
     handleEditCover,
     handleSaveCover,
     handleDeleteEvent,
-    handleTicketPurchase
+    handleTicketPurchase,
+    isPaymentProcessing,
   } = useEventActions(event, refreshEventDetails, canEditEvent, user);
   
   // Process ticket purchase when user is logged in
   const processTicketPurchase = (ticketCount: number) => {
     if (user) {
-      handleBuyTickets(ticketCount);
+      handleTicketPurchase(ticketCount);
     }
   };
   

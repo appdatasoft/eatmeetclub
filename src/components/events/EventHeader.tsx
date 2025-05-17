@@ -57,7 +57,7 @@ const EventHeader: React.FC<EventHeaderProps> = ({
         
         {/* View Menu button only for logged-in users */}
         <div className="absolute top-4 right-4">
-          {restaurantId && user && (
+          {restaurantId && restaurantId !== "unknown" && user && (
             <Button
               variant="secondary"
               size="sm"
@@ -72,7 +72,7 @@ const EventHeader: React.FC<EventHeaderProps> = ({
       
       <div className="absolute bottom-0 left-0 p-6 text-white">
         <h1 className="text-3xl md:text-4xl font-bold mb-1">{title}</h1>
-        {restaurantId ? (
+        {restaurantId && restaurantId !== "unknown" ? (
           <Link 
             to={`/restaurant/${restaurantId}`}
             className="text-lg text-white/90 hover:text-white hover:underline"
@@ -84,7 +84,7 @@ const EventHeader: React.FC<EventHeaderProps> = ({
         )}
       </div>
 
-      {showMenu && restaurantId && user && (
+      {showMenu && restaurantId && restaurantId !== "unknown" && user && (
         <div className="absolute top-0 right-0 w-1/2 h-full">
           <RestaurantMenuPreview restaurantId={restaurantId} />
           <Button 
