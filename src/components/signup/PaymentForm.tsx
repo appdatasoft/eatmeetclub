@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
@@ -10,7 +11,8 @@ import { ArrowLeft, CreditCard, User, Mail, Phone, MapPin } from "lucide-react";
 import { SignupFormValues } from "./SignupForm";
 
 const paymentFormSchema = z.object({
-  name: z.string().min(2, { message: "Name is required" }),
+  firstName: z.string().min(2, { message: "First name is required" }),
+  lastName: z.string().min(2, { message: "Last name is required" }),
   email: z.string().email({ message: "Valid email is required" }),
   phone: z.string().optional(),
   address: z.string().optional(),
@@ -37,13 +39,9 @@ const PaymentForm = ({
   isSubscription = false,
   requireAllFields = false
 }: PaymentFormProps) => {
-  // Create a full name from firstName and lastName
-  const fullName = userDetails.firstName && userDetails.lastName 
-    ? `${userDetails.firstName} ${userDetails.lastName}`
-    : "";
-
   const [formData, setFormData] = useState({
-    name: fullName,
+    firstName: userDetails.firstName || "",
+    lastName: userDetails.lastName || "",
     email: userDetails.email || "",
     phone: userDetails.phoneNumber || "",
     address: userDetails.address || "",
@@ -59,7 +57,8 @@ const PaymentForm = ({
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(validationSchema),
     defaultValues: {
-      name: fullName,
+      firstName: userDetails.firstName || "",
+      lastName: userDetails.lastName || "",
       email: userDetails.email || "",
       phone: userDetails.phoneNumber || "",
       address: userDetails.address || "",
@@ -81,26 +80,51 @@ const PaymentForm = ({
       <Form {...form}>
         <form onSubmit={onSubmit} className="space-y-6">
           {/* Hidden fields to store the actual values for submission */}
-          <input type="hidden" id="name" name="name" value={formData.name} />
+          <input type="hidden" id="firstName" name="firstName" value={formData.firstName} />
+          <input type="hidden" id="lastName" name="lastName" value={formData.lastName} />
           <input type="hidden" id="email" name="email" value={formData.email} />
           <input type="hidden" id="phone" name="phone" value={formData.phone} />
           <input type="hidden" id="address" name="address" value={formData.address} />
 
           <FormField
             control={form.control}
-            name="name"
+            name="firstName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Full Name</FormLabel>
+                <FormLabel>First Name</FormLabel>
                 <FormControl>
                   <div className="flex items-center">
                     <User className="h-4 w-4 text-gray-500 mr-2" />
                     <Input 
-                      placeholder="Enter your full name" 
+                      placeholder="Enter your first name" 
                       {...field} 
                       onChange={(e) => {
                         field.onChange(e);
-                        handleInputChange("name", e.target.value);
+                        handleInputChange("firstName", e.target.value);
+                      }} 
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last Name</FormLabel>
+                <FormControl>
+                  <div className="flex items-center">
+                    <User className="h-4 w-4 text-gray-500 mr-2" />
+                    <Input 
+                      placeholder="Enter your last name" 
+                      {...field} 
+                      onChange={(e) => {
+                        field.onChange(e);
+                        handleInputChange("lastName", e.target.value);
                       }} 
                     />
                   </div>
