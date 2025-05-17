@@ -3,14 +3,23 @@ import { renderHook, act } from '@testing-library/react-hooks';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCheckoutSession } from './useCheckoutSession';
 
+interface CheckoutOptions {
+  createUser: boolean;
+  sendPasswordEmail: boolean;
+  sendInvoiceEmail: boolean;
+  checkExisting: boolean;
+}
+
+interface CheckoutResponse {
+  url?: string;
+  success: boolean;
+  error?: string;
+}
+
 // Mock the actual implementation
 vi.mock('./useCheckoutSession', () => ({
   useCheckoutSession: vi.fn().mockImplementation(() => ({
-    isLoading: false,
-    checkoutUrl: null,
-    error: null,
-    createCheckoutSession: vi.fn(),
-    retry: vi.fn()
+    createCheckoutSession: vi.fn()
   }))
 }));
 
@@ -20,129 +29,81 @@ global.fetch = vi.fn();
 describe('useCheckoutSession', () => {
   const mockFetch = global.fetch as vi.MockedFunction<typeof fetch>;
   const mockImplementation = useCheckoutSession as vi.Mock;
+  const mockCreateCheckoutSession = vi.fn();
   
   beforeEach(() => {
     vi.clearAllMocks();
+    mockImplementation.mockImplementation(() => ({
+      createCheckoutSession: mockCreateCheckoutSession
+    }));
   });
 
-  it('should return loading state initially', () => {
-    mockImplementation.mockImplementationOnce(() => ({
-      isLoading: true,
-      checkoutUrl: null,
-      error: null,
-      createCheckoutSession: vi.fn(),
-      retry: vi.fn()
-    }));
-    
-    const { result } = renderHook(() => useCheckoutSession());
-    
-    expect(result.current.isLoading).toBe(true);
-    expect(result.current.checkoutUrl).toBe(null);
-    expect(result.current.error).toBe(null);
-  });
-  
-  it('should fetch checkout URL', async () => {
-    const mockCreateCheckoutSession = vi.fn().mockResolvedValueOnce({ url: 'https://checkout.stripe.com/test' });
-    
-    mockImplementation.mockImplementationOnce(() => ({
-      isLoading: false,
-      checkoutUrl: 'https://checkout.stripe.com/test',
-      error: null,
-      createCheckoutSession: mockCreateCheckoutSession,
-      retry: vi.fn()
-    }));
-    
-    const { result } = renderHook(() => useCheckoutSession());
-    
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.checkoutUrl).toBe('https://checkout.stripe.com/test');
-    expect(result.current.error).toBe(null);
-  });
-  
-  it('should handle fetch error', async () => {
-    mockImplementation.mockImplementationOnce(() => ({
-      isLoading: false,
-      checkoutUrl: null,
-      error: 'Network error',
-      createCheckoutSession: vi.fn(),
-      retry: vi.fn()
-    }));
-    
-    const { result } = renderHook(() => useCheckoutSession());
-    
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.checkoutUrl).toBe(null);
-    expect(result.current.error).toBe('Network error');
-  });
-  
-  it('should handle API error response', async () => {
-    mockImplementation.mockImplementationOnce(() => ({
-      isLoading: false,
-      checkoutUrl: null,
-      error: 'Failed to create checkout session: Internal Server Error',
-      createCheckoutSession: vi.fn(),
-      retry: vi.fn()
-    }));
-    
-    const { result } = renderHook(() => useCheckoutSession());
-    
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.checkoutUrl).toBe(null);
-    expect(result.current.error).toContain('Failed to create checkout session');
-  });
-  
-  it('should retry on error if retryCount is less than maxRetries', async () => {
-    // First state (with error)
-    const mockRetry = vi.fn();
-    mockImplementation.mockImplementationOnce(() => ({
-      isLoading: false,
-      checkoutUrl: null,
-      error: 'Network error',
-      createCheckoutSession: vi.fn(),
-      retry: mockRetry
-    }));
-    
-    const { result, rerender } = renderHook(() => useCheckoutSession());
-    
-    // Verify the first error state
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.checkoutUrl).toBe(null);
-    expect(result.current.error).toBe('Network error');
-    
-    // Setup second state (after retry - loading)
-    mockImplementation.mockImplementationOnce(() => ({
-      isLoading: true,
-      checkoutUrl: null,
-      error: null,
-      createCheckoutSession: vi.fn(),
-      retry: mockRetry
-    }));
-    
-    // Trigger retry
-    act(() => {
-      result.current.retry();
+  it('should create checkout session with proper parameters', async () => {
+    mockCreateCheckoutSession.mockResolvedValue({ 
+      success: true, 
+      url: 'https://checkout.stripe.com/test' 
     });
     
-    // Should be loading again
-    rerender();
-    expect(result.current.isLoading).toBe(true);
+    const { result } = renderHook(() => useCheckoutSession());
     
-    // Setup third state (success after loading)
-    mockImplementation.mockImplementationOnce(() => ({
-      isLoading: false,
-      checkoutUrl: 'https://checkout.stripe.com/retry_success',
-      error: null,
-      createCheckoutSession: vi.fn(),
-      retry: mockRetry
-    }));
+    const options: CheckoutOptions = {
+      createUser: true,
+      sendPasswordEmail: true,
+      sendInvoiceEmail: true,
+      checkExisting: true
+    };
     
-    // Update to success state
-    rerender();
+    let response: CheckoutResponse;
+    await act(async () => {
+      response = await result.current.createCheckoutSession(
+        'test@example.com', 
+        'Test User', 
+        '123456789', 
+        '123 Test St',
+        options
+      );
+    });
     
-    // Should now have the URL
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.checkoutUrl).toBe('https://checkout.stripe.com/retry_success');
-    expect(result.current.error).toBe(null);
-    expect(mockRetry).toHaveBeenCalledTimes(1);
+    expect(mockCreateCheckoutSession).toHaveBeenCalledWith(
+      'test@example.com', 
+      'Test User', 
+      '123456789', 
+      '123 Test St',
+      options
+    );
+    
+    expect(response.success).toBe(true);
+    expect(response.url).toBe('https://checkout.stripe.com/test');
+  });
+  
+  it('should handle errors properly', async () => {
+    const errorMessage = 'Failed to create checkout session';
+    mockCreateCheckoutSession.mockResolvedValue({ 
+      success: false, 
+      error: errorMessage 
+    });
+    
+    const { result } = renderHook(() => useCheckoutSession());
+    
+    const options: CheckoutOptions = {
+      createUser: true,
+      sendPasswordEmail: true,
+      sendInvoiceEmail: true,
+      checkExisting: true
+    };
+    
+    let response: CheckoutResponse;
+    await act(async () => {
+      response = await result.current.createCheckoutSession(
+        'test@example.com', 
+        'Test User', 
+        null, 
+        null,
+        options
+      );
+    });
+    
+    expect(response.success).toBe(false);
+    expect(response.error).toBe(errorMessage);
   });
 });

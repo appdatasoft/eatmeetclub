@@ -12,12 +12,9 @@ vi.mock('react-router-dom', () => ({
 
 // Mock supabase with proper chaining methods
 vi.mock('@/integrations/supabase/client', () => {
-  const mockFrom = vi.fn();
-  const mockSelect = vi.fn();
   const mockEq = vi.fn();
-  
-  mockFrom.mockReturnValue({ select: mockSelect });
-  mockSelect.mockReturnValue({ eq: mockEq });
+  const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+  const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
   
   return {
     supabase: {
@@ -28,7 +25,6 @@ vi.mock('@/integrations/supabase/client', () => {
         invoke: vi.fn()
       },
       from: mockFrom,
-      select: mockSelect,
       eq: mockEq
     }
   };
@@ -96,9 +92,8 @@ describe('TicketSuccess', () => {
     });
     
     // Mock successful event details fetch
-    const mockEq = supabase.eq;
-    mockEq.mockResolvedValue({
-      data: mockEventDetails,
+    (supabase.from().select().eq as any).mockResolvedValue({
+      data: [mockEventDetails],
       error: null
     });
   });

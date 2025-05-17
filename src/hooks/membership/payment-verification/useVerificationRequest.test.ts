@@ -25,7 +25,7 @@ describe('useVerificationRequest', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: vi.fn().mockResolvedValueOnce({ success: true, userId: 'user_123' })
-    });
+    } as unknown as Response);
     
     const { result } = renderHook(() => useVerificationRequest());
     

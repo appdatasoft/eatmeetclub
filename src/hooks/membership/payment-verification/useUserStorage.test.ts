@@ -1,3 +1,4 @@
+
 import { renderHook, act } from '@testing-library/react-hooks';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useUserStorage } from './useUserStorage';
@@ -82,17 +83,11 @@ describe('useUserStorage', () => {
     });
   });
 
-  // Fix the method name to match the implementation (storeUserDetails)
   it('should store user details in both storages', () => {
     const { result } = renderHook(() => useUserStorage());
     
     act(() => {
-      result.current.storeUserDetails({
-        email: 'new@example.com',
-        name: 'New User',
-        phone: '987654',
-        address: '456 New St'
-      });
+      result.current.storeUserDetails('new@example.com', 'New User', '987654', '456 New St');
     });
     
     expect(localStorageMock.setItem).toHaveBeenCalledWith('signup_email', 'new@example.com');
