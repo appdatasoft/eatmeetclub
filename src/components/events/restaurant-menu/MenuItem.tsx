@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MenuItem } from "./types";
 import MenuItemMedia from "@/components/restaurants/menu/MenuItemMedia";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -10,8 +10,19 @@ interface MenuItemProps {
 
 const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
   const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   
   const hasMedia = item.media && item.media.length > 0;
+
+  // Debug logging for media
+  useEffect(() => {
+    console.log(`MenuItem component for ${item.name}:`, {
+      hasMedia,
+      firstMediaUrl: hasMedia ? item.media[0].url : 'none',
+      mediaCount: hasMedia ? item.media.length : 0
+    });
+  }, [item]);
   
   return (
     <div className="border-b pb-3">
@@ -26,12 +37,25 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
               <img 
                 src={item.media[0].url} 
                 alt={item.name} 
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover ${!imageLoaded && !imageError ? 'hidden' : ''}`}
+                onLoad={() => {
+                  console.log(`Image loaded for ${item.name}:`, item.media[0].url);
+                  setImageLoaded(true);
+                  setImageError(false);
+                }}
                 onError={(e) => {
+                  console.error(`Image error for ${item.name}:`, item.media[0].url);
+                  setImageError(true);
+                  setImageLoaded(false);
                   e.currentTarget.onerror = null; 
                   e.currentTarget.src = "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop";
                 }}
               />
+              {!imageLoaded && !imageError && (
+                <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                  <span className="text-gray-400 text-xs">Loading...</span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center">
