@@ -34,7 +34,7 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
     
     console.log("Event data received:", eventData);
     
-    // Now fetch restaurant data using restaurant_id
+    // Now fetch restaurant data using restaurant_id from events table
     let restaurantData = null;
     if (eventData.restaurant_id) {
       const { data: restaurant, error: restaurantError } = await supabase
@@ -48,8 +48,10 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
         // Don't throw here, just log the error and continue with null restaurant
       } else {
         restaurantData = restaurant;
-        console.log("Restaurant data:", restaurantData);
+        console.log("Restaurant data successfully fetched:", restaurantData);
       }
+    } else {
+      console.warn("No restaurant_id found for event:", eventId);
     }
 
     // Transform the data to match the EventDetails interface
