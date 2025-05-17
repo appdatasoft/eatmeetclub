@@ -92,19 +92,8 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
     }
     
     try {
-      const result = await sendVerificationRequest(paymentId, email, name, {
-        phone,
-        address,
-        isSubscription: true,
-        forceCreateUser: options.forceCreateUser !== false,
-        sendPasswordEmail: options.sendPasswordEmail !== false,
-        createMembershipRecord: options.createMembershipRecord !== false,
-        sendInvoiceEmail: options.sendInvoiceEmail !== false,
-        preventDuplicateEmails: options.forceSendEmails ? false : (options.preventDuplicateEmails !== false),
-        simplifiedVerification: options.simplifiedVerification === true,
-        safeMode: options.safeMode === true,
-        forceSendEmails: options.forceSendEmails === true
-      });
+      // Updated to match the new function signature (paymentId, email, name, options)
+      const result = await sendVerificationRequest(paymentId, email, name);
       
       // Show appropriate message based on response
       showVerificationToasts(result);
@@ -121,8 +110,7 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
         const fallbackResult = await handleSimplifiedVerification(
           paymentId,
           email,
-          name,
-          sendVerificationRequest
+          name
         );
         
         if (fallbackResult) {
