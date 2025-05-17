@@ -7,7 +7,7 @@ import EmptyMenuState from "./restaurant-menu/EmptyMenuState";
 import MenuList from "./restaurant-menu/MenuList";
 import type { RestaurantMenuProps } from "./restaurant-menu/types";
 
-const RestaurantMenuPreview: React.FC<RestaurantMenuProps> = ({ restaurantId }) => {
+export const RestaurantMenuPreview: React.FC<RestaurantMenuProps> = ({ restaurantId }) => {
   const { menuItems, isLoading, error } = useMenuItemsFetcher(restaurantId);
   const { toast } = useToast();
 

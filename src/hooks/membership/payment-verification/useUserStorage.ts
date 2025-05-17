@@ -9,11 +9,18 @@ export const useUserStorage = () => {
   // Import main hook's functionality
   const mainUserStorage = useMainUserStorage();
   
-  // Return only the methods used in payment verification
+  // Add name and email properties for backward compatibility with tests
   return {
     getUserDetails: mainUserStorage.getUserDetails,
     clearUserDetails: mainUserStorage.clearUserDetails,
-    storeUserDetails: mainUserStorage.storeUserDetails
+    storeUserDetails: mainUserStorage.storeUserDetails,
+    // Add these properties to pass the tests
+    get name() {
+      return mainUserStorage.getUserDetails().name || '';
+    },
+    get email() {
+      return mainUserStorage.getUserDetails().email || '';
+    }
   };
 };
 

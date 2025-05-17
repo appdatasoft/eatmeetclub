@@ -36,7 +36,7 @@ describe('useEventPaymentHandler authentication flow', () => {
   })
 
   it('should redirect to login when user is not authenticated', async () => {
-    const { result } = renderHook(() => useEventPaymentHandler({ eventId: 'event123' }))
-    expect(result.current.status).toBe('unauthenticated')
+    const { result } = renderHook(() => useEventPaymentHandler({ event: { id: 'event123' } }))
+    expect(result.current.authStatus).toBe('unauthenticated')
   })
 })

@@ -2,17 +2,21 @@
 import { useState } from "react";
 import { createCheckoutSession } from "@/lib/createCheckoutSession";
 
+interface CheckoutParams {
+  email: string;
+  name?: string;
+  phone?: string;
+  address?: string;
+  stripeMode?: "test" | "live";
+  eventId?: string;
+  quantity?: number;
+}
+
 export function useCheckoutSession() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const startCheckout = async (params: {
-    email: string;
-    name?: string;
-    phone?: string;
-    address?: string;
-    stripeMode?: "test" | "live";
-  }) => {
+  const startCheckout = async (params: CheckoutParams) => {
     setIsLoading(true);
     setError(null);
 
@@ -33,9 +37,12 @@ export function useCheckoutSession() {
       } else {
         throw new Error("No checkout URL returned");
       }
+
+      return { success: true };
     } catch (err: any) {
       console.error("Checkout error:", err);
       setError(err.message || "An unexpected error occurred.");
+      throw err;
     } finally {
       setIsLoading(false);
     }

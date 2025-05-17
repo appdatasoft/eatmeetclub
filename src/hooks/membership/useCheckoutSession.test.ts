@@ -39,11 +39,14 @@ describe('useCheckoutSession', () => {
 
     const { result } = renderHook(() => useCheckoutSession())
 
-    await result.current.startCheckout({ plan: 'monthly' })
+    await result.current.startCheckout({
+      email: 'test@example.com',
+      name: 'Test User'
+    })
 
     expect(mockCreateCheckoutSession).toHaveBeenCalledWith({
       email: 'test@example.com',
-      plan: 'monthly',
+      name: 'Test User'
     })
 
     expect(window.location.assign).toHaveBeenCalledWith(mockUrl)
@@ -54,7 +57,10 @@ describe('useCheckoutSession', () => {
 
     const { result } = renderHook(() => useCheckoutSession())
 
-    await result.current.startCheckout({ plan: 'monthly' })
+    await result.current.startCheckout({
+      email: 'test@example.com',
+      name: 'Test User'
+    })
 
     expect(mockToast.toast).toHaveBeenCalledWith({
       title: 'Checkout failed. Please try again.',

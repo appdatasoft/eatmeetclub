@@ -2,7 +2,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import EventDetailsContainer from "./EventDetailsContainer";
-import TicketPurchase from "./TicketPurchase";
+import { TicketPurchase } from "../TicketPurchase";
 import EventActionButtons from "./EventActionButtons";
 import UnpublishedEventNotice from "./UnpublishedEventNotice";
 import { useIsMobile } from "@/hooks/use-mobile";

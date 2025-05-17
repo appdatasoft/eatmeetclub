@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEventDetails } from "@/hooks/useEventDetails";
 import { useState, useEffect } from "react";
@@ -15,7 +16,7 @@ import EventHeader from "@/components/events/EventHeader";
 
 // Event components
 import EventDetailsContainer from "@/components/events/EventDetails/EventDetailsContainer";
-import TicketPurchase from "@/components/events/EventDetails/TicketPurchase";
+import { TicketPurchase } from "@/components/events/TicketPurchase";
 import EventSkeleton from "@/components/events/EventDetails/EventSkeleton";
 import EventNotFound from "@/components/events/EventDetails/EventNotFound";
 import EventActionButtons from "@/components/events/EventDetails/EventActionButtons";
