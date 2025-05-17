@@ -22,7 +22,7 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }
   const restaurantName = name || "Unknown Restaurant";
   
   // Use the actual description if available, otherwise provide a generic fallback
-  const restaurantDescription = description || `${restaurantName} specializes in sustainable, locally-sourced cuisine with a focus on seasonal ingredients.`;
+  const restaurantDescription = description || "specializes in sustainable, locally-sourced cuisine with a focus on seasonal ingredients.";
   
   useEffect(() => {
     // Fetch restaurant image from the database
