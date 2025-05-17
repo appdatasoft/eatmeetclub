@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { MenuItem } from "./types";
+import type { MenuItem } from "./types";
 import ItemThumbnail from "./components/ItemThumbnail";
 import ItemDetails from "./components/ItemDetails";
 import MediaGalleryDialog from "./components/MediaGalleryDialog";
@@ -10,32 +10,42 @@ interface MenuItemProps {
 }
 
 const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
-  const [showGallery, setShowGallery] = useState(false);
-  
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const hasMedia = item.media && item.media.length > 0;
+
+  const handleOpenGallery = () => {
+    if (hasMedia) {
+      setIsGalleryOpen(true);
+    }
+  };
+
   return (
-    <div className="border-b pb-3">
-      <div className="flex">
-        {/* Thumbnail - always show at least a placeholder */}
-        <div className="mr-3">
-          <ItemThumbnail 
-            media={item.media} 
-            itemName={item.name} 
-            onOpenGallery={() => setShowGallery(true)} 
-          />
-        </div>
-        
-        {/* Item details */}
-        <ItemDetails 
-          item={item} 
-          onOpenGallery={() => setShowGallery(true)} 
-        />
+    <div className="border-b border-gray-200 py-4 last:border-none">
+      <div className="flex items-start gap-3">
+        {/* Thumbnail with navigation */}
+        {hasMedia ? (
+          <div onClick={handleOpenGallery} className="cursor-pointer">
+            <ItemThumbnail 
+              media={item.media} 
+              name={item.name}
+              onClick={handleOpenGallery}
+            />
+          </div>
+        ) : (
+          <div className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center">
+            <span className="text-xs text-gray-400">No image</span>
+          </div>
+        )}
+
+        {/* Item Details */}
+        <ItemDetails item={item} />
       </div>
-      
-      {/* Image Gallery Dialog */}
-      <MediaGalleryDialog 
-        item={item} 
-        open={showGallery} 
-        onOpenChange={setShowGallery} 
+
+      {/* Full Gallery Dialog */}
+      <MediaGalleryDialog
+        item={item}
+        open={isGalleryOpen}
+        onOpenChange={setIsGalleryOpen}
       />
     </div>
   );

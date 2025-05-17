@@ -1,17 +1,17 @@
 
 import React from "react";
-import { MenuItem } from "./types";
-import MenuItemComponent from "./MenuItem";
+import MenuItem from "./MenuItem";
+import type { MenuItem as MenuItemType } from "./types";
 
 interface MenuListProps {
-  menuItems: MenuItem[];
+  menuItems: MenuItemType[];
 }
 
 const MenuList: React.FC<MenuListProps> = ({ menuItems }) => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-1">
       {menuItems.map((item) => (
-        <MenuItemComponent key={item.id} item={item} />
+        <MenuItem key={item.id} item={item} />
       ))}
     </div>
   );
