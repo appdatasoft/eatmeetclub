@@ -10,5 +10,7 @@ export interface Restaurant {
   zipcode: string;
   phone: string;
   website: string | null;
-  description?: string;  // Added description field
+  description?: string;
+  logo_url?: string | null;
+  user_id?: string;
 }

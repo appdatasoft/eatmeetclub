@@ -7,7 +7,8 @@ export interface Restaurant {
   id: string;
   name: string;
   user_id: string;
-  description?: string;  // Ensuring description is defined in this type
+  description?: string;
+  logo_url?: string | null;
 }
 
 export const useRestaurantFetch = (restaurantId: string | undefined) => {

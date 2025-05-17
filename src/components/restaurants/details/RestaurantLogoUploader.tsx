@@ -5,7 +5,6 @@ import { Upload, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { buildStorageUrl } from "@/utils/supabaseStorage";
 
 interface RestaurantLogoUploaderProps {
   restaurantId: string;
@@ -57,21 +56,13 @@ const RestaurantLogoUploader = ({
         .from('lovable-uploads')
         .getPublicUrl(filePath);
       
-      // Create a placeholder menu item ID - this is required by the schema but we're using this for a logo
-      const placeholderMenuItemId = '00000000-0000-0000-0000-000000000000';
+      // Update the logo_url directly in the restaurants table
+      const { error: updateError } = await supabase
+        .from('restaurants')
+        .update({ logo_url: publicUrl })
+        .eq('id', restaurantId);
         
-      // Save the URL to the restaurant_menu_media table
-      const { error: dbError } = await supabase
-        .from('restaurant_menu_media')
-        .insert({
-          restaurant_id: restaurantId,
-          menu_item_id: placeholderMenuItemId, // Add required field
-          url: publicUrl,
-          media_type: 'image',
-          storage_path: filePath
-        });
-        
-      if (dbError) throw dbError;
+      if (updateError) throw updateError;
       
       onUploadComplete(publicUrl);
       

@@ -560,6 +560,7 @@ export type Database = {
           cuisine_type: string
           description: string | null
           id: string
+          logo_url: string | null
           name: string
           phone: string
           state: string
@@ -575,6 +576,7 @@ export type Database = {
           cuisine_type: string
           description?: string | null
           id?: string
+          logo_url?: string | null
           name: string
           phone: string
           state: string
@@ -590,6 +592,7 @@ export type Database = {
           cuisine_type?: string
           description?: string | null
           id?: string
+          logo_url?: string | null
           name?: string
           phone?: string
           state?: string

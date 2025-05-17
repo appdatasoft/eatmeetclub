@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,7 +27,6 @@ const RestaurantDetailsPage: React.FC = () => {
   const [events, setEvents] = useState<any[]>([]);
   const { user } = useAuth();
   const [isOwner, setIsOwner] = useState(false);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   // Fetch restaurant data and events
   useEffect(() => {
@@ -50,19 +48,6 @@ const RestaurantDetailsPage: React.FC = () => {
 
         setRestaurant(restaurantData);
         setIsOwner(user && restaurantData.user_id === user.id);
-        
-        // Fetch restaurant logo
-        const { data: logoData, error: logoError } = await supabase
-          .from("restaurant_menu_media")
-          .select("url")
-          .eq("restaurant_id", id)
-          .eq("media_type", "image")
-          .order("created_at", { ascending: false })
-          .limit(1);
-          
-        if (!logoError && logoData && logoData.length > 0) {
-          setLogoUrl(logoData[0].url);
-        }
         
         // Fetch related events for this restaurant
         const { data: eventsData, error: eventsError } = await supabase
@@ -135,7 +120,12 @@ const RestaurantDetailsPage: React.FC = () => {
   
   // Handle logo upload completion
   const handleLogoUploadComplete = (url: string) => {
-    setLogoUrl(url);
+    if (restaurant) {
+      setRestaurant({
+        ...restaurant,
+        logo_url: url
+      });
+    }
   };
 
   if (isLoading) {
@@ -157,13 +147,13 @@ const RestaurantDetailsPage: React.FC = () => {
               {isOwner ? (
                 <RestaurantLogoUploader 
                   restaurantId={restaurant.id} 
-                  currentLogoUrl={logoUrl} 
+                  currentLogoUrl={restaurant.logo_url} 
                   onUploadComplete={handleLogoUploadComplete} 
                 />
               ) : (
                 <Avatar className="w-24 h-24">
-                  {logoUrl ? (
-                    <AvatarImage src={logoUrl} alt={restaurant.name} className="object-cover" />
+                  {restaurant.logo_url ? (
+                    <AvatarImage src={restaurant.logo_url} alt={restaurant.name} className="object-cover" />
                   ) : (
                     <AvatarFallback>
                       <Image className="h-10 w-10 text-gray-400" />

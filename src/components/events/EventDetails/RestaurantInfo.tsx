@@ -1,68 +1,27 @@
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
-import { Building, Upload, Edit, Image } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { buildStorageUrl } from "@/utils/supabaseStorage";
+import { Building } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
 
 interface RestaurantInfoProps {
   id?: string;
   name: string;
   description: string;
+  logoUrl?: string | null;
 }
 
-const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
+const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ 
+  id, 
+  name, 
+  description,
+  logoUrl
+}) => {
   const isValidRestaurant = id && id !== "unknown";
   const restaurantName = name || "Unknown Restaurant";
   
-  console.log("RestaurantInfo received props:", { id, name, description });
-  
   // Use the actual description if available, otherwise provide a generic fallback
   const restaurantDescription = description || "specializes in sustainable, locally-sourced cuisine with a focus on seasonal ingredients.";
-  
-  useEffect(() => {
-    // Fetch restaurant image from the database
-    const fetchRestaurantImage = async () => {
-      if (isValidRestaurant) {
-        setIsLoading(true);
-        try {
-          // First try to get restaurant image from restaurant_menu_media 
-          const { data: mediaData, error: mediaError } = await supabase
-            .from("restaurant_menu_media")
-            .select("url")
-            .eq("restaurant_id", id)
-            .eq("media_type", "image")
-            .limit(1);
-
-          if (mediaError) {
-            console.error("Error fetching restaurant media:", mediaError);
-          } else if (mediaData && mediaData.length > 0) {
-            setImageUrl(mediaData[0].url);
-          } else {
-            // If no specific image found, we could add a fallback database query here
-            // For now, set to null to use the Building icon
-            setImageUrl(null);
-          }
-        } catch (error) {
-          console.error("Error fetching restaurant image:", error);
-          setImageUrl(null);
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        setIsLoading(false);
-        setImageUrl(null);
-      }
-    };
-    
-    fetchRestaurantImage();
-  }, [id, isValidRestaurant]);
   
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -70,11 +29,9 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }
       <div className="flex items-center mb-4">
         <div className="relative">
           <Avatar className="w-12 h-12 mr-4">
-            {isLoading ? (
-              <div className="w-full h-full bg-gray-300 animate-pulse"></div>
-            ) : isValidRestaurant && imageUrl ? (
+            {isValidRestaurant && logoUrl ? (
               <AvatarImage 
-                src={imageUrl} 
+                src={logoUrl} 
                 alt={restaurantName} 
                 className="object-cover"
               />
