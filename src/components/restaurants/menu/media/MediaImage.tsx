@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ImageOff, RefreshCcw } from 'lucide-react';
 
 interface MediaImageProps {
@@ -13,35 +13,44 @@ const MediaImage: React.FC<MediaImageProps> = ({ url, alt, className = "", onCli
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 2;
+  const [currentUrl, setCurrentUrl] = useState(url);
+  const maxRetries = 3;
+  
+  // Reset states when URL changes
+  useEffect(() => {
+    setCurrentUrl(url);
+    setIsLoaded(false);
+    setHasError(false);
+    setRetryCount(0);
+  }, [url]);
   
   const handleImageLoad = () => {
-    console.log(`Image loaded successfully: ${url}`);
+    console.log(`Image loaded successfully: ${currentUrl}`);
     setIsLoaded(true);
     setHasError(false);
   };
   
   const handleImageError = () => {
-    console.error(`Image error: ${url}`);
+    console.error(`Image error: ${currentUrl}`);
     setHasError(true);
   };
 
   const handleRetry = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering onClick if this is inside a clickable area
+    
     if (retryCount < maxRetries) {
-      console.log(`Retrying image load for ${url}, attempt ${retryCount + 1}`);
+      console.log(`Retrying image load for ${currentUrl}, attempt ${retryCount + 1}`);
       setHasError(false);
       setIsLoaded(false);
       setRetryCount(prev => prev + 1);
       
       // Force browser to re-fetch the image by adding a timestamp parameter
-      const imgElement = e.currentTarget.parentElement?.querySelector('img');
-      if (imgElement) {
-        const newUrl = url.includes('?') 
-          ? `${url}&retry=${Date.now()}` 
-          : `${url}?retry=${Date.now()}`;
-        imgElement.src = newUrl;
-      }
+      const timestamp = Date.now();
+      const newUrl = url.includes('?') 
+        ? `${url}&cache=${timestamp}` 
+        : `${url}?cache=${timestamp}`;
+      
+      setCurrentUrl(newUrl);
     } else {
       console.error(`Maximum retry attempts (${maxRetries}) reached for ${url}`);
     }
@@ -65,7 +74,7 @@ const MediaImage: React.FC<MediaImageProps> = ({ url, alt, className = "", onCli
       
       {/* Actual image */}
       <img 
-        src={url} 
+        src={currentUrl} 
         alt={alt} 
         className={`w-full h-full object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'} ${className}`}
         onLoad={handleImageLoad}

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Volume, RefreshCcw, Film } from 'lucide-react';
 
 interface MediaVideoProps {
@@ -20,16 +20,25 @@ const MediaVideo: React.FC<MediaVideoProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 2;
+  const [currentUrl, setCurrentUrl] = useState(url);
+  const maxRetries = 3;
+  
+  // Reset states when URL changes
+  useEffect(() => {
+    setCurrentUrl(url);
+    setIsLoaded(false);
+    setHasError(false);
+    setRetryCount(0);
+  }, [url]);
   
   const handleVideoLoad = () => {
-    console.log(`Video loaded successfully: ${url}`);
+    console.log(`Video loaded successfully: ${currentUrl}`);
     setIsLoaded(true);
     setHasError(false);
   };
   
   const handleVideoError = () => {
-    console.error(`Video error: ${url}`);
+    console.error(`Video error: ${currentUrl}`);
     setHasError(true);
     setIsLoaded(false);
   };
@@ -38,19 +47,18 @@ const MediaVideo: React.FC<MediaVideoProps> = ({
     e.stopPropagation(); // Prevent triggering onClick if this is inside a clickable area
     
     if (retryCount < maxRetries) {
-      console.log(`Retrying video load for ${url}, attempt ${retryCount + 1}`);
+      console.log(`Retrying video load for ${currentUrl}, attempt ${retryCount + 1}`);
       setHasError(false);
       setIsLoaded(false);
       setRetryCount(prev => prev + 1);
       
       // Force browser to re-fetch the video by adding a timestamp parameter
-      const videoElement = e.currentTarget.parentElement?.querySelector('video') as HTMLVideoElement;
-      if (videoElement) {
-        videoElement.src = url.includes('?') 
-          ? `${url}&retry=${Date.now()}` 
-          : `${url}?retry=${Date.now()}`;
-        videoElement.load();
-      }
+      const timestamp = Date.now();
+      const newUrl = url.includes('?') 
+        ? `${url}&cache=${timestamp}` 
+        : `${url}?cache=${timestamp}`;
+      
+      setCurrentUrl(newUrl);
     } else {
       console.error(`Maximum retry attempts (${maxRetries}) reached for ${url}`);
     }
@@ -74,7 +82,7 @@ const MediaVideo: React.FC<MediaVideoProps> = ({
       
       {/* Actual video */}
       <video 
-        src={url}
+        src={currentUrl}
         className={`w-full h-full object-cover ${className}`}
         controls={showControls}
         autoPlay={autoPlay}

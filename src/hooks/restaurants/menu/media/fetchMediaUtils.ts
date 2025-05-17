@@ -18,11 +18,11 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
     // 3. Root folder paths with item prefix
     `menu-items`,
     // 4. Restaurant folder (might contain item-specific files)
-    `menu-items/${restaurantId}`, 
-    // 5. Bare folders
-    `rice`,
-    `doro-wot`
+    `menu-items/${restaurantId}`
   ];
+  
+  // Additional logging to help debug
+  console.log(`Looking for media in these paths: ${pathsToCheck.join(', ')}`);
   
   // Try each path until we find media
   for (const path of pathsToCheck) {
@@ -32,7 +32,7 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
       const { data: files, error } = await supabase
         .storage
         .from('lovable-uploads')
-        .list(path);
+        .list(path, { sortBy: { column: 'name', order: 'asc' } });
         
       if (error) {
         console.log(`Directory ${path} might not exist:`, error.message);
@@ -44,19 +44,20 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
         continue;
       }
       
-      console.log(`Found ${files.length} files in ${path}`);
+      console.log(`Found ${files.length} files in ${path}:`, files.map(f => f.name).join(', '));
       
       // Filter files that might belong to this item
       const relevantFiles = files.filter(file => {
         // Skip directories
         if (file.name.endsWith('/')) return false;
         
-        // Direct match based on item ID
-        if (file.name.includes(itemId)) return true;
+        // Match based on item ID in filename
+        const matchesId = file.name.includes(itemId);
         
-        // Match based on item name extracted from database records
-        // For example, "rice-123456789.jpg" would match an item with name "rice"
-        return true;
+        // Include all files in item-specific directories
+        const isInItemDir = path.includes(itemId);
+        
+        return matchesId || isInItemDir || path === `menu-items/${restaurantId}/${itemId}`;
       });
       
       if (relevantFiles.length > 0) {
@@ -71,6 +72,8 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
             
           const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
           
+          console.log(`Generated URL for ${filePath}: ${publicUrl}`);
+          
           return {
             url: publicUrl,
             type: isVideo ? 'video' as const : 'image' as const,
@@ -79,7 +82,7 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
         });
         
         if (mediaItems.length > 0) {
-          console.log(`Generated URLs for ${mediaItems.length} files in ${path}`);
+          console.log(`Successfully mapped ${mediaItems.length} media items from ${path}`);
           return mediaItems;
         }
       }
@@ -88,64 +91,86 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
     }
   }
   
-  // If we reach here, try a more aggressive approach to find any item-related images
+  // If we reach here, we need to directly check all files in the bucket
   try {
-    // Directly check entire folder
-    const { data: allFiles, error: allError } = await supabase
+    console.log("Attempting to search entire storage bucket for any files related to this item");
+    
+    const { data: rootFiles, error: rootError } = await supabase
       .storage
       .from('lovable-uploads')
-      .list('menu-items');
+      .list();
       
-    if (!allError && allFiles && allFiles.length > 0) {
-      // Log what we found
-      console.log(`Found ${allFiles.length} total files in menu-items folder`);
+    if (!rootError && rootFiles && rootFiles.length > 0) {
+      console.log(`Found ${rootFiles.length} files at root level of storage`);
       
-      // Try to get restaurant folder directly
-      const restaurantFiles = allFiles.filter(file => 
-        file.name === restaurantId || file.name.startsWith(restaurantId + '/')
+      // Look for item ID or restaurant ID in any file names
+      const possibleMatches = rootFiles.filter(file => 
+        file.name.includes(itemId) || 
+        (file.name.includes(restaurantId) && !file.name.endsWith('/'))
       );
       
-      if (restaurantFiles.length > 0) {
-        console.log(`Found restaurant folder: ${restaurantFiles[0].name}`);
+      if (possibleMatches.length > 0) {
+        console.log(`Found ${possibleMatches.length} possible matching files at root level`);
         
-        // Try to get from nested restaurant folder
-        const { data: nestedFiles } = await supabase
-          .storage
-          .from('lovable-uploads')
-          .list(`menu-items/${restaurantFiles[0].name}`);
-          
-        if (nestedFiles && nestedFiles.length > 0) {
-          console.log(`Found ${nestedFiles.length} files in restaurant nested folder`);
-          
-          const mediaItems = nestedFiles
-            .filter(file => !file.name.endsWith('/'))
-            .map(file => {
-              const filePath = `menu-items/${restaurantFiles[0].name}/${file.name}`;
-              const publicUrl = supabase.storage
-                .from('lovable-uploads')
-                .getPublicUrl(filePath).data.publicUrl;
-                
-              const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
-              
-              return {
-                url: publicUrl,
-                type: isVideo ? 'video' as const : 'image' as const,
-                id: filePath
-              };
-            });
+        const mediaItems = possibleMatches.map(file => {
+          const filePath = file.name;
+          const publicUrl = supabase.storage
+            .from('lovable-uploads')
+            .getPublicUrl(filePath).data.publicUrl;
             
-          if (mediaItems.length > 0) {
-            return mediaItems;
-          }
+          const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+          
+          return {
+            url: publicUrl,
+            type: isVideo ? 'video' as const : 'image' as const,
+            id: filePath
+          };
+        });
+        
+        if (mediaItems.length > 0) {
+          console.log(`Found ${mediaItems.length} media items at root level`);
+          return mediaItems;
         }
       }
     }
   } catch (err) {
-    console.error('Error in aggressive media search:', err);
+    console.error('Error in root level storage search:', err);
+  }
+  
+  // Last resort - try direct access if we know the filename pattern
+  try {
+    console.log("Trying direct file access as last resort");
+    
+    // Test common naming patterns
+    const testPaths = [
+      `${itemId}.jpg`,
+      `${itemId}.png`,
+      `${itemId}.jpeg`,
+      `menu-item-${itemId}.jpg`,
+      `${restaurantId}-${itemId}.jpg`
+    ];
+    
+    for (const testPath of testPaths) {
+      const { data: fileExists } = await supabase
+        .storage
+        .from('lovable-uploads')
+        .getPublicUrl(testPath);
+        
+      if (fileExists) {
+        console.log(`Direct file access successful for ${testPath}`);
+        return [{
+          url: fileExists.publicUrl,
+          type: 'image',
+          id: testPath
+        }];
+      }
+    }
+  } catch (err) {
+    console.error('Error in direct file access attempt:', err);
   }
   
   // Return empty array if no media found
-  console.log(`No media found for item ${itemId}, returning empty array`);
+  console.log(`No media found for item ${itemId} after all attempts, returning empty array`);
   return [];
 };
 
