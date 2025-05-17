@@ -31,21 +31,6 @@ const Events = () => {
     }
   }, [fetchError, toast]);
 
-  // For debugging
-  useEffect(() => {
-    console.log("Events page - Current auth state:", user ? "Logged in" : "Not logged in");
-    console.log("Events page - Raw events count:", events.length);
-    console.log("Events page - Filtered events count:", filteredEvents.length);
-    
-    if (events.length === 0 && !isLoading) {
-      console.log("No events found. This might indicate an issue with data access or RLS policies.");
-    }
-    
-    if (events.length > 0) {
-      console.log("Sample event data:", events[0]);
-    }
-  }, [events, filteredEvents, user, isLoading]);
-
   const handleRefresh = () => {
     console.log("Manual refresh triggered");
     refreshEvents();
@@ -88,13 +73,16 @@ const Events = () => {
             onFilterChange={handleFilterChange} 
           />
 
+          {/* Loading state */}
           {isLoading && (
             <div className="text-center py-8">
-              <p className="text-lg text-gray-600">Loading events...</p>
+              <div className="inline-block animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+              <p className="text-lg text-gray-600 mt-4">Loading events...</p>
             </div>
           )}
 
-          {fetchError && (
+          {/* Error state */}
+          {!isLoading && fetchError && (
             <div className="text-center py-8 bg-red-50 border border-red-100 rounded-lg p-4">
               <h3 className="text-lg font-medium text-red-800">Error loading events</h3>
               <p className="text-red-600 mt-2">{fetchError}</p>
@@ -108,15 +96,17 @@ const Events = () => {
             </div>
           )}
 
+          {/* Events list - only render when not loading and no errors */}
           {!isLoading && !fetchError && (
             <EventsList 
               events={filteredEvents} 
-              isLoading={isLoading} 
-              error={fetchError} 
+              isLoading={false} 
+              error={null} 
             />
           )}
           
-          {!isLoading && events.length === 0 && !fetchError && (
+          {/* Empty state - only show when data loaded successfully but no events found */}
+          {!isLoading && !fetchError && events.length === 0 && (
             <div className="text-center mt-8 bg-blue-50 border border-blue-100 rounded-lg p-6">
               <p className="text-lg text-gray-600">
                 There are currently no published events available.
@@ -135,14 +125,6 @@ const Events = () => {
                 >
                   Refresh events
                 </Button>
-              </div>
-              <div className="mt-6 p-4 bg-gray-50 rounded text-left">
-                <p className="font-medium text-gray-800 mb-2">Debug Information:</p>
-                <ul className="text-sm space-y-1 text-gray-500">
-                  <li>Authentication: {user ? `User logged in (${user.id.slice(0,6)}...)` : "No user logged in"}</li>
-                  <li>Raw events count: {events.length}</li>
-                  <li>Filtered events count: {filteredEvents.length}</li>
-                </ul>
               </div>
             </div>
           )}

@@ -1,4 +1,5 @@
 
+import React from "react";
 import EventCard, { EventCardProps } from "./EventCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -56,7 +57,6 @@ const EventsList = ({ events, isLoading, error }: EventsListProps) => {
     );
   }
 
-  console.log("Rendering events list with", events.length, "events");
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {events.map((event) => (
@@ -66,4 +66,4 @@ const EventsList = ({ events, isLoading, error }: EventsListProps) => {
   );
 };
 
-export default EventsList;
+export default React.memo(EventsList);

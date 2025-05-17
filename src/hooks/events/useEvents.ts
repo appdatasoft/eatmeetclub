@@ -32,15 +32,45 @@ export const useEvents = () => {
   }, [fetchPublishedEvents]);
   
   useEffect(() => {
-    refreshEvents();
+    let isMounted = true;
+    
+    const fetchInitialEvents = async () => {
+      try {
+        setIsLoading(true);
+        setFetchError(null);
+        
+        const formattedEvents = await fetchPublishedEvents();
+        
+        if (isMounted) {
+          setEvents(formattedEvents || []);
+        }
+      } catch (error: any) {
+        if (isMounted) {
+          console.error("Error fetching published events:", error);
+          setFetchError(`An unexpected error occurred: ${error.message}`);
+          setEvents([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    fetchInitialEvents();
     
     // Add subscription to event changes
-    const unsubscribe = subscribeToEventChanges(refreshEvents);
+    const unsubscribe = subscribeToEventChanges(() => {
+      if (isMounted) {
+        refreshEvents();
+      }
+    });
     
     return () => {
+      isMounted = false;
       unsubscribe();
     };
-  }, [refreshEvents, subscribeToEventChanges]);
+  }, [fetchPublishedEvents, subscribeToEventChanges]);
 
   return {
     events,
