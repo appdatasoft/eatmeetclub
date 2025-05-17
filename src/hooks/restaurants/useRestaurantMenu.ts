@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -145,7 +144,7 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
   };
   
   // Handle save item
-  const handleSaveItem = async (item: MenuItemFormValues) => {
+  const handleSaveItem = async (item: MenuItemFormValues): Promise<void> => {
     if (!restaurantId || !user?.id) return;
     
     try {
@@ -267,8 +266,6 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
       
       setIsDialogOpen(false);
       setCurrentItem(null);
-      
-      return true;
     } catch (err: any) {
       console.error('Error saving menu item:', err);
       toast({
@@ -276,7 +273,6 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
         description: err.message || "Failed to save menu item",
         variant: "destructive",
       });
-      return false;
     } finally {
       setIsSaving(false);
     }

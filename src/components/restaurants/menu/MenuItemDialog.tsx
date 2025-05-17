@@ -9,7 +9,7 @@ interface MenuItemDialogProps {
   onClose: () => void;
   currentItem: MenuItem | null;
   isSaving: boolean;
-  onSave: (values: MenuItemFormValues) => Promise<void>;
+  onSave: (values: MenuItemFormValues) => Promise<boolean | void>;
   restaurantId: string;
 }
 
