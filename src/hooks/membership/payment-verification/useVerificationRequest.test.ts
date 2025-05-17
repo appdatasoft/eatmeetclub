@@ -1,7 +1,12 @@
-
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react-hooks';
-import { describe, it, expect, beforeEach } from 'vitest';
 import { useVerificationRequest } from './useVerificationRequest';
+import { useToast } from '@/hooks/use-toast';
+
+// Mock dependencies
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: vi.fn()
+}));
 
 // Mock fetch
 global.fetch = vi.fn();

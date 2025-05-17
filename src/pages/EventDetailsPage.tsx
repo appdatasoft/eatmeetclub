@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useEventDetails } from "@/hooks/useEventDetails";
 import { useAuth } from "@/hooks/useAuth";
@@ -6,6 +5,7 @@ import { useEventAccess } from "@/hooks/useEventAccess";
 import { useEventActions } from "@/hooks/useEventActions";
 import { useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
+import { useEventPaymentHandler } from "@/hooks/event-payment/useEventPaymentHandler";
 
 // Layout components
 import Navbar from "@/components/layout/Navbar";

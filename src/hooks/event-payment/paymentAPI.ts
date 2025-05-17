@@ -23,9 +23,13 @@ export const createTicketPayment = async (
     // Call the Supabase Edge Function to create a payment
     const response = await supabase.functions.invoke('create-ticket-payment', {
       body: {
-        eventId,
-        quantity,
-        userId
+        purchaseData: {
+          eventId,
+          quantity,
+          unitPrice: 0, // Will be determined by the backend
+          serviceFee: 0, // Will be calculated by the backend
+          totalAmount: 0 // Will be calculated by the backend
+        }
       },
       headers: {
         Authorization: `Bearer ${token}`

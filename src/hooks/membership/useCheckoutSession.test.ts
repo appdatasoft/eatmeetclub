@@ -1,7 +1,21 @@
-
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react-hooks';
-import { describe, it, expect, beforeEach } from 'vitest';
 import { useCheckoutSession } from './useCheckoutSession';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+// Mock dependencies
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: vi.fn()
+}));
+
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: {
+    functions: {
+      invoke: vi.fn()
+    }
+  }
+}));
 
 interface CheckoutOptions {
   createUser: boolean;
