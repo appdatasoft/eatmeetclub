@@ -1,6 +1,8 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@12.1.0?target=deno";
+import { userOperations } from "./user-operations.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +16,11 @@ serve(async (req) => {
   }
 
   try {
-    const { email, name, phone } = await req.json();
+    const { email, name, phone, address } = await req.json();
+    
+    // Get auth context - optional as this can also be used without auth
+    let userId = null;
+    const authHeader = req.headers.get("Authorization");
 
     if (!email) {
       return new Response(JSON.stringify({ error: "Missing email", success: false }), {
@@ -27,6 +33,17 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // If auth header is present, verify the user
+    if (authHeader) {
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      
+      if (!userError && userData?.user) {
+        userId = userData.user.id;
+        console.log("Authenticated user:", userId);
+      }
+    }
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
       apiVersion: "2022-11-15",
@@ -51,76 +68,41 @@ serve(async (req) => {
     const stripePriceId = config["stripe_price_id"];
     if (!stripePriceId) throw new Error("Stripe price ID not set in admin_config");
 
-    // 🔍 Check if user exists (use SQL-style query)
+    // Check if user exists in auth system
     const { data: existingUser, error: userError } = await supabase
       .from("auth.users")
       .select("*")
       .eq("email", email)
       .maybeSingle();
 
-    // 🔹 New user: create and invite, then send to Stripe
-    if (!existingUser) {
-      const { error: createError } = await supabase.auth.admin.createUser({
+    // Get or create customer in Stripe
+    const customers = await stripe.customers.list({ email, limit: 1 });
+    let customerId;
+    
+    if (customers.data.length > 0) {
+      customerId = customers.data[0].id;
+    } else {
+      const customer = await stripe.customers.create({
         email,
-        email_confirm: true,
-        user_metadata: { name, phone, membership_active: false },
+        name,
+        phone,
+        address: address ? { line1: address } : undefined
       });
-
-      if (!createError) {
-        await supabase.auth.admin.inviteUserByEmail(email);
-      }
-
-      const session = await stripe.checkout.sessions.create({
-        mode: "subscription",
-        customer_email: email,
-        line_items: [{ price: stripePriceId, quantity: 1 }],
-        success_url: `${siteUrl}/membership-confirmed?success=true&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${siteUrl}/membership-payment?canceled=true`,
-      });
-
-      return new Response(JSON.stringify({ success: true, url: session.url }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      customerId = customer.id;
     }
-
-    // 🔹 Existing user: check metadata
-    const userMetadata = existingUser.raw_user_meta_data || {};
-    const membershipActive = userMetadata.membership_active === true;
-
-    if (membershipActive) {
-      return new Response(JSON.stringify({ success: false, redirect: loginUrl }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // 🔹 Existing inactive user: prorated payment
-    const today = new Date().getDate();
-    const proratedAmount = today > 15 ? Math.round(membershipFee / 2) : membershipFee;
-
+    
+    // Create the checkout session
     const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      customer_email: email,
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: "Prorated Membership",
-              description: "One-time prorated monthly membership fee",
-            },
-            unit_amount: proratedAmount,
-          },
-          quantity: 1,
-        },
-      ],
+      mode: "subscription",
+      customer: customerId,
+      line_items: [{ price: stripePriceId, quantity: 1 }],
       success_url: `${siteUrl}/membership-confirmed?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/membership-payment?canceled=true`,
+      cancel_url: `${siteUrl}/signup?canceled=true`,
       metadata: {
         user_email: email,
         user_name: name,
         phone,
+        address
       },
     });
 

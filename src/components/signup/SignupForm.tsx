@@ -16,9 +16,12 @@ import {
 } from "@/components/ui/form";
 
 const signupSchema = z.object({
+  firstName: z.string().min(1, { message: "First name is required" }),
+  lastName: z.string().min(1, { message: "Last name is required" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters long" }),
-  phoneNumber: z.string().optional(),
+  phoneNumber: z.string().min(10, { message: "Please enter a valid phone number" }),
+  address: z.string().min(3, { message: "Please enter your address" }),
 });
 
 export type SignupFormValues = z.infer<typeof signupSchema>;
@@ -32,9 +35,12 @@ const SignupForm = ({ onSubmit, isLoading }: SignupFormProps) => {
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
+      firstName: "",
+      lastName: "",
       email: "",
       password: "",
       phoneNumber: "",
+      address: "",
     }
   });
 
@@ -64,6 +70,42 @@ const SignupForm = ({ onSubmit, isLoading }: SignupFormProps) => {
   return (
     <Form {...form}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="firstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>First Name</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Enter your first name"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last Name</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Enter your last name"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
         <FormField
           control={form.control}
           name="email"
@@ -72,6 +114,7 @@ const SignupForm = ({ onSubmit, isLoading }: SignupFormProps) => {
               <FormLabel>Email address</FormLabel>
               <FormControl>
                 <Input
+                  type="email"
                   placeholder="youremail@example.com"
                   {...field}
                 />
@@ -121,12 +164,29 @@ const SignupForm = ({ onSubmit, isLoading }: SignupFormProps) => {
           )}
         />
 
+        <FormField
+          control={form.control}
+          name="address"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Address</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="123 Main St, City, State, Zip"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <Button
           type="submit"
           className="w-full"
           isLoading={isLoading}
         >
-          Continue
+          Sign Up
         </Button>
 
         <div className="text-center text-sm">

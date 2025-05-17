@@ -1,38 +1,51 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate, Link, useLocation, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import MainLayout from "@/components/layout/MainLayout";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const location = useLocation();
   const { user, handleLogin, isLoading } = useAuth();
+  
+  // Check for various redirect and status parameters
+  const signupSuccess = searchParams.get('signup') === 'success';
+  const emailVerified = searchParams.get('verified') === 'true';
+  const redirectParam = searchParams.get('redirect');
 
   // If user is already logged in, redirect to dashboard
   useEffect(() => {
     if (user && !isLoading) {
       console.log("User already logged in, redirecting to dashboard or saved redirect");
-      const savedRedirect = redirectUrl || '/dashboard';
-      navigate(savedRedirect);
+      if (redirectParam === 'become-member') {
+        navigate('/become-member');
+      } else {
+        const savedRedirect = redirectUrl || '/dashboard';
+        navigate(savedRedirect);
+      }
     }
-  }, [user, navigate, isLoading, redirectUrl]);
+  }, [user, navigate, isLoading, redirectUrl, redirectParam]);
 
   useEffect(() => {
-    // Check if we have a redirect path from state
+    // Check if we have a redirect path from state or params
     const state = location.state as { from?: string };
     const fromPath = state?.from;
     
-    if (fromPath) {
+    if (redirectParam) {
+      setRedirectUrl(`/${redirectParam}`);
+    } else if (fromPath) {
       setRedirectUrl(fromPath);
     } else {
       // Check for pending ticket purchase stored in localStorage
@@ -54,7 +67,14 @@ const Login = () => {
         }
       }
     }
-  }, [location]);
+    
+    // Set stored email from signup flow if available
+    const storedEmail = localStorage.getItem('loginEmail');
+    if (storedEmail) {
+      setEmail(storedEmail);
+      localStorage.removeItem('loginEmail');
+    }
+  }, [location, redirectParam]);
 
   const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -75,7 +95,9 @@ const Login = () => {
       // Allow the auth state to update before attempting navigation
       setTimeout(() => {
         // Handle redirects after login
-        if (redirectUrl) {
+        if (redirectParam === 'become-member') {
+          navigate('/become-member');
+        } else if (redirectUrl) {
           localStorage.removeItem('redirectAfterLogin');
           navigate(redirectUrl);
         } else {
@@ -121,6 +143,30 @@ const Login = () => {
             <h1 className="text-2xl font-bold">Welcome back</h1>
             <p className="text-gray-600 mt-2">Sign in to your account</p>
           </div>
+
+          {signupSuccess && (
+            <Alert className="mb-6 bg-green-50 border-green-200">
+              <AlertDescription className="text-green-800">
+                Registration successful! Please check your email to verify your account.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {emailVerified && (
+            <Alert className="mb-6 bg-green-50 border-green-200">
+              <AlertDescription className="text-green-800">
+                Email verified successfully! You can now log in.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {redirectParam === 'become-member' && (
+            <Alert className="mb-6 bg-amber-50 border-amber-200">
+              <AlertDescription className="text-amber-800">
+                Please log in or sign up to continue with your membership registration.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <form onSubmit={handleLoginSubmit} className="space-y-6">
             <div className="space-y-2">
