@@ -3,7 +3,7 @@
 import { describe, it, vi, expect, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useEventPaymentHandler } from '../../useEventPaymentHandler'
-import { EventDetails } from '@/types/event'
+import { EventDetails } from '@/hooks/types/eventTypes'
 
 vi.mock('@/lib/navigation', () => ({
   redirectToLogin: vi.fn(),
@@ -53,7 +53,9 @@ describe('useEventPaymentHandler authentication flow', () => {
         city: 'Test City',
         state: 'TS',
         zipcode: '12345',
-        description: 'A test restaurant'
+        description: 'A test restaurant',
+        phone: '555-123-4567',
+        website: 'https://example.com'
       },
       user_id: 'user123',
       published: true,

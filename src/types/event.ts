@@ -7,6 +7,8 @@ export interface Restaurant {
   state: string;
   zipcode: string;
   description: string;
+  phone?: string;
+  website?: string;
 }
 
 export interface EventDetails {
@@ -18,7 +20,7 @@ export interface EventDetails {
   price: number;
   capacity: number;
   restaurant: Restaurant;
-  tickets_sold?: number;
+  tickets_sold: number;
   user_id: string;
   cover_image?: string;
   published: boolean;
