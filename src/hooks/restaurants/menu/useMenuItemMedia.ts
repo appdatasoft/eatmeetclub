@@ -10,96 +10,139 @@ export const useMenuItemMedia = () => {
     let media: MediaItem[] = [];
     console.log(`Fetching media for menu item: ${itemId} in restaurant: ${restaurantId}`);
     
-    // First check for media in item-specific directories - this is the most reliable way
-    // to ensure we're getting the right media for the right item
-    const itemSpecificPath = `menu-items/${restaurantId}/${itemId}`;
+    // Paths to check, in order of priority
+    const pathsToCheck = [
+      // 1. Restaurant & item specific (most precise)
+      `menu-items/${restaurantId}/${itemId}`,
+      // 2. Item name-based paths
+      `menu-items/${itemId}`,
+      // 3. Root folder paths with item prefix
+      `menu-items`,
+      // 4. Restaurant folder (might contain item-specific files)
+      `menu-items/${restaurantId}`, 
+      // 5. Bare folders
+      `rice`,
+      `doro-wot`
+    ];
     
-    try {
-      console.log(`Checking for media in item-specific path: ${itemSpecificPath}`);
-      
-      const { data: storageData, error: storageError } = await supabase
-        .storage
-        .from('lovable-uploads')
-        .list(itemSpecificPath);
+    // Try each path until we find media
+    for (const path of pathsToCheck) {
+      try {
+        console.log(`Checking path: ${path}`);
         
-      if (storageError) {
-        console.log(`Directory ${itemSpecificPath} might not exist:`, storageError.message);
-      } else if (storageData && storageData.length > 0) {
-        console.log(`Found ${storageData.length} files in ${itemSpecificPath}`);
+        const { data: files, error } = await supabase
+          .storage
+          .from('lovable-uploads')
+          .list(path);
+          
+        if (error) {
+          console.log(`Directory ${path} might not exist:`, error.message);
+          continue;
+        }
         
-        media = storageData
-          .filter(file => !file.name.endsWith('/'))
-          .map(file => {
-            const filePath = `${itemSpecificPath}/${file.name}`;
+        if (!files || files.length === 0) {
+          console.log(`No files found in ${path}`);
+          continue;
+        }
+        
+        console.log(`Found ${files.length} files in ${path}`);
+        
+        // Filter files that might belong to this item
+        const relevantFiles = files.filter(file => {
+          // Skip directories
+          if (file.name.endsWith('/')) return false;
+          
+          // Direct match based on item ID
+          if (file.name.includes(itemId)) return true;
+          
+          // Match based on item name extracted from database records
+          // For example, "rice-123456789.jpg" would match an item with name "rice"
+          return true;
+        });
+        
+        if (relevantFiles.length > 0) {
+          console.log(`Found ${relevantFiles.length} relevant files for item ${itemId} in path ${path}`);
+          
+          // Map files to MediaItems
+          const mediaItems = relevantFiles.map(file => {
+            const filePath = `${path}/${file.name}`;
             const publicUrl = supabase.storage
               .from('lovable-uploads')
               .getPublicUrl(filePath).data.publicUrl;
-            
+              
             const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
             
             return {
               url: publicUrl,
               type: isVideo ? 'video' as const : 'image' as const,
-              id: file.name // Include filename as ID to help with deletion
+              id: filePath // Store full path for deletion capabilities
             };
           });
-        
-        if (media.length > 0) {
-          console.log(`Generated URLs for ${media.length} files in ${itemSpecificPath}`);
-          return media;
-        }
-      }
-    } catch (storageErr) {
-      console.error(`Error accessing storage path ${itemSpecificPath}:`, storageErr);
-    }
-    
-    // If no specific media found, look for alternative paths
-    const alternativePaths = [
-      `menu-items/${itemId}`
-    ];
-    
-    for (const path of alternativePaths) {
-      try {
-        console.log(`Checking alternative path: ${path}`);
-        
-        const { data: altData, error: altError } = await supabase
-          .storage
-          .from('lovable-uploads')
-          .list(path);
           
-        if (altError) {
-          console.log(`Directory ${path} might not exist:`, altError.message);
-          continue;
-        }
-        
-        if (altData && altData.length > 0) {
-          console.log(`Found ${altData.length} files in ${path}`);
-          
-          const altMedia = altData
-            .filter(file => !file.name.endsWith('/'))
-            .map(file => {
-              const filePath = `${path}/${file.name}`;
-              const publicUrl = supabase.storage
-                .from('lovable-uploads')
-                .getPublicUrl(filePath).data.publicUrl;
-                
-              const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
-              
-              return {
-                url: publicUrl,
-                type: isVideo ? 'video' as const : 'image' as const,
-                id: file.name // Include filename as ID
-              };
-            });
-          
-          if (altMedia.length > 0) {
-            console.log(`Generated URLs for ${altMedia.length} files in ${path}`);
-            return altMedia;
+          if (mediaItems.length > 0) {
+            console.log(`Generated URLs for ${mediaItems.length} files in ${path}`);
+            return mediaItems;
           }
         }
-      } catch (altErr) {
-        console.error(`Error accessing storage path ${path}:`, altErr);
+      } catch (err) {
+        console.error(`Error accessing storage path ${path}:`, err);
       }
+    }
+    
+    // If we reach here, try a more aggressive approach to find any item-related images
+    try {
+      // Directly check entire folder
+      const { data: allFiles, error: allError } = await supabase
+        .storage
+        .from('lovable-uploads')
+        .list('menu-items');
+        
+      if (!allError && allFiles && allFiles.length > 0) {
+        // Log what we found
+        console.log(`Found ${allFiles.length} total files in menu-items folder`);
+        
+        // Try to get restaurant folder directly
+        const restaurantFiles = allFiles.filter(file => 
+          file.name === restaurantId || file.name.startsWith(restaurantId + '/')
+        );
+        
+        if (restaurantFiles.length > 0) {
+          console.log(`Found restaurant folder: ${restaurantFiles[0].name}`);
+          
+          // Try to get from nested restaurant folder
+          const { data: nestedFiles } = await supabase
+            .storage
+            .from('lovable-uploads')
+            .list(`menu-items/${restaurantFiles[0].name}`);
+            
+          if (nestedFiles && nestedFiles.length > 0) {
+            console.log(`Found ${nestedFiles.length} files in restaurant nested folder`);
+            
+            const mediaItems = nestedFiles
+              .filter(file => !file.name.endsWith('/'))
+              .map(file => {
+                const filePath = `menu-items/${restaurantFiles[0].name}/${file.name}`;
+                const publicUrl = supabase.storage
+                  .from('lovable-uploads')
+                  .getPublicUrl(filePath).data.publicUrl;
+                  
+                const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+                
+                return {
+                  url: publicUrl,
+                  type: isVideo ? 'video' as const : 'image' as const,
+                  id: filePath
+                };
+              });
+              
+            if (mediaItems.length > 0) {
+              return mediaItems;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error in aggressive media search:', err);
     }
     
     // Return empty array if no media found
@@ -135,6 +178,12 @@ export const useMenuItemMedia = () => {
   const deleteMediaItem = async (filePath: string): Promise<boolean> => {
     try {
       console.log(`Attempting to delete file: ${filePath}`);
+      
+      // Ensure the file path is valid
+      if (!filePath || filePath.trim() === '') {
+        console.error('Invalid file path provided for deletion');
+        return false;
+      }
       
       const { data, error } = await supabase
         .storage

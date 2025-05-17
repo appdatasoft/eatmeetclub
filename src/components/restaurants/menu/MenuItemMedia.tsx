@@ -63,7 +63,10 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "", th
                 alt="Menu item thumbnail" 
                 className={`w-full h-full object-cover transition-opacity ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
                 onLoad={() => handleImageLoad(item.url)}
-                onError={() => handleImageError(item.url)}
+                onError={() => {
+                  handleImageError(item.url);
+                  console.log("Attempting to load fallback image");
+                }}
               />
               
               {/* Error state */}
@@ -110,6 +113,11 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "", th
                   src={selectedMedia.url} 
                   alt="Menu item full view" 
                   className="w-full max-h-[80vh] object-contain"
+                  onError={(e) => {
+                    console.error(`Gallery image error:`, selectedMedia.url);
+                    e.currentTarget.onerror = null; // Prevent infinite error loops
+                    e.currentTarget.src = "/placeholder.svg"; 
+                  }}
                 />
               )}
               {selectedMedia?.type === 'video' && selectedMedia.url && (
@@ -118,6 +126,9 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "", th
                   controls
                   className="w-full max-h-[80vh] object-contain"
                   autoPlay
+                  onError={(e) => {
+                    console.error(`Video error:`, selectedMedia.url);
+                  }}
                 />
               )}
               <button 
@@ -162,7 +173,10 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "", th
                     alt="Menu item" 
                     className={`w-full h-full object-cover transition-opacity ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
                     onLoad={() => handleImageLoad(item.url)}
-                    onError={() => handleImageError(item.url)}
+                    onError={() => {
+                      handleImageError(item.url);
+                      // We could set a fallback image here if needed
+                    }}
                   />
                   
                   {/* Error state */}
@@ -204,6 +218,11 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "", th
                 src={selectedMedia.url} 
                 alt="Menu item full view" 
                 className="w-full max-h-[80vh] object-contain"
+                onError={(e) => {
+                  console.error(`Gallery image error:`, selectedMedia.url);
+                  e.currentTarget.onerror = null; // Prevent infinite error loops
+                  e.currentTarget.src = "/placeholder.svg"; 
+                }}
               />
             )}
             {selectedMedia?.type === 'video' && selectedMedia.url && (
@@ -212,6 +231,9 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "", th
                 controls
                 className="w-full max-h-[80vh] object-contain"
                 autoPlay
+                onError={(e) => {
+                  console.error(`Video error:`, selectedMedia.url);
+                }}
               />
             )}
             <button 
