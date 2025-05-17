@@ -16,45 +16,59 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       throw new Error("Invalid event ID format");
     }
     
-    // Join events with restaurants directly using restaurant_id
-    const { data, error: fetchError } = await supabase
+    // First get event data
+    const { data: eventData, error: eventError } = await supabase
       .from("events")
-      .select(`
-        *,
-        restaurant:restaurants(*)
-      `)
+      .select("*")
       .eq("id", eventId)
       .single();
 
-    if (fetchError) {
-      console.error("Error fetching event details:", fetchError);
-      throw new Error(fetchError.message || "Failed to load event details");
+    if (eventError) {
+      console.error("Error fetching event:", eventError);
+      throw new Error(eventError.message || "Failed to load event details");
     }
 
-    if (!data) {
+    if (!eventData) {
       throw new Error("Event not found");
     }
     
-    console.log("Event data received:", data);
-    console.log("Restaurant data:", data.restaurant);
+    console.log("Event data received:", eventData);
+    
+    // Now fetch restaurant data using restaurant_id
+    let restaurantData = null;
+    if (eventData.restaurant_id) {
+      const { data: restaurant, error: restaurantError } = await supabase
+        .from("restaurants")
+        .select("*")
+        .eq("id", eventData.restaurant_id)
+        .single();
+        
+      if (restaurantError) {
+        console.error("Error fetching restaurant:", restaurantError);
+        // Don't throw here, just log the error and continue with null restaurant
+      } else {
+        restaurantData = restaurant;
+        console.log("Restaurant data:", restaurantData);
+      }
+    }
 
     // Transform the data to match the EventDetails interface
     const eventDetails: EventDetails = {
-      id: data.id,
-      title: data.title,
-      description: data.description || "",
-      date: data.date,
-      time: data.time,
-      price: data.price,
-      capacity: data.capacity,
-      restaurant: data.restaurant ? {
-        id: data.restaurant.id,
-        name: data.restaurant.name || "Unknown Restaurant",
-        address: data.restaurant.address || "",
-        city: data.restaurant.city || "",
-        state: data.restaurant.state || "",
-        zipcode: data.restaurant.zipcode || "",
-        description: data.restaurant.description || "",
+      id: eventData.id,
+      title: eventData.title,
+      description: eventData.description || "",
+      date: eventData.date,
+      time: eventData.time,
+      price: eventData.price,
+      capacity: eventData.capacity,
+      restaurant: restaurantData ? {
+        id: restaurantData.id,
+        name: restaurantData.name || "Unknown Restaurant",
+        address: restaurantData.address || "",
+        city: restaurantData.city || "",
+        state: restaurantData.state || "",
+        zipcode: restaurantData.zipcode || "",
+        description: restaurantData.description || "",
       } : {
         id: "unknown",
         name: "Unknown Restaurant",
@@ -64,10 +78,10 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
         zipcode: "",
         description: "",
       },
-      tickets_sold: data.tickets_sold || 0,
-      user_id: data.user_id,
-      cover_image: data.cover_image,
-      published: data.published,
+      tickets_sold: eventData.tickets_sold || 0,
+      user_id: eventData.user_id,
+      cover_image: eventData.cover_image,
+      published: eventData.published,
     };
 
     return eventDetails;
