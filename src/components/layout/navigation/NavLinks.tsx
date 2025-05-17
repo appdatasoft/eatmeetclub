@@ -5,69 +5,44 @@ import {
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-  navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { useAuth } from '@/hooks/useAuth';
+import { cn } from '@/lib/utils';
 
 const NavLinks = () => {
   const { user, isAdmin } = useAuth();
+  
+  // Create a custom link component to avoid anchor tag nesting
+  const NavItem = ({ to, children }: { to: string, children: React.ReactNode }) => {
+    return (
+      <NavigationMenuItem>
+        <Link to={to}>
+          <span className={cn(
+            "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium",
+            "transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+            "focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50"
+          )}>
+            {children}
+          </span>
+        </Link>
+      </NavigationMenuItem>
+    );
+  };
   
   return (
     <div className="hidden md:block">
       <NavigationMenu>
         <NavigationMenuList>
-          <NavigationMenuItem>
-            <Link to="/">
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Home
-              </NavigationMenuLink>
-            </Link>
-          </NavigationMenuItem>
-          <NavigationMenuItem>
-            <Link to="/events">
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Events
-              </NavigationMenuLink>
-            </Link>
-          </NavigationMenuItem>
-          <NavigationMenuItem>
-            <Link to="/venues">
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Venues
-              </NavigationMenuLink>
-            </Link>
-          </NavigationMenuItem>
-          <NavigationMenuItem>
-            <Link to="/dashboard/memories">
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Memories
-              </NavigationMenuLink>
-            </Link>
-          </NavigationMenuItem>
-          <NavigationMenuItem>
-            <Link to="/about">
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                About
-              </NavigationMenuLink>
-            </Link>
-          </NavigationMenuItem>
+          <NavItem to="/">Home</NavItem>
+          <NavItem to="/events">Events</NavItem>
+          <NavItem to="/venues">Venues</NavItem>
+          <NavItem to="/dashboard/memories">Memories</NavItem>
+          <NavItem to="/about">About</NavItem>
           {user && (
-            <NavigationMenuItem>
-              <Link to="/dashboard">
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                  Dashboard
-                </NavigationMenuLink>
-              </Link>
-            </NavigationMenuItem>
+            <NavItem to="/dashboard">Dashboard</NavItem>
           )}
           {isAdmin && (
-            <NavigationMenuItem>
-              <Link to="/admin">
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                  Admin
-                </NavigationMenuLink>
-              </Link>
-            </NavigationMenuItem>
+            <NavItem to="/admin">Admin</NavItem>
           )}
         </NavigationMenuList>
       </NavigationMenu>
