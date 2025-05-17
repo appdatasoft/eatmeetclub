@@ -1,4 +1,3 @@
-
 import { useParams } from "react-router-dom";
 import { useEventDetails } from "@/hooks/useEventDetails";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,9 +32,9 @@ const EventDetailsPage = () => {
     refreshEventDetails 
   } = useEventDetails(id);
   
-  // Show error toast if there's an error
+  // Show error toast if there's an error that's not a "not found" error
   useEffect(() => {
-    if (error) {
+    if (error && !error.includes("not found") && !error.includes("Invalid")) {
       toast({
         title: "Error loading event",
         description: error,
@@ -86,7 +85,7 @@ const EventDetailsPage = () => {
     return (
       <>
         <Navbar />
-        <EventNotFound />
+        <EventNotFound error={error} />
         <Footer />
       </>
     );
