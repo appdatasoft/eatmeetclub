@@ -50,8 +50,98 @@ export const useMenuItems = (restaurantId: string | undefined) => {
             
             const ingredients = ingredientsData ? ingredientsData.map(ing => ing.name) : [];
             
-            // Try to get the media items associated with this menu item from storage
-            const media = await fetchMenuItemMedia(restaurantId, item.id);
+            // Try to get the media files for this menu item
+            let media: {url: string, type: "image" | "video"}[] = [];
+            
+            // Check specific directories first
+            const mediaPaths = [
+              `menu-items/${restaurantId}/${item.id}`,
+              `menu-items/${item.id}`
+            ];
+            
+            let foundMedia = false;
+            for (const path of mediaPaths) {
+              try {
+                const { data: files, error: filesError } = await supabase.storage
+                  .from('lovable-uploads')
+                  .list(path);
+                  
+                if (!filesError && files && files.length > 0) {
+                  const mediaFiles = files.filter(file => !file.name.endsWith('/'));
+                  
+                  if (mediaFiles.length > 0) {
+                    console.log(`Found ${mediaFiles.length} media files in ${path}`);
+                    
+                    media = mediaFiles.map(file => {
+                      const filePath = `${path}/${file.name}`;
+                      const publicUrl = supabase.storage
+                        .from('lovable-uploads')
+                        .getPublicUrl(filePath).data.publicUrl;
+                        
+                      const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+                      
+                      return {
+                        url: publicUrl,
+                        type: isVideo ? 'video' : 'image' 
+                      };
+                    });
+                    
+                    foundMedia = true;
+                    break;
+                  }
+                }
+              } catch (err) {
+                console.error(`Error checking path ${path}:`, err);
+              }
+            }
+            
+            // If no media found in specific directories, check root directory
+            if (!foundMedia) {
+              try {
+                const { data: rootFiles, error: rootError } = await supabase.storage
+                  .from('lovable-uploads')
+                  .list('menu-items');
+                  
+                if (!rootError && rootFiles && rootFiles.length > 0) {
+                  const itemId = item.id.toLowerCase();
+                  const itemName = item.name.toLowerCase().replace(/\s+/g, '-');
+                  
+                  const matchingFiles = rootFiles.filter(file => 
+                    !file.name.endsWith('/') && (
+                      file.name.toLowerCase().includes(itemId) ||
+                      file.name.toLowerCase().includes(itemName)
+                    )
+                  );
+                  
+                  if (matchingFiles.length > 0) {
+                    console.log(`Found ${matchingFiles.length} matching files in root directory for ${item.name}`);
+                    
+                    media = matchingFiles.map(file => {
+                      const filePath = `menu-items/${file.name}`;
+                      const publicUrl = supabase.storage
+                        .from('lovable-uploads')
+                        .getPublicUrl(filePath).data.publicUrl;
+                        
+                      const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+                      
+                      return {
+                        url: publicUrl,
+                        type: isVideo ? 'video' : 'image'
+                      };
+                    });
+                    
+                    foundMedia = true;
+                  }
+                }
+              } catch (rootErr) {
+                console.error('Error checking root directory:', rootErr);
+              }
+            }
+            
+            // If no images found at all, leave media array empty
+            if (media.length === 0) {
+              console.log(`No media found for item: ${item.name}`);
+            }
             
             // Transform to match our MenuItem interface
             return {
@@ -86,88 +176,6 @@ export const useMenuItems = (restaurantId: string | undefined) => {
     
     fetchMenuItems();
   }, [restaurantId, toast]);
-
-  // Function to fetch media for a menu item from Supabase storage
-  const fetchMenuItemMedia = async (restaurantId: string, itemId: string) => {
-    try {
-      const mediaPaths = [
-        `menu-items/${restaurantId}/${itemId}`,
-        `menu-items/${itemId}`
-      ];
-      
-      for (const path of mediaPaths) {
-        const { data: files, error } = await supabase.storage
-          .from('lovable-uploads')
-          .list(path);
-          
-        if (error) {
-          console.log(`No files found in path: ${path}`);
-          continue;
-        }
-        
-        if (files && files.length > 0) {
-          // Filter out directories
-          const mediaFiles = files.filter(file => !file.name.endsWith('/'));
-          
-          if (mediaFiles.length > 0) {
-            return mediaFiles.map(file => {
-              const filePath = `${path}/${file.name}`;
-              const publicUrl = supabase.storage
-                .from('lovable-uploads')
-                .getPublicUrl(filePath).data.publicUrl;
-                
-              const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
-              
-              return {
-                url: publicUrl,
-                type: isVideo ? 'video' : 'image'
-              };
-            });
-          }
-        }
-      }
-      
-      // If no files found in specific paths, check the root directory
-      const { data: rootFiles, error: rootError } = await supabase.storage
-        .from('lovable-uploads')
-        .list('menu-items');
-        
-      if (!rootError && rootFiles && rootFiles.length > 0) {
-        const matchingFiles = rootFiles.filter(file => 
-          file.name.toLowerCase().includes(itemId.toLowerCase()) ||
-          file.name.toLowerCase().includes(restaurantId.toLowerCase())
-        );
-        
-        if (matchingFiles.length > 0) {
-          return matchingFiles.map(file => {
-            const filePath = `menu-items/${file.name}`;
-            const publicUrl = supabase.storage
-              .from('lovable-uploads')
-              .getPublicUrl(filePath).data.publicUrl;
-              
-            const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
-            
-            return {
-              url: publicUrl,
-              type: isVideo ? 'video' : 'image'
-            };
-          });
-        }
-      }
-      
-      // Fallback to static images - only if no images are found in storage
-      return [{
-        url: "https://images.unsplash.com/photo-1546241072-48010ad2862c?auto=format&fit=crop&w=300&h=300",
-        type: "image"
-      }];
-    } catch (error) {
-      console.error('Error fetching menu item media:', error);
-      return [{
-        url: "https://images.unsplash.com/photo-1546241072-48010ad2862c?auto=format&fit=crop&w=300&h=300",
-        type: "image"
-      }];
-    }
-  };
 
   return { menuItems, setMenuItems, isLoading, error };
 };

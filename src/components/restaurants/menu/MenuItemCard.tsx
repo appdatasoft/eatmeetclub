@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash } from 'lucide-react';
@@ -23,12 +23,17 @@ interface MenuItemCardProps {
 }
 
 const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onEdit, onDelete }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  
+  const hasMedia = !!(item.media && item.media.length > 0);
+  
   return (
     <Card className="overflow-hidden bg-white hover:shadow-md transition-shadow border-gray-200">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           {/* Show thumbnail if available */}
-          {item.media && item.media.length > 0 && (
+          {hasMedia && (
             <MenuItemMedia media={item.media} className="mt-0" thumbnailOnly />
           )}
           

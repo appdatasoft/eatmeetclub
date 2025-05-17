@@ -17,6 +17,8 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
   
   const hasMedia = item.media && item.media.length > 0;
   const hasMultipleMedia = hasMedia && item.media.length > 1;
+  
+  const restaurantId = item.restaurant_id || '';
 
   // Reset image states when media changes
   useEffect(() => {
@@ -34,15 +36,21 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
     }
   };
   
-  // Get a reliable placeholder image from a predefined list
-  const getPlaceholderImage = () => {
-    const placeholders = [
-      "https://images.unsplash.com/photo-1546241072-48010ad2862c?auto=format&fit=crop&w=300&h=300",
-      "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=300&h=300",
-      "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop&w=300&h=300"
-    ];
-    return placeholders[Math.floor(Math.random() * placeholders.length)];
+  // Validate URLs to avoid placeholders
+  const isPlaceholderUrl = (url: string) => {
+    return url.includes('unsplash.com') || !url.includes('supabase');
   };
+  
+  // Get the first non-placeholder image or use the first image as fallback
+  const getPrimaryImage = () => {
+    if (!hasMedia) return null;
+    
+    // Try to find a non-placeholder image first
+    const nonPlaceholder = item.media.find(m => !isPlaceholderUrl(m.url));
+    return nonPlaceholder || item.media[0];
+  };
+  
+  const primaryImage = getPrimaryImage();
   
   return (
     <div className="border-b pb-3">
@@ -53,7 +61,7 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
             className="w-16 h-16 rounded-md overflow-hidden cursor-pointer relative bg-gray-100"
             onClick={() => hasMedia && setShowGallery(true)}
           >
-            {hasMedia ? (
+            {primaryImage ? (
               <>
                 {/* Show loading state before image loads */}
                 {!imageLoaded && !imageError && (
@@ -64,32 +72,22 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
                 
                 {/* Show the actual image */}
                 <img 
-                  src={item.media[0].url} 
+                  src={primaryImage.url} 
                   alt={item.name} 
                   className={`w-full h-full object-cover transition-opacity duration-200 ${!imageLoaded ? 'opacity-0' : 'opacity-100'}`}
                   onLoad={() => {
-                    console.log(`Image loaded successfully for ${item.name}:`, item.media[0].url);
+                    console.log(`Image loaded successfully for ${item.name}:`, primaryImage.url);
                     setImageLoaded(true);
                     setImageError(false);
                   }}
                   onError={(e) => {
-                    console.error(`Image error for ${item.name}:`, item.media[0].url);
-                    
-                    // Use a static placeholder from our predefined list
-                    const placeholderUrl = getPlaceholderImage();
-                    console.log(`Using food placeholder for ${item.name}:`, placeholderUrl);
-                    e.currentTarget.src = placeholderUrl;
-                    
-                    // If the placeholder also fails, show the fallback UI
-                    e.currentTarget.onerror = () => {
-                      console.error(`Fallback image also failed for ${item.name}`);
-                      setImageError(true);
-                      setImageLoaded(false);
-                    };
+                    console.error(`Image error for ${item.name}:`, primaryImage.url);
+                    setImageError(true);
+                    setImageLoaded(false);
                   }}
                 />
                 
-                {/* Show error state if both original and fallback images fail */}
+                {/* Show error state if image fails to load */}
                 {imageError && !imageLoaded && (
                   <div 
                     className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-gray-100 cursor-pointer"
@@ -167,7 +165,6 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
                           className="max-h-[60vh] object-contain rounded-md"
                           onError={(e) => {
                             console.error(`Gallery image error for ${item.name} (${idx}):`, media.url);
-                            e.currentTarget.src = getPlaceholderImage();
                             e.currentTarget.onerror = null; // Prevent infinite error loops
                           }}
                         />

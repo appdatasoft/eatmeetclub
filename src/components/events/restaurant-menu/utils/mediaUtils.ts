@@ -7,72 +7,34 @@ import { MediaItem } from "@/components/restaurants/menu/MenuItemMediaUploader";
  */
 export async function fetchMenuItemMedia(restaurantId: string, item: { id: string, name: string }): Promise<MediaItem[]> {
   try {
+    console.log(`Fetching media for item ${item.name} (${item.id}) in restaurant ${restaurantId}`);
     const mediaPaths = [
       `menu-items/${restaurantId}/${item.id}`,
-      `menu-items/${item.id}`
+      `menu-items/${item.id}`,
+      `menu-items/${restaurantId}`
     ];
     
-    // Check specific folders first
-    for (const path of mediaPaths) {
-      try {
-        const { data: files, error } = await supabase.storage
-          .from('lovable-uploads')
-          .list(path);
-          
-        if (error) {
-          console.log(`No files found in path: ${path}`);
-          continue;
-        }
-        
-        if (files && files.length > 0) {
-          // Filter out directories
-          const mediaFiles = files.filter(file => !file.name.endsWith('/'));
-          
-          if (mediaFiles.length > 0) {
-            const media = mediaFiles.map(file => {
-              const filePath = `${path}/${file.name}`;
-              const publicUrl = supabase.storage
-                .from('lovable-uploads')
-                .getPublicUrl(filePath).data.publicUrl;
-                
-              // Fixed type issue by ensuring it's explicitly "video" or "image"
-              const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
-              const fileType: "video" | "image" = isVideo ? "video" : "image";
-              
-              return {
-                url: publicUrl,
-                type: fileType
-              };
-            });
-            
-            console.log(`Found ${media.length} files for ${item.name} in ${path}`);
-            return media;
-          }
-        }
-      } catch (error) {
-        console.error(`Error checking path ${path}:`, error);
-      }
-    }
-    
-    // Check root menu-items directory for any matches with ID or name
+    // Check for direct file matches in menu-items directory
     try {
+      console.log(`Looking for direct matches in menu-items for item ${item.id}`);
       const { data: rootFiles, error: rootError } = await supabase.storage
         .from('lovable-uploads')
-        .list('menu-items', { limit: 1000 });
+        .list('menu-items');
         
       if (!rootError && rootFiles && rootFiles.length > 0) {
-        const itemId = item.id.toLowerCase();
-        const itemName = item.name.toLowerCase().replace(/\s+/g, '-');
+        console.log(`Found ${rootFiles.length} files in root menu-items directory`);
         
+        // Look for files containing the item ID or restaurant ID
+        const itemId = item.id.toLowerCase();
         const matchingFiles = rootFiles.filter(file => 
           !file.name.endsWith('/') && (
             file.name.toLowerCase().includes(itemId) ||
-            file.name.toLowerCase().includes(itemName) ||
-            file.name.toLowerCase().includes(restaurantId.toLowerCase())
+            (item.name && file.name.toLowerCase().includes(item.name.toLowerCase().replace(/\s+/g, '-')))
           )
         );
         
         if (matchingFiles.length > 0) {
+          console.log(`Found ${matchingFiles.length} matching files in root directory`);
           const media = matchingFiles.map(file => {
             const filePath = `menu-items/${file.name}`;
             const publicUrl = supabase.storage
@@ -89,7 +51,6 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
             };
           });
           
-          console.log(`Found ${media.length} matching files for ${item.name} in root directory`);
           return media;
         }
       }
@@ -97,19 +58,95 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
       console.error('Error checking root directory:', error);
     }
     
-    // Use fallback static image only if no images found in storage
-    console.log(`No media found for ${item.name}, using fallback image`);
-    return [{
-      url: getStaticFallbackImage(item.name),
-      type: "image" as const
-    }];
+    // Check specific folders
+    for (const path of mediaPaths) {
+      try {
+        console.log(`Checking path: ${path}`);
+        const { data: files, error } = await supabase.storage
+          .from('lovable-uploads')
+          .list(path);
+          
+        if (error) {
+          console.log(`No files found in path: ${path}`);
+          continue;
+        }
+        
+        if (files && files.length > 0) {
+          // Filter out directories
+          const mediaFiles = files.filter(file => !file.name.endsWith('/'));
+          
+          if (mediaFiles.length > 0) {
+            console.log(`Found ${mediaFiles.length} files in ${path}`);
+            const media = mediaFiles.map(file => {
+              const filePath = `${path}/${file.name}`;
+              const publicUrl = supabase.storage
+                .from('lovable-uploads')
+                .getPublicUrl(filePath).data.publicUrl;
+                
+              // Fixed type issue by ensuring it's explicitly "video" or "image"
+              const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+              const fileType: "video" | "image" = isVideo ? "video" : "image";
+              
+              return {
+                url: publicUrl,
+                type: fileType
+              };
+            });
+            
+            return media;
+          }
+        }
+      } catch (error) {
+        console.error(`Error checking path ${path}:`, error);
+      }
+    }
+    
+    // Check restaurant directory directly as a fallback
+    try {
+      const restaurantPath = `menu-items/${restaurantId}`;
+      console.log(`Checking restaurant path: ${restaurantPath}`);
+      
+      const { data: restaurantFiles, error: restaurantError } = await supabase.storage
+        .from('lovable-uploads')
+        .list(restaurantPath);
+        
+      if (!restaurantError && restaurantFiles && restaurantFiles.length > 0) {
+        const mediaFiles = restaurantFiles.filter(file => !file.name.endsWith('/'));
+        
+        if (mediaFiles.length > 0) {
+          console.log(`Found ${mediaFiles.length} files in restaurant directory`);
+          const media = mediaFiles.map(file => {
+            const filePath = `${restaurantPath}/${file.name}`;
+            const publicUrl = supabase.storage
+              .from('lovable-uploads')
+              .getPublicUrl(filePath).data.publicUrl;
+              
+            // Fixed type issue by ensuring it's explicitly "video" or "image"
+            const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+            const fileType: "video" | "image" = isVideo ? "video" : "image";
+            
+            return {
+              url: publicUrl,
+              type: fileType
+            };
+          });
+          
+          // If we found files in the restaurant directory, just return the first few
+          // as generic item images
+          return media.slice(0, 3);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking restaurant directory:', error);
+    }
+    
+    // If all methods failed, return empty array instead of fallback
+    console.log(`No media found for ${item.name}`);
+    return [];
     
   } catch (error) {
     console.error('Error in fetchMenuItemMedia:', error);
-    return [{
-      url: getStaticFallbackImage(item.name),
-      type: "image" as const
-    }];
+    return [];
   }
 }
 
