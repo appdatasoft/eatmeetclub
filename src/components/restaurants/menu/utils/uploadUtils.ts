@@ -47,8 +47,33 @@ export const uploadFileToStorage = async (
       .from('lovable-uploads')
       .getPublicUrl(filePath);
       
-    if (publicUrlData) {
+    if (publicUrlData && publicUrlData.publicUrl) {
       console.log('Public URL:', publicUrlData.publicUrl);
+      
+      // Store media info in database
+      if (menuItemId) {
+        const mediaType = isVideo ? 'video' : 'image';
+        
+        const { data: mediaRecord, error: mediaError } = await supabase
+          .from('restaurant_menu_media')
+          .insert({
+            menu_item_id: menuItemId,
+            restaurant_id: restaurantId,
+            url: publicUrlData.publicUrl,
+            storage_path: filePath,
+            media_type: mediaType
+          })
+          .select('id')
+          .single();
+          
+        if (mediaError) {
+          console.error("Error storing media record:", mediaError);
+          // Continue anyway, as we have the file uploaded
+        } else {
+          console.log("Media record stored with ID:", mediaRecord.id);
+        }
+      }
+      
       return {
         url: publicUrlData.publicUrl,
         type: isVideo ? 'video' : 'image',
@@ -75,6 +100,24 @@ export const deleteFileFromStorage = async (filePath: string): Promise<boolean> 
   try {
     console.log(`Attempting to delete file: ${filePath}`);
     
+    // First try to delete from the database
+    try {
+      const { data, error } = await supabase
+        .from('restaurant_menu_media')
+        .delete()
+        .eq('storage_path', filePath);
+        
+      if (error) {
+        console.error('Error deleting media record:', error);
+        // Continue with file deletion anyway
+      } else {
+        console.log('Media record deleted successfully');
+      }
+    } catch (err) {
+      console.error('Error checking media records:', err);
+    }
+    
+    // Then delete the actual file
     const { error } = await supabase.storage
       .from('lovable-uploads')
       .remove([filePath]);

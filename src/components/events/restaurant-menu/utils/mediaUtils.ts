@@ -1,6 +1,7 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { MediaItem } from "@/components/restaurants/menu";
-import { addCacheBuster, generateAlternativeUrls, findWorkingImageUrl, getDefaultFoodPlaceholder } from "@/utils/supabaseStorage";
+import { addCacheBuster, getDefaultFoodPlaceholder } from "@/utils/supabaseStorage";
 
 /**
  * Fetches media items for a specific menu item from various possible storage paths
@@ -20,15 +21,28 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
       }];
     }
 
-    // Try multiple possible paths in order of priority
+    // First check if we have media records in the database
+    const { data: mediaRecords, error: mediaError } = await supabase
+      .from('restaurant_menu_media')
+      .select('*')
+      .eq('menu_item_id', item.id);
+      
+    if (!mediaError && mediaRecords && mediaRecords.length > 0) {
+      console.log(`Found ${mediaRecords.length} media records in database for item ${item.id}`);
+      
+      // Convert records to MediaItems
+      return mediaRecords.map(record => ({
+        url: addCacheBuster(record.url),
+        type: record.media_type as 'image' | 'video',
+        id: record.storage_path || record.id,
+      }));
+    }
+    
+    // Fallback to checking storage paths directly (for backward compatibility)
+    // Try common paths for item media
     const pathsToTry = [
-      `${item.id}`, // Direct folder with item ID
-      `menu-items/${item.id}`, // Menu items subfolder
-      `menu-items/${restaurantId}/${item.id}`, // Restaurant specific menu item
-      `restaurants/${restaurantId}/menu/${item.id}`, // Alternative structure
-      // Add normalized name as potential path (convert spaces to hyphens, lowercase)
-      `${item.name.toLowerCase().replace(/\s+/g, '-')}`,
-      `menu-items/${item.name.toLowerCase().replace(/\s+/g, '-')}`
+      `menu-items/${item.id}`,
+      `menu-items/${restaurantId}/${item.id}`
     ];
     
     // Try each path until we find media
@@ -67,23 +81,6 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
       } catch (error) {
         console.error(`Error checking path ${path}:`, error);
       }
-    }
-    
-    // Try to find a working image URL as fallback
-    try {
-      const workingUrl = await findWorkingImageUrl(restaurantId, item.id, item.name);
-      
-      if (workingUrl) {
-        console.log(`Found working direct URL for item ${item.name}:`, workingUrl);
-        
-        return [{
-          url: workingUrl,
-          type: 'image',
-          id: workingUrl.split('?')[0] // Store the URL without query params as ID
-        }];
-      }
-    } catch (err) {
-      console.error(`Error finding working URL for ${item.name}:`, err);
     }
     
     // Create a fallback media item with placeholder as last resort

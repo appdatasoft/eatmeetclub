@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for working with Supabase storage URLs
  */
@@ -104,166 +105,12 @@ export const checkStorageUrlExists = async (url: string): Promise<boolean> => {
 };
 
 /**
- * Generates alternative URL patterns to try for a given item ID
- * @param restaurantId The restaurant ID
- * @param itemId The menu item ID
- * @param itemName Optional item name for alternative URL patterns
- * @returns Array of possible URL patterns to try
- */
-export const generateAlternativeUrls = (
-  restaurantId: string,
-  itemId: string,
-  itemName?: string
-): string[] => {
-  const bucket = 'lovable-uploads';
-  const baseStorageUrl = `https://wocfwpedauuhlrfugxuu.supabase.co/storage/v1/object/public/${bucket}`;
-  const extensions = ['jpg', 'jpeg', 'png', 'webp'];
-  
-  const urls: string[] = [];
-  
-  // Try different patterns with different extensions
-  extensions.forEach(ext => {
-    // Direct ID as filename
-    urls.push(`${baseStorageUrl}/${itemId}.${ext}`);
-    
-    // ID in restaurant-specific folder
-    urls.push(`${baseStorageUrl}/menu-items/${restaurantId}/${itemId}.${ext}`);
-    
-    // ID in general menu-items folder
-    urls.push(`${baseStorageUrl}/menu-items/${itemId}.${ext}`);
-    
-    // Combined restaurant and item IDs
-    urls.push(`${baseStorageUrl}/${restaurantId}-${itemId}.${ext}`);
-    
-    // Try with menu-items prefix
-    urls.push(`${baseStorageUrl}/menu-items/${restaurantId}/${itemId}/main.${ext}`);
-    urls.push(`${baseStorageUrl}/menu-items/${restaurantId}/${itemId}/thumbnail.${ext}`);
-    
-    // Try with public folder
-    urls.push(`${baseStorageUrl}/public/${itemId}.${ext}`);
-    urls.push(`${baseStorageUrl}/public/menu-items/${itemId}.${ext}`);
-    
-    // Try with restaurants folder
-    urls.push(`${baseStorageUrl}/restaurants/${restaurantId}/menu/${itemId}.${ext}`);
-    
-    // Based on your storage structure, let's try the pattern we see in your bucket
-    urls.push(`${baseStorageUrl}/menu-items/${itemId}/${itemId}.${ext}`);
-    urls.push(`${baseStorageUrl}/${itemId}/${itemId}.${ext}`);
-    
-    // If item name is provided, try with that too
-    if (itemName) {
-      // Convert item name to kebab-case for URLs (spaces to hyphens, lowercase)
-      const formattedName = itemName.toLowerCase().replace(/\s+/g, '-');
-      urls.push(`${baseStorageUrl}/${formattedName}.${ext}`);
-      urls.push(`${baseStorageUrl}/${formattedName}/${formattedName}.${ext}`);
-      urls.push(`${baseStorageUrl}/${formattedName}/main.${ext}`);
-      urls.push(`${baseStorageUrl}/menu-items/${formattedName}.${ext}`);
-      urls.push(`${baseStorageUrl}/menu-items/${formattedName}/main.${ext}`);
-    }
-  });
-  
-  return urls.map(url => addCacheBuster(url));
-};
-
-/**
  * Generates a placeholder URL for menu items with no images
  * @returns A placeholder URL string
  */
 export const getDefaultFoodPlaceholder = (): string => {
   // Use a simple colored background instead of an external image
   return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' text-anchor='middle' dominant-baseline='middle' fill='%23888'%3ENo Image%3C/text%3E%3C/svg%3E";
-};
-
-/**
- * Try to get a working image URL from multiple alternatives
- * @param restaurantId The restaurant ID  
- * @param itemId The menu item ID
- * @param itemName Optional item name for alternative URL patterns
- * @returns Promise resolving to a working URL or null
- */
-export const findWorkingImageUrl = async (
-  restaurantId: string, 
-  itemId: string,
-  itemName?: string
-): Promise<string | null> => {
-  try {
-    console.log(`Finding image for item: ${itemId}`);
-    
-    // Look for potential folders based on item name if provided
-    if (itemName) {
-      // Convert item name to potential folder name
-      const formattedName = itemName.toLowerCase().replace(/\s+/g, '-');
-      
-      try {
-        console.log(`Checking folder based on item name: ${formattedName}`);
-        const { data: files, error } = await supabase
-          .storage
-          .from('lovable-uploads')
-          .list(formattedName);
-          
-        if (!error && files && files.length > 0) {
-          // Find the first image file
-          const imageFile = files.find(file => 
-            !file.name.endsWith('/') && 
-            (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png') || file.name.endsWith('.webp'))
-          );
-          
-          if (imageFile) {
-            console.log(`Found file in ${formattedName} folder: ${imageFile.name}`);
-            const filePath = `${formattedName}/${imageFile.name}`;
-            const url = supabase.storage.from('lovable-uploads').getPublicUrl(filePath).data.publicUrl;
-            return addCacheBuster(url);
-          }
-        }
-      } catch (err) {
-        console.error(`Error checking ${formattedName} folder:`, err);
-      }
-    }
-    
-    // Try the menu-items folder structure first (most likely to have the images)
-    const { data: folderFiles } = await supabase
-      .storage
-      .from('lovable-uploads')
-      .list(`menu-items/${itemId}`);
-      
-    if (folderFiles && folderFiles.length > 0) {
-      // Get the first file in the folder
-      const firstFile = folderFiles.find(file => 
-        !file.name.endsWith('/') && 
-        (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png') || file.name.endsWith('.webp'))
-      );
-      
-      if (firstFile) {
-        // It's a file, not a directory
-        console.log(`Found file directly in menu-items/${itemId}: ${firstFile.name}`);
-        const filePath = `menu-items/${itemId}/${firstFile.name}`;
-        const url = supabase.storage.from('lovable-uploads').getPublicUrl(filePath).data.publicUrl;
-        return addCacheBuster(url);
-      }
-    }
-    
-    // If still not found, fall back to checking URLs directly
-    const urls = generateAlternativeUrls(restaurantId, itemId, itemName);
-    
-    console.log(`Attempting to find working image for item ${itemId} with ${urls.length} alternatives`);
-    
-    // Check the first few URLs more quickly with HEAD requests
-    for (let i = 0; i < Math.min(urls.length, 8); i++) {
-      const exists = await checkStorageUrlExists(urls[i]);
-      if (exists) {
-        console.log(`Found working image URL: ${urls[i]}`);
-        return urls[i];
-      }
-    }
-    
-    // If all alternatives failed, return null but log the issue
-    console.log(`No working image found for ${itemId} after checking all alternatives`);
-    return null;
-    
-  } catch (error) {
-    console.error(`Error in findWorkingImageUrl for item ${itemId}:`, error);
-    return null;
-  }
 };
 
 // Import here to avoid circular dependencies
