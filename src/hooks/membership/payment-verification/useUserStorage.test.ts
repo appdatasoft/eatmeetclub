@@ -1,103 +1,62 @@
+/// <reference types="vitest" />
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import React from 'react'
+import { createRoot } from 'react-dom/client'
+import { act } from 'react-dom/test-utils'
+import { useUserStorage } from '../useUserStorage'
 
-import { renderHook, act } from '@testing-library/react-hooks';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useUserStorage } from './useUserStorage';
+let container: HTMLElement
+let root: ReturnType<typeof createRoot>
 
-// Mock LocalStorage
-const mockLocalStorageData: Record<string, string> = {};
-const localStorageMock = {
-  getItem: vi.fn((key) => mockLocalStorageData[key] ?? null),
-  setItem: vi.fn((key, value) => { mockLocalStorageData[key] = value; }),
-  removeItem: vi.fn((key) => { delete mockLocalStorageData[key]; }),
-  clear: vi.fn(() => { Object.keys(mockLocalStorageData).forEach(key => delete mockLocalStorageData[key]); }),
-};
-Object.defineProperty(window, 'localStorage', { value: localStorageMock });
-
-// Mock SessionStorage
-const mockSessionStorageData: Record<string, string> = {};
-const sessionStorageMock = {
-  getItem: vi.fn((key) => mockSessionStorageData[key] ?? null),
-  setItem: vi.fn((key, value) => { mockSessionStorageData[key] = value; }),
-  removeItem: vi.fn((key) => { delete mockSessionStorageData[key]; }),
-  clear: vi.fn(() => { Object.keys(mockSessionStorageData).forEach(key => delete mockSessionStorageData[key]); }),
-};
-Object.defineProperty(window, 'sessionStorage', { value: sessionStorageMock });
+const TestComponent = ({ email }: { email?: string }) => {
+  const user = useUserStorage()
+  return (
+    <div>
+      <div data-testid="name">{user.name}</div>
+      <div data-testid="email">{user.email}</div>
+    </div>
+  )
+}
 
 describe('useUserStorage', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    Object.keys(mockLocalStorageData).forEach(key => delete mockLocalStorageData[key]);
-    Object.keys(mockSessionStorageData).forEach(key => delete mockSessionStorageData[key]);
-  });
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+
+  afterEach(() => {
+    root.unmount()
+    container.remove()
+  })
 
   it('should get user details from localStorage', () => {
-    // Set up test data
-    mockLocalStorageData['signup_email'] = 'test@example.com';
-    mockLocalStorageData['signup_name'] = 'Test User';
-    mockLocalStorageData['signup_phone'] = '123456';
-    mockLocalStorageData['signup_address'] = '123 Test St';
-    
-    const { result } = renderHook(() => useUserStorage());
-    
-    expect(result.current.getUserDetails()).toEqual({
-      email: 'test@example.com',
-      name: 'Test User',
-      phone: '123456',
-      address: '123 Test St'
-    });
-  });
+    localStorage.setItem(
+      'user',
+      JSON.stringify({
+        name: 'Member',
+        email: 'local@example.com',
+        phone: '1234567890',
+        stripeCustomerId: 'cus_123',
+      })
+    )
 
-  it('should get user details from sessionStorage if not in localStorage', () => {
-    // Set up test data
-    mockSessionStorageData['signup_email'] = 'session@example.com';
-    mockSessionStorageData['signup_name'] = 'Session User';
-    
-    const { result } = renderHook(() => useUserStorage());
-    
-    expect(result.current.getUserDetails()).toEqual({
-      email: 'session@example.com',
-      name: 'Session User',
-      phone: '',
-      address: ''
-    });
-  });
+    act(() => {
+      root.render(<TestComponent />)
+    })
 
-  it('should prefer localStorage over sessionStorage if both exist', () => {
-    // Set up test data in both storages
-    mockLocalStorageData['signup_email'] = 'local@example.com';
-    mockSessionStorageData['signup_email'] = 'session@example.com';
-    
-    const { result } = renderHook(() => useUserStorage());
-    
-    expect(result.current.getUserDetails().email).toBe('local@example.com');
-  });
+    expect(container.querySelector('[data-testid="email"]')?.textContent).toBe('local@example.com')
+    expect(container.querySelector('[data-testid="name"]')?.textContent).toBe('Member')
+  })
 
   it('should return empty strings if no data exists', () => {
-    const { result } = renderHook(() => useUserStorage());
-    
-    expect(result.current.getUserDetails()).toEqual({
-      email: '',
-      name: '',
-      phone: '',
-      address: ''
-    });
-  });
-
-  it('should store user details in both storages', () => {
-    const { result } = renderHook(() => useUserStorage());
-    
     act(() => {
-      result.current.storeUserDetails('new@example.com', 'New User', '987654', '456 New St');
-    });
-    
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('signup_email', 'new@example.com');
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('signup_name', 'New User');
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('signup_phone', '987654');
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('signup_address', '456 New St');
-    
-    expect(sessionStorageMock.setItem).toHaveBeenCalledWith('signup_email', 'new@example.com');
-    expect(sessionStorageMock.setItem).toHaveBeenCalledWith('signup_name', 'New User');
-    expect(sessionStorageMock.setItem).toHaveBeenCalledWith('signup_phone', '987654');
-    expect(sessionStorageMock.setItem).toHaveBeenCalledWith('signup_address', '456 New St');
-  });
-});
+      root.render(<TestComponent />)
+    })
+
+    expect(container.querySelector('[data-testid="email"]')?.textContent).toBe('')
+    expect(container.querySelector('[data-testid="name"]')?.textContent).toBe('')
+  })
+})

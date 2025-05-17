@@ -1,123 +1,63 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react-hooks';
-import { useCheckoutSession } from './useCheckoutSession';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+/// <reference types="vitest" />
+import { renderHook } from '@testing-library/react'
+import { describe, it, vi, beforeEach, expect } from 'vitest'
+import { useCheckoutSession } from '../useCheckoutSession'
 
-// Mock dependencies
-vi.mock('@/hooks/use-toast', () => ({
-  useToast: vi.fn()
-}));
+// ✅ Create a simple mock for supabase client
+const mockCreateCheckoutSession = vi.fn()
+const mockToast = { toast: vi.fn() }
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    functions: {
-      invoke: vi.fn()
-    }
-  }
-}));
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: {
+          session: { user: { email: 'test@example.com' } },
+        },
+      }),
+    },
+  },
+}))
 
-interface CheckoutOptions {
-  createUser: boolean;
-  sendPasswordEmail: boolean;
-  sendInvoiceEmail: boolean;
-  checkExisting: boolean;
-}
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: () => mockToast,
+}))
 
-interface CheckoutResponse {
-  url?: string;
-  success: boolean;
-  error?: string;
-}
-
-// Mock the actual implementation
-vi.mock('./useCheckoutSession', () => ({
-  useCheckoutSession: () => ({
-    createCheckoutSession: vi.fn()
-  })
-}));
-
-// Mock fetch
-global.fetch = vi.fn();
+vi.mock('@/lib/stripe', () => ({
+  createCheckoutSession: mockCreateCheckoutSession,
+}))
 
 describe('useCheckoutSession', () => {
-  const mockFetch = global.fetch as vi.MockedFunction<typeof fetch>;
-  const mockImplementation = useCheckoutSession as unknown as vi.Mock;
-  const mockCreateCheckoutSession = vi.fn();
-  
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockImplementation.mockImplementation(() => ({
-      createCheckoutSession: mockCreateCheckoutSession
-    }));
-  });
+    vi.clearAllMocks()
+  })
 
   it('should create checkout session with proper parameters', async () => {
-    mockCreateCheckoutSession.mockResolvedValue({ 
-      success: true, 
-      url: 'https://checkout.stripe.com/test' 
-    });
-    
-    const { result } = renderHook(() => useCheckoutSession());
-    
-    const options: CheckoutOptions = {
-      createUser: true,
-      sendPasswordEmail: true,
-      sendInvoiceEmail: true,
-      checkExisting: true
-    };
-    
-    let response: CheckoutResponse | undefined;
-    await act(async () => {
-      response = await result.current.createCheckoutSession(
-        'test@example.com', 
-        'Test User', 
-        '123456789', 
-        '123 Test St',
-        options
-      );
-    });
-    
-    expect(mockCreateCheckoutSession).toHaveBeenCalledWith(
-      'test@example.com', 
-      'Test User', 
-      '123456789', 
-      '123 Test St',
-      options
-    );
-    
-    expect(response?.success).toBe(true);
-    expect(response?.url).toBe('https://checkout.stripe.com/test');
-  });
-  
+    const mockUrl = 'https://checkout.stripe.com/session/abc123'
+    mockCreateCheckoutSession.mockResolvedValue({ url: mockUrl })
+
+    const { result } = renderHook(() => useCheckoutSession())
+
+    await result.current.startCheckout({ plan: 'monthly' })
+
+    expect(mockCreateCheckoutSession).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      plan: 'monthly',
+    })
+
+    expect(window.location.assign).toHaveBeenCalledWith(mockUrl)
+  })
+
   it('should handle errors properly', async () => {
-    const errorMessage = 'Failed to create checkout session';
-    mockCreateCheckoutSession.mockResolvedValue({ 
-      success: false, 
-      error: errorMessage 
-    });
-    
-    const { result } = renderHook(() => useCheckoutSession());
-    
-    const options: CheckoutOptions = {
-      createUser: true,
-      sendPasswordEmail: true,
-      sendInvoiceEmail: true,
-      checkExisting: true
-    };
-    
-    let response: CheckoutResponse | undefined;
-    await act(async () => {
-      response = await result.current.createCheckoutSession(
-        'test@example.com', 
-        'Test User', 
-        null, 
-        null,
-        options
-      );
-    });
-    
-    expect(response?.success).toBe(false);
-    expect(response?.error).toBe(errorMessage);
-  });
-});
+    mockCreateCheckoutSession.mockRejectedValue(new Error('Network error'))
+
+    const { result } = renderHook(() => useCheckoutSession())
+
+    await result.current.startCheckout({ plan: 'monthly' })
+
+    expect(mockToast.toast).toHaveBeenCalledWith({
+      title: 'Checkout failed. Please try again.',
+      variant: 'destructive',
+    })
+  })
+})

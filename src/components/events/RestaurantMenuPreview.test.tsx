@@ -1,105 +1,91 @@
 
-import React from 'react';
-import { render, screen, waitFor } from '@/lib/test-setup';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import RestaurantMenuPreview from './RestaurantMenuPreview';
-import { useMenuItemsFetcher } from './restaurant-menu/hooks/useMenuItemsFetcher';
+/// <reference types="vitest" />
+import { render, screen } from '@testing-library/react'
+import { describe, it, vi, beforeEach, expect } from 'vitest'
+import { RestaurantMenuPreview } from './RestaurantMenuPreview'
+import { ThemeProvider } from '@/components/theme-provider'
 
-// Mock the hook
-vi.mock('./restaurant-menu/hooks/useMenuItemsFetcher', () => ({
-  useMenuItemsFetcher: vi.fn()
-}));
+// ✅ Declare the toastMock before use
+const toastMock = {
+  toast: vi.fn(),
+}
 
-// Mock the toast
+// ✅ Mock useToast to return the toastMock
 vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({
-    toast: vi.fn()
-  })
-}));
+  useToast: () => toastMock,
+}))
 
-// Mock the components
-vi.mock('./restaurant-menu/LoadingSkeleton', () => ({
-  default: () => <div data-testid="loading-skeleton">Loading...</div>
-}));
+// Helper function to render with theme
+const renderWithTheme = (ui: React.ReactElement) => {
+  return render(<ThemeProvider>{ui}</ThemeProvider>)
+}
 
-vi.mock('./restaurant-menu/EmptyMenuState', () => ({
-  default: () => <div data-testid="empty-menu-state">No menu items</div>
-}));
-
-vi.mock('./restaurant-menu/MenuList', () => ({
-  default: ({ menuItems }) => (
-    <div data-testid="menu-list">
-      {menuItems.length} items found
-    </div>
-  )
-}));
-
-describe('RestaurantMenuPreview Component', () => {
-  const mockRestaurantId = 'restaurant-123';
-  const mockMenuItems = [
-    { id: '1', name: 'Item 1', price: 9.99, type: 'Main' },
-    { id: '2', name: 'Item 2', price: 12.99, type: 'Dessert' }
-  ];
-
+describe('RestaurantMenuPreview', () => {
   beforeEach(() => {
-    vi.resetAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
-  it('renders loading skeleton when loading', () => {
-    (useMenuItemsFetcher as any).mockReturnValue({
-      menuItems: [],
-      isLoading: true,
-      error: null
-    });
+  it('renders loading skeleton when loading', async () => {
+    vi.doMock('@/hooks/restaurant/useRestaurant', () => ({
+      useRestaurant: () => ({
+        isLoading: true,
+        isError: false,
+        menuItems: [],
+      }),
+    }))
 
-    render(<RestaurantMenuPreview restaurantId={mockRestaurantId} />);
-    
-    expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument();
-  });
+    const { container } = renderWithTheme(<RestaurantMenuPreview />)
+    expect(container).toHaveTextContent(/loading/i)
+  })
 
-  it('renders empty state when no menu items are found', () => {
-    (useMenuItemsFetcher as any).mockReturnValue({
-      menuItems: [],
-      isLoading: false,
-      error: null
-    });
+  it('renders empty state when no menu items are found', async () => {
+    vi.doMock('@/hooks/restaurant/useRestaurant', () => ({
+      useRestaurant: () => ({
+        isLoading: false,
+        isError: false,
+        menuItems: [],
+      }),
+    }))
 
-    render(<RestaurantMenuPreview restaurantId={mockRestaurantId} />);
-    
-    expect(screen.getByTestId('empty-menu-state')).toBeInTheDocument();
-  });
+    renderWithTheme(<RestaurantMenuPreview />)
+    expect(screen.getByText(/no menu items/i)).toBeInTheDocument()
+  })
 
-  it('renders menu list when menu items are available', () => {
-    (useMenuItemsFetcher as any).mockReturnValue({
-      menuItems: mockMenuItems,
-      isLoading: false,
-      error: null
-    });
+  it('renders menu list when items exist', async () => {
+    vi.doMock('@/hooks/restaurant/useRestaurant', () => ({
+      useRestaurant: () => ({
+        isLoading: false,
+        isError: false,
+        menuItems: [
+          {
+            id: '1',
+            title: 'Doro Wat',
+            description: 'Spicy chicken stew',
+            price: 15,
+            media: [],
+          },
+        ],
+      }),
+    }))
 
-    render(<RestaurantMenuPreview restaurantId={mockRestaurantId} />);
-    
-    expect(screen.getByTestId('menu-list')).toBeInTheDocument();
-    expect(screen.getByText('2 items found')).toBeInTheDocument();
-  });
+    renderWithTheme(<RestaurantMenuPreview />)
+    expect(screen.getByText(/doro wat/i)).toBeInTheDocument()
+  })
 
-  it('shows error toast when there is an error', async () => {
-    (useMenuItemsFetcher as any).mockReturnValue({
-      menuItems: [],
-      isLoading: false,
-      error: 'Failed to load menu items'
-    });
+  it('shows error toast if fetching menu fails', async () => {
+    vi.doMock('@/hooks/restaurant/useRestaurant', () => ({
+      useRestaurant: () => ({
+        isLoading: false,
+        isError: true,
+        menuItems: [],
+      }),
+    }))
 
-    const toastMock = vi.fn();
-    vi.mock('@/hooks/use-toast', () => ({
-      useToast: () => ({
-        toast: toastMock
-      })
-    }));
+    renderWithTheme(<RestaurantMenuPreview />)
 
-    render(<RestaurantMenuPreview restaurantId={mockRestaurantId} />);
-    
-    await waitFor(() => {
-      expect(toastMock).toHaveBeenCalled();
-    });
-  });
-});
+    expect(toastMock.toast).toHaveBeenCalledWith({
+      title: 'Failed to load menu.',
+      variant: 'destructive',
+    })
+  })
+})
