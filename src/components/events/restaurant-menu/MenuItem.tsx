@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { MenuItem } from "./types";
 import MenuItemMedia from "@/components/restaurants/menu/MenuItemMedia";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Image } from "lucide-react";
 
 interface MenuItemProps {
   item: MenuItem;
@@ -22,7 +23,7 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
       firstMediaUrl: hasMedia ? item.media[0].url : 'none',
       mediaCount: hasMedia ? item.media.length : 0
     });
-  }, [item]);
+  }, [item, hasMedia]);
   
   return (
     <div className="border-b pb-3">
@@ -31,29 +32,46 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
         <div className="mr-3">
           {hasMedia ? (
             <div 
-              className="w-16 h-16 rounded-md overflow-hidden cursor-pointer"
+              className="w-16 h-16 rounded-md overflow-hidden cursor-pointer relative"
               onClick={() => setShowAllPhotos(true)}
             >
+              {/* Show loading state before image loads */}
+              {!imageLoaded && !imageError && (
+                <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-100">
+                  <span className="text-gray-400 text-xs">Loading...</span>
+                </div>
+              )}
+              
+              {/* Show the actual image */}
               <img 
                 src={item.media[0].url} 
                 alt={item.name} 
-                className={`w-full h-full object-cover ${!imageLoaded && !imageError ? 'hidden' : ''}`}
+                className={`w-full h-full object-cover transition-opacity duration-200 ${!imageLoaded ? 'opacity-0' : 'opacity-100'}`}
                 onLoad={() => {
-                  console.log(`Image loaded for ${item.name}:`, item.media[0].url);
+                  console.log(`Image loaded successfully for ${item.name}:`, item.media[0].url);
                   setImageLoaded(true);
                   setImageError(false);
                 }}
                 onError={(e) => {
                   console.error(`Image error for ${item.name}:`, item.media[0].url);
                   setImageError(true);
-                  setImageLoaded(false);
-                  e.currentTarget.onerror = null; 
-                  e.currentTarget.src = "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop";
+                  
+                  // Try loading a placeholder image instead
+                  e.currentTarget.src = "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop&w=300&h=300";
+                  
+                  // If the placeholder also fails, show the fallback UI
+                  e.currentTarget.onerror = () => {
+                    console.error(`Fallback image also failed for ${item.name}`);
+                    setImageError(true);
+                    setImageLoaded(false);
+                  };
                 }}
               />
-              {!imageLoaded && !imageError && (
-                <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                  <span className="text-gray-400 text-xs">Loading...</span>
+              
+              {/* Show error state if both original and fallback images fail */}
+              {imageError && !imageLoaded && (
+                <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-100">
+                  <Image className="h-5 w-5 text-gray-400" />
                 </div>
               )}
             </div>
@@ -108,8 +126,9 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
                       alt={`${item.name} photo ${idx+1}`} 
                       className="w-full h-64 object-cover"
                       onError={(e) => {
-                        e.currentTarget.onerror = null;
+                        console.error(`Gallery image error for ${item.name} (${idx}):`, media.url);
                         e.currentTarget.src = "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop";
+                        e.currentTarget.onerror = null; // Prevent infinite error loops
                       }}
                     />
                   ) : (

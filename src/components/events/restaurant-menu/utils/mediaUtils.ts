@@ -49,6 +49,7 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
           });
         
         if (media.length > 0) {
+          console.log(`Generated URLs for ${media.length} files in ${path}`);
           foundMedia = true;
           break;
         }
@@ -58,12 +59,12 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
     }
   }
   
-  // If no media found, check the root menu-items directory
+  // If no media found in specific paths, check the root menu-items directory
   if (!foundMedia) {
     try {
       console.log("Checking for files directly in menu-items directory");
       
-      // Get all files in the menu-items directory
+      // Get all files in the menu-items directory with increased limit
       const { data: listData, error: listError } = await supabase
         .storage
         .from('lovable-uploads')
@@ -71,10 +72,12 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
       
       if (listError) {
         console.error("Error listing media:", listError);
-      } else if (listData) {
+      } else if (listData && listData.length > 0) {
+        console.log(`Found ${listData.length} total files in menu-items directory`);
+        
         // Match filenames that might contain the item id or name
         const matchingFiles = listData.filter(file => 
-          file.name.toLowerCase().includes(item.id) || 
+          file.name.toLowerCase().includes(item.id.toLowerCase()) || 
           file.name.toLowerCase().includes(item.name.toLowerCase().replace(/\s+/g, '-'))
         );
         
@@ -106,6 +109,10 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
     }
   }
   
+  if (media.length > 0) {
+    console.log(`Final media array for ${item.name} has ${media.length} items:`, media.map(m => m.url));
+  }
+  
   return media;
 }
 
@@ -113,15 +120,20 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
  * Fetches ingredients for a specific menu item
  */
 export async function fetchMenuItemIngredients(itemId: string): Promise<string[]> {
-  const { data: ingredientsData, error: ingredientsError } = await supabase
-    .from('restaurant_menu_ingredients')
-    .select('name')
-    .eq('menu_item_id', itemId);
+  try {
+    const { data: ingredientsData, error: ingredientsError } = await supabase
+      .from('restaurant_menu_ingredients')
+      .select('name')
+      .eq('menu_item_id', itemId);
+      
+    if (ingredientsError) {
+      console.error("Error fetching ingredients:", ingredientsError);
+      return [];
+    }
     
-  if (ingredientsError) {
-    console.error("Error fetching ingredients:", ingredientsError);
+    return ingredientsData ? ingredientsData.map(ing => ing.name) : [];
+  } catch (error) {
+    console.error("Error fetching ingredients:", error);
     return [];
   }
-  
-  return ingredientsData ? ingredientsData.map(ing => ing.name) : [];
 }
