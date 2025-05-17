@@ -46,14 +46,16 @@ export const useEventDetails = (eventId: string | undefined) => {
         let restaurantData: Restaurant;
         
         if (data.restaurant && typeof data.restaurant === 'object') {
+          // Type assertion to handle potential null
+          const restaurant = data.restaurant as Record<string, any>;
           restaurantData = {
-            id: data.restaurant.id || 'unknown',
-            name: data.restaurant.name || 'Unknown Restaurant',
-            address: data.restaurant.address || '',
-            city: data.restaurant.city || '',
-            state: data.restaurant.state || '',
-            zipcode: data.restaurant.zipcode || '',
-            description: data.restaurant.description || ''
+            id: restaurant.id || 'unknown',
+            name: restaurant.name || 'Unknown Restaurant',
+            address: restaurant.address || '',
+            city: restaurant.city || '',
+            state: restaurant.state || '',
+            zipcode: restaurant.zipcode || '',
+            description: restaurant.description || ''
           };
         } else {
           restaurantData = {
