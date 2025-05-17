@@ -9,20 +9,20 @@ export const useEvents = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
-  
+
   const { fetchPublishedEvents } = useEventsAPI();
   const { subscribeToEventChanges } = useEventSubscription();
 
   const refreshEvents = useCallback(async () => {
     if (!isMountedRef.current) return;
-    
+
     try {
       setIsLoading(true);
       setFetchError(null);
       console.log("Fetching published events...");
-      
+
       const formattedEvents = await fetchPublishedEvents();
-      
+
       if (isMountedRef.current) {
         setEvents(formattedEvents || []);
       }
@@ -38,25 +38,31 @@ export const useEvents = () => {
       }
     }
   }, [fetchPublishedEvents]);
-  
+
   useEffect(() => {
     isMountedRef.current = true;
-    
+
     const fetchInitialEvents = async () => {
       await refreshEvents();
     };
-    
+
     fetchInitialEvents();
-    
-    // Add subscription to event changes
+
+    // Debounced refresh to avoid infinite flicker
+    let refreshTimeout: NodeJS.Timeout | null = null;
+
     const unsubscribe = subscribeToEventChanges(() => {
       if (isMountedRef.current) {
-        refreshEvents();
+        if (refreshTimeout) clearTimeout(refreshTimeout);
+        refreshTimeout = setTimeout(() => {
+          refreshEvents();
+        }, 500); // Debounce delay (adjust if needed)
       }
     });
-    
+
     return () => {
       isMountedRef.current = false;
+      if (refreshTimeout) clearTimeout(refreshTimeout);
       unsubscribe();
     };
   }, [refreshEvents, subscribeToEventChanges]);
