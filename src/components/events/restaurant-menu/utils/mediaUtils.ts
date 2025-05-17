@@ -50,7 +50,7 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
             return {
               url: addCacheBuster(publicUrl),
               type: fileType,
-              id: filePath // Store path for deletion capabilities
+              id: filePath
             };
           });
         }

@@ -1,13 +1,20 @@
 
+// Define media item types for restaurant menu items
 export interface MediaItem {
+  id: string;
   url: string;
-  type: "image" | "video";
-  id?: string; // File name or identifier to help with deletion
+  type: 'image' | 'video';
+  isPlaceholder?: boolean;
 }
 
 export interface MediaUploaderProps {
   initialMediaItems?: MediaItem[];
-  onChange: (mediaItems: MediaItem[]) => void;
+  onChange: (items: MediaItem[]) => void;
   restaurantId: string;
-  menuItemId?: string;
+  menuItemId: string;
+}
+
+export interface MediaPreviewProps {
+  mediaItems: MediaItem[];
+  onRemove: (index: number) => void;
 }

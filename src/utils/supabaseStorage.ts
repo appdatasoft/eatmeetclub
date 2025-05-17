@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for working with Supabase storage URLs
  */
@@ -154,8 +153,8 @@ export const generateAlternativeUrls = (
  * @returns A placeholder URL string
  */
 export const getDefaultFoodPlaceholder = (): string => {
-  // Return a default food placeholder URL
-  return "https://wocfwpedauuhlrfugxuu.supabase.co/storage/v1/object/public/lovable-uploads/placeholders/food-placeholder.jpg";
+  // Return a static public URL that we know works (avoiding Supabase storage for fallback)
+  return "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop&w=500&h=500";
 };
 
 /**
