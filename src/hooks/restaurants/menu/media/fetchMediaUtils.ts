@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { MediaItem } from "@/components/restaurants/menu";
+import { addCacheBuster } from '@/utils/supabaseStorage';
 
 /**
  * Fetches media items for a specific menu item from storage
@@ -21,14 +22,9 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
     `menu-items/${restaurantId}`
   ];
   
-  // Additional logging to help debug
-  console.log(`Looking for media in these paths: ${pathsToCheck.join(', ')}`);
-  
   // Try each path until we find media
   for (const path of pathsToCheck) {
     try {
-      console.log(`Checking path: ${path}`);
-      
       const { data: files, error } = await supabase
         .storage
         .from('lovable-uploads')
@@ -43,8 +39,6 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
         console.log(`No files found in ${path}`);
         continue;
       }
-      
-      console.log(`Found ${files.length} files in ${path}:`, files.map(f => f.name).join(', '));
       
       // Filter files that might belong to this item
       const relevantFiles = files.filter(file => {
@@ -61,7 +55,7 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
       });
       
       if (relevantFiles.length > 0) {
-        console.log(`Found ${relevantFiles.length} relevant files for item ${itemId} in path ${path}`);
+        console.log(`Found ${relevantFiles.length} relevant files for item ${itemId}`);
         
         // Map files to MediaItems
         const mediaItems = relevantFiles.map(file => {
@@ -72,17 +66,18 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
             
           const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
           
-          console.log(`Generated URL for ${filePath}: ${publicUrl}`);
+          // Add cache buster parameter to the URL
+          const urlWithCache = addCacheBuster(publicUrl);
           
           return {
-            url: publicUrl,
+            url: urlWithCache,
             type: isVideo ? 'video' as const : 'image' as const,
             id: filePath // Store full path for deletion capabilities
           };
         });
         
         if (mediaItems.length > 0) {
-          console.log(`Successfully mapped ${mediaItems.length} media items from ${path}`);
+          console.log(`Successfully mapped ${mediaItems.length} media items`);
           return mediaItems;
         }
       }
@@ -91,86 +86,38 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
     }
   }
   
-  // If we reach here, we need to directly check all files in the bucket
+  // If no media found, try with fallback approach
   try {
-    console.log("Attempting to search entire storage bucket for any files related to this item");
-    
-    const { data: rootFiles, error: rootError } = await supabase
-      .storage
-      .from('lovable-uploads')
-      .list();
-      
-    if (!rootError && rootFiles && rootFiles.length > 0) {
-      console.log(`Found ${rootFiles.length} files at root level of storage`);
-      
-      // Look for item ID or restaurant ID in any file names
-      const possibleMatches = rootFiles.filter(file => 
-        file.name.includes(itemId) || 
-        (file.name.includes(restaurantId) && !file.name.endsWith('/'))
-      );
-      
-      if (possibleMatches.length > 0) {
-        console.log(`Found ${possibleMatches.length} possible matching files at root level`);
-        
-        const mediaItems = possibleMatches.map(file => {
-          const filePath = file.name;
-          const publicUrl = supabase.storage
-            .from('lovable-uploads')
-            .getPublicUrl(filePath).data.publicUrl;
-            
-          const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
-          
-          return {
-            url: publicUrl,
-            type: isVideo ? 'video' as const : 'image' as const,
-            id: filePath
-          };
-        });
-        
-        if (mediaItems.length > 0) {
-          console.log(`Found ${mediaItems.length} media items at root level`);
-          return mediaItems;
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Error in root level storage search:', err);
-  }
-  
-  // Last resort - try direct access if we know the filename pattern
-  try {
-    console.log("Trying direct file access as last resort");
-    
-    // Test common naming patterns
-    const testPaths = [
+    // Create some test paths for direct uploads without folders
+    const possibleFilePaths = [
       `${itemId}.jpg`,
       `${itemId}.png`,
       `${itemId}.jpeg`,
-      `menu-item-${itemId}.jpg`,
       `${restaurantId}-${itemId}.jpg`
     ];
     
-    for (const testPath of testPaths) {
-      const { data: fileExists } = await supabase
-        .storage
+    for (const filePath of possibleFilePaths) {
+      const { data } = supabase.storage
         .from('lovable-uploads')
-        .getPublicUrl(testPath);
+        .getPublicUrl(filePath);
+      
+      if (data && data.publicUrl) {
+        const urlWithCache = addCacheBuster(data.publicUrl);
+        console.log(`Found direct file access for ${filePath}: ${urlWithCache}`);
         
-      if (fileExists) {
-        console.log(`Direct file access successful for ${testPath}`);
         return [{
-          url: fileExists.publicUrl,
+          url: urlWithCache,
           type: 'image',
-          id: testPath
+          id: filePath
         }];
       }
     }
   } catch (err) {
-    console.error('Error in direct file access attempt:', err);
+    console.error('Error in fallback file path check:', err);
   }
   
   // Return empty array if no media found
-  console.log(`No media found for item ${itemId} after all attempts, returning empty array`);
+  console.log(`No media found for menu item ${itemId}`);
   return [];
 };
 
@@ -185,13 +132,13 @@ export const fetchIngredientsForMenuItem = async (itemId: string): Promise<strin
       .eq('menu_item_id', itemId);
     
     if (ingredientsError) {
-      console.error(`Error fetching ingredients for item ${itemId}:`, ingredientsError);
+      console.error(`Error fetching ingredients:`, ingredientsError);
       return [];
     }
     
     return ingredientsData ? ingredientsData.map(ing => ing.name) : [];
   } catch (err) {
-    console.error(`Error in fetchIngredientsForMenuItem for item ${itemId}:`, err);
+    console.error(`Error in fetchIngredientsForMenuItem:`, err);
     return [];
   }
 };

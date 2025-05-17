@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ImageOff, RefreshCcw } from 'lucide-react';
+import { addCacheBuster } from '@/utils/supabaseStorage';
 
 interface MediaImageProps {
   url: string;
@@ -18,32 +19,30 @@ const MediaImage: React.FC<MediaImageProps> = ({ url, alt, className = "", onCli
   
   // Reset states when URL changes
   useEffect(() => {
-    setCurrentUrl(url);
+    setCurrentUrl(addCacheBuster(url));
     setIsLoaded(false);
     setHasError(false);
     setRetryCount(0);
   }, [url]);
   
   const handleImageLoad = () => {
-    console.log(`Image loaded successfully: ${currentUrl}`);
     setIsLoaded(true);
     setHasError(false);
   };
   
   const handleImageError = () => {
-    console.error(`Image error: ${currentUrl}`);
-    
     // Try with cache-busting parameter automatically if under max retries
     if (retryCount < maxRetries) {
-      console.log(`Auto-retrying image load for ${currentUrl}, attempt ${retryCount + 1}`);
-      setRetryCount(prev => prev + 1);
+      const nextRetryCount = retryCount + 1;
+      setRetryCount(nextRetryCount);
       
       // Force browser to re-fetch the image by adding a timestamp parameter
       const timestamp = Date.now();
       const newUrl = url.includes('?') 
-        ? `${url}&cache=${timestamp}` 
-        : `${url}?cache=${timestamp}`;
+        ? `${url}&cache=${timestamp}&retry=${nextRetryCount}` 
+        : `${url}?cache=${timestamp}&retry=${nextRetryCount}`;
       
+      console.log(`Auto-retrying image load (${nextRetryCount}/${maxRetries}): ${newUrl}`);
       setCurrentUrl(newUrl);
     } else {
       setHasError(true);
@@ -54,17 +53,17 @@ const MediaImage: React.FC<MediaImageProps> = ({ url, alt, className = "", onCli
   const handleRetry = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering onClick if this is inside a clickable area
     
-    console.log(`Manual retry for image ${url}, resetting retries`);
     setHasError(false);
     setIsLoaded(false);
     setRetryCount(0);
       
-    // Force browser to re-fetch the image by adding a timestamp parameter
+    // Force browser to re-fetch the image with a fresh timestamp
     const timestamp = Date.now();
     const newUrl = url.includes('?') 
-      ? `${url}&cache=${timestamp}` 
-      : `${url}?cache=${timestamp}`;
+      ? `${url}&cache=${timestamp}&manual=true` 
+      : `${url}?cache=${timestamp}&manual=true`;
     
+    console.log(`Manual retry for image: ${newUrl}`);
     setCurrentUrl(newUrl);
   };
   

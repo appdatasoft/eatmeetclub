@@ -14,7 +14,9 @@ export const addCacheBuster = (url: string): string => {
   try {
     // Add a timestamp to bust cache
     const timestamp = Date.now();
-    return url.includes('?') ? `${url}&t=${timestamp}` : `${url}?t=${timestamp}`;
+    const randomString = Math.random().toString(36).substring(2, 8);
+    const parameter = `t=${timestamp}_${randomString}`;
+    return url.includes('?') ? `${url}&${parameter}` : `${url}?${parameter}`;
   } catch (error) {
     console.error('Error adding cache buster to URL', error);
     return url;
@@ -39,10 +41,11 @@ export const buildStorageUrl = (
     // Normalize path by removing leading slash
     const normalizedPath = path.startsWith('/') ? path.substring(1) : path;
     
-    // Build the URL using the Supabase project reference from environment
+    // Build the URL using the Supabase project reference
     const storageUrl = `https://wocfwpedauuhlrfugxuu.supabase.co/storage/v1/object/public/${bucket}/${normalizedPath}`;
     
-    return storageUrl;
+    // Add cache busting parameter
+    return addCacheBuster(storageUrl);
   } catch (error) {
     console.error('Error building storage URL', error);
     return fallback || '';
@@ -58,7 +61,7 @@ export const extractPathFromStorageUrl = (url: string): string | null => {
   if (!url) return null;
   
   try {
-    const regex = /\/storage\/v1\/object\/public\/([^/]+)\/(.+)/;
+    const regex = /\/storage\/v1\/object\/public\/([^/]+)\/(.+?)(?:\?.*)?$/;
     const match = url.match(regex);
     
     if (!match || match.length < 3) return null;
@@ -81,4 +84,22 @@ export const extractPathFromStorageUrl = (url: string): string | null => {
 export const isStorageUrl = (url: string): boolean => {
   if (!url) return false;
   return url.includes('/storage/v1/object/public/');
+};
+
+/**
+ * Checks if a storage URL exists and is accessible
+ * @param url The URL to check
+ * @returns Promise resolving to boolean indicating if the URL is accessible
+ */
+export const checkStorageUrlExists = async (url: string): Promise<boolean> => {
+  if (!url) return false;
+  
+  try {
+    // Use HEAD request to check if the file exists without downloading it
+    const response = await fetch(url, { method: 'HEAD' });
+    return response.ok;
+  } catch (error) {
+    console.error('Error checking if storage URL exists:', error);
+    return false;
+  }
 };

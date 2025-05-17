@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageOff, RefreshCcw } from 'lucide-react';
+import { addCacheBuster } from '@/utils/supabaseStorage';
 
 interface SupabaseImageProps {
   src: string;
@@ -27,7 +28,16 @@ const SupabaseImage: React.FC<SupabaseImageProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [currentSrc, setCurrentSrc] = useState(addCacheBuster(src));
   const maxRetries = 3;
+
+  // Reset states when src changes
+  useEffect(() => {
+    setCurrentSrc(addCacheBuster(src));
+    setIsLoading(true);
+    setHasError(false);
+    setRetryCount(0);
+  }, [src]);
 
   const handleImageLoad = () => {
     setIsLoading(false);
@@ -35,17 +45,20 @@ const SupabaseImage: React.FC<SupabaseImageProps> = ({
   };
 
   const handleImageError = () => {
+    // Try with cache-busting parameter automatically if under max retries
     if (retryCount < maxRetries) {
-      // Try again with a timestamp to bypass cache
-      setRetryCount(prev => prev + 1);
-      const timestamp = new Date().getTime();
-      const imgEl = document.getElementById(`supabase-img-${src.replace(/[^\w]/g, '')}`);
-      if (imgEl) {
-        const newSrc = src.includes('?') 
-          ? `${src}&t=${timestamp}` 
-          : `${src}?t=${timestamp}`;
-        (imgEl as HTMLImageElement).src = newSrc;
-      }
+      const nextCount = retryCount + 1;
+      setRetryCount(nextCount);
+      
+      // Force browser to re-fetch the image by adding a timestamp parameter
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 8);
+      const newSrc = src.includes('?') 
+        ? `${src}&t=${timestamp}&r=${randomString}&attempt=${nextCount}` 
+        : `${src}?t=${timestamp}&r=${randomString}&attempt=${nextCount}`;
+      
+      console.log(`Auto-retrying image load (${nextCount}/${maxRetries}): ${newSrc}`);
+      setCurrentSrc(newSrc);
     } else {
       setIsLoading(false);
       setHasError(true);
@@ -53,19 +66,21 @@ const SupabaseImage: React.FC<SupabaseImageProps> = ({
     }
   };
 
-  const handleRetry = () => {
+  const handleRetry = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering onClick if inside a clickable element
     setHasError(false);
     setIsLoading(true);
     setRetryCount(0);
+    
     // Force browser to retry by adding/changing timestamp
-    const timestamp = new Date().getTime();
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 8);
     const newSrc = src.includes('?') 
-      ? `${src}&t=${timestamp}` 
-      : `${src}?t=${timestamp}`;
-    const imgEl = document.getElementById(`supabase-img-${src.replace(/[^\w]/g, '')}`);
-    if (imgEl) {
-      (imgEl as HTMLImageElement).src = newSrc;
-    }
+      ? `${src}&t=${timestamp}&r=${randomString}&manual=true` 
+      : `${src}?t=${timestamp}&r=${randomString}&manual=true`;
+    
+    console.log(`Manual retry for image: ${newSrc}`);
+    setCurrentSrc(newSrc);
   };
 
   // If custom fallback is provided and there's an error, show it
@@ -100,19 +115,20 @@ const SupabaseImage: React.FC<SupabaseImageProps> = ({
           </button>
 
           {/* Hidden fallback image that will show if visible image fails */}
-          <img 
-            src={fallbackSrc} 
-            alt={alt} 
-            className={`absolute inset-0 object-cover w-full h-full ${className}`} 
-            style={{ opacity: 0.3 }}
-          />
+          {fallbackSrc && (
+            <img 
+              src={fallbackSrc} 
+              alt={alt} 
+              className={`absolute inset-0 object-cover w-full h-full ${className}`} 
+              style={{ opacity: 0.3 }}
+            />
+          )}
         </div>
       )}
 
       {/* Main image */}
       <img
-        id={`supabase-img-${src.replace(/[^\w]/g, '')}`}
-        src={src}
+        src={currentSrc}
         alt={alt}
         className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} ${hasError ? 'hidden' : ''} transition-opacity duration-200`}
         style={{ 
