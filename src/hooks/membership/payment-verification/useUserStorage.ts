@@ -12,7 +12,8 @@ export const useUserStorage = () => {
   // Return only the methods used in payment verification
   return {
     getUserDetails: mainUserStorage.getUserDetails,
-    clearUserDetails: mainUserStorage.clearUserDetails
+    clearUserDetails: mainUserStorage.clearUserDetails,
+    storeUserDetails: mainUserStorage.storeUserDetails
   };
 };
 

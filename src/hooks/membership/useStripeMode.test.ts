@@ -6,21 +6,14 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Mock the Supabase client properly with a chain-able API
 vi.mock('@/integrations/supabase/client', () => {
-  const mockFrom = vi.fn();
-  const mockSelect = vi.fn();
-  const mockEq = vi.fn();
-  const mockSingle = vi.fn();
-  
-  mockFrom.mockReturnValue({ select: mockSelect });
-  mockSelect.mockReturnValue({ eq: mockEq });
-  mockEq.mockReturnValue({ single: mockSingle });
+  const mockSingleFn = vi.fn();
+  const mockEqFn = vi.fn(() => ({ single: mockSingleFn }));
+  const mockSelectFn = vi.fn(() => ({ eq: mockEqFn }));
+  const mockFromFn = vi.fn(() => ({ select: mockSelectFn }));
   
   return {
     supabase: {
-      from: mockFrom,
-      select: mockSelect,
-      eq: mockEq,
-      single: mockSingle
+      from: mockFromFn
     }
   };
 });
@@ -40,11 +33,17 @@ describe('useStripeMode', () => {
 
   it('should fetch Stripe mode from admin_config', async () => {
     // Mock successful response
-    const mockSingle = supabase.from("").select("").eq("").single;
-    mockSingle.mockResolvedValueOnce({
+    const mockSingleFn = vi.fn().mockResolvedValueOnce({
       data: { value: 'live' },
       error: null
     });
+    
+    const mockEqFn = vi.fn(() => ({ single: mockSingleFn }));
+    const mockSelectFn = vi.fn(() => ({ eq: mockEqFn }));
+    const mockFromFn = vi.fn(() => ({ select: mockSelectFn }));
+    
+    // Override the mocked implementation for this test
+    vi.mocked(supabase.from).mockImplementation(mockFromFn);
 
     const { result, waitForNextUpdate } = renderHook(() => useStripeMode());
     
@@ -52,8 +51,9 @@ describe('useStripeMode', () => {
     
     await waitForNextUpdate();
     
-    expect(supabase.from).toHaveBeenCalledWith('admin_config');
-    expect(supabase.eq).toHaveBeenCalledWith('key', 'stripe_mode');
+    expect(mockFromFn).toHaveBeenCalledWith('admin_config');
+    expect(mockSelectFn).toHaveBeenCalledWith('value');
+    expect(mockEqFn).toHaveBeenCalledWith('key', 'stripe_mode');
     expect(result.current.isStripeTestMode).toBe(false);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.stripeCheckError).toBeNull();
@@ -61,11 +61,17 @@ describe('useStripeMode', () => {
 
   it('should handle errors when fetching Stripe mode', async () => {
     // Mock error response
-    const mockSingle = supabase.from("").select("").eq("").single;
-    mockSingle.mockResolvedValueOnce({
+    const mockSingleFn = vi.fn().mockResolvedValueOnce({
       data: null,
       error: { message: 'Failed to fetch Stripe mode' }
     });
+    
+    const mockEqFn = vi.fn(() => ({ single: mockSingleFn }));
+    const mockSelectFn = vi.fn(() => ({ eq: mockEqFn }));
+    const mockFromFn = vi.fn(() => ({ select: mockSelectFn }));
+    
+    // Override the mocked implementation for this test
+    vi.mocked(supabase.from).mockImplementation(mockFromFn);
 
     const { result, waitForNextUpdate } = renderHook(() => useStripeMode());
     
@@ -78,11 +84,17 @@ describe('useStripeMode', () => {
 
   it('should retry fetching Stripe mode when handleRetryStripeCheck is called', async () => {
     // First mock an error
-    const mockSingle = supabase.from("").select("").eq("").single;
-    mockSingle.mockResolvedValueOnce({
+    const mockSingleFnError = vi.fn().mockResolvedValueOnce({
       data: null,
       error: { message: 'Failed to fetch Stripe mode' }
     });
+    
+    const mockEqFnError = vi.fn(() => ({ single: mockSingleFnError }));
+    const mockSelectFnError = vi.fn(() => ({ eq: mockEqFnError }));
+    const mockFromFnError = vi.fn(() => ({ select: mockSelectFnError }));
+    
+    // Override the mocked implementation for the first part of this test
+    vi.mocked(supabase.from).mockImplementation(mockFromFnError);
 
     const { result, waitForNextUpdate } = renderHook(() => useStripeMode());
     
@@ -91,10 +103,17 @@ describe('useStripeMode', () => {
     expect(result.current.stripeCheckError).toBe('Failed to fetch Stripe mode');
     
     // Mock successful response for retry
-    mockSingle.mockResolvedValueOnce({
+    const mockSingleFnSuccess = vi.fn().mockResolvedValueOnce({
       data: { value: 'live' },
       error: null
     });
+    
+    const mockEqFnSuccess = vi.fn(() => ({ single: mockSingleFnSuccess }));
+    const mockSelectFnSuccess = vi.fn(() => ({ eq: mockEqFnSuccess }));
+    const mockFromFnSuccess = vi.fn(() => ({ select: mockSelectFnSuccess }));
+    
+    // Override the mocked implementation for the retry part
+    vi.mocked(supabase.from).mockImplementation(mockFromFnSuccess);
     
     // Call retry
     act(() => {
