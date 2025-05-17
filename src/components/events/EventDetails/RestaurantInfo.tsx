@@ -12,15 +12,19 @@ interface RestaurantInfoProps {
 const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }) => {
   console.log("RestaurantInfo props:", { id, name, description });
   
+  const isValidRestaurant = id && id !== "unknown";
+  const restaurantName = name || "Unknown Restaurant";
+  const restaurantDescription = description || `${restaurantName} specializes in sustainable, locally-sourced cuisine with a focus on seasonal ingredients. Our restaurant has been serving the community with a commitment to quality and hospitality.`;
+  
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <h2 className="text-xl font-semibold mb-4">About the Restaurant</h2>
       <div className="flex items-center mb-4">
         <div className="w-12 h-12 rounded-full bg-gray-200 mr-4 overflow-hidden flex items-center justify-center">
-          {id && id !== "unknown" ? (
+          {isValidRestaurant ? (
             <img 
               src="https://images.unsplash.com/photo-1581954548122-53a79ddb74f9?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&q=80" 
-              alt={name} 
+              alt={restaurantName} 
               className="w-full h-full object-cover"
             />
           ) : (
@@ -28,23 +32,19 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }
           )}
         </div>
         <div>
-          {id && id !== "unknown" ? (
+          {isValidRestaurant ? (
             <Link to={`/restaurant/${id}`} className="font-medium hover:text-primary hover:underline">
-              {name}
+              {restaurantName}
             </Link>
           ) : (
-            <h3 className="font-medium">{name}</h3>
+            <h3 className="font-medium">{restaurantName}</h3>
           )}
           <p className="text-sm text-gray-500">Serving delicious meals</p>
         </div>
       </div>
-      <p className="text-gray-700 mb-4">
-        {description || 
-          `${name} specializes in sustainable, locally-sourced cuisine with a focus on seasonal ingredients. 
-          Our restaurant has been serving the community with a commitment to quality and hospitality.`}
-      </p>
+      <p className="text-gray-700 mb-4">{restaurantDescription}</p>
       
-      {id && id !== "unknown" && (
+      {isValidRestaurant && (
         <Link 
           to={`/restaurant/${id}`}
           className="text-primary hover:underline font-medium"

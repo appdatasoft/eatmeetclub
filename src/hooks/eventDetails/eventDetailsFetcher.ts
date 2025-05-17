@@ -16,19 +16,12 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       throw new Error("Invalid event ID format");
     }
     
+    // Join events with restaurants directly using restaurant_id
     const { data, error: fetchError } = await supabase
       .from("events")
       .select(`
         *,
-        restaurants (
-          id,
-          name,
-          address,
-          city,
-          state,
-          zipcode,
-          description
-        )
+        restaurant:restaurants(*)
       `)
       .eq("id", eventId)
       .single();
@@ -43,7 +36,7 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
     }
     
     console.log("Event data received:", data);
-    console.log("Restaurant data:", data.restaurants);
+    console.log("Restaurant data:", data.restaurant);
 
     // Transform the data to match the EventDetails interface
     const eventDetails: EventDetails = {
@@ -54,14 +47,14 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       time: data.time,
       price: data.price,
       capacity: data.capacity,
-      restaurant: data.restaurants ? {
-        id: data.restaurants.id,
-        name: data.restaurants.name || "Unknown Restaurant",
-        address: data.restaurants.address || "",
-        city: data.restaurants.city || "",
-        state: data.restaurants.state || "",
-        zipcode: data.restaurants.zipcode || "",
-        description: data.restaurants.description || "",
+      restaurant: data.restaurant ? {
+        id: data.restaurant.id,
+        name: data.restaurant.name || "Unknown Restaurant",
+        address: data.restaurant.address || "",
+        city: data.restaurant.city || "",
+        state: data.restaurant.state || "",
+        zipcode: data.restaurant.zipcode || "",
+        description: data.restaurant.description || "",
       } : {
         id: "unknown",
         name: "Unknown Restaurant",

@@ -25,8 +25,19 @@ const EventDetailsContainer: React.FC<EventDetailsContainerProps> = ({
 }) => {
   const isMobile = useIsMobile();
   
+  // Ensure restaurant data is available with fallbacks
+  const restaurant = event.restaurant || { 
+    id: "unknown", 
+    name: "Unknown Restaurant",
+    address: '',
+    city: '',
+    state: '',
+    zipcode: '',
+    description: ''
+  };
+  
   // Log restaurant data for debugging
-  console.log("Restaurant data in EventDetailsContainer:", event.restaurant);
+  console.log("Restaurant data in EventDetailsContainer:", restaurant);
   
   return (
     <div className="lg:col-span-2">
@@ -40,9 +51,9 @@ const EventDetailsContainer: React.FC<EventDetailsContainerProps> = ({
         ticketsPercentage={ticketsPercentage}
       />
       <RestaurantInfo 
-        id={event.restaurant?.id}
-        name={event.restaurant?.name || "Unknown Restaurant"} 
-        description={event.restaurant?.description}
+        id={restaurant.id}
+        name={restaurant.name} 
+        description={restaurant.description}
       />
       {!isCurrentUserOwner && !isMobile && (
         <div className="mt-6 flex justify-end">
