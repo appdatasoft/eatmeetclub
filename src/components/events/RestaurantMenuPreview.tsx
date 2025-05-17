@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useMenuItemsFetcher } from "./restaurant-menu/MenuItemsFetcher";
+import { useMenuItemsFetcher } from "./restaurant-menu/hooks/useMenuItemsFetcher";
 import LoadingSkeleton from "./restaurant-menu/LoadingSkeleton";
 import EmptyMenuState from "./restaurant-menu/EmptyMenuState";
 import MenuList from "./restaurant-menu/MenuList";
