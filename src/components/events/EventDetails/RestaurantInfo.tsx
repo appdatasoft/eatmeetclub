@@ -1,9 +1,12 @@
 
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Building } from "lucide-react";
+import { Building, Upload, Edit, Image } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { buildStorageUrl } from "@/utils/supabaseStorage";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 interface RestaurantInfoProps {
   id?: string;
@@ -14,6 +17,7 @@ interface RestaurantInfoProps {
 const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
   const isValidRestaurant = id && id !== "unknown";
   const restaurantName = name || "Unknown Restaurant";
   const restaurantDescription = description || `${restaurantName} specializes in sustainable, locally-sourced cuisine with a focus on seasonal ingredients.`;
@@ -62,18 +66,22 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <h2 className="text-xl font-semibold mb-4">About the Restaurant</h2>
       <div className="flex items-center mb-4">
-        <div className="w-12 h-12 rounded-full bg-gray-200 mr-4 overflow-hidden flex items-center justify-center">
-          {isLoading ? (
-            <div className="w-full h-full bg-gray-300 animate-pulse"></div>
-          ) : isValidRestaurant && imageUrl ? (
-            <img 
-              src={imageUrl} 
-              alt={restaurantName} 
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <Building className="h-6 w-6 text-gray-400" />
-          )}
+        <div className="relative">
+          <Avatar className="w-12 h-12 mr-4">
+            {isLoading ? (
+              <div className="w-full h-full bg-gray-300 animate-pulse"></div>
+            ) : isValidRestaurant && imageUrl ? (
+              <AvatarImage 
+                src={imageUrl} 
+                alt={restaurantName} 
+                className="object-cover"
+              />
+            ) : (
+              <AvatarFallback>
+                <Building className="h-6 w-6 text-gray-400" />
+              </AvatarFallback>
+            )}
+          </Avatar>
         </div>
         <div>
           {isValidRestaurant ? (
@@ -89,12 +97,14 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }
       <p className="text-gray-700 mb-4">{restaurantDescription}</p>
       
       {isValidRestaurant && (
-        <Link 
-          to={`/restaurant/${id}`}
-          className="text-primary hover:underline font-medium"
-        >
-          View Restaurant Profile
-        </Link>
+        <div className="flex justify-between items-center">
+          <Link 
+            to={`/restaurant/${id}`}
+            className="text-primary hover:underline font-medium"
+          >
+            View Restaurant Profile
+          </Link>
+        </div>
       )}
     </div>
   );
