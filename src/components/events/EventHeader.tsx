@@ -55,7 +55,7 @@ const EventHeader: React.FC<EventHeaderProps> = ({
           )}
         </div>
         
-        {/* View Menu button only for logged-in users */}
+        {/* View Menu button for all users */}
         <div className="absolute top-4 right-4">
           {restaurantId && restaurantId !== "unknown" && (
             <Button
@@ -84,7 +84,8 @@ const EventHeader: React.FC<EventHeaderProps> = ({
         )}
       </div>
 
-      {showMenu && restaurantId && restaurantId !== "unknown" && user && (
+      {/* Removed the user check to allow all users to view the menu */}
+      {showMenu && restaurantId && restaurantId !== "unknown" && (
         <div className="absolute top-0 right-0 w-1/2 h-full">
           <RestaurantMenuPreview restaurantId={restaurantId} />
           <Button 
