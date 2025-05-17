@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import RestaurantMenuPreview from "./RestaurantMenuPreview";
 import SupabaseImage from "@/components/common/SupabaseImage";
+import { useAuth } from "@/hooks/useAuth";
 
 interface EventHeaderProps {
   title: string;
@@ -24,9 +25,10 @@ const EventHeader: React.FC<EventHeaderProps> = ({
   coverImage = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60"
 }) => {
   const [showMenu, setShowMenu] = useState(false);
+  const { user } = useAuth();
   
   // For debugging purposes: log the received props
-  console.log("EventHeader props:", { title, restaurantName, restaurantId, isOwner });
+  console.log("EventHeader props:", { title, restaurantName, restaurantId, isOwner, user });
 
   return (
     <div className="relative h-64 md:h-96 overflow-hidden">
@@ -53,9 +55,9 @@ const EventHeader: React.FC<EventHeaderProps> = ({
           )}
         </div>
         
-        {/* View Menu button always on the right if restaurantId exists */}
+        {/* View Menu button only for logged-in users */}
         <div className="absolute top-4 right-4">
-          {restaurantId && (
+          {restaurantId && user && (
             <Button
               variant="secondary"
               size="sm"
@@ -82,7 +84,7 @@ const EventHeader: React.FC<EventHeaderProps> = ({
         )}
       </div>
 
-      {showMenu && restaurantId && (
+      {showMenu && restaurantId && user && (
         <div className="absolute top-0 right-0 w-1/2 h-full">
           <RestaurantMenuPreview restaurantId={restaurantId} />
           <Button 
