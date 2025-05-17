@@ -45,7 +45,8 @@ export const useMenuItemsFetcher = (restaurantId: string) => {
               name: item.name,
               description: item.description || '',
               price: item.price,
-              type: item.type || 'Other',
+              // Use a default type if not present in the database item
+              type: 'Other',
               ingredients,
               media,
               restaurant_id: restaurantId
