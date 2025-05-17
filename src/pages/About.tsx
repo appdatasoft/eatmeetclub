@@ -18,6 +18,15 @@ const About = () => {
             defaultContent="About Eat Meet Club"
           />
           
+          <div className="bg-white rounded-xl p-8 shadow-sm mb-12">
+            <EditableText
+              id="about-summary"
+              tag="p"
+              className="text-lg text-gray-700 leading-relaxed"
+              defaultContent="Eat Meet Club brings people together through shared dining experiences at local restaurants. We create spaces for meaningful connections, support neighborhood businesses, and build stronger communities around the dinner table. Join us to make new friends, discover great food, and rediscover the joy of face-to-face conversations."
+            />
+          </div>
+          
           <AboutTabs activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
       </div>
