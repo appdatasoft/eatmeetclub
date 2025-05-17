@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
-import { useCheckoutSession } from '@/hooks/useCheckoutSession'
 
 export interface TicketPurchaseProps {
   eventId: string;
@@ -16,7 +15,6 @@ export const TicketPurchase: React.FC<TicketPurchaseProps> = ({
 }) => {
   const [ticketCount, setTicketCount] = useState(1)
   const { toast } = useToast()
-  const { startCheckout, isLoading: loading } = useCheckoutSession()
 
   const handleIncrease = () => {
     if (ticketCount < ticketsRemaining) {
@@ -31,17 +29,8 @@ export const TicketPurchase: React.FC<TicketPurchaseProps> = ({
   }
 
   const handleBuy = () => {
-    startCheckout({
-      email: '',
-      name: '',
-      eventId,
-      quantity: ticketCount,
-    }).catch(() => {
-      toast({
-        title: 'Checkout failed. Please try again.',
-        variant: 'destructive',
-      })
-    })
+    // This would be implemented by the parent component
+    console.log('Buy ticket clicked', { eventId, ticketCount });
   }
 
   const subtotal = ticketPrice * ticketCount
@@ -123,29 +112,9 @@ export const TicketPurchase: React.FC<TicketPurchaseProps> = ({
 
       <button
         onClick={handleBuy}
-        disabled={loading}
         className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none bg-primary text-white hover:bg-primary/90 h-11 rounded-md px-8 w-full"
       >
-        {loading ? (
-          <>
-            <svg
-              className="lucide lucide-loader-circle mr-2 h-4 w-4 animate-spin"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              width="24"
-            >
-              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-            </svg>
-            Processing...
-          </>
-        ) : (
-          'Buy Ticket'
-        )}
+        Buy Ticket
       </button>
 
       <p className="text-xs text-gray-500 text-center mt-4">

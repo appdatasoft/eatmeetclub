@@ -15,8 +15,8 @@ describe('useVerificationRequest', () => {
   // Test case
   it('should initialize with default state', () => {
     const { result } = renderHook(() => useVerificationRequest())
-    expect(result.current.isLoading).toBe(false)
-    expect(result.current.error).toBe(null)
+    expect(result.current.isVerifying).toBe(false)
+    expect(result.current.verificationError).toBe(null)
     expect(typeof result.current.sendVerificationRequest).toBe('function')
   })
 })
