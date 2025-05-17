@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { MediaItem } from './types/mediaTypes';
-import { GalleryHorizontal } from 'lucide-react';
+import { GalleryHorizontal, ArrowLeft, ArrowRight } from 'lucide-react';
 import MediaThumbnail from './media/MediaThumbnail';
 import MediaGallery from './media/MediaGallery';
 import MediaDialog from './media/MediaDialog';
@@ -14,15 +14,35 @@ interface MenuItemMediaProps {
 
 const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "", thumbnailOnly = false }) => {
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   if (!media || media.length === 0) return null;
   
   const handleMediaClick = (item: MediaItem) => {
     setSelectedMedia(item);
+    // Find the index of the clicked item
+    const index = media.findIndex(m => m.url === item.url && m.type === item.type);
+    if (index !== -1) {
+      setActiveIndex(index);
+    }
   };
 
   const handleCloseDialog = () => {
     setSelectedMedia(null);
+  };
+  
+  const handleNavigate = (direction: 'prev' | 'next') => {
+    if (!media || media.length <= 1) return;
+    
+    let newIndex;
+    if (direction === 'next') {
+      newIndex = (activeIndex + 1) % media.length;
+    } else {
+      newIndex = (activeIndex - 1 + media.length) % media.length;
+    }
+    
+    setActiveIndex(newIndex);
+    setSelectedMedia(media[newIndex]);
   };
   
   // If thumbnailOnly is true, just show the first item as a thumbnail
@@ -31,8 +51,11 @@ const MenuItemMedia: React.FC<MenuItemMediaProps> = ({ media, className = "", th
       <div className={`${className}`}>
         <div className="relative">
           <MediaThumbnail
-            item={media[0]}
-            onClick={() => handleMediaClick(media[0])}
+            item={media[activeIndex]}
+            onClick={() => handleMediaClick(media[activeIndex])}
+            totalItems={media.length}
+            onNavigate={handleNavigate}
+            showNav={media.length > 1}
           />
           
           {/* Show gallery indicator if there are multiple items */}

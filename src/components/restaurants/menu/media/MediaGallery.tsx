@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { MediaItem } from '../types/mediaTypes';
 import MediaThumbnail from './MediaThumbnail';
 
@@ -11,6 +11,7 @@ interface MediaGalleryProps {
 
 const MediaGallery: React.FC<MediaGalleryProps> = ({ media, onSelectMedia, className = "" }) => {
   const galleryRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const handleKeyNavigation = (e: React.KeyboardEvent) => {
     const currentIndex = Number((document.activeElement?.getAttribute('data-index') || '0'));
@@ -21,6 +22,24 @@ const MediaGallery: React.FC<MediaGalleryProps> = ({ media, onSelectMedia, class
     } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
       const prevElement = galleryRef.current?.querySelector(`[data-index="${currentIndex - 1}"]`) as HTMLElement;
       prevElement?.focus();
+    }
+  };
+
+  // Navigation handler for the thumbnail navigator
+  const handleNavigate = (index: number, direction: 'prev' | 'next') => {
+    let newIndex;
+    if (direction === 'next') {
+      newIndex = (index + 1) % media.length;
+    } else {
+      newIndex = (index - 1 + media.length) % media.length;
+    }
+    
+    // Focus and scroll to the new thumbnail
+    const nextElement = galleryRef.current?.querySelector(`[data-index="${newIndex}"]`) as HTMLElement;
+    if (nextElement) {
+      nextElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      nextElement.focus();
+      setActiveIndex(newIndex);
     }
   };
 
@@ -49,6 +68,9 @@ const MediaGallery: React.FC<MediaGalleryProps> = ({ media, onSelectMedia, class
             onClick={() => onSelectMedia(item)}
             className="focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
             data-index={index}
+            totalItems={media.length}
+            onNavigate={(direction) => handleNavigate(index, direction)}
+            showNav={media.length > 1}
           />
         </div>
       ))}

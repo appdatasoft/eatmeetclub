@@ -1,6 +1,6 @@
 
 import React from "react";
-import { X, ImageOff, RefreshCcw } from "lucide-react";
+import { X, ImageOff, RefreshCcw, ArrowLeft, ArrowRight } from "lucide-react";
 import { MediaItem } from "./types/mediaTypes";
 import { addCacheBuster, getDefaultFoodPlaceholder } from "@/utils/supabaseStorage";
 
@@ -14,6 +14,7 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({ mediaItems, onRemove }) => 
   const [errorStates, setErrorStates] = React.useState<Record<number, boolean>>({});
   const [retryCount, setRetryCount] = React.useState<Record<number, number>>({});
   const [usedFallback, setUsedFallback] = React.useState<Record<number, boolean>>({});
+  const [activeIndex, setActiveIndex] = React.useState(0);
   const maxRetries = 3;
 
   const handleImageLoad = (index: number) => {
@@ -46,6 +47,20 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({ mediaItems, onRemove }) => 
     setErrorStates(prev => ({ ...prev, [index]: false }));
     setRetryCount(prev => ({ ...prev, [index]: 0 }));
     setUsedFallback(prev => ({ ...prev, [index]: false }));
+  };
+
+  // Handle navigation between preview items
+  const handleNavigate = (direction: 'prev' | 'next', e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering other click handlers
+    
+    let newIndex;
+    if (direction === 'next') {
+      newIndex = (activeIndex + 1) % mediaItems.length;
+    } else {
+      newIndex = (activeIndex - 1 + mediaItems.length) % mediaItems.length;
+    }
+    
+    setActiveIndex(newIndex);
   };
 
   // Construct image URL with cache busting based on retry state
@@ -120,6 +135,29 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({ mediaItems, onRemove }) => 
                   opacity: errorStates[index] ? 0 : 1
                 }}
               />
+              
+              {/* Navigation arrows - only show when multiple items are present */}
+              {mediaItems.length > 1 && (
+                <div className="absolute inset-0 flex items-center justify-between px-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={(e) => handleNavigate('prev', e)}
+                    className="bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors"
+                    aria-label="Previous image"
+                  >
+                    <ArrowLeft className="h-3 w-3" />
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={(e) => handleNavigate('next', e)}
+                    className="bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors"
+                    aria-label="Next image"
+                  >
+                    <ArrowRight className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="w-24 h-24 border rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
