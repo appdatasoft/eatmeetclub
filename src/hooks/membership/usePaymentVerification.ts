@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useVerificationRequest } from "./payment-verification/useVerificationRequest";
@@ -92,8 +91,18 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
     }
     
     try {
-      // Updated to match the new function signature (paymentId, email, name, options)
-      const result = await sendVerificationRequest(paymentId, email, name);
+      // Pass all required options to the verification request
+      const result = await sendVerificationRequest(
+        paymentId, 
+        email, 
+        name,
+        {
+          phone,
+          address,
+          isSubscription: true,
+          ...options
+        }
+      );
       
       // Show appropriate message based on response
       showVerificationToasts(result);
@@ -107,15 +116,34 @@ export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationP
       
       // Try the simplified verification as a fallback if not already using it
       if (!options.simplifiedVerification && options.retry) {
-        const fallbackResult = await handleSimplifiedVerification(
+        // First get the simplified verification ready
+        const canTrySimplified = await handleSimplifiedVerification(
           paymentId,
           email,
           name
         );
         
-        if (fallbackResult) {
-          clearUserDetails();
-          return true;
+        if (canTrySimplified) {
+          // If simplified verification preparation succeeded, try sending the request with simplified options
+          try {
+            const fallbackResult = await sendVerificationRequest(
+              paymentId,
+              email,
+              name,
+              {
+                simplifiedVerification: true,
+                safeMode: true,
+                forceSendEmails: true
+              }
+            );
+            
+            if (fallbackResult.success) {
+              clearUserDetails();
+              return true;
+            }
+          } catch (simplifiedError) {
+            console.error("Simplified verification request failed:", simplifiedError);
+          }
         }
       }
       
