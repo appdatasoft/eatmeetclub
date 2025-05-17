@@ -43,11 +43,12 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
           return;
         }
 
-        console.log("Found menu items:", menuItemsData.length);
+        console.log(`Found ${menuItemsData.length} menu items for restaurant ${restaurantId}`);
 
         // Process each menu item to fetch related data
         const itemsWithDetails = await Promise.all(menuItemsData.map(async (item) => {
           // Fetch ingredients
+          console.log(`Fetching ingredients for item: ${item.name} (${item.id})`);
           const ingredients = await fetchMenuItemIngredients(item.id);
           
           // Fetch media items with better error handling
@@ -60,7 +61,7 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
             name: item.name,
             description: item.description || '',
             price: item.price,
-            type: '', // This doesn't exist in the database schema
+            type: item.type || 'Other', // Default type if not present
             ingredients: ingredients,
             media: media
           } as MenuItem;

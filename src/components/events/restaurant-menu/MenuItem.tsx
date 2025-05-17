@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { MenuItem } from "./types";
 import MenuItemMedia from "@/components/restaurants/menu/MenuItemMedia";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Image } from "lucide-react";
+import { Image, ImageOff } from "lucide-react";
 
 interface MenuItemProps {
   item: MenuItem;
@@ -23,7 +23,7 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
       hasMedia,
       firstMediaUrl: hasMedia ? item.media[0].url : 'none',
       mediaCount: hasMedia ? item.media.length : 0,
-      itemDetails: item
+      itemComplete: item
     });
   }, [item, hasMedia]);
 
@@ -58,61 +58,64 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
       <div className="flex">
         {/* Thumbnail - always show at least a placeholder */}
         <div className="mr-3">
-          {hasMedia ? (
-            <div 
-              className="w-16 h-16 rounded-md overflow-hidden cursor-pointer relative"
-              onClick={() => setShowAllPhotos(true)}
-            >
-              {/* Show loading state before image loads */}
-              {!imageLoaded && !imageError && (
-                <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-100">
-                  <span className="text-gray-400 text-xs">Loading...</span>
-                </div>
-              )}
-              
-              {/* Show the actual image */}
-              <img 
-                src={item.media[0].url} 
-                alt={item.name} 
-                className={`w-full h-full object-cover transition-opacity duration-200 ${!imageLoaded ? 'opacity-0' : 'opacity-100'}`}
-                onLoad={() => {
-                  console.log(`Image loaded successfully for ${item.name}:`, item.media[0].url);
-                  setImageLoaded(true);
-                  setImageError(false);
-                }}
-                onError={(e) => {
-                  console.error(`Image error for ${item.name}:`, item.media[0].url);
-                  
-                  // Try loading a placeholder image instead
-                  const placeholderUrl = getPlaceholderImage();
-                  console.log(`Using food placeholder for ${item.name}:`, placeholderUrl);
-                  e.currentTarget.src = placeholderUrl;
-                  
-                  // If the placeholder also fails, show the fallback UI
-                  e.currentTarget.onerror = () => {
-                    console.error(`Fallback image also failed for ${item.name}`);
-                    setImageError(true);
-                    setImageLoaded(false);
-                  };
-                }}
-              />
-              
-              {/* Show error state if both original and fallback images fail */}
-              {imageError && !imageLoaded && (
-                <div 
-                  className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-gray-100 cursor-pointer"
-                  onClick={handleRetryImage}
-                >
-                  <Image className="h-5 w-5 text-gray-400 mb-1" />
-                  <span className="text-gray-400 text-xs">Tap to retry</span>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center">
-              <span className="text-gray-400 text-xs">No image</span>
-            </div>
-          )}
+          <div 
+            className="w-16 h-16 rounded-md overflow-hidden cursor-pointer relative bg-gray-100"
+            onClick={() => hasMedia && setShowAllPhotos(true)}
+          >
+            {hasMedia ? (
+              <>
+                {/* Show loading state before image loads */}
+                {!imageLoaded && !imageError && (
+                  <div className="absolute inset-0 w-full h-full flex items-center justify-center">
+                    <span className="text-gray-400 text-xs">Loading...</span>
+                  </div>
+                )}
+                
+                {/* Show the actual image */}
+                <img 
+                  src={item.media[0].url} 
+                  alt={item.name} 
+                  className={`w-full h-full object-cover transition-opacity duration-200 ${!imageLoaded ? 'opacity-0' : 'opacity-100'}`}
+                  onLoad={() => {
+                    console.log(`Image loaded successfully for ${item.name}:`, item.media[0].url);
+                    setImageLoaded(true);
+                    setImageError(false);
+                  }}
+                  onError={(e) => {
+                    console.error(`Image error for ${item.name}:`, item.media[0].url);
+                    
+                    // Try loading a placeholder image instead
+                    const placeholderUrl = getPlaceholderImage();
+                    console.log(`Using food placeholder for ${item.name}:`, placeholderUrl);
+                    e.currentTarget.src = placeholderUrl;
+                    
+                    // If the placeholder also fails, show the fallback UI
+                    e.currentTarget.onerror = () => {
+                      console.error(`Fallback image also failed for ${item.name}`);
+                      setImageError(true);
+                      setImageLoaded(false);
+                    };
+                  }}
+                />
+                
+                {/* Show error state if both original and fallback images fail */}
+                {imageError && !imageLoaded && (
+                  <div 
+                    className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-gray-100 cursor-pointer"
+                    onClick={handleRetryImage}
+                  >
+                    <ImageOff className="h-5 w-5 text-gray-400 mb-1" />
+                    <span className="text-gray-400 text-xs">Tap to retry</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              // No media available
+              <div className="flex items-center justify-center h-full w-full">
+                <span className="text-gray-400 text-xs">No image</span>
+              </div>
+            )}
+          </div>
         </div>
         
         {/* Item details */}
