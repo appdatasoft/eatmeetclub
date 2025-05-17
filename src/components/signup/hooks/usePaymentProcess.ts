@@ -11,8 +11,9 @@ export const usePaymentProcess = ({ setIsLoading }: UsePaymentProcessProps) => {
     
     // Get form data from the hidden fields
     const form = e.target as HTMLFormElement;
+    const firstName = (form.querySelector('#firstName') as HTMLInputElement)?.value;
+    const lastName = (form.querySelector('#lastName') as HTMLInputElement)?.value;
     const email = (form.querySelector('#email') as HTMLInputElement)?.value;
-    const name = (form.querySelector('#name') as HTMLInputElement)?.value;
     const phone = (form.querySelector('#phone') as HTMLInputElement)?.value;
     const address = (form.querySelector('#address') as HTMLInputElement)?.value;
     
@@ -27,14 +28,14 @@ export const usePaymentProcess = ({ setIsLoading }: UsePaymentProcessProps) => {
     
     // Store user details in localStorage for later use
     localStorage.setItem('signup_email', email);
-    localStorage.setItem('signup_name', name || '');
+    localStorage.setItem('signup_name', `${firstName} ${lastName}`.trim());
     localStorage.setItem('signup_phone', phone || '');
     localStorage.setItem('signup_address', address || '');
     
     setIsLoading(true);
     
     try {
-      console.log("Creating checkout session with details:", { email, name, phone, address });
+      console.log("Creating checkout session with details:", { email, firstName, lastName, phone, address });
       
       // Create a Stripe checkout session - without requiring auth
       const response = await fetch(
@@ -46,7 +47,7 @@ export const usePaymentProcess = ({ setIsLoading }: UsePaymentProcessProps) => {
           },
           body: JSON.stringify({
             email,
-            name,
+            name: `${firstName} ${lastName}`.trim(),
             phone,
             address
           }),

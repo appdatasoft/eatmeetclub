@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SignupFormValues } from "../SignupForm";
-import { paymentFormSchema, PaymentFormValues } from "./types";
+import { paymentFormSchema, requiredPaymentFormSchema, PaymentFormValues } from "./types";
 
 interface UsePaymentFormProps {
   userDetails: SignupFormValues;
@@ -23,10 +23,7 @@ export const usePaymentForm = ({
   });
 
   const validationSchema = requireAllFields 
-    ? paymentFormSchema.extend({
-        phone: z.string().min(1, { message: "Phone number is required" }),
-        address: z.string().min(1, { message: "Address is required" }),
-      })
+    ? requiredPaymentFormSchema
     : paymentFormSchema;
 
   const form = useForm<PaymentFormValues>({
@@ -57,8 +54,5 @@ export const usePaymentForm = ({
     isFormValid: form.formState.isValid
   };
 };
-
-// Make sure to import z at the top
-import { z } from "zod";
 
 export default usePaymentForm;
