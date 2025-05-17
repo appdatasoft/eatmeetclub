@@ -4,7 +4,7 @@ import { MenuItem } from "../types";
 
 interface ItemDetailsProps {
   item: MenuItem;
-  onOpenGallery: () => void;
+  onOpenGallery?: () => void;  // Made optional with "?"
 }
 
 const ItemDetails: React.FC<ItemDetailsProps> = ({ item, onOpenGallery }) => {
@@ -35,7 +35,7 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, onOpenGallery }) => {
         </p>
       )}
       
-      {hasMultipleMedia && (
+      {hasMultipleMedia && onOpenGallery && (
         <button
           type="button"
           onClick={(e) => {

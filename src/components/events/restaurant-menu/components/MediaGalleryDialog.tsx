@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { MenuItem } from "../types";
 import { ImageOff, Film, ArrowLeft, ArrowRight } from "lucide-react";
 
@@ -26,8 +26,14 @@ const MediaGalleryDialog: React.FC<MediaGalleryDialogProps> = ({ item, open, onO
           <div className="relative">
             <Carousel 
               className="w-full"
-              onSelect={(index) => setActiveIndex(index)}
-              defaultIndex={activeIndex}
+              opts={{
+                startIndex: activeIndex
+              }}
+              onSelect={(api) => {
+                if (api) {
+                  setActiveIndex(api.selectedScrollSnap());
+                }
+              }}
             >
               <CarouselContent>
                 {item.media.map((media, idx) => (

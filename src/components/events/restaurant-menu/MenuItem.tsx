@@ -38,7 +38,10 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
         )}
 
         {/* Item Details */}
-        <ItemDetails item={item} />
+        <ItemDetails 
+          item={item} 
+          onOpenGallery={handleOpenGallery}
+        />
       </div>
 
       {/* Full Gallery Dialog */}
