@@ -1,8 +1,11 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { EventCardProps } from "@/components/events/EventCard";
 import { useEventsAPI } from "./useEventsAPI";
 import { useEventSubscription } from "./useEventSubscription";
+
+const deepEqual = (a: any, b: any): boolean => {
+  return JSON.stringify(a) === JSON.stringify(b);
+};
 
 export const useEvents = () => {
   const [events, setEvents] = useState<EventCardProps[]>([]);
@@ -10,7 +13,7 @@ export const useEvents = () => {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
 
-  const { fetchPublishedEvents } = useEventsAPI();
+  const { fetchPublishedEvents } = useEventsAPI(); // ensure it's memoized
   const { subscribeToEventChanges } = useEventSubscription();
 
   const refreshEvents = useCallback(async () => {
@@ -19,50 +22,34 @@ export const useEvents = () => {
     try {
       setIsLoading(true);
       setFetchError(null);
-      console.log("Fetching published events...");
+      const newEvents = await fetchPublishedEvents();
 
-      const formattedEvents = await fetchPublishedEvents();
-
-      if (isMountedRef.current) {
-        setEvents(formattedEvents || []);
+      if (isMountedRef.current && !deepEqual(newEvents, events)) {
+        setEvents(newEvents);
+        console.log("Updated events list");
+      } else {
+        console.log("No change in event data, skipping update");
       }
     } catch (error: any) {
-      console.error("Unexpected error fetching published events:", error);
       if (isMountedRef.current) {
-        setFetchError(`An unexpected error occurred: ${error.message}`);
-        setEvents([]);
+        setFetchError(error.message || "Unknown error");
       }
     } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
+      if (isMountedRef.current) setIsLoading(false);
     }
-  }, [fetchPublishedEvents]);
+  }, [fetchPublishedEvents, events]);
 
   useEffect(() => {
     isMountedRef.current = true;
 
-    const fetchInitialEvents = async () => {
-      await refreshEvents();
-    };
-
-    fetchInitialEvents();
-
-    // Debounced refresh to avoid infinite flicker
-    let refreshTimeout: NodeJS.Timeout | null = null;
+    refreshEvents(); // initial load
 
     const unsubscribe = subscribeToEventChanges(() => {
-      if (isMountedRef.current) {
-        if (refreshTimeout) clearTimeout(refreshTimeout);
-        refreshTimeout = setTimeout(() => {
-          refreshEvents();
-        }, 500); // Debounce delay (adjust if needed)
-      }
+      if (isMountedRef.current) refreshEvents();
     });
 
     return () => {
       isMountedRef.current = false;
-      if (refreshTimeout) clearTimeout(refreshTimeout);
       unsubscribe();
     };
   }, [refreshEvents, subscribeToEventChanges]);
@@ -71,7 +58,7 @@ export const useEvents = () => {
     events,
     isLoading,
     fetchError,
-    refreshEvents
+    refreshEvents,
   };
 };
 
