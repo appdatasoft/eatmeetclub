@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { render, screen, fireEvent } from '@/lib/test-setup';
 import { describe, it, expect, vi } from 'vitest';
@@ -82,7 +83,7 @@ describe('MenuItemForm Component', () => {
     price: 9.99,
     type: 'Main Course',
     ingredients: ['Ingredient 1', 'Ingredient 2'],
-    media: [{ url: 'image.jpg', type: 'image' }]
+    media: [{ id: 'image-1', url: 'image.jpg', type: 'image' }]
   };
   
   it('renders with initial values', () => {
@@ -125,7 +126,7 @@ describe('MenuItemForm Component', () => {
       price: 9.99,
       type: 'Main Course',
       ingredients: ['Ingredient 1', 'Ingredient 2'],
-      media: [{ url: 'image.jpg', type: 'image' }]
+      media: [{ id: 'image-1', url: 'image.jpg', type: 'image' }]
     });
   });
 
