@@ -9,11 +9,11 @@ export const useEventManagement = (
   refreshEventDetails: () => Promise<void>,
   canEditEvent: boolean,
   navigate: NavigateFunction,
-  toast: ReturnType<typeof useToast>,
   isDeleting: boolean,
   setIsDeleting: (value: boolean) => void,
   setIsDeleteDialogOpen: (value: boolean) => void
 ) => {
+  const { toast } = useToast();
   
   const handleEditEvent = () => {
     if (!event) return;

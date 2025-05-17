@@ -12,7 +12,7 @@ export const useEventFetching = (eventId?: string) => {
   const [loading, setLoading] = useState(true);
 
   // Use specialized hooks to fetch data and check ownership
-  const { fetchEventWithDetails } = useEventDataFetch(toast);
+  const { fetchEventWithDetails } = useEventDataFetch();
   const { checkOwnership, isCurrentUserOwner, setIsCurrentUserOwner } = useEventOwnership();
 
   const fetchEventDetails = useCallback(async () => {

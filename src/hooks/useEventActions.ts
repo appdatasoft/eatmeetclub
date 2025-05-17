@@ -27,7 +27,6 @@ export const useEventActions = (
     refreshEventDetails,
     canEditEvent,
     navigate,
-    toast,
     isDeleting,
     setIsDeleting,
     setIsDeleteDialogOpen
@@ -40,7 +39,7 @@ export const useEventActions = (
     isUploadingCover,
     handleEditCover,
     handleSaveCover
-  } = useEventCoverImage(event, refreshEventDetails, toast);
+  } = useEventCoverImage(event, refreshEventDetails);
   
   // Handle ticket purchase for non-logged in users
   const handleTicketPurchase = (ticketCount: number) => {

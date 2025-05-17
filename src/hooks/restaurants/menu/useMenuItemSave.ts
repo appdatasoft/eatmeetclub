@@ -3,147 +3,111 @@ import { supabase } from '@/integrations/supabase/client';
 import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
 import { MenuItemFormValues } from '@/components/restaurants/menu/MenuItemForm';
 
-export const useMenuItemSave = {
-  // Create a new menu item
-  createMenuItem: async (
-    restaurantId: string,
-    item: MenuItemFormValues,
-    filteredIngredients: string[],
-    menuItems: MenuItem[],
-    setMenuItems: (items: MenuItem[]) => void,
-    toast: any
-  ) => {
-    try {
-      // Create a new menu item
-      const { data: newItem, error: createError } = await supabase
-        .from('restaurant_menu_items')
-        .insert({
-          restaurant_id: restaurantId,
-          name: item.name,
-          description: item.description || null,
-          price: item.price
-        })
-        .select()
-        .single();
-        
-      if (createError) throw createError;
-      
-      if (newItem) {
-        // Insert ingredients
-        if (filteredIngredients.length > 0) {
-          const ingredientsToInsert = filteredIngredients.map(name => ({
-            menu_item_id: newItem.id,
-            name,
-            restaurant_id: restaurantId
-          }));
-          
-          const { error: insertIngredientsError } = await supabase
-            .from('restaurant_menu_ingredients')
-            .insert(ingredientsToInsert);
-            
-          if (insertIngredientsError) throw insertIngredientsError;
-        }
-        
-        // Create the final menu item with all data
-        const newMenuItem: MenuItem = {
-          id: newItem.id,
-          name: item.name,
-          description: item.description || '',
-          price: item.price,
-          type: item.type || 'Other',
-          ingredients: filteredIngredients,
-          media: item.media || []
-        };
-        
-        setMenuItems([...menuItems, newMenuItem]);
-        
-        toast({
-          title: "Item Created",
-          description: "New menu item has been created",
-        });
-        
-        return true;
-      }
-    } catch (error: any) {
-      console.error('Error creating menu item:', error);
-      throw error;
-    }
-    return false;
-  },
+export const useMenuItemSave = (
+  restaurantId: string,
+  menuItems: MenuItem[],
+  setMenuItems: (items: MenuItem[]) => void,
+  setIsDialogOpen: (value: boolean) => void,
+  toast: any,
+  setIsSaving: (value: boolean) => void
+) => {
   
-  // Update an existing menu item
-  updateMenuItem: async (
-    restaurantId: string,
-    itemId: string,
-    item: MenuItemFormValues,
-    filteredIngredients: string[],
-    menuItems: MenuItem[],
-    setMenuItems: (items: MenuItem[]) => void,
-    toast: any
-  ) => {
+  const handleSaveItem = async (formData: MenuItemFormValues): Promise<void> => {
+    if (!restaurantId) return;
+    
     try {
-      // Update existing menu item
-      const { error: updateError } = await supabase
-        .from('restaurant_menu_items')
-        .update({
-          name: item.name,
-          description: item.description || null,
-          price: item.price
-        })
-        .eq('id', itemId);
-        
-      if (updateError) throw updateError;
+      setIsSaving(true);
+      const isNewItem = !formData.id;
       
-      // Delete and re-create ingredients
-      const { error: deleteIngredientsError } = await supabase
-        .from('restaurant_menu_ingredients')
-        .delete()
-        .eq('menu_item_id', itemId);
-        
-      if (deleteIngredientsError) throw deleteIngredientsError;
+      // Prepare the item data
+      const itemData = {
+        name: formData.name,
+        description: formData.description || '',
+        price: formData.price,
+        restaurant_id: restaurantId
+      };
       
-      // Add new ingredients
-      if (filteredIngredients.length > 0) {
-        const ingredientsToInsert = filteredIngredients.map(name => ({
-          menu_item_id: itemId,
-          name,
-          restaurant_id: restaurantId
+      let savedItemId: string;
+      
+      // Insert or update the menu item
+      if (isNewItem) {
+        // Create new item
+        const { data: newItem, error: insertError } = await supabase
+          .from('restaurant_menu_items')
+          .insert(itemData)
+          .select()
+          .single();
+          
+        if (insertError) throw insertError;
+        savedItemId = newItem.id;
+      } else {
+        // Update existing item
+        const { data: updatedItem, error: updateError } = await supabase
+          .from('restaurant_menu_items')
+          .update(itemData)
+          .eq('id', formData.id)
+          .select()
+          .single();
+          
+        if (updateError) throw updateError;
+        savedItemId = formData.id;
+      }
+      
+      // Process ingredients - first delete existing
+      if (!isNewItem) {
+        const { error: deleteIngredientsError } = await supabase
+          .from('restaurant_menu_ingredients')
+          .delete()
+          .eq('menu_item_id', savedItemId);
+          
+        if (deleteIngredientsError) throw deleteIngredientsError;
+      }
+      
+      // Add ingredients if any
+      if (formData.ingredients && formData.ingredients.length > 0) {
+        const ingredientsData = formData.ingredients.map(ing => ({
+          menu_item_id: savedItemId,
+          restaurant_id: restaurantId,
+          name: ing
         }));
         
-        const { error: insertIngredientsError } = await supabase
+        const { error: ingredientsError } = await supabase
           .from('restaurant_menu_ingredients')
-          .insert(ingredientsToInsert);
+          .insert(ingredientsData);
           
-        if (insertIngredientsError) throw insertIngredientsError;
+        if (ingredientsError) throw ingredientsError;
       }
       
-      // Update UI
-      setMenuItems(
-        menuItems.map(menuItem => 
-          menuItem.id === itemId 
-            ? { 
-                ...menuItem, 
-                name: item.name, 
-                description: item.description || '', 
-                price: item.price, 
-                type: item.type || 'Other', 
-                ingredients: filteredIngredients,
-                media: item.media || []
-              } 
-            : menuItem
-        )
-      );
+      // Handle media uploads and associations
+      // This would typically be done here, but for simplicity we'll just
+      // update the UI with the saved data
+      
+      // Update the UI
+      const updatedMenuItems = isNewItem
+        ? [...menuItems, { ...formData, id: savedItemId }]
+        : menuItems.map(item => item.id === formData.id ? { ...item, ...formData } : item);
+        
+      setMenuItems(updatedMenuItems);
       
       toast({
-        title: "Item Updated",
-        description: "Menu item has been updated",
+        title: isNewItem ? "Item Added" : "Item Updated",
+        description: `Menu item has been ${isNewItem ? 'added' : 'updated'} successfully`,
       });
       
-      return true;
-    } catch (error: any) {
-      console.error('Error updating menu item:', error);
-      throw error;
+      // Close the dialog
+      setIsDialogOpen(false);
+    } catch (err: any) {
+      console.error('Error saving menu item:', err);
+      
+      toast({
+        title: "Save Failed",
+        description: err.message || "Could not save menu item",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
-    return false;
-  }
+  };
+
+  return { handleSaveItem };
 };

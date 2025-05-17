@@ -1,13 +1,12 @@
 
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { EventDetails } from "@/hooks/types/eventTypes";
 
 export const useEventCoverImage = (
   event: EventDetails | null,
   refreshEventDetails: () => Promise<void>,
-  toast: ReturnType<typeof useToast>
 ) => {
   const [isEditCoverDialogOpen, setIsEditCoverDialogOpen] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
