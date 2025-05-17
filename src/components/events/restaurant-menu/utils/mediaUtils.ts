@@ -167,7 +167,7 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
 /**
  * Fetches ingredients for a specific menu item
  */
-export async function fetchMenuItemIngredients(itemId: string): Promise<string[]> => {
+export async function fetchMenuItemIngredients(itemId: string): Promise<string[]> {
   try {
     const { data: ingredientsData, error: ingredientsError } = await supabase
       .from('restaurant_menu_ingredients')
@@ -184,4 +184,4 @@ export async function fetchMenuItemIngredients(itemId: string): Promise<string[]
     console.error("Error fetching ingredients:", error);
     return [];
   }
-};
+}
