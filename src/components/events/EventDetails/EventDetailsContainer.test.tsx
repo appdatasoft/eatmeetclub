@@ -2,10 +2,11 @@
 import { render, screen } from "@/lib/test-setup";
 import { EventDetails } from "@/types/event";
 import EventDetailsContainer from "./EventDetailsContainer";
+import { describe, it, expect, vi } from "vitest";
 
 // Mock useIsMobile hook
-jest.mock("@/hooks/use-mobile", () => ({
-  useIsMobile: jest.fn(() => false)
+vi.mock("@/hooks/use-mobile", () => ({
+  useIsMobile: vi.fn(() => false)
 }));
 
 describe("EventDetailsContainer", () => {

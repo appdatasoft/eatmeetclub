@@ -1,6 +1,7 @@
 
 import { render, screen } from "@/lib/test-setup";
 import RestaurantInfo from "./RestaurantInfo";
+import { describe, it, expect } from "vitest";
 
 describe("RestaurantInfo", () => {
   const defaultProps = {
