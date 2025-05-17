@@ -97,42 +97,36 @@ const MediaGalleryDialog: React.FC<MediaGalleryDialogProps> = ({ item, open, onO
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              
-              {item.media && item.media.length > 1 && (
-                <>
-                  <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveIndex((prev) => (prev - 1 + item.media.length) % item.media.length);
-                      }}
-                      className="bg-black/50 text-white rounded-full p-2 hover:bg-black/70 transition-colors"
-                      aria-label="Previous image"
-                    >
-                      <ArrowLeft className="h-5 w-5" />
-                    </button>
-                  </div>
-                  
-                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveIndex((prev) => (prev + 1) % item.media.length);
-                      }}
-                      className="bg-black/50 text-white rounded-full p-2 hover:bg-black/70 transition-colors"
-                      aria-label="Next image"
-                    >
-                      <ArrowRight className="h-5 w-5" />
-                    </button>
-                  </div>
-                </>
-              )}
             </Carousel>
             
-            {/* Image counter */}
+            {/* Navigation controls below the image */}
             {item.media && item.media.length > 1 && (
-              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-                {activeIndex + 1} / {item.media.length}
+              <div className="flex justify-center items-center mt-4 gap-4">
+                <button 
+                  onClick={() => {
+                    setActiveIndex((prev) => (prev - 1 + item.media.length) % item.media.length);
+                  }}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md px-3 py-1 flex items-center transition-colors"
+                  aria-label="Previous image"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  <span>Previous</span>
+                </button>
+                
+                <div className="text-sm font-medium">
+                  {activeIndex + 1} / {item.media.length}
+                </div>
+                
+                <button 
+                  onClick={() => {
+                    setActiveIndex((prev) => (prev + 1) % item.media.length);
+                  }}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md px-3 py-1 flex items-center transition-colors"
+                  aria-label="Next image"
+                >
+                  <span>Next</span>
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </button>
               </div>
             )}
           </div>

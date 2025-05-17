@@ -13,6 +13,10 @@ const ItemThumbnail: React.FC<ItemThumbnailProps> = ({ media, name, onClick }) =
   const [activeIndex, setActiveIndex] = useState(0);
   const hasMultipleMedia = media.length > 1;
   
+  // Get current media item
+  const currentMedia = media[activeIndex];
+  
+  // Handle navigation without opening the popup
   const handleNavigate = (direction: 'prev' | 'next', e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering the parent onClick
     
@@ -35,12 +39,12 @@ const ItemThumbnail: React.FC<ItemThumbnailProps> = ({ media, name, onClick }) =
     );
   }
   
-  // Get current media item
-  const currentMedia = media[activeIndex];
-  
   return (
-    <div className="relative group" onClick={onClick}>
-      <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100">
+    <div className="flex flex-col">
+      <div 
+        className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 cursor-pointer"
+        onClick={onClick}
+      >
         {currentMedia.type === 'image' ? (
           currentMedia.url ? (
             <img 
@@ -79,31 +83,30 @@ const ItemThumbnail: React.FC<ItemThumbnailProps> = ({ media, name, onClick }) =
       
       {/* Media count indicator for multiple media */}
       {hasMultipleMedia && (
-        <div className="absolute bottom-0 right-0 bg-black/60 text-white text-[10px] px-1 rounded-tl-md flex items-center">
-          <GalleryHorizontal className="h-2 w-2 mr-0.5" aria-hidden="true" />
-          <span>{media.length}</span>
+        <div className="text-[10px] text-gray-500 text-center mt-1">
+          {activeIndex + 1}/{media.length}
         </div>
       )}
       
-      {/* Navigation arrows - only show when there are multiple items and on hover/focus */}
+      {/* Navigation arrows below the thumbnail */}
       {hasMultipleMedia && (
-        <div className="absolute inset-0 flex items-center justify-between px-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+        <div className="flex justify-center gap-1 mt-1">
           <button 
             type="button"
             onClick={(e) => handleNavigate('prev', e)}
-            className="bg-black/50 text-white rounded-full p-0.5 hover:bg-black/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white"
+            className="bg-gray-100 text-gray-600 rounded p-0.5 hover:bg-gray-200 transition-colors"
             aria-label="Previous image"
           >
-            <ArrowLeft className="h-2 w-2" />
+            <ArrowLeft className="h-2.5 w-2.5" />
           </button>
           
           <button 
             type="button"
             onClick={(e) => handleNavigate('next', e)}
-            className="bg-black/50 text-white rounded-full p-0.5 hover:bg-black/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white"
+            className="bg-gray-100 text-gray-600 rounded p-0.5 hover:bg-gray-200 transition-colors"
             aria-label="Next image"
           >
-            <ArrowRight className="h-2 w-2" />
+            <ArrowRight className="h-2.5 w-2.5" />
           </button>
         </div>
       )}
