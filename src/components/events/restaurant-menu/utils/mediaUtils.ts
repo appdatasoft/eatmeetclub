@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { MediaItem } from "@/components/restaurants/menu";
 import { addCacheBuster, generateAlternativeUrls, findWorkingImageUrl, getDefaultFoodPlaceholder } from "@/utils/supabaseStorage";
@@ -21,72 +20,15 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
       }];
     }
 
-    // Check common food items with known direct folders
-    const commonFoodItems = [
-      {name: "doro-wot", keywords: ["doro", "wot"]},
-      {name: "rice", keywords: ["rice"]},
-      {name: "injera", keywords: ["injera"]},
-      {name: "tibs", keywords: ["tibs"]},
-      {name: "kitfo", keywords: ["kitfo"]},
-      {name: "misir", keywords: ["misir"]}
-    ];
-    
-    // Check if this item matches any common food item
-    const matchedFoodItem = commonFoodItems.find(food => 
-      food.keywords.some(keyword => 
-        item.name.toLowerCase().includes(keyword.toLowerCase()) || 
-        item.id.toLowerCase().includes(keyword.toLowerCase())
-      )
-    );
-    
-    if (matchedFoodItem) {
-      const folderName = matchedFoodItem.name;
-      try {
-        console.log(`Found potential match for ${item.name}, checking ${folderName} folder`);
-        
-        const { data: files, error } = await supabase
-          .storage
-          .from('lovable-uploads')
-          .list(folderName);
-          
-        if (!error && files && files.length > 0) {
-          const imageFiles = files.filter(file => !file.name.endsWith('/') && 
-            (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png')));
-          
-          if (imageFiles.length > 0) {
-            console.log(`Found ${imageFiles.length} images in ${folderName} folder`);
-            
-            const mediaItems = imageFiles.map(file => {
-              const filePath = `${folderName}/${file.name}`;
-              const publicUrl = supabase.storage
-                .from('lovable-uploads')
-                .getPublicUrl(filePath).data.publicUrl;
-                
-              // Add cache buster parameter to the URL
-              const urlWithCache = addCacheBuster(publicUrl);
-              
-              return {
-                url: urlWithCache,
-                type: 'image' as const,
-                id: filePath
-              };
-            });
-            
-            console.log(`Successfully found ${folderName} images:`, mediaItems);
-            return mediaItems;
-          }
-        }
-      } catch (err) {
-        console.error(`Error fetching ${folderName} specific images:`, err);
-      }
-    }
-    
     // Try multiple possible paths in order of priority
     const pathsToTry = [
       `${item.id}`, // Direct folder with item ID
       `menu-items/${item.id}`, // Menu items subfolder
       `menu-items/${restaurantId}/${item.id}`, // Restaurant specific menu item
-      `restaurants/${restaurantId}/menu/${item.id}` // Alternative structure
+      `restaurants/${restaurantId}/menu/${item.id}`, // Alternative structure
+      // Add normalized name as potential path (convert spaces to hyphens, lowercase)
+      `${item.name.toLowerCase().replace(/\s+/g, '-')}`,
+      `menu-items/${item.name.toLowerCase().replace(/\s+/g, '-')}`
     ];
     
     // Try each path until we find media
@@ -129,7 +71,7 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
     
     // Try to find a working image URL as fallback
     try {
-      const workingUrl = await findWorkingImageUrl(restaurantId, item.id);
+      const workingUrl = await findWorkingImageUrl(restaurantId, item.id, item.name);
       
       if (workingUrl) {
         console.log(`Found working direct URL for item ${item.name}:`, workingUrl);

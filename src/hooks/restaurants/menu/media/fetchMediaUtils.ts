@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { MediaItem } from "@/components/restaurants/menu";
 import { addCacheBuster, generateAlternativeUrls, findWorkingImageUrl, getDefaultFoodPlaceholder } from '@/utils/supabaseStorage';
@@ -9,64 +8,6 @@ import { addCacheBuster, generateAlternativeUrls, findWorkingImageUrl, getDefaul
 export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string): Promise<MediaItem[]> => {
   let media: MediaItem[] = [];
   console.log(`Fetching media for menu item: ${itemId} in restaurant: ${restaurantId}`);
-  
-  // Common food items with direct folders in storage
-  const commonFoodItems = [
-    {name: "doro-wot", keywords: ["doro", "wot"]},
-    {name: "rice", keywords: ["rice"]},
-    {name: "injera", keywords: ["injera"]},
-    {name: "tibs", keywords: ["tibs"]},
-    {name: "kitfo", keywords: ["kitfo"]},
-    {name: "misir", keywords: ["misir"]}
-  ];
-  
-  // Check if this item matches any common food item
-  for (const food of commonFoodItems) {
-    if (food.keywords.some(keyword => 
-        itemId.toLowerCase().includes(keyword.toLowerCase()) || 
-        keyword.toLowerCase().includes(itemId.toLowerCase()))) {
-      try {
-        console.log(`Checking direct folder for ${food.name}`);
-        const { data: files, error } = await supabase
-          .storage
-          .from('lovable-uploads')
-          .list(food.name);
-          
-        if (!error && files && files.length > 0) {
-          const imageFiles = files.filter(file => !file.name.endsWith('/'));
-          
-          if (imageFiles.length > 0) {
-            console.log(`Found ${imageFiles.length} files in direct folder ${food.name}`);
-            
-            const mediaItems = imageFiles.map(file => {
-              const filePath = `${food.name}/${file.name}`;
-              const publicUrl = supabase.storage
-                .from('lovable-uploads')
-                .getPublicUrl(filePath).data.publicUrl;
-                
-              const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
-              
-              // Add cache buster parameter to the URL
-              const urlWithCache = addCacheBuster(publicUrl);
-              
-              return {
-                url: urlWithCache,
-                type: isVideo ? 'video' as const : 'image' as const,
-                id: filePath // Store full path for deletion capabilities
-              };
-            });
-            
-            if (mediaItems.length > 0) {
-              console.log(`Successfully mapped ${mediaItems.length} media items`);
-              return mediaItems;
-            }
-          }
-        }
-      } catch (err) {
-        console.error(`Error accessing direct folder ${food.name}:`, err);
-      }
-    }
-  }
   
   // Paths to check, in order of priority
   const pathsToCheck = [
@@ -141,7 +82,7 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
   // Try direct file URLs as a fallback approach
   try {
     // Find a working image URL
-    const workingUrl = await findWorkingImageUrl(restaurantId, itemId);
+    const workingUrl = await findWorkingImageUrl(restaurantId, itemId, itemId);
     
     if (workingUrl) {
       console.log(`Found working direct URL for item ${itemId}:`, workingUrl);

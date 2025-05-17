@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for working with Supabase storage URLs
  */
@@ -108,45 +107,19 @@ export const checkStorageUrlExists = async (url: string): Promise<boolean> => {
  * Generates alternative URL patterns to try for a given item ID
  * @param restaurantId The restaurant ID
  * @param itemId The menu item ID
+ * @param itemName Optional item name for alternative URL patterns
  * @returns Array of possible URL patterns to try
  */
 export const generateAlternativeUrls = (
   restaurantId: string,
-  itemId: string
+  itemId: string,
+  itemName?: string
 ): string[] => {
   const bucket = 'lovable-uploads';
   const baseStorageUrl = `https://wocfwpedauuhlrfugxuu.supabase.co/storage/v1/object/public/${bucket}`;
   const extensions = ['jpg', 'jpeg', 'png', 'webp'];
   
   const urls: string[] = [];
-  
-  // Check for common food items
-  const commonFoodItems = [
-    {name: "doro-wot", keywords: ["doro", "wot"]},
-    {name: "rice", keywords: ["rice"]},
-    {name: "injera", keywords: ["injera"]},
-    {name: "tibs", keywords: ["tibs"]},
-    {name: "kitfo", keywords: ["kitfo"]},
-    {name: "misir", keywords: ["misir"]}
-  ];
-  
-  // Add common food items first
-  for (const food of commonFoodItems) {
-    if (food.keywords.some(keyword => 
-        itemId.toLowerCase().includes(keyword.toLowerCase()) || 
-        keyword.toLowerCase().includes(itemId.toLowerCase()))) {
-      extensions.forEach(ext => {
-        urls.push(`${baseStorageUrl}/${food.name}/${food.name}.${ext}`);
-        urls.push(`${baseStorageUrl}/${food.name}/main.${ext}`);
-        urls.push(`${baseStorageUrl}/${food.name}/image.${ext}`);
-        urls.push(`${baseStorageUrl}/${food.name}/1.${ext}`);
-        
-        // Try with item name too
-        const formattedFoodName = food.name.replace('-', '');
-        urls.push(`${baseStorageUrl}/${food.name}/${formattedFoodName}.${ext}`);
-      });
-    }
-  }
   
   // Try different patterns with different extensions
   extensions.forEach(ext => {
@@ -176,6 +149,17 @@ export const generateAlternativeUrls = (
     // Based on your storage structure, let's try the pattern we see in your bucket
     urls.push(`${baseStorageUrl}/menu-items/${itemId}/${itemId}.${ext}`);
     urls.push(`${baseStorageUrl}/${itemId}/${itemId}.${ext}`);
+    
+    // If item name is provided, try with that too
+    if (itemName) {
+      // Convert item name to kebab-case for URLs (spaces to hyphens, lowercase)
+      const formattedName = itemName.toLowerCase().replace(/\s+/g, '-');
+      urls.push(`${baseStorageUrl}/${formattedName}.${ext}`);
+      urls.push(`${baseStorageUrl}/${formattedName}/${formattedName}.${ext}`);
+      urls.push(`${baseStorageUrl}/${formattedName}/main.${ext}`);
+      urls.push(`${baseStorageUrl}/menu-items/${formattedName}.${ext}`);
+      urls.push(`${baseStorageUrl}/menu-items/${formattedName}/main.${ext}`);
+    }
   });
   
   return urls.map(url => addCacheBuster(url));
@@ -194,54 +178,45 @@ export const getDefaultFoodPlaceholder = (): string => {
  * Try to get a working image URL from multiple alternatives
  * @param restaurantId The restaurant ID  
  * @param itemId The menu item ID
+ * @param itemName Optional item name for alternative URL patterns
  * @returns Promise resolving to a working URL or null
  */
 export const findWorkingImageUrl = async (
   restaurantId: string, 
-  itemId: string
+  itemId: string,
+  itemName?: string
 ): Promise<string | null> => {
   try {
     console.log(`Finding image for item: ${itemId}`);
     
-    // Common food items with direct folders in storage
-    const commonFoodItems = [
-      {name: "doro-wot", keywords: ["doro", "wot"]},
-      {name: "rice", keywords: ["rice"]},
-      {name: "injera", keywords: ["injera"]},
-      {name: "tibs", keywords: ["tibs"]},
-      {name: "kitfo", keywords: ["kitfo"]},
-      {name: "misir", keywords: ["misir"]}
-    ];
-    
-    // Check if this item matches any common food item
-    for (const food of commonFoodItems) {
-      if (food.keywords.some(keyword => 
-          itemId.toLowerCase().includes(keyword.toLowerCase()) || 
-          keyword.toLowerCase().includes(itemId.toLowerCase()))) {
-        try {
-          console.log(`Checking direct folder for ${food.name}`);
-          const { data: files, error } = await supabase
-            .storage
-            .from('lovable-uploads')
-            .list(food.name);
-            
-          if (!error && files && files.length > 0) {
-            // Find the first image file
-            const imageFile = files.find(file => 
-              !file.name.endsWith('/') && 
-              (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png') || file.name.endsWith('.webp'))
-            );
-            
-            if (imageFile) {
-              console.log(`Found file in ${food.name} folder: ${imageFile.name}`);
-              const filePath = `${food.name}/${imageFile.name}`;
-              const url = supabase.storage.from('lovable-uploads').getPublicUrl(filePath).data.publicUrl;
-              return addCacheBuster(url);
-            }
+    // Look for potential folders based on item name if provided
+    if (itemName) {
+      // Convert item name to potential folder name
+      const formattedName = itemName.toLowerCase().replace(/\s+/g, '-');
+      
+      try {
+        console.log(`Checking folder based on item name: ${formattedName}`);
+        const { data: files, error } = await supabase
+          .storage
+          .from('lovable-uploads')
+          .list(formattedName);
+          
+        if (!error && files && files.length > 0) {
+          // Find the first image file
+          const imageFile = files.find(file => 
+            !file.name.endsWith('/') && 
+            (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png') || file.name.endsWith('.webp'))
+          );
+          
+          if (imageFile) {
+            console.log(`Found file in ${formattedName} folder: ${imageFile.name}`);
+            const filePath = `${formattedName}/${imageFile.name}`;
+            const url = supabase.storage.from('lovable-uploads').getPublicUrl(filePath).data.publicUrl;
+            return addCacheBuster(url);
           }
-        } catch (err) {
-          console.error(`Error checking ${food.name} folder:`, err);
         }
+      } catch (err) {
+        console.error(`Error checking ${formattedName} folder:`, err);
       }
     }
     
@@ -268,7 +243,7 @@ export const findWorkingImageUrl = async (
     }
     
     // If still not found, fall back to checking URLs directly
-    const urls = generateAlternativeUrls(restaurantId, itemId);
+    const urls = generateAlternativeUrls(restaurantId, itemId, itemName);
     
     console.log(`Attempting to find working image for item ${itemId} with ${urls.length} alternatives`);
     
