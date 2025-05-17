@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useEventPaymentHandler } from "./event-payment/useEventPaymentHandler";
-import { EventDetails } from "@/types/event";
+import { EventDetails, Restaurant } from "@/types/event";
 
 export const useEventDetails = (eventId: string | undefined) => {
   const [event, setEvent] = useState<EventDetails | null>(null);
@@ -42,6 +42,17 @@ export const useEventDetails = (eventId: string | undefined) => {
       if (error) {
         setError(error.message);
       } else if (data) {
+        // Create a default restaurant object if one is not returned
+        const restaurantData: Restaurant = data.restaurant || {
+          id: 'unknown',
+          name: 'Unknown Restaurant',
+          address: '',
+          city: '',
+          state: '',
+          zipcode: '',
+          description: ''
+        };
+
         // Ensure data conforms to EventDetails type
         const eventData: EventDetails = {
           id: data.id,
@@ -53,7 +64,7 @@ export const useEventDetails = (eventId: string | undefined) => {
           capacity: data.capacity,
           user_id: data.user_id,
           published: data.published,
-          restaurant: data.restaurant,
+          restaurant: restaurantData,
           cover_image: data.cover_image,
           tickets_sold: data.tickets_sold
         };

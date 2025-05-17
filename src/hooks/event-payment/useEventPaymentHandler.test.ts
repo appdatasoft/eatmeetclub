@@ -38,12 +38,13 @@ describe('useEventPaymentHandler', () => {
     user_id: 'user123',
     published: true,
     restaurant: {
+      id: 'rest123', // Add the missing required id property
       name: 'Test Restaurant',
       address: '123 Test St',
       city: 'Test City',
-      state: 'Test State', // Added missing property
-      zipcode: '12345', // Added missing property
-      description: 'Test Description' // Added missing property
+      state: 'Test State',
+      zipcode: '12345',
+      description: 'Test Description'
     },
     date: '2023-06-15',
     time: '19:00'
