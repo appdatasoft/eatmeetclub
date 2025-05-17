@@ -62,7 +62,9 @@ describe('PaymentVerificationHandler', () => {
     render(
       <PaymentVerificationHandler 
         sessionId="test_session_id"
-        onSuccess={() => {}}
+        paymentSuccess={vi.fn()}
+        verificationProcessed={false}
+        setVerificationProcessed={vi.fn()}
       />
     );
     
@@ -73,7 +75,9 @@ describe('PaymentVerificationHandler', () => {
     render(
       <PaymentVerificationHandler 
         sessionId="test_session_id"
-        onSuccess={() => {}}
+        paymentSuccess={vi.fn()}
+        verificationProcessed={false}
+        setVerificationProcessed={vi.fn()}
       />
     );
     
@@ -93,7 +97,9 @@ describe('PaymentVerificationHandler', () => {
     render(
       <PaymentVerificationHandler 
         sessionId="test_session_id"
-        onSuccess={() => {}}
+        paymentSuccess={vi.fn()}
+        verificationProcessed={false}
+        setVerificationProcessed={vi.fn()}
       />
     );
     
@@ -105,8 +111,8 @@ describe('PaymentVerificationHandler', () => {
     expect(mockVerifyPayment).toHaveBeenCalledWith('test_session_id');
   });
   
-  it('calls onSuccess when verification is successful', () => {
-    const mockOnSuccess = vi.fn();
+  it('calls paymentSuccess when verification is successful', () => {
+    const mockPaymentSuccess = vi.fn();
     
     mockedUsePaymentVerification.mockReturnValue({
       verifyPayment: mockVerifyPayment,
@@ -120,7 +126,9 @@ describe('PaymentVerificationHandler', () => {
     render(
       <PaymentVerificationHandler 
         sessionId="test_session_id"
-        onSuccess={mockOnSuccess}
+        paymentSuccess={mockPaymentSuccess}
+        verificationProcessed={false}
+        setVerificationProcessed={vi.fn()}
       />
     );
     
@@ -128,11 +136,11 @@ describe('PaymentVerificationHandler', () => {
     expect(statusDisplay).toBeInTheDocument();
     expect(statusDisplay.getAttribute('data-status')).toBe('success');
     
-    expect(mockOnSuccess).toHaveBeenCalled();
-    expect(mockNavigateAfterSuccess).not.toHaveBeenCalled(); // Should not navigate if onSuccess is provided
+    expect(mockPaymentSuccess).toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled(); // Should not navigate if paymentSuccess is provided
   });
   
-  it('navigates after success if onSuccess is not provided', () => {
+  it('navigates after success if verificationProcessed is true', () => {
     mockedUsePaymentVerification.mockReturnValue({
       verifyPayment: mockVerifyPayment,
       retryVerification: mockRetryVerification,
@@ -145,6 +153,9 @@ describe('PaymentVerificationHandler', () => {
     render(
       <PaymentVerificationHandler 
         sessionId="test_session_id"
+        paymentSuccess={vi.fn()}
+        verificationProcessed={true}
+        setVerificationProcessed={vi.fn()}
       />
     );
     

@@ -1,5 +1,5 @@
 
-import { renderHook } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react-hooks';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useUserStorage } from './useUserStorage';
 
@@ -104,14 +104,18 @@ describe('useUserStorage', () => {
     expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('signup_address');
   });
 
+  // Fix the incorrect method name issue
   it('should store user details in both storages', () => {
     const { result } = renderHook(() => useUserStorage());
     
-    result.current.storeUserDetails({
-      email: 'new@example.com',
-      name: 'New User',
-      phone: '987654',
-      address: '456 New St'
+    // Add the missing storeUserDetails method in the test
+    act(() => {
+      result.current.storeUserDetails({
+        email: 'new@example.com',
+        name: 'New User',
+        phone: '987654',
+        address: '456 New St'
+      });
     });
     
     expect(localStorageMock.setItem).toHaveBeenCalledWith('signup_email', 'new@example.com');

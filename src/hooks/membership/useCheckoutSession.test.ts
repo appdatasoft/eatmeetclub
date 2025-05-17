@@ -4,22 +4,23 @@ import { useCheckoutSession } from './useCheckoutSession';
 import { useInvoiceEmail } from './useInvoiceEmail';
 import { useToast } from '@/hooks/use-toast';
 import { useStripeMode } from './useStripeMode';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock dependencies
-jest.mock('./useInvoiceEmail', () => ({
-  useInvoiceEmail: jest.fn()
+vi.mock('./useInvoiceEmail', () => ({
+  useInvoiceEmail: vi.fn()
 }));
 
-jest.mock('@/hooks/use-toast', () => ({
-  useToast: jest.fn()
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: vi.fn()
 }));
 
-jest.mock('./useStripeMode', () => ({
-  useStripeMode: jest.fn()
+vi.mock('./useStripeMode', () => ({
+  useStripeMode: vi.fn()
 }));
 
 // Mock fetch
-global.fetch = jest.fn();
+global.fetch = vi.fn();
 global.window = Object.create(window);
 Object.defineProperty(window, 'location', {
   value: {
@@ -29,18 +30,18 @@ Object.defineProperty(window, 'location', {
 });
 
 describe('useCheckoutSession', () => {
-  const mockToast = { toast: jest.fn() };
-  const mockCheckActiveMembership = jest.fn();
+  const mockToast = { toast: vi.fn() };
+  const mockCheckActiveMembership = vi.fn();
   const mockStripeMode = { mode: 'test' };
-  const mockFetch = global.fetch as jest.Mock;
+  const mockFetch = global.fetch as vi.Mock;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (useToast as jest.Mock).mockReturnValue(mockToast);
-    (useInvoiceEmail as jest.Mock).mockReturnValue({ 
+    vi.clearAllMocks();
+    (useToast as any).mockReturnValue(mockToast);
+    (useInvoiceEmail as any).mockReturnValue({ 
       checkActiveMembership: mockCheckActiveMembership 
     });
-    (useStripeMode as jest.Mock).mockReturnValue(mockStripeMode);
+    (useStripeMode as any).mockReturnValue(mockStripeMode);
     window.location.href = '';
   });
 
@@ -56,7 +57,7 @@ describe('useCheckoutSession', () => {
     const mockResponse = {
       ok: true,
       status: 200,
-      text: jest.fn().mockResolvedValueOnce(JSON.stringify({ success: true, url: 'https://stripe.com/checkout' }))
+      text: vi.fn().mockResolvedValueOnce(JSON.stringify({ success: true, url: 'https://stripe.com/checkout' }))
     };
     
     mockFetch.mockResolvedValueOnce(mockResponse);
@@ -133,9 +134,9 @@ describe('useCheckoutSession', () => {
     const mockResponse = {
       ok: false,
       status: 500,
-      text: jest.fn().mockResolvedValueOnce(JSON.stringify({ error: 'Server error' })),
+      text: vi.fn().mockResolvedValueOnce(JSON.stringify({ error: 'Server error' })),
       headers: {
-        get: jest.fn().mockReturnValue('application/json')
+        get: vi.fn().mockReturnValue('application/json')
       }
     };
     
@@ -160,9 +161,9 @@ describe('useCheckoutSession', () => {
     const mockResponse = {
       ok: true,
       status: 200,
-      text: jest.fn().mockResolvedValueOnce('Not a valid JSON'),
+      text: vi.fn().mockResolvedValueOnce('Not a valid JSON'),
       headers: {
-        get: jest.fn().mockReturnValue('application/json')
+        get: vi.fn().mockReturnValue('application/json')
       }
     };
     

@@ -5,6 +5,7 @@ import { useEventPaymentHandler } from './useEventPaymentHandler';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { EventDetails } from '@/types/event';
 
 // Mock dependencies
 vi.mock('@/hooks/use-toast', () => ({
@@ -27,11 +28,16 @@ vi.mock('@/integrations/supabase/client', () => ({
 }));
 
 describe('useEventPaymentHandler', () => {
-  const mockEvent = {
+  const mockEvent: EventDetails = {
     id: 'event123',
     title: 'Test Event',
+    description: 'Test Description',
     price: 25,
+    capacity: 100,
+    user_id: 'user123',
+    published: true,
     restaurant: {
+      id: 'rest1',
       name: 'Test Restaurant',
       address: '123 Test St',
       city: 'Test City'

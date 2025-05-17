@@ -35,7 +35,19 @@ describe('useVerificationRequest', () => {
         'session_123',
         'test@example.com',
         'Test User',
-        { phone: '123456', address: '123 Test St' }
+        { 
+          phone: '123456', 
+          address: '123 Test St',
+          isSubscription: true,
+          forceCreateUser: false,
+          sendPasswordEmail: true,
+          createMembershipRecord: true,
+          sendInvoiceEmail: true,
+          preventDuplicateEmails: false,
+          simplifiedVerification: false,
+          safeMode: false,
+          forceSendEmails: false
+        }
       );
     });
     
@@ -67,7 +79,20 @@ describe('useVerificationRequest', () => {
         await result.current.sendVerificationRequest(
           'session_123',
           'test@example.com',
-          'Test User'
+          'Test User',
+          {
+            phone: null,
+            address: null,
+            isSubscription: true,
+            forceCreateUser: false,
+            sendPasswordEmail: true,
+            createMembershipRecord: true,
+            sendInvoiceEmail: true,
+            preventDuplicateEmails: false,
+            simplifiedVerification: false,
+            safeMode: false,
+            forceSendEmails: false
+          }
         );
       } catch (e) {
         error = e;
@@ -91,7 +116,20 @@ describe('useVerificationRequest', () => {
         await result.current.sendVerificationRequest(
           'session_123',
           'test@example.com',
-          'Test User'
+          'Test User',
+          {
+            phone: null,
+            address: null,
+            isSubscription: true,
+            forceCreateUser: false,
+            sendPasswordEmail: true,
+            createMembershipRecord: true,
+            sendInvoiceEmail: true,
+            preventDuplicateEmails: false,
+            simplifiedVerification: false,
+            safeMode: false,
+            forceSendEmails: false
+          }
         );
       } catch (e) {
         error = e;
@@ -115,7 +153,20 @@ describe('useVerificationRequest', () => {
         await result.current.sendVerificationRequest(
           'session_123',
           'test@example.com',
-          'Test User'
+          'Test User',
+          {
+            phone: null,
+            address: null,
+            isSubscription: true,
+            forceCreateUser: false,
+            sendPasswordEmail: true,
+            createMembershipRecord: true,
+            sendInvoiceEmail: true,
+            preventDuplicateEmails: false,
+            simplifiedVerification: false,
+            safeMode: false,
+            forceSendEmails: false
+          }
         );
       } catch (e) {
         // Ignore error

@@ -1,5 +1,6 @@
 
 import { renderHook, act } from '@testing-library/react-hooks';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { usePaymentVerification } from './usePaymentVerification';
 import { useToast } from '@/hooks/use-toast';
 import { useVerificationRequest } from './payment-verification/useVerificationRequest';
@@ -7,54 +8,55 @@ import { useBackupProcessing } from './payment-verification/useBackupProcessing'
 import { useUserStorage } from './payment-verification/useUserStorage';
 
 // Mock dependencies
-jest.mock('@/hooks/use-toast', () => ({
-  useToast: jest.fn()
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: vi.fn()
 }));
 
-jest.mock('./payment-verification/useVerificationRequest', () => ({
-  useVerificationRequest: jest.fn()
+vi.mock('./payment-verification/useVerificationRequest', () => ({
+  useVerificationRequest: vi.fn()
 }));
 
-jest.mock('./payment-verification/useBackupProcessing', () => ({
-  useBackupProcessing: jest.fn()
+vi.mock('./payment-verification/useBackupProcessing', () => ({
+  useBackupProcessing: vi.fn()
 }));
 
-jest.mock('./payment-verification/useUserStorage', () => ({
-  useUserStorage: jest.fn()
+vi.mock('./payment-verification/useUserStorage', () => ({
+  useUserStorage: vi.fn()
 }));
 
 describe('usePaymentVerification', () => {
-  const mockSetIsProcessing = jest.fn();
-  const mockToast = { toast: jest.fn() };
-  const mockSendVerificationRequest = jest.fn();
-  const mockHandleSimplifiedVerification = jest.fn();
-  const mockSendBackupEmails = jest.fn();
-  const mockShowVerificationToasts = jest.fn();
-  const mockGetUserDetails = jest.fn();
-  const mockClearUserDetails = jest.fn();
+  const mockSetIsProcessing = vi.fn();
+  const mockToast = { toast: vi.fn() };
+  const mockSendVerificationRequest = vi.fn();
+  const mockHandleSimplifiedVerification = vi.fn();
+  const mockSendBackupEmails = vi.fn();
+  const mockShowVerificationToasts = vi.fn();
+  const mockGetUserDetails = vi.fn();
+  const mockClearUserDetails = vi.fn();
   
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
-    (useToast as jest.Mock).mockReturnValue(mockToast);
+    (useToast as any).mockReturnValue(mockToast);
     
-    (useVerificationRequest as jest.Mock).mockReturnValue({
+    (useVerificationRequest as any).mockReturnValue({
       sendVerificationRequest: mockSendVerificationRequest,
       isVerifying: false,
       verificationError: null,
       verificationAttempts: 0,
-      setVerificationAttempts: jest.fn()
+      setVerificationAttempts: vi.fn()
     });
     
-    (useBackupProcessing as jest.Mock).mockReturnValue({
+    (useBackupProcessing as any).mockReturnValue({
       handleSimplifiedVerification: mockHandleSimplifiedVerification,
       sendBackupEmails: mockSendBackupEmails,
       showVerificationToasts: mockShowVerificationToasts
     });
     
-    (useUserStorage as jest.Mock).mockReturnValue({
+    (useUserStorage as any).mockReturnValue({
       getUserDetails: mockGetUserDetails,
-      clearUserDetails: mockClearUserDetails
+      clearUserDetails: mockClearUserDetails,
+      storeUserDetails: vi.fn()
     });
   });
 
