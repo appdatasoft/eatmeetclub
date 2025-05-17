@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@/lib/test-setup';
 import { describe, it, expect, vi } from 'vitest';
 import IngredientsInput from '../IngredientsInput';
 
@@ -75,13 +75,20 @@ describe('IngredientsInput Component', () => {
     // Click the remove button for Pepper
     const removeButtons = screen.getAllByRole('button');
     // Find the button next to 'Pepper' text
-    const pepperRemoveButton = Array.from(removeButtons).find(
-      button => button.parentElement?.textContent?.includes('Pepper')
+    const pepperButton = Array.from(removeButtons).find(
+      button => {
+        const element = button as HTMLElement;
+        return element.parentElement?.textContent?.includes('Pepper');
+      }
     );
     
-    fireEvent.click(pepperRemoveButton!);
-    
-    // Check if onIngredientsChange was called with correct array
-    expect(mockOnChange).toHaveBeenCalledWith(['Salt', 'Sugar']);
+    if (pepperButton) {
+      fireEvent.click(pepperButton);
+      
+      // Check if onIngredientsChange was called with correct array
+      expect(mockOnChange).toHaveBeenCalledWith(['Salt', 'Sugar']);
+    } else {
+      throw new Error('Pepper remove button not found');
+    }
   });
 });
