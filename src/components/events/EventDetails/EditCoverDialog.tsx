@@ -33,7 +33,7 @@ const EditCoverDialog: React.FC<EditCoverDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-background">
+      <DialogContent className="bg-background border shadow-lg" style={{ backgroundColor: "white" }}>
         <DialogHeader>
           <DialogTitle>Edit Cover Image</DialogTitle>
           <DialogDescription>

@@ -43,11 +43,10 @@ const EventCard: React.FC<EventCardProps> = ({
       <div className="relative h-48">
         <Link to={`/event/${id}`}>
           {image.startsWith('data:') ? (
-            // SVG placeholder case
-            <div
-              className="h-full w-full bg-gray-100 flex items-center justify-center"
-              dangerouslySetInnerHTML={{ __html: atob(image.split(',')[1]) }}
-            />
+            // SVG placeholder case - use as src instead of dangerouslySetInnerHTML
+            <div className="h-full w-full bg-gray-100 flex items-center justify-center">
+              <img src={image} alt={title} className="h-full w-full object-cover" />
+            </div>
           ) : (
             // Use SupabaseImage for actual images
             <SupabaseImage
