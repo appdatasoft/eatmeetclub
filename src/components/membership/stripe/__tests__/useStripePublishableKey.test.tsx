@@ -30,7 +30,7 @@ describe('useStripePublishableKey Hook', () => {
   });
   
   it('should return loading state initially', () => {
-    (global.fetch as jest.Mock).mockImplementationOnce(() => 
+    (global.fetch as any).mockImplementationOnce(() => 
       new Promise(resolve => setTimeout(() => resolve({
         ok: true,
         json: () => Promise.resolve({ key: 'test_publishable_key' })
@@ -45,7 +45,7 @@ describe('useStripePublishableKey Hook', () => {
   });
   
   it('should fetch and return Stripe key', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ key: 'test_publishable_key' })
     });
@@ -75,7 +75,7 @@ describe('useStripePublishableKey Hook', () => {
   });
   
   it('should handle fetch error', async () => {
-    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+    (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
     
     const { result, waitForNextUpdate } = renderHook(() => useStripePublishableKey());
     
@@ -88,7 +88,7 @@ describe('useStripePublishableKey Hook', () => {
   });
   
   it('should handle API error response', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    (global.fetch as any).mockResolvedValueOnce({
       ok: false,
       status: 500,
       statusText: 'Internal Server Error'
@@ -105,7 +105,7 @@ describe('useStripePublishableKey Hook', () => {
   
   it('should retry on error if retryCount is less than maxRetries', async () => {
     // First call fails
-    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+    (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
     
     const { result, waitForNextUpdate } = renderHook(() => useStripePublishableKey());
     
@@ -117,7 +117,7 @@ describe('useStripePublishableKey Hook', () => {
     expect(result.current.error).toBe('Network error');
     
     // Setup second attempt to succeed
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ key: 'retry_success_key' })
     });
