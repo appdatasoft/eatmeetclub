@@ -1,6 +1,6 @@
 
 import { vi } from 'vitest';
-import { EventDetails } from '@/types/event';
+import { EventDetails } from '@/hooks/types/eventTypes';
 
 // Create mock event data for tests
 export const createMockEvent = (): EventDetails => ({
@@ -21,7 +21,8 @@ export const createMockEvent = (): EventDetails => ({
     description: 'Test Description'
   },
   date: '2023-06-15',
-  time: '19:00'
+  time: '19:00',
+  tickets_sold: 0
 });
 
 // Create a mock localStorage for tests
