@@ -118,9 +118,9 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
         } else {
           console.log(`No matching files found for item ${item.name} in menu-items directory`);
           
-          // Default: Use a food-related image from Unsplash as fallback
-          const fallbackImageUrl = `https://source.unsplash.com/300x300/?food,${encodeURIComponent(item.name)}`;
-          console.log(`Using fallback image for ${item.name}:`, fallbackImageUrl);
+          // Use predefined static fallback images instead of dynamic Unsplash URLs
+          const fallbackImageUrl = getStaticFallbackImage(item.name);
+          console.log(`Using static fallback image for ${item.name}:`, fallbackImageUrl);
           
           media = [{
             url: fallbackImageUrl,
@@ -136,10 +136,10 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
   if (media.length > 0) {
     console.log(`Final media array for ${item.name} has ${media.length} items:`, media.map(m => m.url));
   } else {
-    console.log(`No media found for item ${item.name}, using fallback image`);
+    console.log(`No media found for item ${item.name}, using static fallback image`);
     
-    // Always ensure at least one placeholder image
-    const fallbackImageUrl = `https://source.unsplash.com/300x300/?food,${encodeURIComponent(item.name)}`;
+    // Always ensure at least one placeholder image using static URLs
+    const fallbackImageUrl = getStaticFallbackImage(item.name);
     media = [{
       url: fallbackImageUrl,
       type: 'image'
@@ -147,6 +147,28 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
   }
   
   return media;
+}
+
+/**
+ * Returns a static fallback image URL based on the item name
+ * Using predefined Unsplash images to avoid the dynamic API calls that can fail
+ */
+function getStaticFallbackImage(itemName: string): string {
+  // Array of reliable, pre-cached food images from Unsplash
+  const fallbackImages = [
+    "https://images.unsplash.com/photo-1546241072-48010ad2862c?auto=format&fit=crop&w=300&h=300", // Generic food
+    "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=300&h=300", // Food closeup
+    "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop&w=300&h=300", // Plate of food
+    "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=300&h=300", // Colorful food
+    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=300&h=300"  // Vegetable dish
+  ];
+  
+  // Use the first character of the item name as a simple hash to pick a consistent image
+  const firstChar = (itemName || "").charAt(0).toLowerCase();
+  const charCode = firstChar.charCodeAt(0) || 0;
+  const index = charCode % fallbackImages.length;
+  
+  return fallbackImages[index];
 }
 
 /**

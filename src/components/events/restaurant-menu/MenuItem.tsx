@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { MenuItem } from "./types";
 import MenuItemMedia from "@/components/restaurants/menu/MenuItemMedia";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Image, ImageOff } from "lucide-react";
 
 interface MenuItemProps {
@@ -43,7 +43,7 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
     }
   };
   
-  // Get a random placeholder from Unsplash if needed
+  // Get a reliable placeholder image from a predefined list instead of dynamic Unsplash URLs
   const getPlaceholderImage = () => {
     const placeholders = [
       "https://images.unsplash.com/photo-1546241072-48010ad2862c?auto=format&fit=crop&w=300&h=300",
@@ -84,7 +84,7 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
                   onError={(e) => {
                     console.error(`Image error for ${item.name}:`, item.media[0].url);
                     
-                    // Try loading a placeholder image instead
+                    // Use a static placeholder from our predefined list
                     const placeholderUrl = getPlaceholderImage();
                     console.log(`Using food placeholder for ${item.name}:`, placeholderUrl);
                     e.currentTarget.src = placeholderUrl;
@@ -147,12 +147,14 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
         </div>
       </div>
       
-      {/* Full Media Gallery Dialog */}
+      {/* Full Media Gallery Dialog - Fixed with DialogTitle for accessibility */}
       <Dialog open={showAllPhotos} onOpenChange={setShowAllPhotos}>
         <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-medium">{item.name}</DialogTitle>
+          </DialogHeader>
+          
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">{item.name}</h3>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {hasMedia && item.media.map((media, idx) => (
                 <div key={idx} className="rounded-md overflow-hidden">
