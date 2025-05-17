@@ -29,11 +29,6 @@ const MediaGalleryDialog: React.FC<MediaGalleryDialogProps> = ({ item, open, onO
               opts={{
                 startIndex: activeIndex
               }}
-              onSelect={(api) => {
-                if (api) {
-                  setActiveIndex(api.selectedScrollSnap());
-                }
-              }}
             >
               <CarouselContent>
                 {item.media.map((media, idx) => (
