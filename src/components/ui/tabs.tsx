@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
 
@@ -50,4 +51,62 @@ const TabsContent = React.forwardRef<
 ))
 TabsContent.displayName = TabsPrimitive.Content.displayName
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+// Custom large tab variant
+const TabsLarge = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root>
+>(({ className, ...props }, ref) => (
+  <Tabs
+    ref={ref}
+    className={cn("w-full", className)}
+    {...props}
+  />
+))
+TabsLarge.displayName = "TabsLarge"
+
+const TabsListLarge = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
+>(({ className, ...props }, ref) => (
+  <TabsList
+    ref={ref}
+    className={cn(
+      "flex w-full justify-center gap-4 bg-transparent p-0",
+      className
+    )}
+    {...props}
+  />
+))
+TabsListLarge.displayName = "TabsListLarge"
+
+const TabsTriggerLarge = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
+>(({ className, ...props }, ref) => (
+  <TabsTrigger
+    ref={ref}
+    className={cn(
+      "flex items-center gap-2 border-b-2 border-transparent px-4 py-3 text-lg font-medium rounded-none data-[state=active]:border-brand-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none",
+      className
+    )}
+    {...props}
+  />
+))
+TabsTriggerLarge.displayName = "TabsTriggerLarge"
+
+const TabsContentLarge = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
+>(({ className, ...props }, ref) => (
+  <TabsContent
+    ref={ref}
+    className={cn(
+      "mt-6 p-0 animate-in fade-in-50",
+      className
+    )}
+    {...props}
+  />
+))
+TabsContentLarge.displayName = "TabsContentLarge"
+
+export { Tabs, TabsList, TabsTrigger, TabsContent, TabsLarge, TabsListLarge, TabsTriggerLarge, TabsContentLarge }
