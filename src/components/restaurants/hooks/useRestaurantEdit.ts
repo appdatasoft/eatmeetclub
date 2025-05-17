@@ -23,6 +23,7 @@ export const useRestaurantEdit = (onSave: () => void, onClose: () => void) => {
           zipcode: data.zipcode,
           phone: data.phone,
           website: data.website || null,
+          description: data.description || null, // Ensure description gets saved
         })
         .eq("id", restaurantId);
 

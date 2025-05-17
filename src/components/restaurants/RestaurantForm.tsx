@@ -1,3 +1,4 @@
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -9,6 +10,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { restaurantFormSchema, RestaurantFormValues } from "./schema/restaurantFormSchema";
 import { Restaurant } from "./types/restaurant";
 import { useEffect } from "react";
@@ -37,6 +39,7 @@ const RestaurantForm = ({
       zipcode: "",
       phone: "",
       website: "",
+      description: "",
     },
   });
 
@@ -52,6 +55,7 @@ const RestaurantForm = ({
         zipcode: restaurant.zipcode || "",
         phone: restaurant.phone,
         website: restaurant.website || "",
+        description: restaurant.description || "",
       });
     }
   }, [restaurant, isOpen, form]);
@@ -87,6 +91,24 @@ const RestaurantForm = ({
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Describe the restaurant, its atmosphere, specialties, etc." 
+                  className="min-h-[100px]" 
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

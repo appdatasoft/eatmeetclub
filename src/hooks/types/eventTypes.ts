@@ -1,4 +1,16 @@
 
+export interface Restaurant {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zipcode: string;
+  description: string;
+  phone?: string;
+  website?: string;
+}
+
 export interface EventDetails {
   id: string;
   title: string;
@@ -7,16 +19,8 @@ export interface EventDetails {
   time: string;
   price: number;
   capacity: number;
-  restaurant: {
-    id?: string;
-    name: string;
-    address: string;
-    city: string;
-    state: string;
-    zipcode: string;
-    description: string;
-  };
-  tickets_sold?: number;
+  restaurant: Restaurant;
+  tickets_sold: number;
   user_id: string;
   cover_image?: string;
   published: boolean;
