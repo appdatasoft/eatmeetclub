@@ -1,22 +1,26 @@
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@/lib/test-setup';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MembershipPaymentForm from './MembershipPaymentForm';
 import { useForm, FormProvider } from 'react-hook-form';
 
 // Mock child components
-jest.mock('./MembershipBenefits', () => () => <div data-testid="membership-benefits">Benefits</div>);
-jest.mock('./MembershipFormFields', () => ({ form, disabled }: any) => (
+vi.mock('./MembershipBenefits', () => ({
+  default: () => <div data-testid="membership-benefits">Benefits</div>
+}));
+vi.mock('./MembershipFormFields', () => ({
+  form, disabled }: any) => (
   <div data-testid="membership-form-fields" data-disabled={disabled}>Form Fields</div>
 ));
-jest.mock('./FormActions', () => ({ onCancel, isProcessing, formSubmitted }: any) => (
+vi.mock('./FormActions', () => ({
+  onCancel, isProcessing, formSubmitted }: any) => (
   <div data-testid="form-actions" data-processing={isProcessing} data-submitted={formSubmitted}>
     <button onClick={onCancel} data-testid="cancel-button">Cancel</button>
   </div>
 ));
-jest.mock('./PaymentSection', () => (
-  { clientSecret, email, isProcessing, onPaymentSuccess, onPaymentError }: any
-) => (
+vi.mock('./PaymentSection', () => ({
+  clientSecret, email, isProcessing, onPaymentSuccess, onPaymentError }: any) => (
   <div data-testid="payment-section" data-client-secret={clientSecret} data-email={email} data-processing={isProcessing}>
     <button onClick={() => onPaymentSuccess()} data-testid="success-button">Success</button>
     <button onClick={() => onPaymentError('Test error')} data-testid="error-button">Error</button>
@@ -24,7 +28,7 @@ jest.mock('./PaymentSection', () => (
 ));
 
 // Mock Form component from shadcn/ui
-jest.mock('@/components/ui/form', () => ({
+vi.mock('@/components/ui/form', () => ({
   Form: ({ children }: any) => children
 }));
 
@@ -43,10 +47,10 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => {
 };
 
 describe('MembershipPaymentForm', () => {
-  const mockOnSubmit = jest.fn();
-  const mockOnCancel = jest.fn();
-  const mockOnPaymentSuccess = jest.fn();
-  const mockOnPaymentError = jest.fn();
+  const mockOnSubmit = vi.fn();
+  const mockOnCancel = vi.fn();
+  const mockOnPaymentSuccess = vi.fn();
+  const mockOnPaymentError = vi.fn();
   
   const defaultProps = {
     membershipFee: 25,
@@ -59,7 +63,7 @@ describe('MembershipPaymentForm', () => {
   };
   
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders all form sections', () => {

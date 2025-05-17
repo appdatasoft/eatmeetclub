@@ -1,15 +1,16 @@
 
 import { renderHook, act } from '@testing-library/react-hooks';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useVerificationRequest } from './useVerificationRequest';
 
 // Mock fetch
-global.fetch = jest.fn();
+global.fetch = vi.fn();
 
 describe('useVerificationRequest', () => {
-  const mockFetch = global.fetch as jest.Mock;
+  const mockFetch = global.fetch as vi.Mock;
   
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should initialize with default state', () => {
@@ -23,7 +24,7 @@ describe('useVerificationRequest', () => {
   it('should send verification request successfully', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: jest.fn().mockResolvedValueOnce({ success: true, userId: 'user_123' })
+      json: vi.fn().mockResolvedValueOnce({ success: true, userId: 'user_123' })
     });
     
     const { result } = renderHook(() => useVerificationRequest());
@@ -55,7 +56,7 @@ describe('useVerificationRequest', () => {
   it('should handle verification request failure', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
-      json: jest.fn().mockResolvedValueOnce({ success: false, message: 'Verification failed' })
+      json: vi.fn().mockResolvedValueOnce({ success: false, message: 'Verification failed' })
     });
     
     const { result } = renderHook(() => useVerificationRequest());

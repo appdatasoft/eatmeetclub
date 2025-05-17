@@ -1,211 +1,153 @@
 
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, screen } from '@/lib/test-setup';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PaymentVerificationHandler from './PaymentVerificationHandler';
-import { useToast } from '@/hooks/use-toast';
-import usePaymentVerification from '@/hooks/membership/usePaymentVerification';
-import { useBackupEmail } from '@/hooks/membership/useBackupEmail';
-import { useWelcomeEmail } from '@/hooks/membership/useWelcomeEmail';
 
-// Mock dependencies
-jest.mock('@/hooks/use-toast', () => ({
-  useToast: jest.fn()
+// Mock hooks
+vi.mock('@/hooks/membership/usePaymentVerification', () => ({
+  usePaymentVerification: vi.fn()
 }));
 
-jest.mock('@/hooks/membership/usePaymentVerification', () => ({
-  __esModule: true,
-  default: jest.fn()
+// Mock components
+vi.mock('./PaymentStatusDisplay', () => ({
+  default: ({ status, error }: any) => (
+    <div data-testid="payment-status" data-status={status} data-error={error}>
+      Payment Status Display
+    </div>
+  )
 }));
 
-jest.mock('@/hooks/membership/useBackupEmail', () => ({
-  useBackupEmail: jest.fn()
-}));
+// Mock global fetch
+global.fetch = vi.fn();
 
-jest.mock('@/hooks/membership/useWelcomeEmail', () => ({
-  useWelcomeEmail: jest.fn()
-}));
-
-// Mock LocalStorage
-const mockLocalStorageData: Record<string, string> = {};
-const localStorageMock = {
-  getItem: jest.fn((key) => mockLocalStorageData[key] ?? null),
-  setItem: jest.fn((key, value) => { mockLocalStorageData[key] = value; }),
-  removeItem: jest.fn((key) => { delete mockLocalStorageData[key]; }),
-  clear: jest.fn(() => { Object.keys(mockLocalStorageData).forEach(key => delete mockLocalStorageData[key]); }),
-};
-Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+// Get references to the mocked functions
+const mockedUsePaymentVerification = vi.mocked(
+  require('@/hooks/membership/usePaymentVerification').usePaymentVerification
+);
 
 describe('PaymentVerificationHandler', () => {
-  const mockToast = { toast: jest.fn() };
-  const mockVerifyPayment = jest.fn();
-  const mockSendDirectBackupEmail = jest.fn();
-  const mockSendWelcomeEmail = jest.fn();
-  const mockSetVerificationProcessed = jest.fn();
+  const mockVerifyPayment = vi.fn();
+  const mockRetryVerification = vi.fn();
+  const mockNavigate = vi.fn();
   
   beforeEach(() => {
-    jest.clearAllMocks();
-    Object.keys(mockLocalStorageData).forEach(key => delete mockLocalStorageData[key]);
+    vi.clearAllMocks();
     
-    // Setup default test data
-    mockLocalStorageData['signup_email'] = 'test@example.com';
-    mockLocalStorageData['signup_name'] = 'Test User';
+    // Mock localStorage
+    const mockLocalStorage = {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    };
     
-    (useToast as jest.Mock).mockReturnValue(mockToast);
-    (usePaymentVerification as jest.Mock).mockReturnValue({
+    Object.defineProperty(window, 'localStorage', {
+      value: mockLocalStorage,
+      writable: true
+    });
+    
+    // Mock usePaymentVerification hook
+    mockedUsePaymentVerification.mockReturnValue({
       verifyPayment: mockVerifyPayment,
-      isVerifying: false,
-      verificationAttempts: 0,
-      verificationError: null
-    });
-    (useBackupEmail as jest.Mock).mockReturnValue({
-      sendDirectBackupEmail: mockSendDirectBackupEmail
-    });
-    (useWelcomeEmail as jest.Mock).mockReturnValue({
-      sendWelcomeEmail: mockSendWelcomeEmail
+      retryVerification: mockRetryVerification,
+      isProcessing: false,
+      verificationError: null,
+      verificationStatus: 'idle',
+      navigateAfterSuccess: mockNavigate
     });
   });
-
-  it('does not verify payment if verification already processed', () => {
+  
+  it('renders correctly with idle state', () => {
     render(
-      <PaymentVerificationHandler
-        sessionId="session_123"
-        paymentSuccess={true}
-        verificationProcessed={true}
-        setVerificationProcessed={mockSetVerificationProcessed}
+      <PaymentVerificationHandler 
+        sessionId="test_session_id"
+        onSuccess={() => {}}
       />
     );
     
-    expect(mockVerifyPayment).not.toHaveBeenCalled();
+    expect(screen.getByTestId('payment-status')).toBeInTheDocument();
   });
-
-  it('does not verify payment if session ID is missing', () => {
+  
+  it('calls verifyPayment on mount if sessionId is provided', () => {
     render(
-      <PaymentVerificationHandler
-        sessionId={null}
-        paymentSuccess={true}
-        verificationProcessed={false}
-        setVerificationProcessed={mockSetVerificationProcessed}
+      <PaymentVerificationHandler 
+        sessionId="test_session_id"
+        onSuccess={() => {}}
       />
     );
     
-    expect(mockVerifyPayment).not.toHaveBeenCalled();
+    expect(mockVerifyPayment).toHaveBeenCalledWith('test_session_id');
   });
-
-  it('shows an error and marks as processed when email is missing', () => {
-    // Clear stored email
-    delete mockLocalStorageData['signup_email'];
-    
-    render(
-      <PaymentVerificationHandler
-        sessionId="session_123"
-        paymentSuccess={true}
-        verificationProcessed={false}
-        setVerificationProcessed={mockSetVerificationProcessed}
-      />
-    );
-    
-    expect(mockToast.toast).toHaveBeenCalledWith(expect.objectContaining({ 
-      title: "Email validation failed",
-      variant: "destructive",
-    }));
-    expect(mockSetVerificationProcessed).toHaveBeenCalledWith(true);
-    expect(mockVerifyPayment).not.toHaveBeenCalled();
-  });
-
-  it('verifies payment successfully with valid data', () => {
-    mockVerifyPayment.mockResolvedValueOnce(true);
-    
-    render(
-      <PaymentVerificationHandler
-        sessionId="session_123"
-        paymentSuccess={true}
-        verificationProcessed={false}
-        setVerificationProcessed={mockSetVerificationProcessed}
-      />
-    );
-    
-    expect(mockToast.toast).toHaveBeenCalledWith(expect.objectContaining({ 
-      title: "Verifying payment"
-    }));
-    
-    expect(mockVerifyPayment).toHaveBeenCalledWith("session_123", expect.objectContaining({
-      forceCreateUser: true,
-      sendPasswordEmail: true,
-      createMembershipRecord: true,
-      sendInvoiceEmail: true,
-      simplifiedVerification: false,
-      retry: true,
-      forceSendEmails: true
-    }));
-  });
-
-  it('sends welcome email after successful verification', async () => {
-    mockVerifyPayment.mockResolvedValueOnce(true);
-    mockSendWelcomeEmail.mockResolvedValueOnce(true);
-    
-    render(
-      <PaymentVerificationHandler
-        sessionId="session_123"
-        paymentSuccess={true}
-        verificationProcessed={false}
-        setVerificationProcessed={mockSetVerificationProcessed}
-      />
-    );
-    
-    // Wait for async operations
-    await new Promise(resolve => setTimeout(resolve, 0));
-    
-    expect(mockSendWelcomeEmail).toHaveBeenCalledWith(
-      'test@example.com',
-      'Test User',
-      'session_123'
-    );
-    
-    expect(mockToast.toast).toHaveBeenCalledWith(expect.objectContaining({ 
-      title: "Welcome to our membership!"
-    }));
-    
-    expect(mockSetVerificationProcessed).toHaveBeenCalledWith(true);
-    expect(sessionStorage.getItem('checkout_initiated')).toBe(null);
-  });
-
-  it('sends backup emails when max verification attempts reached', async () => {
-    // Mock verification attempts exceeded
-    (usePaymentVerification as jest.Mock).mockReturnValue({
-      verifyPayment: mockVerifyPayment.mockResolvedValueOnce(false),
-      isVerifying: false,
-      verificationAttempts: 3,
-      verificationError: null
+  
+  it('displays correct status and passes error to PaymentStatusDisplay', () => {
+    mockedUsePaymentVerification.mockReturnValue({
+      verifyPayment: mockVerifyPayment,
+      retryVerification: mockRetryVerification,
+      isProcessing: true,
+      verificationError: 'Test error',
+      verificationStatus: 'error',
+      navigateAfterSuccess: mockNavigate
     });
     
     render(
-      <PaymentVerificationHandler
-        sessionId="session_123"
-        paymentSuccess={true}
-        verificationProcessed={false}
-        setVerificationProcessed={mockSetVerificationProcessed}
+      <PaymentVerificationHandler 
+        sessionId="test_session_id"
+        onSuccess={() => {}}
       />
     );
     
-    // Wait for async operations
-    await new Promise(resolve => setTimeout(resolve, 0));
+    const statusDisplay = screen.getByTestId('payment-status');
+    expect(statusDisplay).toBeInTheDocument();
+    expect(statusDisplay.getAttribute('data-status')).toBe('error');
     
-    expect(mockToast.toast).toHaveBeenCalledWith(expect.objectContaining({ 
-      title: "Verification taking longer than expected"
-    }));
+    expect(statusDisplay.getAttribute('data-error')).toBe('Test error');
+    expect(mockVerifyPayment).toHaveBeenCalledWith('test_session_id');
+  });
+  
+  it('calls onSuccess when verification is successful', () => {
+    const mockOnSuccess = vi.fn();
     
-    expect(mockSendDirectBackupEmail).toHaveBeenCalledWith(
-      'test@example.com',
-      'Test User',
-      'session_123'
+    mockedUsePaymentVerification.mockReturnValue({
+      verifyPayment: mockVerifyPayment,
+      retryVerification: mockRetryVerification,
+      isProcessing: false,
+      verificationError: null,
+      verificationStatus: 'success',
+      navigateAfterSuccess: mockNavigate
+    });
+    
+    render(
+      <PaymentVerificationHandler 
+        sessionId="test_session_id"
+        onSuccess={mockOnSuccess}
+      />
     );
     
-    expect(mockSendWelcomeEmail).toHaveBeenCalledWith(
-      'test@example.com',
-      'Test User',
-      'session_123'
+    const statusDisplay = screen.getByTestId('payment-status');
+    expect(statusDisplay).toBeInTheDocument();
+    expect(statusDisplay.getAttribute('data-status')).toBe('success');
+    
+    expect(mockOnSuccess).toHaveBeenCalled();
+    expect(mockNavigateAfterSuccess).not.toHaveBeenCalled(); // Should not navigate if onSuccess is provided
+  });
+  
+  it('navigates after success if onSuccess is not provided', () => {
+    mockedUsePaymentVerification.mockReturnValue({
+      verifyPayment: mockVerifyPayment,
+      retryVerification: mockRetryVerification,
+      isProcessing: false,
+      verificationError: null,
+      verificationStatus: 'success',
+      navigateAfterSuccess: mockNavigate
+    });
+    
+    render(
+      <PaymentVerificationHandler 
+        sessionId="test_session_id"
+      />
     );
     
-    expect(mockSetVerificationProcessed).toHaveBeenCalledWith(true);
+    expect(mockNavigate).toHaveBeenCalled();
   });
 });

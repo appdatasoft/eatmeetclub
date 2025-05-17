@@ -1,30 +1,31 @@
 
 import { renderHook } from '@testing-library/react-hooks';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useUserStorage } from './useUserStorage';
 
 // Mock LocalStorage
 const mockLocalStorageData: Record<string, string> = {};
 const localStorageMock = {
-  getItem: jest.fn((key) => mockLocalStorageData[key] ?? null),
-  setItem: jest.fn((key, value) => { mockLocalStorageData[key] = value; }),
-  removeItem: jest.fn((key) => { delete mockLocalStorageData[key]; }),
-  clear: jest.fn(() => { Object.keys(mockLocalStorageData).forEach(key => delete mockLocalStorageData[key]); }),
+  getItem: vi.fn((key) => mockLocalStorageData[key] ?? null),
+  setItem: vi.fn((key, value) => { mockLocalStorageData[key] = value; }),
+  removeItem: vi.fn((key) => { delete mockLocalStorageData[key]; }),
+  clear: vi.fn(() => { Object.keys(mockLocalStorageData).forEach(key => delete mockLocalStorageData[key]); }),
 };
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
 // Mock SessionStorage
 const mockSessionStorageData: Record<string, string> = {};
 const sessionStorageMock = {
-  getItem: jest.fn((key) => mockSessionStorageData[key] ?? null),
-  setItem: jest.fn((key, value) => { mockSessionStorageData[key] = value; }),
-  removeItem: jest.fn((key) => { delete mockSessionStorageData[key]; }),
-  clear: jest.fn(() => { Object.keys(mockSessionStorageData).forEach(key => delete mockSessionStorageData[key]); }),
+  getItem: vi.fn((key) => mockSessionStorageData[key] ?? null),
+  setItem: vi.fn((key, value) => { mockSessionStorageData[key] = value; }),
+  removeItem: vi.fn((key) => { delete mockSessionStorageData[key]; }),
+  clear: vi.fn(() => { Object.keys(mockSessionStorageData).forEach(key => delete mockSessionStorageData[key]); }),
 };
 Object.defineProperty(window, 'sessionStorage', { value: sessionStorageMock });
 
 describe('useUserStorage', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     Object.keys(mockLocalStorageData).forEach(key => delete mockLocalStorageData[key]);
     Object.keys(mockSessionStorageData).forEach(key => delete mockSessionStorageData[key]);
   });

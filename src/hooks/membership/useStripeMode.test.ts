@@ -1,21 +1,22 @@
 
 import { renderHook, act } from '@testing-library/react-hooks';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useStripeMode } from './useStripeMode';
 import { supabase } from '@/integrations/supabase/client';
 
 // Mock the Supabase client
-jest.mock('@/integrations/supabase/client', () => ({
+vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    single: jest.fn()
+    from: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn()
   }
 }));
 
 describe('useStripeMode', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should initialize with test mode and loading state', () => {
@@ -28,10 +29,10 @@ describe('useStripeMode', () => {
 
   it('should fetch Stripe mode from admin_config', async () => {
     // Mock successful response
-    (supabase.from as jest.Mock).mockReturnThis();
-    (supabase.select as jest.Mock).mockReturnThis();
-    (supabase.eq as jest.Mock).mockReturnThis();
-    (supabase.single as jest.Mock).mockResolvedValueOnce({
+    (supabase.from as any).mockReturnThis();
+    (supabase.select as any).mockReturnThis();
+    (supabase.eq as any).mockReturnThis();
+    (supabase.single as any).mockResolvedValueOnce({
       data: { value: 'live' },
       error: null
     });
@@ -51,10 +52,10 @@ describe('useStripeMode', () => {
 
   it('should handle errors when fetching Stripe mode', async () => {
     // Mock error response
-    (supabase.from as jest.Mock).mockReturnThis();
-    (supabase.select as jest.Mock).mockReturnThis();
-    (supabase.eq as jest.Mock).mockReturnThis();
-    (supabase.single as jest.Mock).mockResolvedValueOnce({
+    (supabase.from as any).mockReturnThis();
+    (supabase.select as any).mockReturnThis();
+    (supabase.eq as any).mockReturnThis();
+    (supabase.single as any).mockResolvedValueOnce({
       data: null,
       error: { message: 'Failed to fetch Stripe mode' }
     });
@@ -70,10 +71,10 @@ describe('useStripeMode', () => {
 
   it('should retry fetching Stripe mode when handleRetryStripeCheck is called', async () => {
     // First mock an error
-    (supabase.from as jest.Mock).mockReturnThis();
-    (supabase.select as jest.Mock).mockReturnThis();
-    (supabase.eq as jest.Mock).mockReturnThis();
-    (supabase.single as jest.Mock).mockResolvedValueOnce({
+    (supabase.from as any).mockReturnThis();
+    (supabase.select as any).mockReturnThis();
+    (supabase.eq as any).mockReturnThis();
+    (supabase.single as any).mockResolvedValueOnce({
       data: null,
       error: { message: 'Failed to fetch Stripe mode' }
     });
@@ -85,7 +86,7 @@ describe('useStripeMode', () => {
     expect(result.current.stripeCheckError).toBe('Failed to fetch Stripe mode');
     
     // Mock successful response for retry
-    (supabase.single as jest.Mock).mockResolvedValueOnce({
+    (supabase.single as any).mockResolvedValueOnce({
       data: { value: 'live' },
       error: null
     });
