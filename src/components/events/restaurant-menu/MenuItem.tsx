@@ -18,8 +18,6 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
   const hasMedia = item.media && item.media.length > 0;
   const hasMultipleMedia = hasMedia && item.media.length > 1;
   
-  const restaurantId = item.restaurant_id || '';
-
   // Reset image states when media changes
   useEffect(() => {
     setImageLoaded(false);
@@ -36,18 +34,10 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
     }
   };
   
-  // Validate URLs to avoid placeholders
-  const isPlaceholderUrl = (url: string) => {
-    return url.includes('unsplash.com') || !url.includes('supabase');
-  };
-  
-  // Get the first non-placeholder image or use the first image as fallback
+  // Get the first media item or null if none available
   const getPrimaryImage = () => {
     if (!hasMedia) return null;
-    
-    // Try to find a non-placeholder image first
-    const nonPlaceholder = item.media.find(m => !isPlaceholderUrl(m.url));
-    return nonPlaceholder || item.media[0];
+    return item.media[0];
   };
   
   const primaryImage = getPrimaryImage();
@@ -109,7 +99,7 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
             ) : (
               // No media available
               <div className="flex items-center justify-center h-full w-full">
-                <span className="text-gray-400 text-xs">No image</span>
+                <Image className="h-5 w-5 text-gray-400" />
               </div>
             )}
           </div>
@@ -166,6 +156,8 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
                           onError={(e) => {
                             console.error(`Gallery image error for ${item.name} (${idx}):`, media.url);
                             e.currentTarget.onerror = null; // Prevent infinite error loops
+                            // Replace with a placeholder if needed
+                            e.currentTarget.src = "/placeholder.svg"; 
                           }}
                         />
                       ) : (

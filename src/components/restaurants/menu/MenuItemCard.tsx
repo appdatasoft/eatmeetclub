@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash, Image } from 'lucide-react';
@@ -22,10 +22,7 @@ interface MenuItemCardProps {
   onDelete: (itemId: string) => void;
 }
 
-const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onEdit, onDelete }) => {
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  
+const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onEdit, onDelete }) => {  
   // Log the item to debug
   console.log("MenuItemCard rendering item:", item.name, "with media:", item.media);
   

@@ -3,12 +3,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
 import { MediaItem } from '@/components/restaurants/menu/MenuItemMediaUploader';
-import { fetchMenuItemMedia, fetchMenuItemIngredients } from '@/components/events/restaurant-menu/utils/mediaUtils';
+import { useMenuItemMedia } from '@/hooks/restaurants/menu/useMenuItemMedia';
 
 export const useMenuItems = (restaurantId: string | undefined) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { fetchMediaForMenuItem, fetchIngredientsForMenuItem } = useMenuItemMedia();
 
   useEffect(() => {
     const fetchMenuItems = async () => {
@@ -37,12 +38,12 @@ export const useMenuItems = (restaurantId: string | undefined) => {
           const processedItems = await Promise.all(menuData.map(async (item) => {
             console.log(`Processing menu item: ${item.name} (${item.id})`);
             
-            // Fetch media for this item
-            const media = await fetchMenuItemMedia(restaurantId, item);
+            // Fetch media for this item using our improved hook
+            const media = await fetchMediaForMenuItem(restaurantId, item.id);
             console.log(`Retrieved ${media?.length || 0} media items for ${item.name}`);
             
             // Fetch ingredients for this item
-            const ingredients = await fetchMenuItemIngredients(item.id);
+            const ingredients = await fetchIngredientsForMenuItem(item.id);
             console.log(`Retrieved ${ingredients?.length || 0} ingredients for ${item.name}`);
 
             return {

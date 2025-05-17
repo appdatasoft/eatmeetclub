@@ -10,79 +10,75 @@ export const useMenuItemMedia = () => {
     let media: MediaItem[] = [];
     console.log(`Fetching media for menu item: ${itemId} in restaurant: ${restaurantId}`);
     
-    // First check for media in item-specific directories
-    const storagePaths = [
-      `menu-items/${restaurantId}/${itemId}`,
+    // First check for media in item-specific directories - this is the most reliable way
+    // to ensure we're getting the right media for the right item
+    const itemSpecificPath = `menu-items/${restaurantId}/${itemId}`;
+    
+    try {
+      console.log(`Checking for media in item-specific path: ${itemSpecificPath}`);
+      
+      const { data: storageData, error: storageError } = await supabase
+        .storage
+        .from('lovable-uploads')
+        .list(itemSpecificPath);
+        
+      if (storageError) {
+        console.log(`Directory ${itemSpecificPath} might not exist:`, storageError.message);
+      } else if (storageData && storageData.length > 0) {
+        console.log(`Found ${storageData.length} files in ${itemSpecificPath}`);
+        
+        media = storageData
+          .filter(file => !file.name.endsWith('/'))
+          .map(file => {
+            const filePath = `${itemSpecificPath}/${file.name}`;
+            const publicUrl = supabase.storage
+              .from('lovable-uploads')
+              .getPublicUrl(filePath).data.publicUrl;
+            
+            const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+            
+            return {
+              url: publicUrl,
+              type: isVideo ? 'video' : 'image',
+              id: file.name // Include filename as ID to help with deletion
+            };
+          });
+        
+        if (media.length > 0) {
+          console.log(`Generated URLs for ${media.length} files in ${itemSpecificPath}`);
+          return media;
+        }
+      }
+    } catch (storageErr) {
+      console.error(`Error accessing storage path ${itemSpecificPath}:`, storageErr);
+    }
+    
+    // If no specific media found, look for alternative paths
+    const alternativePaths = [
       `menu-items/${itemId}`
     ];
     
-    let foundMedia = false;
-    for (const path of storagePaths) {
+    for (const path of alternativePaths) {
       try {
-        console.log(`Checking for media in path: ${path}`);
+        console.log(`Checking alternative path: ${path}`);
         
-        const { data: storageData, error: storageError } = await supabase
+        const { data: altData, error: altError } = await supabase
           .storage
           .from('lovable-uploads')
           .list(path);
           
-        if (storageError) {
-          console.log(`Directory ${path} might not exist:`, storageError.message);
+        if (altError) {
+          console.log(`Directory ${path} might not exist:`, altError.message);
           continue;
         }
         
-        if (storageData && storageData.length > 0) {
-          console.log(`Found ${storageData.length} files in ${path}`);
+        if (altData && altData.length > 0) {
+          console.log(`Found ${altData.length} files in ${path}`);
           
-          media = storageData
+          const altMedia = altData
             .filter(file => !file.name.endsWith('/'))
             .map(file => {
               const filePath = `${path}/${file.name}`;
-              const publicUrl = supabase.storage
-                .from('lovable-uploads')
-                .getPublicUrl(filePath).data.publicUrl;
-              
-              const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
-              
-              return {
-                url: publicUrl,
-                type: isVideo ? 'video' : 'image'
-              };
-            });
-          
-          if (media.length > 0) {
-            console.log(`Generated URLs for ${media.length} files in ${path}`);
-            foundMedia = true;
-            break;
-          }
-        }
-      } catch (storageErr) {
-        console.error(`Error accessing storage path ${path}:`, storageErr);
-      }
-    }
-    
-    // If no media found, check the root menu-items directory for files that match the item id
-    if (!foundMedia) {
-      try {
-        console.log(`Checking root menu-items directory for item ID: ${itemId}`);
-        
-        const { data: rootData, error: rootError } = await supabase
-          .storage
-          .from('lovable-uploads')
-          .list('menu-items', { limit: 100 });
-          
-        if (rootError) {
-          console.log(`Error listing root menu-items directory:`, rootError.message);
-        } else if (rootData && rootData.length > 0) {
-          const matchingFiles = rootData.filter(file => 
-            file.name.toLowerCase().includes(itemId.toLowerCase())
-          );
-          
-          if (matchingFiles.length > 0) {
-            console.log(`Found ${matchingFiles.length} matching files in root directory`);
-            
-            media = matchingFiles.map(file => {
-              const filePath = `menu-items/${file.name}`;
               const publicUrl = supabase.storage
                 .from('lovable-uploads')
                 .getPublicUrl(filePath).data.publicUrl;
@@ -91,32 +87,24 @@ export const useMenuItemMedia = () => {
               
               return {
                 url: publicUrl,
-                type: isVideo ? 'video' : 'image'
+                type: isVideo ? 'video' : 'image',
+                id: file.name // Include filename as ID
               };
             });
-            
-            foundMedia = true;
+          
+          if (altMedia.length > 0) {
+            console.log(`Generated URLs for ${altMedia.length} files in ${path}`);
+            return altMedia;
           }
         }
-      } catch (rootErr) {
-        console.error(`Error checking root menu-items directory:`, rootErr);
+      } catch (altErr) {
+        console.error(`Error accessing storage path ${path}:`, altErr);
       }
     }
     
-    // If still no media found, use a static fallback
-    if (media.length === 0) {
-      console.log(`No media found for item ${itemId}, using fallback`);
-      
-      // Use a static fallback image
-      const fallbackImage = {
-        url: "https://images.unsplash.com/photo-1546241072-48010ad2862c?auto=format&fit=crop&w=300&h=300",
-        type: "image" as const
-      };
-      
-      media.push(fallbackImage);
-    }
-    
-    return media;
+    // Return empty array if no media found
+    console.log(`No media found for item ${itemId}, returning empty array`);
+    return [];
   };
   
   /**
@@ -141,8 +129,34 @@ export const useMenuItemMedia = () => {
     }
   };
   
+  /**
+   * Deletes a media item
+   */
+  const deleteMediaItem = async (filePath: string): Promise<boolean> => {
+    try {
+      console.log(`Attempting to delete file: ${filePath}`);
+      
+      const { data, error } = await supabase
+        .storage
+        .from('lovable-uploads')
+        .remove([filePath]);
+        
+      if (error) {
+        console.error('Error deleting file:', error);
+        return false;
+      }
+      
+      console.log('File deleted successfully:', filePath);
+      return true;
+    } catch (err) {
+      console.error('Error in deleteMediaItem:', err);
+      return false;
+    }
+  };
+  
   return {
     fetchMediaForMenuItem,
-    fetchIngredientsForMenuItem
+    fetchIngredientsForMenuItem,
+    deleteMediaItem
   };
 };

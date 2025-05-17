@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 export interface MediaItem {
   url: string;
   type: "image" | "video";
-  id?: string;
+  id?: string; // File name or identifier to help with deletion
 }
 
 interface MenuItemMediaUploaderProps {
@@ -43,18 +43,22 @@ const MenuItemMediaUploader: React.FC<MenuItemMediaUploaderProps> = ({
         const file = files[i];
         const fileExt = file.name.split('.').pop();
         const isVideo = file.type.startsWith('video/');
-        const fileName = `${restaurantId}/${menuItemId || 'temp'}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+        
+        // Ensure we're using menu item ID in the storage path to maintain the relationship
+        const storageFolder = menuItemId ? `menu-items/${restaurantId}/${menuItemId}` : `menu-items/${restaurantId}/temp`;
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+        const filePath = `${storageFolder}/${fileName}`;
         
         // Calculate progress based on current file
         setProgress(Math.round((i / files.length) * 100));
         
         console.log('Uploading file:', file.name);
-        console.log('Storage path:', `menu-items/${fileName}`);
+        console.log('Storage path:', filePath);
         
         // Upload file to Supabase storage
         const { data, error } = await supabase.storage
           .from('lovable-uploads')
-          .upload(`menu-items/${fileName}`, file, {
+          .upload(filePath, file, {
             cacheControl: '3600',
             upsert: false,
           });
@@ -69,13 +73,14 @@ const MenuItemMediaUploader: React.FC<MenuItemMediaUploaderProps> = ({
         // Get public URL
         const { data: publicUrlData } = supabase.storage
           .from('lovable-uploads')
-          .getPublicUrl(`menu-items/${fileName}`);
+          .getPublicUrl(filePath);
           
         if (publicUrlData) {
           console.log('Public URL:', publicUrlData.publicUrl);
           newMediaItems.push({
             url: publicUrlData.publicUrl,
-            type: isVideo ? 'video' : 'image'
+            type: isVideo ? 'video' : 'image',
+            id: filePath // Store the full path for easy deletion
           });
         }
       }
@@ -105,11 +110,52 @@ const MenuItemMediaUploader: React.FC<MenuItemMediaUploaderProps> = ({
     }
   };
   
-  const removeMediaItem = (index: number) => {
+  const removeMediaItem = async (index: number) => {
+    const item = mediaItems[index];
+    const filePath = item.id || extractPathFromUrl(item.url);
+    
+    // Only try to delete from storage if we have a valid path
+    if (filePath) {
+      try {
+        console.log(`Attempting to delete file: ${filePath}`);
+        
+        const { error } = await supabase.storage
+          .from('lovable-uploads')
+          .remove([filePath]);
+          
+        if (error) {
+          console.error('Error deleting file from storage:', error);
+          toast({
+            title: "Error removing file",
+            description: error.message || "Could not remove file from storage",
+            variant: "destructive",
+          });
+        }
+      } catch (err) {
+        console.error('Error in delete operation:', err);
+      }
+    }
+    
+    // Remove from UI regardless of storage deletion success
     const newMediaItems = [...mediaItems];
     newMediaItems.splice(index, 1);
     setMediaItems(newMediaItems);
     onChange(newMediaItems);
+  };
+  
+  // Helper to extract path from public URL
+  const extractPathFromUrl = (url: string): string | null => {
+    try {
+      // Extract the path portion from the URL
+      const match = url.match(/\/storage\/v1\/object\/public\/lovable-uploads\/(.+)/);
+      if (match && match[1]) {
+        return match[1];
+      }
+      return null;
+    } catch (err) {
+      console.error('Error extracting path from URL:', err);
+      return null;
+    }
   };
   
   return (
