@@ -2,6 +2,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import SupabaseImage from "@/components/common/SupabaseImage";
 
 export interface EventCardProps {
   id: string;
@@ -39,12 +40,23 @@ const EventCard: React.FC<EventCardProps> = ({
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow duration-300 h-full flex flex-col">
-      <div className="relative">
+      <div className="relative h-48">
         <Link to={`/event/${id}`}>
-          <div
-            className="h-48 bg-cover bg-center"
-            style={{ backgroundImage: `url(${image})` }}
-          />
+          {image.startsWith('data:') ? (
+            // SVG placeholder case
+            <div
+              className="h-full w-full bg-gray-100 flex items-center justify-center"
+              dangerouslySetInnerHTML={{ __html: atob(image.split(',')[1]) }}
+            />
+          ) : (
+            // Use SupabaseImage for actual images
+            <SupabaseImage
+              src={image}
+              alt={title}
+              className="h-full w-full object-cover"
+              fallbackSrc="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' text-anchor='middle' dominant-baseline='middle' fill='%23888'%3ENo Event Image%3C/text%3E%3C/svg%3E"
+            />
+          )}
         </Link>
         <span
           className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium ${
