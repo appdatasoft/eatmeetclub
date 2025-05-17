@@ -6,89 +6,72 @@ import { MediaItem } from "@/components/restaurants/menu/MenuItemMediaUploader";
  * Fetches media items for a specific menu item from various possible storage paths
  */
 export async function fetchMenuItemMedia(restaurantId: string, item: { id: string, name: string }): Promise<MediaItem[]> {
-  let media: MediaItem[] = [];
-  console.log(`Starting fetchMenuItemMedia for ${item.name} (${item.id})`);
-  
-  // First check for media in item-specific directories
-  const storagePaths = [
-    `menu-items/${restaurantId}/${item.id}`,
-    `menu-items/${item.id}`
-  ];
-  
-  let foundMedia = false;
-  for (const path of storagePaths) {
-    try {
-      console.log(`Checking for media in path: ${path}`);
-      
-      const { data: storageData, error: storageError } = await supabase
-        .storage
-        .from('lovable-uploads')
-        .list(path);
-        
-      if (storageError) {
-        console.log(`Directory ${path} might not exist:`, storageError.message);
-        continue;
-      }
-      
-      if (storageData && storageData.length > 0) {
-        console.log(`Found ${storageData.length} files in ${path}`);
-        
-        media = storageData
-          .filter(file => !file.name.endsWith('/'))
-          .map(file => {
-            const filePath = `${path}/${file.name}`;
-            const publicUrl = supabase.storage
-              .from('lovable-uploads')
-              .getPublicUrl(filePath).data.publicUrl;
-            
-            const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
-            
-            return {
-              url: publicUrl,
-              type: isVideo ? 'video' : 'image'
-            };
-          });
-        
-        if (media.length > 0) {
-          console.log(`Generated URLs for ${media.length} files in ${path}`);
-          foundMedia = true;
-          break;
+  try {
+    const mediaPaths = [
+      `menu-items/${restaurantId}/${item.id}`,
+      `menu-items/${item.id}`
+    ];
+    
+    // Check specific folders first
+    for (const path of mediaPaths) {
+      try {
+        const { data: files, error } = await supabase.storage
+          .from('lovable-uploads')
+          .list(path);
+          
+        if (error) {
+          console.log(`No files found in path: ${path}`);
+          continue;
         }
+        
+        if (files && files.length > 0) {
+          // Filter out directories
+          const mediaFiles = files.filter(file => !file.name.endsWith('/'));
+          
+          if (mediaFiles.length > 0) {
+            const media = mediaFiles.map(file => {
+              const filePath = `${path}/${file.name}`;
+              const publicUrl = supabase.storage
+                .from('lovable-uploads')
+                .getPublicUrl(filePath).data.publicUrl;
+                
+              const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+              
+              return {
+                url: publicUrl,
+                type: isVideo ? 'video' : 'image'
+              };
+            });
+            
+            console.log(`Found ${media.length} files for ${item.name} in ${path}`);
+            return media;
+          }
+        }
+      } catch (error) {
+        console.error(`Error checking path ${path}:`, error);
       }
-    } catch (storageErr) {
-      console.error(`Error accessing storage path ${path}:`, storageErr);
     }
-  }
-  
-  // If no media found in specific paths, check the root menu-items directory with enhanced matching
-  if (!foundMedia) {
+    
+    // Check root menu-items directory for any matches with ID or name
     try {
-      console.log("Checking root menu-items directory with enhanced matching");
-      
-      // Get all files in the menu-items directory with increased limit
-      const { data: listData, error: listError } = await supabase
-        .storage
+      const { data: rootFiles, error: rootError } = await supabase.storage
         .from('lovable-uploads')
         .list('menu-items', { limit: 1000 });
-      
-      if (listError) {
-        console.error("Error listing media:", listError);
-      } else if (listData && listData.length > 0) {
-        console.log(`Found ${listData.length} total files in menu-items directory`);
         
-        // Enhanced matching against item ID or name (case insensitive)
+      if (!rootError && rootFiles && rootFiles.length > 0) {
         const itemId = item.id.toLowerCase();
-        const itemName = item.name.toLowerCase();
+        const itemName = item.name.toLowerCase().replace(/\s+/g, '-');
         
-        const matchingFiles = listData.filter(file => {
-          const fileName = file.name.toLowerCase();
-          return fileName.includes(itemId) || fileName.includes(itemName);
-        });
+        const matchingFiles = rootFiles.filter(file => 
+          !file.name.endsWith('/') && (
+            file.name.toLowerCase().includes(itemId) ||
+            file.name.toLowerCase().includes(itemName) ||
+            file.name.toLowerCase().includes(restaurantId.toLowerCase())
+          )
+        );
         
         if (matchingFiles.length > 0) {
-          console.log(`Found ${matchingFiles.length} matching files for ${item.name}`);
-          
-          media = matchingFiles.map(file => {
+          const media = matchingFiles.map(file => {
             const filePath = `menu-items/${file.name}`;
             const publicUrl = supabase.storage
               .from('lovable-uploads')
@@ -101,27 +84,29 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
               type: isVideo ? 'video' : 'image'
             };
           });
+          
+          console.log(`Found ${media.length} matching files for ${item.name} in root directory`);
+          return media;
         }
       }
-    } catch (err) {
-      console.error("Error with directory listing:", err);
+    } catch (error) {
+      console.error('Error checking root directory:', error);
     }
-  }
-  
-  if (media.length === 0) {
-    console.log(`No media found for item ${item.name}, using static fallback image`);
     
-    // Use a static fallback image
-    const fallbackImageUrl = getStaticFallbackImage(item.name);
-    media = [{
-      url: fallbackImageUrl,
+    // Use fallback static image only if no images found in storage
+    console.log(`No media found for ${item.name}, using fallback image`);
+    return [{
+      url: getStaticFallbackImage(item.name),
       type: 'image'
     }];
-  } else {
-    console.log(`Final media array for ${item.name} has ${media.length} items`);
+    
+  } catch (error) {
+    console.error('Error in fetchMenuItemMedia:', error);
+    return [{
+      url: getStaticFallbackImage(item.name),
+      type: 'image'
+    }];
   }
-  
-  return media;
 }
 
 /**
@@ -130,11 +115,9 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
 function getStaticFallbackImage(itemName: string): string {
   // Array of reliable, pre-cached food images from Unsplash
   const fallbackImages = [
-    "https://images.unsplash.com/photo-1546241072-48010ad2862c?auto=format&fit=crop&w=300&h=300", // Generic food
-    "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=300&h=300", // Food closeup
-    "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop&w=300&h=300", // Plate of food
-    "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=300&h=300", // Colorful food
-    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=300&h=300"  // Vegetable dish
+    "https://images.unsplash.com/photo-1546241072-48010ad2862c?auto=format&fit=crop&w=300&h=300",
+    "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=300&h=300",
+    "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop&w=300&h=300"
   ];
   
   // Use the first character of the item name as a simple hash to pick a consistent image

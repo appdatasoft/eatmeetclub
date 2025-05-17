@@ -3,14 +3,12 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
-import { useMenuItemMedia } from './useMenuItemMedia';
 
 export const useMenuItems = (restaurantId: string | undefined) => {
   const { toast } = useToast();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { fetchMediaForMenuItem, fetchIngredientsForMenuItem } = useMenuItemMedia();
 
   useEffect(() => {
     const fetchMenuItems = async () => {
@@ -41,10 +39,19 @@ export const useMenuItems = (restaurantId: string | undefined) => {
             console.log(`Processing menu item: ${item.name} (${item.id})`);
             
             // Fetch ingredients for this menu item
-            const ingredients = await fetchIngredientsForMenuItem(item.id);
+            const { data: ingredientsData, error: ingredientsError } = await supabase
+              .from('restaurant_menu_ingredients')
+              .select('name')
+              .eq('menu_item_id', item.id);
+              
+            if (ingredientsError) {
+              console.error(`Error fetching ingredients for item ${item.id}:`, ingredientsError);
+            }
             
-            // Try to get the media items associated with this menu item
-            const media = await fetchMediaForMenuItem(restaurantId, item.id);
+            const ingredients = ingredientsData ? ingredientsData.map(ing => ing.name) : [];
+            
+            // Try to get the media items associated with this menu item from storage
+            const media = await fetchMenuItemMedia(restaurantId, item.id);
             
             // Transform to match our MenuItem interface
             return {
@@ -78,7 +85,89 @@ export const useMenuItems = (restaurantId: string | undefined) => {
     };
     
     fetchMenuItems();
-  }, [restaurantId, fetchMediaForMenuItem, fetchIngredientsForMenuItem, toast]);
+  }, [restaurantId, toast]);
+
+  // Function to fetch media for a menu item from Supabase storage
+  const fetchMenuItemMedia = async (restaurantId: string, itemId: string) => {
+    try {
+      const mediaPaths = [
+        `menu-items/${restaurantId}/${itemId}`,
+        `menu-items/${itemId}`
+      ];
+      
+      for (const path of mediaPaths) {
+        const { data: files, error } = await supabase.storage
+          .from('lovable-uploads')
+          .list(path);
+          
+        if (error) {
+          console.log(`No files found in path: ${path}`);
+          continue;
+        }
+        
+        if (files && files.length > 0) {
+          // Filter out directories
+          const mediaFiles = files.filter(file => !file.name.endsWith('/'));
+          
+          if (mediaFiles.length > 0) {
+            return mediaFiles.map(file => {
+              const filePath = `${path}/${file.name}`;
+              const publicUrl = supabase.storage
+                .from('lovable-uploads')
+                .getPublicUrl(filePath).data.publicUrl;
+                
+              const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+              
+              return {
+                url: publicUrl,
+                type: isVideo ? 'video' : 'image'
+              };
+            });
+          }
+        }
+      }
+      
+      // If no files found in specific paths, check the root directory
+      const { data: rootFiles, error: rootError } = await supabase.storage
+        .from('lovable-uploads')
+        .list('menu-items');
+        
+      if (!rootError && rootFiles && rootFiles.length > 0) {
+        const matchingFiles = rootFiles.filter(file => 
+          file.name.toLowerCase().includes(itemId.toLowerCase()) ||
+          file.name.toLowerCase().includes(restaurantId.toLowerCase())
+        );
+        
+        if (matchingFiles.length > 0) {
+          return matchingFiles.map(file => {
+            const filePath = `menu-items/${file.name}`;
+            const publicUrl = supabase.storage
+              .from('lovable-uploads')
+              .getPublicUrl(filePath).data.publicUrl;
+              
+            const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
+            
+            return {
+              url: publicUrl,
+              type: isVideo ? 'video' : 'image'
+            };
+          });
+        }
+      }
+      
+      // Fallback to static images - only if no images are found in storage
+      return [{
+        url: "https://images.unsplash.com/photo-1546241072-48010ad2862c?auto=format&fit=crop&w=300&h=300",
+        type: "image"
+      }];
+    } catch (error) {
+      console.error('Error fetching menu item media:', error);
+      return [{
+        url: "https://images.unsplash.com/photo-1546241072-48010ad2862c?auto=format&fit=crop&w=300&h=300",
+        type: "image"
+      }];
+    }
+  };
 
   return { menuItems, setMenuItems, isLoading, error };
 };

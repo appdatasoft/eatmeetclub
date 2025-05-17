@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from "react";
 import { MenuItem } from "./types";
-import MenuItemMedia from "@/components/restaurants/menu/MenuItemMedia";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Image, ImageOff } from "lucide-react";
 
@@ -16,16 +15,6 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
   const [retryCount, setRetryCount] = useState(0);
   
   const hasMedia = item.media && item.media.length > 0;
-
-  // Enhanced debug logging for media
-  useEffect(() => {
-    console.log(`MenuItem component for ${item.name}:`, {
-      hasMedia,
-      firstMediaUrl: hasMedia ? item.media[0].url : 'none',
-      mediaCount: hasMedia ? item.media.length : 0,
-      itemComplete: item
-    });
-  }, [item, hasMedia]);
 
   // Reset image states when media changes
   useEffect(() => {
@@ -43,7 +32,7 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
     }
   };
   
-  // Get a reliable placeholder image from a predefined list instead of dynamic Unsplash URLs
+  // Get a reliable placeholder image from a predefined list
   const getPlaceholderImage = () => {
     const placeholders = [
       "https://images.unsplash.com/photo-1546241072-48010ad2862c?auto=format&fit=crop&w=300&h=300",
