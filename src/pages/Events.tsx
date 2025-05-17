@@ -18,7 +18,7 @@ const Events = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isManuallyRefreshing, setIsManuallyRefreshing] = useState(false);
   
   // Show toast for errors
   useEffect(() => {
@@ -33,17 +33,25 @@ const Events = () => {
   }, [fetchError, toast]);
 
   const handleRefresh = async () => {
+    if (isManuallyRefreshing) return; // Prevent multiple refreshes
+    
     console.log("Manual refresh triggered");
-    setIsRefreshing(true);
+    setIsManuallyRefreshing(true);
     
     toast({
       title: "Refreshing events",
       description: "Looking for new events..."
     });
     
-    await refreshEvents();
-    setIsRefreshing(false);
+    try {
+      await refreshEvents();
+    } finally {
+      setIsManuallyRefreshing(false);
+    }
   };
+
+  // Calculate the effective loading state
+  const effectiveLoading = isLoading || isManuallyRefreshing;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -80,13 +88,13 @@ const Events = () => {
 
           {/* Display the events list conditionally */}
           <EventsList 
-            events={isLoading ? [] : filteredEvents} 
-            isLoading={isLoading || isRefreshing} 
+            events={effectiveLoading ? [] : filteredEvents} 
+            isLoading={effectiveLoading} 
             error={fetchError} 
           />
           
           {/* Empty state - only show when data loaded successfully but no events found */}
-          {!isLoading && !isRefreshing && !fetchError && events.length === 0 && (
+          {!effectiveLoading && !fetchError && events.length === 0 && (
             <div className="text-center mt-8 bg-blue-50 border border-blue-100 rounded-lg p-6">
               <p className="text-lg text-gray-600">
                 There are currently no published events available.
@@ -102,9 +110,9 @@ const Events = () => {
                 <Button 
                   variant="outline"
                   onClick={handleRefresh}
-                  disabled={isRefreshing}
+                  disabled={effectiveLoading}
                 >
-                  {isRefreshing ? "Refreshing..." : "Refresh events"}
+                  {effectiveLoading ? "Refreshing..." : "Refresh events"}
                 </Button>
               </div>
             </div>

@@ -1,16 +1,34 @@
+
 import { supabase } from "@/integrations/supabase/client";
+import { useRef } from "react";
 
 export const useEventSubscription = () => {
+  const lastRefreshRef = useRef(0);
+  const timeoutIdRef = useRef<number | null>(null);
+  const throttleDelay = 3000; // 3-second throttle
+  
   const subscribeToEventChanges = (onChangeCallback: () => void) => {
-    let lastRefresh = 0;
+    // Clear any existing timeout when creating a new subscription
+    if (timeoutIdRef.current !== null) {
+      window.clearTimeout(timeoutIdRef.current);
+      timeoutIdRef.current = null;
+    }
 
     const throttledCallback = () => {
       const now = Date.now();
-      if (now - lastRefresh > 3000) { // 3-second throttle
-        lastRefresh = now;
+      if (now - lastRefreshRef.current > throttleDelay) {
+        lastRefreshRef.current = now;
         onChangeCallback();
       } else {
         console.log("Skipped refresh: throttled");
+        // Schedule a refresh after the throttle period
+        if (timeoutIdRef.current === null) {
+          timeoutIdRef.current = window.setTimeout(() => {
+            lastRefreshRef.current = Date.now();
+            onChangeCallback();
+            timeoutIdRef.current = null;
+          }, throttleDelay);
+        }
       }
     };
 
@@ -19,18 +37,24 @@ export const useEventSubscription = () => {
       .on(
         "postgres_changes",
         {
-          event: "INSERT", // Only respond to new event rows
+          event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
           schema: "public",
           table: "events",
         },
         (payload) => {
-          console.log("New event inserted:", payload);
+          console.log("Event change detected:", payload.eventType, payload);
           throttledCallback();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Subscription status:", status);
+      });
 
     return () => {
+      if (timeoutIdRef.current !== null) {
+        window.clearTimeout(timeoutIdRef.current);
+        timeoutIdRef.current = null;
+      }
       supabase.removeChannel(channel);
     };
   };

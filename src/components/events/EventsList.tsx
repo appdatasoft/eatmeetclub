@@ -9,7 +9,7 @@ interface EventsListProps {
   error: string | null;
 }
 
-const EventsList = ({ events, isLoading, error }: EventsListProps) => {
+const EventsList = React.memo(({ events, isLoading, error }: EventsListProps) => {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -58,7 +58,16 @@ const EventsList = ({ events, isLoading, error }: EventsListProps) => {
       ))}
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparator for more precise control over re-renders
+  if (prevProps.isLoading !== nextProps.isLoading) return false;
+  if (prevProps.error !== nextProps.error) return false;
+  if (prevProps.events.length !== nextProps.events.length) return false;
+  
+  // Only do deep comparison if everything else is the same
+  return prevProps.events.every((event, index) => 
+    event.id === nextProps.events[index]?.id
+  );
+});
 
-// Using React.memo to prevent unnecessary re-renders
-export default React.memo(EventsList);
+export default EventsList;

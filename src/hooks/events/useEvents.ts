@@ -1,20 +1,27 @@
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { EventCardProps } from "@/components/events/EventCard";
 import { useEventsAPI } from "./useEventsAPI";
 import { useEventSubscription } from "./useEventSubscription";
-
-const deepEqual = (a: any, b: any): boolean => {
-  return JSON.stringify(a) === JSON.stringify(b);
-};
 
 export const useEvents = () => {
   const [events, setEvents] = useState<EventCardProps[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
+  const initialLoadComplete = useRef(false);
 
-  const { fetchPublishedEvents } = useEventsAPI(); // ensure it's memoized
+  const { fetchPublishedEvents } = useEventsAPI();
   const { subscribeToEventChanges } = useEventSubscription();
+
+  // Function to check if two arrays of events are equal
+  const areEventsEqual = (prevEvents: EventCardProps[], newEvents: EventCardProps[]): boolean => {
+    if (prevEvents.length !== newEvents.length) return false;
+    
+    // Compare by id for faster comparison
+    const prevIds = new Set(prevEvents.map(e => e.id));
+    return newEvents.every(event => prevIds.has(event.id));
+  };
 
   const refreshEvents = useCallback(async () => {
     if (!isMountedRef.current) return;
@@ -24,35 +31,53 @@ export const useEvents = () => {
       setFetchError(null);
       const newEvents = await fetchPublishedEvents();
 
-      if (isMountedRef.current && !deepEqual(newEvents, events)) {
-        setEvents(newEvents);
-        console.log("Updated events list");
-      } else {
-        console.log("No change in event data, skipping update");
+      if (isMountedRef.current) {
+        // Only update state if events have actually changed
+        if (!areEventsEqual(events, newEvents)) {
+          setEvents(newEvents);
+          console.log("Updated events list with new data");
+        } else {
+          console.log("No change in event data, skipping update");
+        }
       }
     } catch (error: any) {
       if (isMountedRef.current) {
         setFetchError(error.message || "Unknown error");
       }
     } finally {
-      if (isMountedRef.current) setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+        initialLoadComplete.current = true;
+      }
     }
-  }, [fetchPublishedEvents, events]);
+  }, [fetchPublishedEvents]);
 
+  // Separate effect for initial load
   useEffect(() => {
     isMountedRef.current = true;
-
-    refreshEvents(); // initial load
-
+    
+    if (!initialLoadComplete.current) {
+      refreshEvents();
+    }
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [refreshEvents]);
+  
+  // Separate effect for subscription
+  useEffect(() => {
     const unsubscribe = subscribeToEventChanges(() => {
-      if (isMountedRef.current) refreshEvents();
+      if (isMountedRef.current && initialLoadComplete.current) {
+        console.log("Event change detected via subscription");
+        refreshEvents();
+      }
     });
 
     return () => {
-      isMountedRef.current = false;
       unsubscribe();
     };
-  }, [refreshEvents, subscribeToEventChanges]);
+  }, [subscribeToEventChanges, refreshEvents]);
 
   return {
     events,
