@@ -61,7 +61,8 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
             name: item.name,
             description: item.description || '',
             price: item.price,
-            type: item.type || 'Other', // Default type if not present
+            // Fixed: Use a default type instead of accessing a non-existent property
+            type: 'Other', // Default type if not present
             ingredients: ingredients,
             media: media
           } as MenuItem;
