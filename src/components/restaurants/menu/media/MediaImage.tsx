@@ -26,20 +26,45 @@ const MediaImage: React.FC<MediaImageProps> = ({
   const maxRetries = 3;
   const mountedRef = useRef(true);
   
-  // Reset states when URL changes and generate cache-busted URL immediately
+  // Validate URL and use it or fallback to placeholder
   useEffect(() => {
-    const bustedUrl = addCacheBuster(url);
-    setCurrentUrl(bustedUrl);
+    const validateAndSetUrl = () => {
+      try {
+        // Basic URL validation - check if it's empty or invalid
+        if (!url || url.trim() === '') {
+          throw new Error('Empty URL');
+        }
+        
+        // Try to construct a URL to validate it (will throw if invalid)
+        new URL(url);
+        
+        // If valid, add cache buster
+        const bustedUrl = addCacheBuster(url);
+        setCurrentUrl(bustedUrl);
+      } catch (err) {
+        console.error(`Invalid URL provided to MediaImage: ${url}`, err);
+        // Use fallback immediately for invalid URLs
+        if (fallbackImg) {
+          setCurrentUrl(fallbackImg);
+          setUsedFallback(true);
+        } else {
+          setCurrentUrl(getDefaultFoodPlaceholder());
+          setUsedFallback(true);
+        }
+      }
+    };
+    
+    validateAndSetUrl();
     setIsLoaded(false);
     setHasError(false);
     setRetryCount(0);
-    setUsedFallback(false);
     
     return () => {
       mountedRef.current = false;
     };
-  }, [url]);
+  }, [url, fallbackImg]);
   
+  // Rest of component logic for handling load/error states
   const handleImageLoad = () => {
     if (!mountedRef.current) return;
     console.log(`Image loaded successfully: ${currentUrl}`);
@@ -56,14 +81,20 @@ const MediaImage: React.FC<MediaImageProps> = ({
       setRetryCount(nextRetryCount);
       
       // Generate a completely new URL with timestamp to force browser to re-fetch
-      const timestamp = Date.now();
-      const randomString = Math.random().toString(36).substring(2, 8);
-      const newUrl = url.includes('?') 
-        ? `${url}&t=${timestamp}&r=${randomString}&retry=${nextRetryCount}` 
-        : `${url}?t=${timestamp}&r=${randomString}&retry=${nextRetryCount}`;
-      
-      console.log(`Auto-retrying image load (${nextRetryCount}/${maxRetries}): ${newUrl}`);
-      setCurrentUrl(newUrl);
+      try {
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(2, 8);
+        const newUrl = url.includes('?') 
+          ? `${url}&t=${timestamp}&r=${randomString}&retry=${nextRetryCount}` 
+          : `${url}?t=${timestamp}&r=${randomString}&retry=${nextRetryCount}`;
+        
+        console.log(`Auto-retrying image load (${nextRetryCount}/${maxRetries}): ${newUrl}`);
+        setCurrentUrl(newUrl);
+      } catch (err) {
+        // If URL manipulation fails, move to fallback
+        setUsedFallback(true);
+        setCurrentUrl(getDefaultFoodPlaceholder());
+      }
     } else {
       // If we have a fallback image and haven't tried it yet, use it
       if (fallbackImg && !usedFallback) {
@@ -75,7 +106,7 @@ const MediaImage: React.FC<MediaImageProps> = ({
         // Try default food placeholder as a last resort
         const placeholder = getDefaultFoodPlaceholder();
         console.log(`Using default food placeholder: ${placeholder}`);
-        setCurrentUrl(addCacheBuster(placeholder));
+        setCurrentUrl(placeholder);
         setRetryCount(0);
         setUsedFallback(true);
       } else {
@@ -92,16 +123,21 @@ const MediaImage: React.FC<MediaImageProps> = ({
     setIsLoaded(false);
     setRetryCount(0);
     setUsedFallback(false);
-      
-    // Force browser to re-fetch the image with a fresh timestamp
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 7);
-    const newUrl = url.includes('?') 
-      ? `${url}&t=${timestamp}&r=${random}&manual=true` 
-      : `${url}?t=${timestamp}&r=${random}&manual=true`;
     
-    console.log(`Manual retry for image: ${newUrl}`);
-    setCurrentUrl(newUrl);
+    try {  
+      // Force browser to re-fetch the image with a fresh timestamp
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substring(2, 7);
+      const newUrl = url.includes('?') 
+        ? `${url}&t=${timestamp}&r=${random}&manual=true` 
+        : `${url}?t=${timestamp}&r=${random}&manual=true`;
+      
+      console.log(`Manual retry for image: ${newUrl}`);
+      setCurrentUrl(newUrl);
+    } catch (err) {
+      // If URL manipulation fails, use placeholder
+      setCurrentUrl(getDefaultFoodPlaceholder());
+    }
   };
   
   const handleKeyDown = (e: React.KeyboardEvent) => {

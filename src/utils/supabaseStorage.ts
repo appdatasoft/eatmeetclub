@@ -12,6 +12,9 @@ export const addCacheBuster = (url: string): string => {
   if (!url) return url;
   
   try {
+    // Validate URL first
+    new URL(url);
+    
     // Add a timestamp to bust cache
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 8);
@@ -44,6 +47,9 @@ export const buildStorageUrl = (
     // Build the URL using the Supabase project reference
     const storageUrl = `https://wocfwpedauuhlrfugxuu.supabase.co/storage/v1/object/public/${bucket}/${normalizedPath}`;
     
+    // Validate the URL by constructing a URL object
+    new URL(storageUrl);
+    
     // Add cache busting parameter
     return addCacheBuster(storageUrl);
   } catch (error) {
@@ -61,6 +67,9 @@ export const extractPathFromStorageUrl = (url: string): string | null => {
   if (!url) return null;
   
   try {
+    // Validate URL first
+    new URL(url);
+    
     const regex = /\/storage\/v1\/object\/public\/([^/]+)\/(.+?)(?:\?.*)?$/;
     const match = url.match(regex);
     
@@ -83,7 +92,14 @@ export const extractPathFromStorageUrl = (url: string): string | null => {
  */
 export const isStorageUrl = (url: string): boolean => {
   if (!url) return false;
-  return url.includes('/storage/v1/object/public/');
+  
+  try {
+    // Validate URL first
+    new URL(url);
+    return url.includes('/storage/v1/object/public/');
+  } catch (error) {
+    return false;
+  }
 };
 
 /**
@@ -95,6 +111,9 @@ export const checkStorageUrlExists = async (url: string): Promise<boolean> => {
   if (!url) return false;
   
   try {
+    // Validate URL first
+    new URL(url);
+    
     // Use HEAD request to check if the file exists without downloading it
     const response = await fetch(url, { method: 'HEAD' });
     return response.ok;

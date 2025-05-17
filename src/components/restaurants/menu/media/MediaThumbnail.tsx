@@ -9,15 +9,24 @@ interface MediaThumbnailProps {
   item: MediaItem;
   onClick: () => void;
   className?: string;
+  "data-index"?: number;
 }
 
-const MediaThumbnail: React.FC<MediaThumbnailProps> = ({ item, onClick, className = "" }) => {
+const MediaThumbnail: React.FC<MediaThumbnailProps> = ({ 
+  item, 
+  onClick, 
+  className = "",
+  "data-index": dataIndex 
+}) => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onClick();
     }
   };
+
+  // Validate URL existence before rendering
+  const hasValidUrl = item && item.url && typeof item.url === 'string' && item.url.trim() !== '';
 
   return (
     <div 
@@ -26,9 +35,10 @@ const MediaThumbnail: React.FC<MediaThumbnailProps> = ({ item, onClick, classNam
       onKeyDown={handleKeyDown}
       tabIndex={0}
       role="button"
+      data-index={dataIndex}
       aria-label={item.type === 'image' ? "View image" : "Play video"}
     >
-      {item.url ? (
+      {hasValidUrl ? (
         item.type === 'image' ? (
           <MediaImage 
             url={item.url} 

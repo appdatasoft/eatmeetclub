@@ -50,22 +50,35 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({ mediaItems, onRemove }) => 
 
   // Construct image URL with cache busting based on retry state
   const getImageUrl = (item: MediaItem, index: number): string => {
-    const currentRetryCount = retryCount[index] || 0;
-    
-    if (usedFallback[index]) {
-      return addCacheBuster(getDefaultFoodPlaceholder());
+    // First check if the URL is valid
+    if (!item.url || item.url.trim() === '') {
+      return getDefaultFoodPlaceholder();
     }
     
-    let url = item.url;
-    if (currentRetryCount > 0) {
-      const timestamp = Date.now();
-      const random = Math.random().toString(36).substring(2, 7);
-      url = url.includes('?') 
-        ? `${url}&t=${timestamp}&r=${random}&retry=${currentRetryCount}` 
-        : `${url}?t=${timestamp}&r=${random}&retry=${currentRetryCount}`;
+    try {
+      // Test if URL is valid by constructing a URL object
+      new URL(item.url);
+      
+      const currentRetryCount = retryCount[index] || 0;
+      
+      if (usedFallback[index]) {
+        return getDefaultFoodPlaceholder();
+      }
+      
+      let url = item.url;
+      if (currentRetryCount > 0) {
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substring(2, 7);
+        url = url.includes('?') 
+          ? `${url}&t=${timestamp}&r=${random}&retry=${currentRetryCount}` 
+          : `${url}?t=${timestamp}&r=${random}&retry=${currentRetryCount}`;
+      }
+      
+      return url;
+    } catch (err) {
+      console.error(`Invalid URL in MediaPreview: ${item.url}`, err);
+      return getDefaultFoodPlaceholder();
     }
-    
-    return url;
   };
 
   return (
@@ -110,11 +123,17 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({ mediaItems, onRemove }) => 
             </div>
           ) : (
             <div className="w-24 h-24 border rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
-              <video 
-                src={item.url} 
-                className="w-full h-full object-cover"
-                controls
-              />
+              {item.url && item.url.trim() !== '' ? (
+                <video 
+                  src={item.url} 
+                  className="w-full h-full object-cover"
+                  controls
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full w-full">
+                  <span className="text-gray-400 text-xs">No video</span>
+                </div>
+              )}
             </div>
           )}
           <button
