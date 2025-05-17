@@ -2,7 +2,7 @@
 import React from "react";
 import { X, ImageOff, RefreshCcw } from "lucide-react";
 import { MediaItem } from "./types/mediaTypes";
-import { addCacheBuster } from "@/utils/supabaseStorage";
+import { addCacheBuster, getDefaultFoodPlaceholder } from "@/utils/supabaseStorage";
 
 interface MediaPreviewProps {
   mediaItems: MediaItem[];
@@ -12,6 +12,9 @@ interface MediaPreviewProps {
 const MediaPreview: React.FC<MediaPreviewProps> = ({ mediaItems, onRemove }) => {
   const [loadingStates, setLoadingStates] = React.useState<Record<number, boolean>>({});
   const [errorStates, setErrorStates] = React.useState<Record<number, boolean>>({});
+  const [retryCount, setRetryCount] = React.useState<Record<number, number>>({});
+  const [usedFallback, setUsedFallback] = React.useState<Record<number, boolean>>({});
+  const maxRetries = 3;
 
   const handleImageLoad = (index: number) => {
     setLoadingStates(prev => ({ ...prev, [index]: false }));
@@ -19,14 +22,50 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({ mediaItems, onRemove }) => 
   };
 
   const handleImageError = (index: number) => {
-    setLoadingStates(prev => ({ ...prev, [index]: false }));
-    setErrorStates(prev => ({ ...prev, [index]: true }));
+    const currentRetries = retryCount[index] || 0;
+    
+    if (currentRetries < maxRetries) {
+      // Auto-retry with increasing retry count
+      setRetryCount(prev => ({ ...prev, [index]: (prev[index] || 0) + 1 }));
+      setLoadingStates(prev => ({ ...prev, [index]: true }));
+      // The img element will automatically retry with the new src
+    } else if (!usedFallback[index]) {
+      // Try fallback image
+      setUsedFallback(prev => ({ ...prev, [index]: true }));
+      setRetryCount(prev => ({ ...prev, [index]: 0 }));
+    } else {
+      // All retries failed
+      setLoadingStates(prev => ({ ...prev, [index]: false }));
+      setErrorStates(prev => ({ ...prev, [index]: true }));
+    }
   };
 
   const handleRetry = (index: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering remove
     setLoadingStates(prev => ({ ...prev, [index]: true }));
     setErrorStates(prev => ({ ...prev, [index]: false }));
+    setRetryCount(prev => ({ ...prev, [index]: 0 }));
+    setUsedFallback(prev => ({ ...prev, [index]: false }));
+  };
+
+  // Construct image URL with cache busting based on retry state
+  const getImageUrl = (item: MediaItem, index: number): string => {
+    const currentRetryCount = retryCount[index] || 0;
+    
+    if (usedFallback[index]) {
+      return addCacheBuster(getDefaultFoodPlaceholder());
+    }
+    
+    let url = item.url;
+    if (currentRetryCount > 0) {
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substring(2, 7);
+      url = url.includes('?') 
+        ? `${url}&t=${timestamp}&r=${random}&retry=${currentRetryCount}` 
+        : `${url}?t=${timestamp}&r=${random}&retry=${currentRetryCount}`;
+    }
+    
+    return url;
   };
 
   return (
@@ -59,7 +98,7 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({ mediaItems, onRemove }) => 
               
               {/* Actual image */}
               <img 
-                src={addCacheBuster(item.url)}
+                src={getImageUrl(item, index)}
                 alt="Menu item" 
                 className="w-full h-full object-cover"
                 onLoad={() => handleImageLoad(index)}

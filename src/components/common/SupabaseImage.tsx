@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageOff, RefreshCcw } from 'lucide-react';
-import { addCacheBuster } from '@/utils/supabaseStorage';
+import { addCacheBuster, getDefaultFoodPlaceholder } from '@/utils/supabaseStorage';
 
 interface SupabaseImageProps {
   src: string;
@@ -19,7 +19,7 @@ const SupabaseImage: React.FC<SupabaseImageProps> = ({
   src,
   alt,
   className = "",
-  fallbackSrc = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60",
+  fallbackSrc,
   width,
   height,
   onClick,
@@ -29,7 +29,11 @@ const SupabaseImage: React.FC<SupabaseImageProps> = ({
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [currentSrc, setCurrentSrc] = useState(addCacheBuster(src));
+  const [usedFallback, setUsedFallback] = useState(false);
   const maxRetries = 3;
+
+  // Use food placeholder as last resort fallback if no fallbackSrc provided
+  const finalFallbackSrc = fallbackSrc || getDefaultFoodPlaceholder();
 
   // Reset states when src changes
   useEffect(() => {
@@ -37,6 +41,7 @@ const SupabaseImage: React.FC<SupabaseImageProps> = ({
     setIsLoading(true);
     setHasError(false);
     setRetryCount(0);
+    setUsedFallback(false);
   }, [src]);
 
   const handleImageLoad = () => {
@@ -59,10 +64,16 @@ const SupabaseImage: React.FC<SupabaseImageProps> = ({
       
       console.log(`Auto-retrying image load (${nextCount}/${maxRetries}): ${newSrc}`);
       setCurrentSrc(newSrc);
+    } else if (!usedFallback) {
+      // Try fallback source
+      console.log(`Trying fallback image source: ${finalFallbackSrc}`);
+      setCurrentSrc(addCacheBuster(finalFallbackSrc));
+      setRetryCount(0);
+      setUsedFallback(true);
     } else {
       setIsLoading(false);
       setHasError(true);
-      console.error(`Failed to load image after ${maxRetries} attempts: ${src}`);
+      console.error(`Failed to load image after ${maxRetries} attempts and fallback: ${src}`);
     }
   };
 
@@ -71,6 +82,7 @@ const SupabaseImage: React.FC<SupabaseImageProps> = ({
     setHasError(false);
     setIsLoading(true);
     setRetryCount(0);
+    setUsedFallback(false);
     
     // Force browser to retry by adding/changing timestamp
     const timestamp = Date.now();
@@ -115,9 +127,9 @@ const SupabaseImage: React.FC<SupabaseImageProps> = ({
           </button>
 
           {/* Hidden fallback image that will show if visible image fails */}
-          {fallbackSrc && (
+          {finalFallbackSrc && (
             <img 
-              src={fallbackSrc} 
+              src={finalFallbackSrc} 
               alt={alt} 
               className={`absolute inset-0 object-cover w-full h-full ${className}`} 
               style={{ opacity: 0.3 }}

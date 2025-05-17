@@ -1,30 +1,39 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ImageOff, RefreshCcw } from 'lucide-react';
-import { addCacheBuster } from '@/utils/supabaseStorage';
+import { addCacheBuster, getDefaultFoodPlaceholder } from '@/utils/supabaseStorage';
 
 interface MediaImageProps {
   url: string;
   alt: string;
   className?: string;
   onClick?: () => void;
+  fallbackImg?: string;
 }
 
-const MediaImage: React.FC<MediaImageProps> = ({ url, alt, className = "", onClick }) => {
+const MediaImage: React.FC<MediaImageProps> = ({ 
+  url, 
+  alt, 
+  className = "", 
+  onClick,
+  fallbackImg
+}) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [currentUrl, setCurrentUrl] = useState("");
+  const [usedFallback, setUsedFallback] = useState(false);
   const maxRetries = 3;
   const mountedRef = useRef(true);
   
   // Reset states when URL changes and generate cache-busted URL immediately
   useEffect(() => {
-    const bustersUrl = addCacheBuster(url);
-    setCurrentUrl(bustersUrl);
+    const bustedUrl = addCacheBuster(url);
+    setCurrentUrl(bustedUrl);
     setIsLoaded(false);
     setHasError(false);
     setRetryCount(0);
+    setUsedFallback(false);
     
     return () => {
       mountedRef.current = false;
@@ -56,8 +65,23 @@ const MediaImage: React.FC<MediaImageProps> = ({ url, alt, className = "", onCli
       console.log(`Auto-retrying image load (${nextRetryCount}/${maxRetries}): ${newUrl}`);
       setCurrentUrl(newUrl);
     } else {
-      setHasError(true);
-      console.error(`Maximum retry attempts (${maxRetries}) reached for ${url}`);
+      // If we have a fallback image and haven't tried it yet, use it
+      if (fallbackImg && !usedFallback) {
+        console.log(`Trying fallback image: ${fallbackImg}`);
+        setCurrentUrl(addCacheBuster(fallbackImg));
+        setRetryCount(0);
+        setUsedFallback(true);
+      } else if (!usedFallback) {
+        // Try default food placeholder as a last resort
+        const placeholder = getDefaultFoodPlaceholder();
+        console.log(`Using default food placeholder: ${placeholder}`);
+        setCurrentUrl(addCacheBuster(placeholder));
+        setRetryCount(0);
+        setUsedFallback(true);
+      } else {
+        setHasError(true);
+        console.error(`Maximum retry attempts (${maxRetries}) reached for ${url}`);
+      }
     }
   };
 
@@ -67,6 +91,7 @@ const MediaImage: React.FC<MediaImageProps> = ({ url, alt, className = "", onCli
     setHasError(false);
     setIsLoaded(false);
     setRetryCount(0);
+    setUsedFallback(false);
       
     // Force browser to re-fetch the image with a fresh timestamp
     const timestamp = Date.now();

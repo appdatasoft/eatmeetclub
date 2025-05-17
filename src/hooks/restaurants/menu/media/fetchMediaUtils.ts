@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { MediaItem } from "@/components/restaurants/menu";
-import { addCacheBuster, generateAlternativeUrls } from '@/utils/supabaseStorage';
+import { addCacheBuster, generateAlternativeUrls, findWorkingImageUrl, getDefaultFoodPlaceholder } from '@/utils/supabaseStorage';
 
 /**
  * Fetches media items for a specific menu item from storage
@@ -89,43 +89,63 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
   
   // Try direct file URLs as a fallback approach
   try {
-    // Generate a list of possible URLs to try
-    const alternativeUrls = generateAlternativeUrls(restaurantId, itemId);
-    console.log(`Trying ${alternativeUrls.length} alternative URL patterns for item ${itemId}`);
+    // Find a working image URL
+    const workingUrl = await findWorkingImageUrl(restaurantId, itemId);
     
-    // Check each URL with a HEAD request 
-    // (this approach is more efficient than actually trying to render the images)
-    const urlChecks = alternativeUrls.map(async (url) => {
-      try {
-        const response = await fetch(url, { method: 'HEAD' });
-        if (response.ok) {
-          return url;
-        }
-        return null;
-      } catch (_) {
-        return null;
-      }
-    });
-    
-    // Wait for all HEAD requests to complete
-    const validUrls = (await Promise.all(urlChecks)).filter(Boolean) as string[];
-    
-    if (validUrls.length > 0) {
-      console.log(`Found ${validUrls.length} valid direct URL(s) for item ${itemId}:`, validUrls[0]);
+    if (workingUrl) {
+      console.log(`Found working direct URL for item ${itemId}:`, workingUrl);
       
-      return validUrls.map(url => ({
-        url,
+      return [{
+        url: workingUrl,
         type: 'image',
-        id: url.split('?')[0] // Store the URL without query params as ID
-      }));
+        id: workingUrl.split('?')[0] // Store the URL without query params as ID
+      }];
+    } else {
+      console.log(`Testing alternative URLs for item ${itemId}`);
+      
+      // Generate a list of possible URLs to try
+      const alternativeUrls = generateAlternativeUrls(restaurantId, itemId);
+      console.log(`Trying ${alternativeUrls.length} alternative URL patterns for item ${itemId}`);
+      
+      // Check each URL with a HEAD request (this approach is more efficient than actually trying to render the images)
+      const urlChecks = alternativeUrls.slice(0, 5).map(async (url) => {
+        // Only check first 5 to avoid too many requests
+        try {
+          const response = await fetch(url, { method: 'HEAD' });
+          if (response.ok) {
+            return url;
+          }
+          return null;
+        } catch (_) {
+          return null;
+        }
+      });
+      
+      // Wait for all HEAD requests to complete
+      const validUrls = (await Promise.all(urlChecks)).filter(Boolean) as string[];
+      
+      if (validUrls.length > 0) {
+        console.log(`Found ${validUrls.length} valid direct URL(s) for item ${itemId}:`, validUrls[0]);
+        
+        return validUrls.map(url => ({
+          url,
+          type: 'image',
+          id: url.split('?')[0] // Store the URL without query params as ID
+        }));
+      }
     }
   } catch (err) {
     console.error('Error in fallback URL check:', err);
   }
   
-  // Return empty array if no media found
-  console.log(`No media found for menu item ${itemId}`);
-  return [];
+  // Create a fallback media item with placeholder image as last resort
+  console.log(`No media found for menu item ${itemId}, using placeholder`);
+  return [{
+    url: getDefaultFoodPlaceholder(),
+    type: 'image',
+    id: 'placeholder',
+    isPlaceholder: true
+  }];
 };
 
 /**

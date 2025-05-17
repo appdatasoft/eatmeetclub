@@ -133,7 +133,53 @@ export const generateAlternativeUrls = (
     
     // Combined restaurant and item IDs
     urls.push(`${baseStorageUrl}/${restaurantId}-${itemId}.${ext}`);
+    
+    // Try with menu-items prefix
+    urls.push(`${baseStorageUrl}/menu-items/${restaurantId}/${itemId}/main.${ext}`);
+    urls.push(`${baseStorageUrl}/menu-items/${restaurantId}/${itemId}/thumbnail.${ext}`);
+    
+    // Try with public folder
+    urls.push(`${baseStorageUrl}/public/${itemId}.${ext}`);
+    urls.push(`${baseStorageUrl}/public/menu-items/${itemId}.${ext}`);
+    
+    // Try with restaurants folder
+    urls.push(`${baseStorageUrl}/restaurants/${restaurantId}/menu/${itemId}.${ext}`);
   });
   
   return urls.map(url => addCacheBuster(url));
+};
+
+/**
+ * Generates a placeholder URL for menu items with no images
+ * @returns A placeholder URL string
+ */
+export const getDefaultFoodPlaceholder = (): string => {
+  // Return a default food placeholder URL
+  return "https://wocfwpedauuhlrfugxuu.supabase.co/storage/v1/object/public/lovable-uploads/placeholders/food-placeholder.jpg";
+};
+
+/**
+ * Try to get a working image URL from multiple alternatives
+ * @param restaurantId The restaurant ID  
+ * @param itemId The menu item ID
+ * @returns Promise resolving to a working URL or null
+ */
+export const findWorkingImageUrl = async (
+  restaurantId: string, 
+  itemId: string
+): Promise<string | null> => {
+  const urls = generateAlternativeUrls(restaurantId, itemId);
+  
+  console.log(`Attempting to find working image for item ${itemId} with ${urls.length} alternatives`);
+  
+  // Check the first few URLs more quickly with HEAD requests
+  for (let i = 0; i < Math.min(urls.length, 4); i++) {
+    const exists = await checkStorageUrlExists(urls[i]);
+    if (exists) {
+      console.log(`Found working image URL: ${urls[i]}`);
+      return urls[i];
+    }
+  }
+  
+  return null;
 };

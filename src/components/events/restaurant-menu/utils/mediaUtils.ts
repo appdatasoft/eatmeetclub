@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { MediaItem } from "@/components/restaurants/menu";
-import { addCacheBuster, generateAlternativeUrls } from "@/utils/supabaseStorage";
+import { addCacheBuster, generateAlternativeUrls, findWorkingImageUrl, getDefaultFoodPlaceholder } from "@/utils/supabaseStorage";
 
 /**
  * Fetches media items for a specific menu item from various possible storage paths
@@ -12,8 +12,13 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
     
     // Check if restaurantId and itemId are valid
     if (!restaurantId || !item.id) {
-      console.log('Missing restaurantId or itemId, returning empty media array');
-      return [];
+      console.log('Missing restaurantId or itemId, returning placeholder');
+      return [{
+        url: getDefaultFoodPlaceholder(),
+        type: 'image',
+        id: 'placeholder',
+        isPlaceholder: true
+      }];
     }
     
     // Main path - this should be the primary location where images are stored
@@ -52,6 +57,23 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
       }
     } catch (error) {
       console.error(`Error checking primary path ${primaryPath}:`, error);
+    }
+    
+    // Find a working image URL as fallback
+    try {
+      const workingUrl = await findWorkingImageUrl(restaurantId, item.id);
+      
+      if (workingUrl) {
+        console.log(`Found working direct URL for item ${item.name}:`, workingUrl);
+        
+        return [{
+          url: workingUrl,
+          type: 'image',
+          id: workingUrl.split('?')[0] // Store the URL without query params as ID
+        }];
+      }
+    } catch (err) {
+      console.error(`Error finding working URL for ${item.name}:`, err);
     }
     
     // Fallback path - just the item ID
@@ -122,20 +144,30 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
       console.error(`Error in alternative URL check for ${item.name}:`, err);
     }
     
-    // If no media found, return empty array
-    console.log(`No media found for ${item.name} after all attempts`);
-    return [];
+    // Create a fallback media item with placeholder as last resort
+    console.log(`No media found for ${item.name} after all attempts, using placeholder`);
+    return [{
+      url: getDefaultFoodPlaceholder(),
+      type: 'image',
+      id: 'placeholder',
+      isPlaceholder: true
+    }];
     
   } catch (error) {
     console.error('Error in fetchMenuItemMedia:', error);
-    return [];
+    return [{
+      url: getDefaultFoodPlaceholder(),
+      type: 'image',
+      id: 'placeholder',
+      isPlaceholder: true
+    }];
   }
 }
 
 /**
  * Fetches ingredients for a specific menu item
  */
-export async function fetchMenuItemIngredients(itemId: string): Promise<string[]> {
+export async function fetchMenuItemIngredients(itemId: string): Promise<string[]> => {
   try {
     const { data: ingredientsData, error: ingredientsError } = await supabase
       .from('restaurant_menu_ingredients')
@@ -152,4 +184,4 @@ export async function fetchMenuItemIngredients(itemId: string): Promise<string[]
     console.error("Error fetching ingredients:", error);
     return [];
   }
-}
+};
