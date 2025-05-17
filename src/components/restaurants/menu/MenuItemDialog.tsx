@@ -34,10 +34,10 @@ const MenuItemDialog: React.FC<MenuItemDialogProps> = ({
       <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto bg-white border-gray-200 shadow-lg">
         <DialogHeader>
           <DialogTitle className="text-gray-900">
-            {currentItem ? 'Edit Menu Item' : 'Add Menu Item'}
+            {currentItem && currentItem.id ? 'Edit Menu Item' : 'Add Menu Item'}
           </DialogTitle>
           <DialogDescription>
-            {currentItem ? 'Update the details of this menu item.' : 'Add a new item to your restaurant menu.'}
+            {currentItem && currentItem.id ? 'Update the details of this menu item.' : 'Add a new item to your restaurant menu.'}
           </DialogDescription>
         </DialogHeader>
         <MenuItemForm
