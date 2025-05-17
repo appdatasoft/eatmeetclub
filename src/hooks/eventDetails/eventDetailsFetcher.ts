@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { EventDetails } from "../types/eventTypes";
 import { toast } from "@/hooks/use-toast";
@@ -15,10 +16,23 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       throw new Error("Invalid event ID format");
     }
     
-    // First get event data
+    // First get event data with restaurant details
     const { data: eventData, error: eventError } = await supabase
       .from("events")
-      .select("*, restaurants(*)")
+      .select(`
+        *,
+        restaurants (
+          id,
+          name,
+          address,
+          city,
+          state,
+          zipcode,
+          description,
+          phone,
+          website
+        )
+      `)
       .eq("id", eventId)
       .single();
 
@@ -31,7 +45,7 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       throw new Error("Event not found");
     }
     
-    console.log("Event data received:", eventData);
+    console.log("Event data with restaurant details:", eventData);
     
     // Transform the data to match the EventDetails interface
     const eventDetails: EventDetails = {
@@ -50,6 +64,8 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
         state: eventData.restaurants.state || "",
         zipcode: eventData.restaurants.zipcode || "",
         description: eventData.restaurants.description || "",
+        phone: eventData.restaurants.phone || "",
+        website: eventData.restaurants.website || ""
       } : {
         id: "unknown",
         name: "Unknown Restaurant",
@@ -58,6 +74,8 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
         state: "",
         zipcode: "",
         description: "",
+        phone: "",
+        website: ""
       },
       tickets_sold: eventData.tickets_sold || 0,
       user_id: eventData.user_id,
@@ -66,11 +84,10 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
     };
 
     // Log the transformed data to verify restaurant description is included
-    console.log("Transformed event details:", {
+    console.log("Transformed event details with restaurant data:", {
       ...eventDetails,
       restaurant: {
-        ...eventDetails.restaurant,
-        description: eventDetails.restaurant.description
+        ...eventDetails.restaurant
       }
     });
 

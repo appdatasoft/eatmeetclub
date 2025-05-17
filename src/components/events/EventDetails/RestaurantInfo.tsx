@@ -21,6 +21,8 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }
   const isValidRestaurant = id && id !== "unknown";
   const restaurantName = name || "Unknown Restaurant";
   
+  console.log("RestaurantInfo received props:", { id, name, description });
+  
   // Use the actual description if available, otherwise provide a generic fallback
   const restaurantDescription = description || "specializes in sustainable, locally-sourced cuisine with a focus on seasonal ingredients.";
   
@@ -61,9 +63,6 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ id, name, description }
     
     fetchRestaurantImage();
   }, [id, isValidRestaurant]);
-  
-  // Add detailed debugging to confirm props including description are received
-  console.log("RestaurantInfo props:", { id, name, description, isValidRestaurant, imageUrl, restaurantDescription });
   
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">

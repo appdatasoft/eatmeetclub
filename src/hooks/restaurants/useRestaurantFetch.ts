@@ -7,6 +7,7 @@ export interface Restaurant {
   id: string;
   name: string;
   user_id: string;
+  description?: string;  // Ensuring description is defined in this type
 }
 
 export const useRestaurantFetch = (restaurantId: string | undefined) => {
@@ -46,7 +47,7 @@ export const useRestaurantFetch = (restaurantId: string | undefined) => {
           return;
         }
         
-        console.log('Restaurant data:', data);
+        console.log('Restaurant data from useRestaurantFetch:', data);
         setRestaurant(data);
         
         // Check if user is owner
