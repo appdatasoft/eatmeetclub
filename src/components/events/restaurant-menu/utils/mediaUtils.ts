@@ -75,14 +75,17 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
       } else if (listData && listData.length > 0) {
         console.log(`Found ${listData.length} total files in menu-items directory`);
         
-        // Match filenames that might contain the item id or name
+        // Log to help with debugging
+        console.log("Matching against:", item.name.toLowerCase());
+        console.log("All files:", listData.map(f => f.name));
+        
+        // Match filenames that contain the item name (simplify matching logic)
         const matchingFiles = listData.filter(file => 
-          file.name.toLowerCase().includes(item.id.toLowerCase()) || 
-          file.name.toLowerCase().includes(item.name.toLowerCase().replace(/\s+/g, '-'))
+          file.name.toLowerCase().includes(item.name.toLowerCase())
         );
         
         if (matchingFiles.length > 0) {
-          console.log(`Found ${matchingFiles.length} files with matching name pattern for item ${item.id}:`, 
+          console.log(`Found ${matchingFiles.length} files with matching name pattern for item ${item.name}:`, 
                       matchingFiles.map(f => f.name).join(', '));
           
           media = matchingFiles.map(file => {
@@ -101,7 +104,7 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
             };
           });
         } else {
-          console.log(`No matching files found for item ${item.id} (${item.name}) in menu-items directory`);
+          console.log(`No matching files found for item ${item.name} in menu-items directory`);
         }
       }
     } catch (err) {
