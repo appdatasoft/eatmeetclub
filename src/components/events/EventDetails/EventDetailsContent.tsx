@@ -97,7 +97,7 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
                 </Badge>
               </div>
               
-              {/* Create Memory button */}
+              {/* Create Memory button - only for logged in users */}
               {user && (
                 <Button 
                   onClick={handleCreateMemory}
@@ -109,31 +109,29 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
                 </Button>
               )}
               
-              {/* View Restaurant Menu button - only for logged-in users */}
-              {user && (
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="mb-4 w-full flex items-center gap-2"
-                    >
-                      <Utensils className="h-4 w-4" />
-                      <span>View Restaurant Menu</span>
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent className="w-full sm:max-w-md md:max-w-lg">
-                    <SheetHeader>
-                      <SheetTitle>Menu: {event.restaurant.name}</SheetTitle>
-                      <SheetDescription>
-                        Browse the restaurant's menu items
-                      </SheetDescription>
-                    </SheetHeader>
-                    <div className="mt-6 pr-6">
-                      <RestaurantMenuPreview restaurantId={event.restaurant.id} />
-                    </div>
-                  </SheetContent>
-                </Sheet>
-              )}
+              {/* View Restaurant Menu button - Available for all users */}
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="mb-4 w-full flex items-center gap-2"
+                  >
+                    <Utensils className="h-4 w-4" />
+                    <span>View Restaurant Menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-full sm:max-w-md md:max-w-lg">
+                  <SheetHeader>
+                    <SheetTitle>Menu: {event.restaurant.name}</SheetTitle>
+                    <SheetDescription>
+                      Browse the restaurant's menu items
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="mt-6 pr-6">
+                    <RestaurantMenuPreview restaurantId={event.restaurant.id} />
+                  </div>
+                </SheetContent>
+              </Sheet>
               
               {/* Add Menu button - only show if user is logged in and is the owner of the event */}
               {user && isCurrentUserOwner && (

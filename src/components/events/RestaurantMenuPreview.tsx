@@ -29,7 +29,7 @@ const RestaurantMenuPreview: React.FC<RestaurantMenuProps> = ({ restaurantId }) 
     return <LoadingSkeleton />;
   }
 
-  if (menuItems.length === 0) {
+  if (!menuItems || menuItems.length === 0) {
     return <EmptyMenuState />;
   }
 
