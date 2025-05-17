@@ -63,6 +63,7 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
   if (!foundMedia) {
     try {
       console.log("Checking for files directly in menu-items directory");
+      console.log("Looking for item name:", item.name);
       
       // Get all files in the menu-items directory with increased limit
       const { data: listData, error: listError } = await supabase
@@ -79,14 +80,16 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
         console.log("Matching against:", item.name.toLowerCase());
         console.log("All files:", listData.map(f => f.name));
         
-        // Match filenames that contain the item name (simplify matching logic)
-        const matchingFiles = listData.filter(file => 
-          file.name.toLowerCase().includes(item.name.toLowerCase())
-        );
+        // Match filenames that contain the item name (case insensitive)
+        const itemNameLower = item.name.toLowerCase().trim();
+        const matchingFiles = listData.filter(file => {
+          const fileNameLower = file.name.toLowerCase();
+          return fileNameLower.includes(itemNameLower);
+        });
         
         if (matchingFiles.length > 0) {
           console.log(`Found ${matchingFiles.length} files with matching name pattern for item ${item.name}:`, 
-                      matchingFiles.map(f => f.name).join(', '));
+                     matchingFiles.map(f => f.name).join(', '));
           
           media = matchingFiles.map(file => {
             const filePath = `menu-items/${file.name}`;
@@ -114,6 +117,8 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
   
   if (media.length > 0) {
     console.log(`Final media array for ${item.name} has ${media.length} items:`, media.map(m => m.url));
+  } else {
+    console.log(`No media found for item ${item.name}`);
   }
   
   return media;

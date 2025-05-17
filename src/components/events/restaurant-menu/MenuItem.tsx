@@ -13,6 +13,7 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
   const hasMedia = item.media && item.media.length > 0;
 
@@ -24,6 +25,31 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
       mediaCount: hasMedia ? item.media.length : 0
     });
   }, [item, hasMedia]);
+
+  // Reset image states when media changes
+  useEffect(() => {
+    setImageLoaded(false);
+    setImageError(false);
+  }, [item.media]);
+  
+  const handleRetryImage = () => {
+    if (retryCount < 2) {
+      console.log(`Retrying image load for ${item.name}, attempt ${retryCount + 1}`);
+      setImageError(false);
+      setImageLoaded(false);
+      setRetryCount(prevCount => prevCount + 1);
+    }
+  };
+  
+  // Get a random placeholder from Unsplash if needed
+  const getPlaceholderImage = () => {
+    const placeholders = [
+      "https://images.unsplash.com/photo-1546241072-48010ad2862c?auto=format&fit=crop&w=300&h=300",
+      "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=300&h=300",
+      "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop&w=300&h=300"
+    ];
+    return placeholders[Math.floor(Math.random() * placeholders.length)];
+  };
   
   return (
     <div className="border-b pb-3">
@@ -54,10 +80,11 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
                 }}
                 onError={(e) => {
                   console.error(`Image error for ${item.name}:`, item.media[0].url);
-                  setImageError(true);
                   
                   // Try loading a placeholder image instead
-                  e.currentTarget.src = "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop&w=300&h=300";
+                  const placeholderUrl = getPlaceholderImage();
+                  console.log(`Using food placeholder for ${item.name}:`, placeholderUrl);
+                  e.currentTarget.src = placeholderUrl;
                   
                   // If the placeholder also fails, show the fallback UI
                   e.currentTarget.onerror = () => {
@@ -70,8 +97,12 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
               
               {/* Show error state if both original and fallback images fail */}
               {imageError && !imageLoaded && (
-                <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-100">
-                  <Image className="h-5 w-5 text-gray-400" />
+                <div 
+                  className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-gray-100 cursor-pointer"
+                  onClick={handleRetryImage}
+                >
+                  <Image className="h-5 w-5 text-gray-400 mb-1" />
+                  <span className="text-gray-400 text-xs">Tap to retry</span>
                 </div>
               )}
             </div>
@@ -127,7 +158,7 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
                       className="w-full h-64 object-cover"
                       onError={(e) => {
                         console.error(`Gallery image error for ${item.name} (${idx}):`, media.url);
-                        e.currentTarget.src = "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop";
+                        e.currentTarget.src = getPlaceholderImage();
                         e.currentTarget.onerror = null; // Prevent infinite error loops
                       }}
                     />
