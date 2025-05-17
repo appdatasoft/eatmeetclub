@@ -14,7 +14,7 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
   try {
     const { data, error } = await supabase
       .from('restaurant_menu_media')
-      .select('*')
+      .select('id, url, media_type, storage_path')
       .eq('menu_item_id', itemId);
     
     if (error) {
@@ -26,7 +26,7 @@ export const fetchMediaForMenuItem = async (restaurantId: string, itemId: string
       return data.map(item => ({
         url: addCacheBuster(item.url),
         type: item.media_type as 'image' | 'video',
-        id: item.id,
+        id: item.storage_path || item.id,
       }));
     }
   } catch (err) {

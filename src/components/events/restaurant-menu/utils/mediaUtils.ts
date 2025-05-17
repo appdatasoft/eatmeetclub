@@ -24,7 +24,7 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
     // First check if we have media records in the database
     const { data: mediaRecords, error: mediaError } = await supabase
       .from('restaurant_menu_media')
-      .select('*')
+      .select('id, url, media_type, storage_path')
       .eq('menu_item_id', item.id);
       
     if (!mediaError && mediaRecords && mediaRecords.length > 0) {
