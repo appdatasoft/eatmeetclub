@@ -60,11 +60,10 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
     }
   }
   
-  // If no media found in specific paths, check the root menu-items directory and use fuzzy matching
+  // If no media found in specific paths, check the root menu-items directory with enhanced matching
   if (!foundMedia) {
     try {
-      console.log("Checking for files directly in menu-items directory");
-      console.log("Looking for item name or ID:", item.name, item.id);
+      console.log("Checking root menu-items directory with enhanced matching");
       
       // Get all files in the menu-items directory with increased limit
       const { data: listData, error: listError } = await supabase
@@ -77,28 +76,17 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
       } else if (listData && listData.length > 0) {
         console.log(`Found ${listData.length} total files in menu-items directory`);
         
-        // Enhanced logging for debugging
-        console.log("Matching against:", item.name.toLowerCase(), "or ID:", item.id);
-        
-        // Match filenames that contain the item name or ID (case insensitive)
-        const itemNameLower = item.name.toLowerCase().trim();
-        const itemId = item.id.toLowerCase().trim();
+        // Enhanced matching against item ID or name (case insensitive)
+        const itemId = item.id.toLowerCase();
+        const itemName = item.name.toLowerCase();
         
         const matchingFiles = listData.filter(file => {
-          const fileNameLower = file.name.toLowerCase();
-          return (
-            fileNameLower.includes(itemNameLower) || 
-            fileNameLower.includes(itemId) ||
-            // Additional matching for common patterns
-            fileNameLower.includes(itemNameLower.substring(0, 5)) || // Match first 5 chars
-            fileNameLower.includes(itemNameLower.replace(/\s+/g, '-')) || // Match kebab-case
-            fileNameLower.includes(itemNameLower.replace(/\s+/g, '_'))   // Match snake_case
-          );
+          const fileName = file.name.toLowerCase();
+          return fileName.includes(itemId) || fileName.includes(itemName);
         });
         
         if (matchingFiles.length > 0) {
-          console.log(`Found ${matchingFiles.length} files with matching name pattern for item ${item.name}:`, 
-                     matchingFiles.map(f => f.name).join(', '));
+          console.log(`Found ${matchingFiles.length} matching files for ${item.name}`);
           
           media = matchingFiles.map(file => {
             const filePath = `menu-items/${file.name}`;
@@ -108,24 +96,11 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
               
             const isVideo = file.name.match(/\.(mp4|webm|mov)$/i) !== null;
             
-            console.log(`Generated URL for ${file.name}:`, publicUrl);
-            
             return {
               url: publicUrl,
               type: isVideo ? 'video' : 'image'
             };
           });
-        } else {
-          console.log(`No matching files found for item ${item.name} in menu-items directory`);
-          
-          // Use predefined static fallback images instead of dynamic Unsplash URLs
-          const fallbackImageUrl = getStaticFallbackImage(item.name);
-          console.log(`Using static fallback image for ${item.name}:`, fallbackImageUrl);
-          
-          media = [{
-            url: fallbackImageUrl,
-            type: 'image'
-          }];
         }
       }
     } catch (err) {
@@ -133,17 +108,17 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
     }
   }
   
-  if (media.length > 0) {
-    console.log(`Final media array for ${item.name} has ${media.length} items:`, media.map(m => m.url));
-  } else {
+  if (media.length === 0) {
     console.log(`No media found for item ${item.name}, using static fallback image`);
     
-    // Always ensure at least one placeholder image using static URLs
+    // Use a static fallback image
     const fallbackImageUrl = getStaticFallbackImage(item.name);
     media = [{
       url: fallbackImageUrl,
       type: 'image'
     }];
+  } else {
+    console.log(`Final media array for ${item.name} has ${media.length} items`);
   }
   
   return media;
@@ -151,7 +126,6 @@ export async function fetchMenuItemMedia(restaurantId: string, item: { id: strin
 
 /**
  * Returns a static fallback image URL based on the item name
- * Using predefined Unsplash images to avoid the dynamic API calls that can fail
  */
 function getStaticFallbackImage(itemName: string): string {
   // Array of reliable, pre-cached food images from Unsplash

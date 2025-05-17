@@ -16,7 +16,7 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
   useEffect(() => {
     const fetchMenuItems = async () => {
       if (!restaurantId) {
-        console.log("No restaurantId provided to RestaurantMenuPreview");
+        console.log("No restaurantId provided to useMenuItemsFetcher");
         setIsLoading(false);
         return;
       }
@@ -61,19 +61,11 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
             name: item.name,
             description: item.description || '',
             price: item.price,
-            // Fixed: Use a default type instead of accessing a non-existent property
-            type: 'Other', // Default type if not present
+            type: 'Other', // Default type since it's not in the database
             ingredients: ingredients,
             media: media
           } as MenuItem;
         }));
-        
-        // Add debugging log to check media loading for each item
-        console.log("Items with media loaded:", itemsWithDetails.map(i => ({
-          name: i.name,
-          mediaCount: i.media?.length || 0,
-          firstImage: i.media && i.media.length > 0 ? i.media[0].url : 'none'
-        })));
         
         // Group items by type for display
         const types = [...new Set(itemsWithDetails.map(item => item.type || 'Other'))];
@@ -88,11 +80,7 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
       }
     };
 
-    if (restaurantId) {
-      fetchMenuItems();
-    } else {
-      setIsLoading(false);
-    }
+    fetchMenuItems();
   }, [restaurantId]);
 
   return { menuItems, menuTypes, isLoading, error };

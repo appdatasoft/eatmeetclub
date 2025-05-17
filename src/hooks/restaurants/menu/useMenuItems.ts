@@ -14,10 +14,14 @@ export const useMenuItems = (restaurantId: string | undefined) => {
 
   useEffect(() => {
     const fetchMenuItems = async () => {
-      if (!restaurantId) return;
+      if (!restaurantId) {
+        setIsLoading(false);
+        return;
+      }
       
       try {
         setIsLoading(true);
+        console.log("Fetching menu items for restaurant:", restaurantId);
         
         // Fetch menu items
         const { data: menuData, error: menuError } = await supabase
@@ -25,11 +29,17 @@ export const useMenuItems = (restaurantId: string | undefined) => {
           .select('*')
           .eq('restaurant_id', restaurantId);
           
-        if (menuError) throw menuError;
+        if (menuError) {
+          throw menuError;
+        }
         
-        if (menuData) {
+        if (menuData && menuData.length > 0) {
+          console.log(`Found ${menuData.length} menu items for restaurant ${restaurantId}`);
+          
           // For each menu item, fetch its ingredients and media items
           const itemsWithDetails = await Promise.all(menuData.map(async (item) => {
+            console.log(`Processing menu item: ${item.name} (${item.id})`);
+            
             // Fetch ingredients for this menu item
             const ingredients = await fetchIngredientsForMenuItem(item.id);
             
@@ -42,13 +52,17 @@ export const useMenuItems = (restaurantId: string | undefined) => {
               name: item.name,
               description: item.description || '',
               price: item.price,
-              type: '', // Set a default empty string since type doesn't exist in the database
+              type: 'Other', // Default type since it's not in the database
               ingredients: ingredients,
               media: media
             } as MenuItem;
           }));
           
+          console.log(`Processed ${itemsWithDetails.length} menu items with details`);
           setMenuItems(itemsWithDetails);
+        } else {
+          console.log(`No menu items found for restaurant ${restaurantId}`);
+          setMenuItems([]);
         }
       } catch (error: any) {
         console.error('Error fetching menu items:', error);
@@ -63,12 +77,8 @@ export const useMenuItems = (restaurantId: string | undefined) => {
       }
     };
     
-    if (restaurantId) {
-      fetchMenuItems();
-    } else {
-      setIsLoading(false);
-    }
-  }, [restaurantId, toast]);
+    fetchMenuItems();
+  }, [restaurantId, fetchMediaForMenuItem, fetchIngredientsForMenuItem, toast]);
 
   return { menuItems, setMenuItems, isLoading, error };
 };

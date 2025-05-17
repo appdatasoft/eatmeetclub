@@ -1,50 +1,58 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 export const useRestaurantFetch = (restaurantId: string | undefined, userId: string | undefined) => {
-  const { toast } = useToast();
   const [restaurant, setRestaurant] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isOwner, setIsOwner] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     const fetchRestaurant = async () => {
       if (!restaurantId) return;
       
       try {
-        // Fetch restaurant details
+        setIsLoading(true);
+        
         const { data: restaurantData, error: restaurantError } = await supabase
           .from('restaurants')
           .select('*')
           .eq('id', restaurantId)
           .single();
-          
+        
         if (restaurantError) throw restaurantError;
         
-        setRestaurant(restaurantData);
-        
-        // Check if user is the owner of the restaurant
-        if (userId) {
-          setIsOwner(restaurantData.user_id === userId);
+        if (restaurantData) {
+          setRestaurant(restaurantData);
+          
+          // Check if the current user is the owner of this restaurant
+          if (userId && restaurantData.user_id === userId) {
+            setIsOwner(true);
+          }
+        } else {
+          throw new Error('Restaurant not found');
         }
-      } catch (error: any) {
-        console.error('Error fetching restaurant:', error);
-        setError(error.message || 'Failed to fetch restaurant');
+      } catch (err: any) {
+        console.error('Error fetching restaurant:', err);
+        setError(err.message);
         toast({
           title: 'Error',
-          description: error.message || 'Failed to fetch restaurant',
+          description: err.message || 'Failed to load restaurant',
           variant: 'destructive'
         });
-      } 
+      } finally {
+        setIsLoading(false);
+      }
     };
     
     if (restaurantId) {
       fetchRestaurant();
+    } else {
+      setIsLoading(false);
     }
-  }, [restaurantId, userId, toast]);
+  }, [restaurantId, userId]);
 
   return { restaurant, isLoading, isOwner, error };
 };
