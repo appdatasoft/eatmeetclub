@@ -1,17 +1,15 @@
 
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import EditableText from "@/components/editor/EditableText";
-import { useState } from "react";
+import React, { useState } from "react";
+import MainLayout from "@/components/layout/MainLayout";
 import { TabsLarge, TabsListLarge, TabsTriggerLarge, TabsContentLarge } from "@/components/ui/tabs";
 import { Book, Target, Eye } from "lucide-react";
+import EditableText from "@/components/editor/EditableText";
 
 const About = () => {
   const [activeTab, setActiveTab] = useState("about");
 
   return (
-    <>
-      <Navbar />
+    <MainLayout>
       <div className="container-custom py-16 px-4">
         <div className="max-w-4xl mx-auto">
           <EditableText
@@ -272,8 +270,7 @@ const About = () => {
           </TabsLarge>
         </div>
       </div>
-      <Footer />
-    </>
+    </MainLayout>
   );
 };
 

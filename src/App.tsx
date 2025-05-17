@@ -26,6 +26,7 @@ import RestaurantMenu from "@/pages/dashboard/RestaurantMenu";
 import EditEvent from "@/pages/EditEvent";
 import Signup from "@/pages/Signup";
 import ForgotPassword from "@/pages/ForgotPassword";
+import About from "@/pages/About";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { EditableContentProvider } from "@/components/editor/EditableContentProvider";
@@ -67,6 +68,7 @@ function App() {
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/vision" element={<Vision />} />
           <Route path="/mission" element={<Mission />} />
+          <Route path="/about" element={<About />} />
           
           {/* New routes for events and venues */}
           <Route path="/events" element={<Events />} />
