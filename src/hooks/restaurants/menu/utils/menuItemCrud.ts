@@ -1,7 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
-import { MenuItemFormValues } from '@/components/restaurants/menu/MenuItemForm';
+import { MenuItemFormValues } from '@/components/restaurants/menu/types/menuTypes';
 
 /**
  * Creates a new menu item in the database

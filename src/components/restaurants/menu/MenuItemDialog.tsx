@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import MenuItemForm, { MenuItemFormValues } from '@/components/restaurants/menu/MenuItemForm';
+import MenuItemForm from '@/components/restaurants/menu/MenuItemForm';
 import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
+import { MenuItemFormValues } from './types/menuTypes';
 
 interface MenuItemDialogProps {
   isOpen: boolean;

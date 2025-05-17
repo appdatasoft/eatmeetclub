@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -9,7 +8,7 @@ import { useRestaurantFetch } from '@/hooks/restaurants/useRestaurantFetch';
 import { useMenuItemDialog } from '@/hooks/restaurants/menu/useMenuItemDialog';
 import { createMenuItem, updateMenuItem } from '@/hooks/restaurants/menu/utils/menuItemCrud';
 import { useMenuItemDelete } from '@/hooks/restaurants/menu/useMenuItemDelete';
-import { MenuItemFormValues } from '@/components/restaurants/menu/MenuItemForm';
+import { MenuItemFormValues } from '@/components/restaurants/menu/types/menuTypes';
 
 export interface Restaurant {
   id: string;

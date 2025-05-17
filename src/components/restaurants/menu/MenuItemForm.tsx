@@ -1,23 +1,12 @@
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { X, Plus } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import BasicDetails from './form/BasicDetails';
+import IngredientsInput from './form/IngredientsInput';
+import FormActions from './form/FormActions';
 import MenuItemMediaUploader from './MenuItemMediaUploader';
 import { MediaItem } from './types/mediaTypes';
-
-export interface MenuItemFormValues {
-  id?: string;
-  name: string;
-  description: string;
-  price: number;
-  type: string;
-  ingredients: string[];
-  media?: MediaItem[];
-}
+import { MenuItemFormValues } from './types/menuTypes';
 
 interface MenuItemFormProps {
   initialValues?: MenuItemFormValues;
@@ -26,15 +15,6 @@ interface MenuItemFormProps {
   onCancel?: () => void;
   restaurantId: string;
 }
-
-const MENU_ITEM_TYPES = [
-  "Appetizer",
-  "Main Course",
-  "Side Dish",
-  "Dessert",
-  "Beverage",
-  "Special"
-];
 
 const MenuItemForm: React.FC<MenuItemFormProps> = ({ 
   initialValues, 
@@ -51,8 +31,6 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
     ingredients: [''],
     media: []
   });
-
-  const [ingredientInput, setIngredientInput] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -76,20 +54,10 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
     }));
   };
 
-  const addIngredient = () => {
-    if (ingredientInput.trim()) {
-      setFormValues(prev => ({
-        ...prev,
-        ingredients: [...prev.ingredients, ingredientInput.trim()]
-      }));
-      setIngredientInput('');
-    }
-  };
-
-  const removeIngredient = (index: number) => {
+  const handleIngredientsChange = (ingredients: string[]) => {
     setFormValues(prev => ({
       ...prev,
-      ingredients: prev.ingredients.filter((_, i) => i !== index)
+      ingredients
     }));
   };
 
@@ -107,66 +75,16 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 text-gray-900">
-      <div className="space-y-2">
-        <Label htmlFor="name" className="text-gray-900">Food Item Name*</Label>
-        <Input
-          id="name"
-          name="name"
-          value={formValues.name}
-          onChange={handleChange}
-          placeholder="e.g., Margherita Pizza"
-          required
-          className="bg-white border-gray-300"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="type" className="text-gray-900">Type*</Label>
-        <Select
-          value={formValues.type}
-          onValueChange={handleTypeChange}
-          required
-        >
-          <SelectTrigger className="bg-white border-gray-300">
-            <SelectValue placeholder="Select a type" />
-          </SelectTrigger>
-          <SelectContent>
-            {MENU_ITEM_TYPES.map((type) => (
-              <SelectItem key={type} value={type}>
-                {type}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description" className="text-gray-900">Description</Label>
-        <Textarea
-          id="description"
-          name="description"
-          value={formValues.description}
-          onChange={handleChange}
-          placeholder="Describe this food item..."
-          rows={3}
-          className="bg-white border-gray-300"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="price" className="text-gray-900">Price*</Label>
-        <Input
-          id="price"
-          name="price"
-          type="number"
-          min="0"
-          step="0.01"
-          value={formValues.price}
-          onChange={handleChange}
-          required
-          className="bg-white border-gray-300"
-        />
-      </div>
+      <BasicDetails 
+        name={formValues.name}
+        description={formValues.description}
+        price={formValues.price}
+        type={formValues.type}
+        onNameChange={handleChange}
+        onDescriptionChange={handleChange}
+        onPriceChange={handleChange}
+        onTypeChange={handleTypeChange}
+      />
 
       <div className="space-y-2">
         <Label className="text-gray-900">Images & Videos</Label>
@@ -178,52 +96,15 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({
         />
       </div>
 
-      <div className="space-y-2">
-        <Label className="text-gray-900">Ingredients</Label>
-        <div className="flex flex-wrap gap-2 mb-2">
-          {formValues.ingredients.map((ingredient, index) => (
-            ingredient.trim() && (
-              <div key={index} className="bg-accent rounded-full px-3 py-1 flex items-center gap-1">
-                <span>{ingredient}</span>
-                <button 
-                  type="button" 
-                  onClick={() => removeIngredient(index)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <Input
-            value={ingredientInput}
-            onChange={(e) => setIngredientInput(e.target.value)}
-            placeholder="Add an ingredient"
-            className="flex-1 bg-white border-gray-300"
-          />
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={addIngredient}
-            disabled={!ingredientInput.trim()}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <IngredientsInput 
+        ingredients={formValues.ingredients}
+        onIngredientsChange={handleIngredientsChange}
+      />
 
-      <div className="flex justify-end gap-2 pt-2">
-        {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-        )}
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Saving...' : 'Save Item'}
-        </Button>
-      </div>
+      <FormActions 
+        onCancel={onCancel}
+        isLoading={isLoading}
+      />
     </form>
   );
 };
