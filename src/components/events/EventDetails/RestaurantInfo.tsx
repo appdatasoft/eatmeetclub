@@ -20,8 +20,9 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({
   const isValidRestaurant = id && id !== "unknown";
   const restaurantName = name || "Unknown Restaurant";
   
-  // Use the actual description if available, otherwise provide a generic fallback
-  const restaurantDescription = description || "specializes in sustainable, locally-sourced cuisine with a focus on seasonal ingredients.";
+  // Use the actual description if available, otherwise provide a fallback
+  const restaurantDescription = description || 
+    `${restaurantName} specializes in sustainable, locally-sourced cuisine with a focus on seasonal ingredients.`;
   
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">

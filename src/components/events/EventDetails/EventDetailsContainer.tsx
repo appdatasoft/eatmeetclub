@@ -25,7 +25,8 @@ const EventDetailsContainer: React.FC<EventDetailsContainerProps> = ({
 }) => {
   const isMobile = useIsMobile();
   
-  // Ensure restaurant data is available with fallbacks
+  // Make sure restaurant data is always available with proper fallbacks
+  // Only use fallback if restaurant data is completely missing
   const restaurant = event.restaurant || { 
     id: "unknown", 
     name: "Unknown Restaurant",
@@ -36,8 +37,10 @@ const EventDetailsContainer: React.FC<EventDetailsContainerProps> = ({
     description: ''
   };
   
-  // Log restaurant data for debugging
-  console.log("Restaurant data in EventDetailsContainer:", restaurant);
+  // Log restaurant data for debugging in development
+  if (process.env.NODE_ENV !== 'production') {
+    console.log("Restaurant data in EventDetailsContainer:", restaurant);
+  }
   
   return (
     <div className="lg:col-span-2">
@@ -53,7 +56,7 @@ const EventDetailsContainer: React.FC<EventDetailsContainerProps> = ({
       <RestaurantInfo 
         id={restaurant.id}
         name={restaurant.name} 
-        description={restaurant.description}
+        description={restaurant.description || "This restaurant specializes in providing a unique dining experience."}
         logoUrl={restaurant.logo_url}
       />
       {!isCurrentUserOwner && !isMobile && (

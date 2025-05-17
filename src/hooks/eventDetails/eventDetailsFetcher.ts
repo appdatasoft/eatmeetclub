@@ -21,7 +21,7 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       .from("events")
       .select(`
         *,
-        restaurants (
+        restaurant:restaurants(
           id,
           name,
           address,
@@ -46,7 +46,7 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       throw new Error("Event not found");
     }
     
-    console.log("Event data with restaurant details:", eventData);
+    console.log("Raw event data with restaurant details:", eventData);
     
     // Transform the data to match the EventDetails interface
     const eventDetails: EventDetails = {
@@ -57,17 +57,17 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       time: eventData.time,
       price: eventData.price,
       capacity: eventData.capacity,
-      restaurant: eventData.restaurants ? {
-        id: eventData.restaurants.id,
-        name: eventData.restaurants.name || "Unknown Restaurant",
-        address: eventData.restaurants.address || "",
-        city: eventData.restaurants.city || "",
-        state: eventData.restaurants.state || "",
-        zipcode: eventData.restaurants.zipcode || "",
-        description: eventData.restaurants.description || "",
-        phone: eventData.restaurants.phone || "",
-        website: eventData.restaurants.website || "",
-        logo_url: eventData.restaurants.logo_url || ""
+      restaurant: eventData.restaurant ? {
+        id: eventData.restaurant.id,
+        name: eventData.restaurant.name || "Unknown Restaurant",
+        address: eventData.restaurant.address || "",
+        city: eventData.restaurant.city || "",
+        state: eventData.restaurant.state || "",
+        zipcode: eventData.restaurant.zipcode || "",
+        description: eventData.restaurant.description || "",
+        phone: eventData.restaurant.phone || "",
+        website: eventData.restaurant.website || "",
+        logo_url: eventData.restaurant.logo_url || ""
       } : {
         id: "unknown",
         name: "Unknown Restaurant",
