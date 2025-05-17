@@ -21,8 +21,12 @@ const Vision = () => {
                 <p className="text-gray-700 mb-6 text-xl italic">
                   To rebuild local community from the dinner table out — by uniting neighbors through food, games, and civic purpose.
                 </p>
-                <p className="text-gray-600">
+                <p className="text-gray-600 mb-6">
                   EatMeetClub is where people disconnect from distractions and reconnect with each other, their neighborhoods, and their voice in shaping the place they live. It's a movement to restore real connection, support local restaurants, and make civic life feel human, playful, and meaningful again.
+                </p>
+                <p className="text-gray-600">
+                  This vision stands against isolation, consumer manipulation, and digital numbness.
+                  And it stands for joy, belonging, and rootedness.
                 </p>
               </div>
               
