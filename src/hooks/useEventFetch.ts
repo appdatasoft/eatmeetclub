@@ -34,11 +34,14 @@ export const useEventFetch = (eventId: string | undefined): EventDetailsResponse
       setError(err.message || "An unexpected error occurred");
       setEvent(null);
       
-      toast({
-        title: "Error loading event",
-        description: err.message || "Failed to load event details",
-        variant: "destructive"
-      });
+      // Only show toast for server errors, not for invalid IDs or not found
+      if (err.message !== "Invalid event ID format" && err.message !== "Event not found") {
+        toast({
+          title: "Error loading event",
+          description: err.message || "Failed to load event details",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsLoading(false);
     }

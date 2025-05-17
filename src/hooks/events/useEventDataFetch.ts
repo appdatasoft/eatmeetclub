@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { EventDetails } from "@/types/event";
 
@@ -10,7 +9,7 @@ export const useEventDataFetch = () => {
       // Fetch event data with restaurant details
       const { data, error } = await supabase
         .from('events')
-        .select('*, restaurant:restaurants(*)')
+        .select('*, restaurants(*)')
         .eq('id', eventId)
         .single();
       

@@ -20,7 +20,7 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       .from("events")
       .select(`
         *,
-        restaurant:restaurants (
+        restaurants (
           id,
           name,
           address,
@@ -54,13 +54,13 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       price: data.price,
       capacity: data.capacity,
       restaurant: {
-        id: data.restaurant?.id,
-        name: data.restaurant?.name || "Unknown Restaurant",
-        address: data.restaurant?.address || "",
-        city: data.restaurant?.city || "",
-        state: data.restaurant?.state || "",
-        zipcode: data.restaurant?.zipcode || "",
-        description: data.restaurant?.description || "",
+        id: data.restaurants?.id,
+        name: data.restaurants?.name || "Unknown Restaurant",
+        address: data.restaurants?.address || "",
+        city: data.restaurants?.city || "",
+        state: data.restaurants?.state || "",
+        zipcode: data.restaurants?.zipcode || "",
+        description: data.restaurants?.description || "",
       },
       tickets_sold: data.tickets_sold || 0,
       user_id: data.user_id,

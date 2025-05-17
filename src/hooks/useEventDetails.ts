@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
@@ -26,7 +25,7 @@ export const useEventDetails = (eventId: string | undefined) => {
         .from('events')
         .select(`
           *,
-          restaurant (
+          restaurants (
             id,
             name,
             address,
@@ -45,9 +44,9 @@ export const useEventDetails = (eventId: string | undefined) => {
         // Create a default restaurant object if one is not returned
         let restaurantData: Restaurant;
         
-        if (data.restaurant && typeof data.restaurant === 'object') {
+        if (data.restaurants && typeof data.restaurants === 'object') {
           // Type assertion to handle potential null
-          const restaurant = data.restaurant as Record<string, any>;
+          const restaurant = data.restaurants as Record<string, any>;
           restaurantData = {
             id: restaurant.id || 'unknown',
             name: restaurant.name || 'Unknown Restaurant',
