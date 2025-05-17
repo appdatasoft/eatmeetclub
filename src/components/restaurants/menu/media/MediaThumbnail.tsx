@@ -51,52 +51,64 @@ const MediaThumbnail: React.FC<MediaThumbnailProps> = ({
   const hasValidUrl = item && item.url && typeof item.url === 'string' && item.url.trim() !== '';
 
   return (
-    <div 
-      className={`w-16 h-16 rounded-md overflow-hidden bg-gray-100 cursor-pointer relative ${className}`}
-      onClick={onClick}
-      onKeyDown={handleKeyDown}
-      tabIndex={0}
-      role="button"
-      data-index={dataIndex}
-      aria-label={item.type === 'image' ? "View image" : "Play video"}
-    >
-      {hasValidUrl ? (
-        item.type === 'image' ? (
-          <MediaImage 
-            url={item.url} 
-            alt="Menu item thumbnail" 
-          />
+    <div className="flex flex-col">
+      {/* Thumbnail image */}
+      <div 
+        className={`w-16 h-16 rounded-md overflow-hidden bg-gray-100 cursor-pointer ${className}`}
+        onClick={onClick}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="button"
+        data-index={dataIndex}
+        aria-label={item.type === 'image' ? "View image" : "Play video"}
+      >
+        {hasValidUrl ? (
+          item.type === 'image' ? (
+            <MediaImage 
+              url={item.url} 
+              alt="Menu item thumbnail" 
+            />
+          ) : (
+            <MediaVideo 
+              url={item.url}
+            />
+          )
         ) : (
-          <MediaVideo 
-            url={item.url}
-          />
-        )
-      ) : (
-        <div className="flex items-center justify-center h-full w-full bg-gray-100" aria-hidden="true">
-          <Image className="h-6 w-6 text-gray-400" />
-          <span className="sr-only">No media available</span>
+          <div className="flex items-center justify-center h-full w-full bg-gray-100" aria-hidden="true">
+            <Image className="h-6 w-6 text-gray-400" />
+            <span className="sr-only">No media available</span>
+          </div>
+        )}
+      </div>
+      
+      {/* Item counter below the thumbnail */}
+      {showNav && totalItems > 1 && (
+        <div className="text-[10px] text-gray-500 text-center mt-1">
+          {(dataIndex || 0) + 1}/{totalItems}
         </div>
       )}
 
-      {/* Navigation arrows - only show when there are multiple items */}
+      {/* Navigation buttons below the thumbnail */}
       {showNav && totalItems > 1 && (
-        <div className="absolute inset-0 flex items-center justify-between px-1">
+        <div className="flex justify-between gap-1 mt-1">
           <button 
             type="button"
             onClick={(e) => handleNavClick('prev', e)}
-            className="bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+            className="flex-1 bg-gray-100 text-gray-600 rounded py-0.5 px-1 hover:bg-gray-200 transition-colors text-[10px] flex items-center justify-center"
             aria-label="Previous image"
           >
-            <ArrowLeft size={14} />
+            <ArrowLeft className="h-2.5 w-2.5 mr-0.5" />
+            <span>Prev</span>
           </button>
           
           <button 
             type="button"
             onClick={(e) => handleNavClick('next', e)}
-            className="bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+            className="flex-1 bg-gray-100 text-gray-600 rounded py-0.5 px-1 hover:bg-gray-200 transition-colors text-[10px] flex items-center justify-center"
             aria-label="Next image"
           >
-            <ArrowRight size={14} />
+            <span>Next</span>
+            <ArrowRight className="h-2.5 w-2.5 ml-0.5" />
           </button>
         </div>
       )}
