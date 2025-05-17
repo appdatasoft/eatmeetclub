@@ -19,6 +19,9 @@ import EventNotFound from "@/components/events/EventDetails/EventNotFound";
 import DeleteEventDialog from "@/components/events/EventDetails/DeleteEventDialog";
 import EditCoverDialog from "@/components/events/EventDetails/EditCoverDialog";
 
+// Import types
+import { EventDetails } from "@/types/event";
+
 const EventDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -42,7 +45,7 @@ const EventDetailsPage = () => {
     }
   }, [error]);
   
-  const { canEditEvent } = useEventAccess(event);
+  const { canEditEvent } = useEventAccess(event as unknown as EventDetails);
   
   const {
     isDeleteDialogOpen,
@@ -57,7 +60,7 @@ const EventDetailsPage = () => {
     handleDeleteEvent,
     handleTicketPurchase,
     isPaymentProcessing,
-  } = useEventActions(event, refreshEventDetails, canEditEvent, user);
+  } = useEventActions(event as unknown as EventDetails, refreshEventDetails, canEditEvent, user);
   
   // Process ticket purchase when user is logged in
   const processTicketPurchase = (ticketCount: number) => {
@@ -123,7 +126,7 @@ const EventDetailsPage = () => {
         />
 
         <EventDetailsContent
-          event={event}
+          event={event as unknown as EventDetails}
           ticketsRemaining={ticketsRemaining}
           ticketsPercentage={ticketsPercentage}
           eventUrl={eventUrl}

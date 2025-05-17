@@ -1,11 +1,10 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import EventDetailsContainer from "./EventDetailsContainer";
 import { TicketPurchase } from "@/components/events/TicketPurchase";
 import EventActionButtons from "./EventActionButtons";
-import { EventDetails } from "@/hooks/types/eventTypes";
+import { EventDetails } from "@/types/event";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EventDetailsContentProps {
@@ -39,7 +38,15 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
   const navigate = useNavigate();
   
   // Ensure restaurant info is available
-  const restaurant = event.restaurant || { address: '', city: '', state: '', zipcode: '' };
+  const restaurant = event.restaurant || { 
+    id: "unknown", 
+    name: "Unknown Restaurant", 
+    address: '', 
+    city: '', 
+    state: '', 
+    zipcode: '',
+    description: ''
+  };
   const locationStr = `${restaurant.address}, ${restaurant.city}, ${restaurant.state} ${restaurant.zipcode}`;
 
   return (
