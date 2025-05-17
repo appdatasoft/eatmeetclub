@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash } from 'lucide-react';
+import { Edit, Trash, Image } from 'lucide-react';
 import { MediaItem } from './MenuItemMediaUploader';
 import MenuItemMedia from './MenuItemMedia';
 
@@ -23,6 +23,9 @@ interface MenuItemCardProps {
 }
 
 const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onEdit, onDelete }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  
   // Log the item to debug
   console.log("MenuItemCard rendering item:", item.name, "with media:", item.media);
   
@@ -42,7 +45,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onEdit, onDelete }) =
           {/* No image found fallback */}
           {!hasMedia && (
             <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
-              <span className="text-xs text-gray-400">No image</span>
+              <Image className="h-5 w-5 text-gray-400" />
             </div>
           )}
           

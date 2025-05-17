@@ -35,13 +35,15 @@ export const useMenuItems = (restaurantId: string | undefined) => {
 
           // Process menu items with media and ingredients
           const processedItems = await Promise.all(menuData.map(async (item) => {
+            console.log(`Processing menu item: ${item.name} (${item.id})`);
+            
             // Fetch media for this item
             const media = await fetchMenuItemMedia(restaurantId, item);
+            console.log(`Retrieved ${media?.length || 0} media items for ${item.name}`);
             
             // Fetch ingredients for this item
             const ingredients = await fetchMenuItemIngredients(item.id);
-            
-            console.log(`Processed ${item.name} with ${media?.length || 0} media items and ${ingredients?.length || 0} ingredients`);
+            console.log(`Retrieved ${ingredients?.length || 0} ingredients for ${item.name}`);
 
             return {
               id: item.id,
