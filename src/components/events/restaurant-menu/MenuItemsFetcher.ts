@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MenuItem } from "./types";
@@ -60,66 +59,67 @@ export const useMenuItemsFetcher = (restaurantId: string): FetcherResult => {
             console.error("Error fetching ingredients:", ingredientsError);
           }
           
-          // Try to get media directly from storage
+          // Try to get media items with better error handling
           let media: MediaItem[] = [];
-          try {
-            // First try folder path with restaurant ID and item ID
-            const folderPath = `menu-items/${restaurantId}/${item.id}`;
-            console.log("Checking storage path:", folderPath);
-            
-            const { data: storageData, error: storageError } = await supabase
-              .storage
-              .from('lovable-uploads')
-              .list(folderPath);
+          
+          // Try multiple potential storage paths
+          const storagePaths = [
+            `menu-items/${restaurantId}/${item.id}`, // Primary path
+            `menu-items/${item.id}`, // Alternate path without restaurant
+            `menu-items` // Root path to search by prefix
+          ];
+          
+          for (const path of storagePaths) {
+            try {
+              console.log(`Checking for media in path: ${path}`);
               
-            if (storageError) {
-              console.error("Error listing files:", storageError);
-            }
-              
-            if (storageData && storageData.length > 0) {
-              console.log("Found files in storage:", storageData.length);
-              media = storageData.map(file => {
-                const publicUrl = supabase.storage
+              let storageData;
+              // If checking root path, use search
+              if (path === 'menu-items') {
+                const { data, error } = await supabase
+                  .storage
                   .from('lovable-uploads')
-                  .getPublicUrl(`${folderPath}/${file.name}`).data.publicUrl;
-                  
-                return {
-                  url: publicUrl,
-                  type: file.metadata?.mimetype?.startsWith('video/') ? 'video' : 'image'
-                };
-              });
-            } else {
-              // Try alternate path format
-              const altPath = `menu-items/${item.id}-`;
-              console.log("Checking alternate storage path:", altPath);
-              
-              const { data: altData, error: altError } = await supabase
-                .storage
-                .from('lovable-uploads')
-                .list('menu-items', {
-                  search: `${item.id}-`
-                });
+                  .list(path, {
+                    search: `${item.id}-`
+                  });
+                storageData = data;
                 
-              if (altError) {
-                console.error("Error listing alternate files:", altError);
+                if (error) console.error(`Error searching ${path}:`, error);
+              } else {
+                // Otherwise list directory directly
+                const { data, error } = await supabase
+                  .storage
+                  .from('lovable-uploads')
+                  .list(path);
+                storageData = data;
+                
+                if (error) console.error(`Error listing ${path}:`, error);
               }
+              
+              if (storageData && storageData.length > 0) {
+                console.log(`Found ${storageData.length} files in ${path}`);
                 
-              if (altData && altData.length > 0) {
-                console.log("Found files in alternate storage:", altData.length);
-                media = altData.map(file => {
+                media = storageData.map(file => {
+                  const filePath = path === 'menu-items' 
+                    ? `${path}/${file.name}` 
+                    : `${path}/${file.name}`;
+                    
                   const publicUrl = supabase.storage
                     .from('lovable-uploads')
-                    .getPublicUrl(`menu-items/${file.name}`).data.publicUrl;
-                    
+                    .getPublicUrl(filePath).data.publicUrl;
+                  
                   return {
                     url: publicUrl,
                     type: file.metadata?.mimetype?.startsWith('video/') ? 'video' : 'image'
                   };
                 });
+                
+                // If we found media, break the loop
+                if (media.length > 0) break;
               }
+            } catch (storageErr) {
+              console.error(`Error accessing storage path ${path}:`, storageErr);
             }
-          } catch (storageErr) {
-            console.error('Error accessing storage:', storageErr);
           }
           
           console.log(`Menu item ${item.id} has ${media.length} media items`);
@@ -131,7 +131,7 @@ export const useMenuItemsFetcher = (restaurantId: string): FetcherResult => {
             price: item.price,
             type: '', // This doesn't exist in the database schema
             ingredients: ingredientsData ? ingredientsData.map(ing => ing.name) : [],
-            media: media || []
+            media: media
           } as MenuItem;
         }));
         

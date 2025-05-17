@@ -11,12 +11,16 @@ const MenuItemComponent: React.FC<MenuItemProps> = ({ item }) => {
   return (
     <div className="border-b pb-3">
       <div className="flex">
-        {/* Thumbnail */}
-        {item.media && item.media.length > 0 && (
-          <div className="mr-3">
+        {/* Thumbnail - always show at least a placeholder */}
+        <div className="mr-3">
+          {item.media && item.media.length > 0 ? (
             <MenuItemMedia media={item.media} className="mt-0" thumbnailOnly />
-          </div>
-        )}
+          ) : (
+            <div className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center">
+              <span className="text-gray-400 text-xs">No image</span>
+            </div>
+          )}
+        </div>
         
         {/* Item details */}
         <div className="flex-1">
