@@ -9,8 +9,17 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
-  const { session, user } = useAuth();
+  const { user, session, loading } = useAuth();
   const location = useLocation();
+
+  // Show loading state while auth is being checked
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   if (!session) {
     // Redirect to login if not authenticated

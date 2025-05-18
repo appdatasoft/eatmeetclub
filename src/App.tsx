@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -32,11 +32,10 @@ import TicketSuccess from './pages/TicketSuccess';
 import PaymentsPage from './pages/dashboard/PaymentsPage';
 import BecomeMember from './pages/BecomeMember';
 
+// Create a new QueryClient instance
 const queryClient = new QueryClient();
 
 function App() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
@@ -53,17 +52,17 @@ function App() {
                 <Route path="/become-member" element={<BecomeMember />} />
 
                 {/* Dashboard routes */}
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/dashboard/events" element={<EventsManagement />} />
-                <Route path="/dashboard/create-event" element={<CreateEvent />} />
-                <Route path="/dashboard/memories" element={<Memories />} />
-                <Route path="/dashboard/create-memory" element={<CreateMemory />} />
-                <Route path="/dashboard/memory/:id" element={<MemoryDetail />} />
-                <Route path="/dashboard/edit-memory/:id" element={<EditMemory />} />
-                <Route path="/dashboard/add-restaurant" element={<AddRestaurant />} />
-                <Route path="/dashboard/restaurant/:id/menu" element={<RestaurantMenu />} />
-                <Route path="/dashboard/settings" element={<Settings />} />
-                <Route path="/dashboard/payments" element={<PaymentsPage />} />
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/dashboard/events" element={<ProtectedRoute><EventsManagement /></ProtectedRoute>} />
+                <Route path="/dashboard/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
+                <Route path="/dashboard/memories" element={<ProtectedRoute><Memories /></ProtectedRoute>} />
+                <Route path="/dashboard/create-memory" element={<ProtectedRoute><CreateMemory /></ProtectedRoute>} />
+                <Route path="/dashboard/memory/:id" element={<ProtectedRoute><MemoryDetail /></ProtectedRoute>} />
+                <Route path="/dashboard/edit-memory/:id" element={<ProtectedRoute><EditMemory /></ProtectedRoute>} />
+                <Route path="/dashboard/add-restaurant" element={<ProtectedRoute><AddRestaurant /></ProtectedRoute>} />
+                <Route path="/dashboard/restaurant/:id/menu" element={<ProtectedRoute><RestaurantMenu /></ProtectedRoute>} />
+                <Route path="/dashboard/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/dashboard/payments" element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
 
                 {/* Admin routes */}
                 <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />

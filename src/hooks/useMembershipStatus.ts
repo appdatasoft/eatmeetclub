@@ -14,6 +14,7 @@ export const useMembershipStatus = () => {
     if (!user) {
       setIsActive(false);
       setMembership(null);
+      setExpiresAt(null);
       setIsLoading(false);
       return;
     }
@@ -45,11 +46,13 @@ export const useMembershipStatus = () => {
         setExpiresAt(membershipData?.renewal_at || null);
       } else {
         setMembership(null);
+        setExpiresAt(null);
       }
     } catch (error) {
       console.error('Error checking membership status:', error);
       setIsActive(false);
       setMembership(null);
+      setExpiresAt(null);
     } finally {
       setIsLoading(false);
     }

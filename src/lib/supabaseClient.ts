@@ -10,9 +10,5 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY;
 
-console.log("Initializing secondary Supabase client with:", { 
-  url: supabaseUrl.substring(0, 15) + '...',
-  keyLength: supabaseAnonKey?.length || 0
-});
-
+// Initialize Supabase client - ensure we only create one instance
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
