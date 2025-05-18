@@ -33,6 +33,7 @@ import Register from "@/pages/Register";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AuthRedirect from "@/components/auth/AuthRedirect";
 import Settings from "@/pages/dashboard/Settings";
+import UserProfilePage from "@/pages/UserProfilePage";
 
 function App() {
   return (
@@ -74,6 +75,10 @@ function App() {
           <Route path="/event/:id" element={<EventDetailsPage />} />
           <Route path="/venues" element={<VenuesPage />} />
           <Route path="/restaurant/:id" element={<RestaurantDetailsPage />} />
+          
+          {/* Profile routes */}
+          <Route path="/profile" element={<UserProfilePage />} />
+          <Route path="/profile/:id" element={<UserProfilePage />} />
           
           {/* Protected routes */}
           <Route path="/edit-event/:id" element={
