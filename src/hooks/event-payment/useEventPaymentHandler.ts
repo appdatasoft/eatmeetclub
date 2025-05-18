@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -5,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { EventDetails } from "@/types/event";
 import { createTicketPayment } from "./paymentAPI";
+import { usePaymentConfig } from "@/hooks/usePaymentConfig";
 
 export interface EventPaymentHandlerResponse {
   isPaymentProcessing: boolean;
@@ -17,6 +19,7 @@ export const useEventPaymentHandler = (
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { data: paymentConfig } = usePaymentConfig();
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
 
   const handleBuyTickets = async (ticketCount: number) => {
@@ -51,10 +54,13 @@ export const useEventPaymentHandler = (
     try {
       setIsPaymentProcessing(true);
       
-      // Calculate service fee (5% of total)
+      // Get service fee percentage from config or use default 5%
+      const serviceFeePercent = paymentConfig?.serviceFeePercent || 5;
+      
+      // Calculate service fee (configured % of total)
       const unitPrice = event.price;
       const subtotal = unitPrice * ticketCount;
-      const serviceFee = subtotal * 0.05; // 5% service fee
+      const serviceFee = subtotal * (serviceFeePercent / 100); // Use configured % service fee
       const totalAmount = subtotal + serviceFee;
       
       // Store ticket purchase details in localStorage for access after payment

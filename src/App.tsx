@@ -1,101 +1,82 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
-import Login from "@/pages/Login";
-import NotFound from "@/pages/NotFound";
-import MembershipPayment from "@/pages/MembershipPayment";
-import SetPassword from "@/pages/SetPassword";
-import BecomeMember from "@/pages/BecomeMember";
-import Index from "@/pages/Index";
-import HowItWorks from "@/pages/HowItWorks";
-import Vision from "@/pages/Vision";
-import Mission from "@/pages/Mission";
-import Dashboard from "@/pages/dashboard/Dashboard";
-import EventsManagement from "@/pages/dashboard/EventsManagement";
-import CreateEvent from "@/pages/dashboard/CreateEvent";
-import PaymentSuccessPage from "@/pages/dashboard/PaymentSuccessPage";
-import Events from "@/pages/Events";
-import EventDetailsPage from "@/pages/EventDetailsPage";
-import VenuesPage from "@/pages/VenuesPage";
-import RestaurantDetailsPage from "@/pages/RestaurantDetailsPage";
-import AdminDashboard from "@/pages/admin/AdminDashboard";
-import ConfigPage from "@/pages/admin/ConfigPage";
-import UsersPage from "@/pages/admin/UsersPage";
-import AdminSettings from "@/pages/dashboard/AdminSettings";
-import AddRestaurant from "@/pages/dashboard/AddRestaurant";
-import RestaurantMenu from "@/pages/dashboard/RestaurantMenu";
-import EditEvent from "@/pages/EditEvent";
-import Signup from "@/pages/Signup";
-import ForgotPassword from "@/pages/ForgotPassword";
-import About from "@/pages/About";
-import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { EditableContentProvider } from "@/components/editor/EditableContentProvider";
+import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ThemeProvider } from "@/components/theme-provider"
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { Toaster } from "@/components/ui/toaster"
+
+// Import components and pages
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Dashboard from './pages/dashboard/Dashboard';
+import EventsManagement from './pages/EventsManagement';
+import CreateEvent from './pages/CreateEvent';
+import Memories from './pages/Memories';
+import CreateMemory from './pages/CreateMemory';
+import MemoryDetail from './pages/MemoryDetail';
+import EditMemory from './pages/EditMemory';
+import AddRestaurant from './pages/AddRestaurant';
+import RestaurantMenu from './pages/RestaurantMenu';
+import Settings from './pages/Settings';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import ConfigPage from './pages/admin/ConfigPage';
+import UsersPage from './pages/admin/UsersPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import PublicRoute from './components/PublicRoute';
+import NotFound from './pages/NotFound';
+import EventDetail from './pages/EventDetail';
+import TicketSuccess from './pages/TicketSuccess';
+import PaymentsPage from './pages/dashboard/PaymentsPage';
+
+const queryClient = new QueryClient();
 
 function App() {
-  // Validate Supabase connection on app startup
-  useEffect(() => {
-    // Simple health check to verify Supabase connection
-    const checkSupabaseConnection = async () => {
-      try {
-        // Minimal request to check if Supabase is responding
-        const { error } = await supabase.from('app_config').select('key').limit(1);
-        if (error) {
-          console.error('Supabase connection check failed:', error);
-        } else {
-          console.log('Supabase connection successful');
-        }
-      } catch (err) {
-        console.error('Failed to connect to Supabase:', err);
-      }
-    };
-    
-    checkSupabaseConnection();
-  }, []);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   return (
     <BrowserRouter>
-      <EditableContentProvider>
-        <Routes>
-          {/* Route to home page */}
-          <Route path="/" element={<Index />} />
-          
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/membership-payment" element={<MembershipPayment />} />
-          <Route path="/set-password" element={<SetPassword />} />
-          <Route path="/become-member" element={<BecomeMember />} />
-          <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/vision" element={<Vision />} />
-          <Route path="/mission" element={<Mission />} />
-          <Route path="/about" element={<About />} />
-          
-          {/* New routes for events and venues */}
-          <Route path="/events" element={<Events />} />
-          <Route path="/event/:id" element={<EventDetailsPage />} />
-          <Route path="/venues" element={<VenuesPage />} />
-          <Route path="/restaurant/:id" element={<RestaurantDetailsPage />} />
-          <Route path="/edit-event/:id" element={<EditEvent />} />
-          
-          {/* Admin routes */}
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/config" element={<ConfigPage />} />
-          <Route path="/admin/users" element={<UsersPage />} />
-          
-          {/* Dashboard routes */}
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/events" element={<EventsManagement />} />
-          <Route path="/dashboard/create-event" element={<CreateEvent />} />
-          <Route path="/dashboard/payment-success" element={<PaymentSuccessPage />} />
-          <Route path="/dashboard/admin-settings" element={<AdminSettings />} />
-          <Route path="/dashboard/add-restaurant" element={<AddRestaurant />} />
-          <Route path="/dashboard/restaurant-menu/:id" element={<RestaurantMenu />} />
-          
-          {/* Catch-all route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
-      </EditableContentProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider defaultTheme="light" storageKey="eat-meet-theme">
+          <div className="app bg-background min-h-screen">
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Home />} />
+              <Route path="/event/:id" element={<EventDetail />} />
+              <Route path="/ticket-success" element={<TicketSuccess />} />
+              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+              <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+
+              {/* Dashboard routes */}
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard/events" element={<EventsManagement />} />
+              <Route path="/dashboard/create-event" element={<CreateEvent />} />
+              <Route path="/dashboard/memories" element={<Memories />} />
+              <Route path="/dashboard/create-memory" element={<CreateMemory />} />
+              <Route path="/dashboard/memory/:id" element={<MemoryDetail />} />
+              <Route path="/dashboard/edit-memory/:id" element={<EditMemory />} />
+              <Route path="/dashboard/add-restaurant" element={<AddRestaurant />} />
+              <Route path="/dashboard/restaurant/:id/menu" element={<RestaurantMenu />} />
+              <Route path="/dashboard/settings" element={<Settings />} />
+              <Route path="/dashboard/payments" element={<PaymentsPage />} />
+
+              {/* Admin routes */}
+              <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/admin/config" element={<ProtectedRoute requiredRole="admin"><ConfigPage /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><UsersPage /></ProtectedRoute>} />
+              
+              {/* Auth routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              
+              {/* Fallback */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </div>
+          <Toaster />
+        </ThemeProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
     </BrowserRouter>
   );
 }

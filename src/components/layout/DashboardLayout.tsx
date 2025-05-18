@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import { useAuth } from '@/hooks/useAuth';
-import { PlusCircle } from 'lucide-react'; 
+import { PlusCircle, CreditCard } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
@@ -113,6 +113,17 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                         className={`block px-3 py-2 rounded-md ${isActive('/dashboard/add-restaurant')}`}
                       >
                         Restaurants
+                      </Link>
+                    </li>
+                    <li>
+                      <Link 
+                        to="/dashboard/payments" 
+                        className={`block px-3 py-2 rounded-md ${isActive('/dashboard/payments')}`}
+                      >
+                        <div className="flex items-center">
+                          <CreditCard className="h-4 w-4 mr-2" />
+                          <span>Payments</span>
+                        </div>
                       </Link>
                     </li>
                     <li>
