@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  isLoading: boolean; // Add this property
+  isLoading: boolean;
   isAdmin: boolean;
   handleLogout: () => Promise<void>;
   handleLogin: (email: string, password: string) => Promise<{ success: boolean; error?: any }>;
@@ -18,7 +18,7 @@ export const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   loading: true,
-  isLoading: true, // Add this property
+  isLoading: true,
   isAdmin: false,
   handleLogout: async () => {},
   handleLogin: async () => ({ success: false }),
@@ -29,7 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isLoading, setIsLoading] = useState(true); // Add this state
+  const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         setLoading(false);
-        setIsLoading(false); // Update this state too
+        setIsLoading(false);
         
         // Check admin status if user is logged in
         if (currentSession?.user) {
@@ -59,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       setLoading(false);
-      setIsLoading(false); // Update this state too
+      setIsLoading(false);
       
       // Check admin status if user is logged in
       if (currentSession?.user) {
@@ -92,7 +92,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const handleLogin = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log("Login attempt for:", email);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -102,7 +104,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error };
       }
       
-      return { success: true };
+      console.log("Login successful for:", email);
+      return { success: true, data };
     } catch (error) {
       console.error("Unexpected login error:", error);
       return { success: false, error };
@@ -124,16 +127,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  // Add handleLogout function
   const handleLogout = async () => {
+    console.log("Logging out...");
     await supabase.auth.signOut();
+    console.log("Logged out successfully");
   };
 
   const value = {
     user,
     session,
     loading,
-    isLoading, // Add this property
+    isLoading,
     isAdmin,
     handleLogout,
     handleLogin,

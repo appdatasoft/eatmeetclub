@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,14 +14,33 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { handleLogin, session } = useAuth();
+  const location = useLocation();
+  const { handleLogin, session, isLoading } = useAuth();
+
+  // Extract the redirect path from location state or search params
+  const getRedirectPath = () => {
+    const searchParams = new URLSearchParams(location.search);
+    const redirectParam = searchParams.get('redirect');
+    
+    // Check location state first (from ProtectedRoute)
+    const fromPath = location.state?.from;
+    
+    // Then check localStorage
+    const storedPath = localStorage.getItem('redirectAfterLogin');
+    
+    // Prioritize: redirect param > location state > localStorage > default
+    return redirectParam || fromPath || storedPath || '/dashboard';
+  };
 
   // Redirect if already logged in
   useEffect(() => {
-    if (session) {
-      navigate('/dashboard');
+    if (!isLoading && session) {
+      const redirectPath = getRedirectPath();
+      console.log("Already logged in, redirecting to:", redirectPath);
+      localStorage.removeItem('redirectAfterLogin');
+      navigate(redirectPath);
     }
-  }, [session, navigate]);
+  }, [session, navigate, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +55,7 @@ const Login = () => {
     }
 
     setLoading(true);
+    console.log("Attempting login for:", email);
     
     try {
       const { success, error } = await handleLogin(email, password);
@@ -46,11 +66,17 @@ const Login = () => {
           description: "Welcome back!",
         });
         
-        // Get redirect path from localStorage or default to dashboard
-        const redirectPath = localStorage.getItem('redirectAfterLogin') || '/dashboard';
-        localStorage.removeItem('redirectAfterLogin'); // Clear stored path
+        // Get redirect path
+        const redirectPath = getRedirectPath();
+        console.log("Login successful, redirecting to:", redirectPath);
+        
+        // Clear stored path
+        localStorage.removeItem('redirectAfterLogin');
+        
+        // Navigate to redirect path
         navigate(redirectPath);
       } else {
+        console.error("Login failed:", error);
         toast({
           title: "Login failed",
           description: error?.message || "Invalid email or password",
@@ -58,16 +84,25 @@ const Login = () => {
         });
       }
     } catch (error) {
+      console.error("Login error:", error);
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
-      console.error("Login error:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
+        <p className="ml-3 text-gray-500">Checking authentication...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
