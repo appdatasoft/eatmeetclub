@@ -2,8 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,6 +11,9 @@ import { useAuth } from "@/hooks/useAuth";
 import RetryAlert from "@/components/ui/RetryAlert";
 import MainLayout from "@/components/layout/MainLayout";
 import { fetchWithRetry } from "@/utils/fetchUtils";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useUserTickets } from "@/hooks/useUserTickets";
 
 interface UserProfile {
   id: string;
@@ -35,7 +36,7 @@ const UserProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isLoading: authLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [eventsCreated, setEventsCreated] = useState<UserEvent[]>([]);
   const [eventsAttending, setEventsAttending] = useState<UserEvent[]>([]);
@@ -44,10 +45,14 @@ const UserProfilePage: React.FC = () => {
   const [isSelf, setIsSelf] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
 
+  // Wait for auth to resolve before proceeding
   useEffect(() => {
+    if (authLoading) return;
+    
     // If on /profile route with no ID, use the current user's ID
     // or redirect to login if not logged in
     if (!id && !currentUser) {
+      console.log("No user found, redirecting to login");
       navigate('/login', { state: { from: '/profile' } });
       return;
     }
@@ -55,75 +60,76 @@ const UserProfilePage: React.FC = () => {
     const fetchUserData = async () => {
       const userId = id || currentUser?.id;
       
-      if (!userId) return;
+      if (!userId) {
+        console.log("No user ID available");
+        return;
+      }
       
+      console.log("Fetching profile data for user ID:", userId);
       setIsLoading(true);
       setError(null);
       
       try {
         // Check if viewing own profile
         if (currentUser && ((!id && currentUser) || id === currentUser.id)) {
+          console.log("User is viewing their own profile");
           setIsSelf(true);
         }
         
-        // Get user profile info
-        const { data: userData, error: userError } = await fetchWithRetry(async () => {
-          return await supabase
-            .from('user_roles')
-            .select(`
-              user_id,
-              role
-            `)
-            .eq('user_id', userId)
-            .single();
-        });
+        // Get user profile info - user role
+        const { data: userData, error: userError } = await supabase
+          .from('user_roles')
+          .select('role, user_id')
+          .eq('user_id', userId)
+          .single();
           
         if (userError && userError.code !== 'PGRST116') { // Not found error
+          console.error("Error fetching user role:", userError);
           throw userError;
         }
         
         // Get user's created events (if any)
-        const { data: createdEvents, error: createdError } = await fetchWithRetry(async () => {
-          return await supabase
-            .from('events')
-            .select(`
+        const { data: createdEvents, error: createdError } = await supabase
+          .from('events')
+          .select(`
+            id,
+            title,
+            date,
+            price,
+            cover_image,
+            restaurants (name)
+          `)
+          .eq('user_id', userId)
+          .eq('published', true)
+          .order('date', { ascending: true });
+          
+        if (createdError) {
+          console.error("Error fetching created events:", createdError);
+          throw createdError;
+        }
+        
+        // Get events user is attending via tickets
+        const { data: tickets, error: ticketsError } = await supabase
+          .from('tickets')
+          .select(`
+            event_id,
+            events (
               id,
               title,
               date,
               price,
               cover_image,
               restaurants (name)
-            `)
-            .eq('user_id', userId)
-            .eq('published', true)
-            .order('date', { ascending: true });
-        });
-          
-        if (createdError) {
-          throw createdError;
-        }
-        
-        // Get events user is attending via tickets
-        const { data: tickets, error: ticketsError } = await fetchWithRetry(async () => {
-          return await supabase
-            .from('tickets')
-            .select(`
-              event_id,
-              events (
-                id,
-                title,
-                date,
-                price,
-                cover_image,
-                restaurants (name)
-              )
-            `)
-            .eq('user_id', userId);
-        });
+            )
+          `)
+          .eq('user_id', userId);
           
         if (ticketsError) {
+          console.error("Error fetching tickets:", ticketsError);
           throw ticketsError;
         }
+        
+        console.log("Fetched data:", { userData, createdEvents, tickets });
         
         // Format profile data
         setProfile({
@@ -145,14 +151,19 @@ const UserProfilePage: React.FC = () => {
         );
         
         // Format attended events
-        const attendingEvents = tickets?.map(ticket => ({
-          id: ticket.events.id,
-          title: ticket.events.title,
-          date: ticket.events.date,
-          price: ticket.events.price,
-          cover_image: ticket.events.cover_image,
-          restaurant_name: ticket.events.restaurants?.name || 'Unknown Restaurant'
-        })) || [];
+        const attendingEvents = tickets?.map(ticket => {
+          // Skip if events is null (can happen if event was deleted)
+          if (!ticket.events) return null;
+          
+          return {
+            id: ticket.events.id,
+            title: ticket.events.title,
+            date: ticket.events.date,
+            price: ticket.events.price,
+            cover_image: ticket.events.cover_image,
+            restaurant_name: ticket.events.restaurants?.name || 'Unknown Restaurant'
+          };
+        }).filter(Boolean) as UserEvent[];
         
         // Remove duplicates (in case user bought multiple tickets)
         const uniqueEvents = Array.from(
@@ -175,7 +186,7 @@ const UserProfilePage: React.FC = () => {
     };
 
     fetchUserData();
-  }, [id, toast, currentUser, navigate]);
+  }, [id, toast, currentUser, navigate, authLoading]);
 
   const handleRetry = async () => {
     setIsRetrying(true);
@@ -196,11 +207,64 @@ const UserProfilePage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  // Show loading state while auth is loading
+  if (authLoading) {
     return (
       <MainLayout>
         <div className="container-custom py-12 flex items-center justify-center">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+          <LoadingSpinner size="large" text="Loading authentication..." />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="bg-accent py-12">
+          <div className="container-custom">
+            <div className="flex items-center">
+              <Skeleton className="h-20 w-20 rounded-full mr-6" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="container-custom py-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="md:col-span-2">
+              <h2 className="text-2xl font-semibold mb-4">Loading Events...</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[1, 2].map(i => (
+                  <Card key={i} className="overflow-hidden">
+                    <Skeleton className="h-40 w-full" />
+                    <CardContent className="p-4">
+                      <Skeleton className="h-6 w-3/4 mb-3" />
+                      <Skeleton className="h-4 w-1/2 mb-6" />
+                      <Skeleton className="h-9 w-full" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-32" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i}>
+                      <Skeleton className="h-3 w-20 mb-1" />
+                      <Skeleton className="h-5 w-24" />
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </MainLayout>
     );
