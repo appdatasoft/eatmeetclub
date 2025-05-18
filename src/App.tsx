@@ -1,84 +1,181 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
+import { CartProvider } from "./contexts/CartContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import { AdminEditProvider } from "./contexts/AdminEditContext";
+import { SkinAnalysisProvider } from "./contexts/SkinAnalysisContext";
+import { EditableContentProvider } from "./components/editor/EditableContentProvider"; // ✅ Added
 
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from "@/components/theme-provider"
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { Toaster } from "@/components/ui/toaster"
-import { AuthProvider } from '@/hooks/useAuth';
+import Index from "./pages/Index";
+import Products from "./pages/Products";
+import ProductPage from "./pages/ProductPage";
+import Cart from "./pages/Cart";
+import StoryPage from "./pages/StoryPage";
+import NotFound from "./pages/NotFound";
+import Auth from "./pages/Auth";
+import Register from "./pages/Register";
+import ResetPassword from "./pages/ResetPassword";
+import UpdatePassword from "./pages/UpdatePassword";
+import PhoneVerification from "./pages/PhoneVerification";
+import Results from "./pages/Results";
+import SkinAnalysis from "./pages/SkinAnalysis";
+import Dashboard from "./pages/Dashboard";
+import Orders from "./pages/dashboard/Orders";
+import Feed from "./pages/dashboard/Feed";
+import UserAddresses from "./pages/dashboard/Addresses";
+import UserDiscountCodes from "./pages/dashboard/DiscountCodes";
+import Checkout from "./pages/Checkout";
+import UserDetailsForm from "./pages/UserDetailsForm";
+import PaymentConfirmation from "./pages/PaymentConfirmation";
 
-// Import components and pages
-import Home from './pages/Index';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import Dashboard from './pages/dashboard/Dashboard';
-import EventsManagement from './pages/dashboard/EventsManagement';
-import CreateEvent from './pages/dashboard/CreateEvent';
-import Memories from './pages/dashboard/Memories';
-import CreateMemory from './pages/dashboard/CreateMemory';
-import MemoryDetail from './pages/dashboard/MemoryDetail';
-import EditMemory from './pages/dashboard/EditMemory';
-import AddRestaurant from './pages/dashboard/AddRestaurant';
-import RestaurantMenu from './pages/dashboard/RestaurantMenu';
-import Settings from './pages/dashboard/Settings';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import ConfigPage from './pages/admin/ConfigPage';
-import UsersPage from './pages/admin/UsersPage';
-import ProtectedRoute from './components/ProtectedRoute';
-import PublicRoute from './components/PublicRoute';
-import NotFound from './pages/NotFound';
-import EventDetail from './pages/EventDetails';
-import TicketSuccess from './pages/TicketSuccess';
-import PaymentsPage from './pages/dashboard/PaymentsPage';
-import BecomeMember from './pages/BecomeMember';
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminOverview from "./pages/admin/AdminOverview";
+import AdminProducts from "./pages/admin/Products";
+import SiteConfig from "./pages/admin/SiteConfig";
+import EmailTemplatesPage from "./pages/admin/EmailTemplates";
+import Subscriptions from "./pages/admin/Subscriptions";
+import DiscountCodes from "./pages/admin/DiscountCodes";
+import AdminAddresses from "./pages/admin/Addresses";
+import AdminOrders from "./pages/admin/Orders";
+import AdminCustomers from "./pages/admin/Customers";
+import CustomerProfile from "./pages/admin/CustomerProfile";
+import AffiliateApplications from "./pages/admin/AffiliateApplications";
+import AffiliateApplicationDetail from "./pages/admin/AffiliateApplicationDetail";
 
-// Create a new QueryClient instance
-const queryClient = new QueryClient();
+import AffiliateApplication from "./pages/AffiliateApplication";
+import AffiliateLogin from "./pages/affiliate/Login";
+import AffiliateDashboard from "./pages/affiliate/Dashboard";
+
+import AffiliateProfile from "./pages/dashboard/affiliates/Profile";
+import AffiliateAnalytics from "./pages/dashboard/affiliates/Analytics";
+import AffiliatePayments from "./pages/dashboard/affiliates/Payments";
+
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import SnippyChat from "./components/SnippyChat";
+import SecuritySettings from './pages/admin/SecuritySettings';
+
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+
+import "./App.css";
 
 function App() {
+  console.log("App is rendering with routes");
+
   return (
-    <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <ThemeProvider defaultTheme="light" storageKey="eat-meet-theme">
-            <div className="app bg-background min-h-screen">
-              <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<Home />} />
-                <Route path="/event/:id" element={<EventDetail />} />
-                <Route path="/ticket-success" element={<TicketSuccess />} />
-                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-                <Route path="/become-member" element={<BecomeMember />} />
+    <HelmetProvider>
+      <CartProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <AdminEditProvider>
+              <SkinAnalysisProvider>
+                <EditableContentProvider> {/* ✅ Added here */}
+                  <Routes>
+                    {/* Public Routes */}
+                    <Route path="/" element={<Index />} />
+                    <Route path="/products" element={<Products />} />
+                    <Route path="/products/:productId" element={<ProductPage />} />
+                    <Route path="/cart" element={<Cart />} />
+                    <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/story/:storyId" element={<StoryPage />} />
+                    <Route path="/results" element={<Results />} />
+                    <Route path="/skin-analysis" element={<SkinAnalysis />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/update-password" element={<UpdatePassword />} />
+                    <Route path="/phone-verification" element={<PhoneVerification />} />
+                    <Route path="/user-details" element={<UserDetailsForm />} />
+                    <Route path="/payment-confirmation" element={<PaymentConfirmation />} />
+                    <Route path="/terms" element={<Terms />} />
+                    <Route path="/privacy" element={<Privacy />} />
 
-                {/* Dashboard routes */}
-                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/dashboard/events" element={<ProtectedRoute><EventsManagement /></ProtectedRoute>} />
-                <Route path="/dashboard/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
-                <Route path="/dashboard/memories" element={<ProtectedRoute><Memories /></ProtectedRoute>} />
-                <Route path="/dashboard/create-memory" element={<ProtectedRoute><CreateMemory /></ProtectedRoute>} />
-                <Route path="/dashboard/memory/:id" element={<ProtectedRoute><MemoryDetail /></ProtectedRoute>} />
-                <Route path="/dashboard/edit-memory/:id" element={<ProtectedRoute><EditMemory /></ProtectedRoute>} />
-                <Route path="/dashboard/add-restaurant" element={<ProtectedRoute><AddRestaurant /></ProtectedRoute>} />
-                <Route path="/dashboard/restaurant/:id/menu" element={<ProtectedRoute><RestaurantMenu /></ProtectedRoute>} />
-                <Route path="/dashboard/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                <Route path="/dashboard/payments" element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
+                    {/* Protected Dashboard Routes */}
+                    <Route path="/dashboard" element={
+                      <ProtectedRoute>
+                        <Dashboard />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/dashboard/feed" element={
+                      <ProtectedRoute>
+                        <Feed />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/dashboard/orders" element={
+                      <ProtectedRoute>
+                        <Orders />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/dashboard/addresses" element={
+                      <ProtectedRoute>
+                        <UserAddresses />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/dashboard/discount-codes" element={
+                      <ProtectedRoute>
+                        <UserDiscountCodes />
+                      </ProtectedRoute>
+                    } />
 
-                {/* Admin routes */}
-                <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
-                <Route path="/admin/config" element={<ProtectedRoute requiredRole="admin"><ConfigPage /></ProtectedRoute>} />
-                <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><UsersPage /></ProtectedRoute>} />
-                
-                {/* Fallback */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </div>
-            <Toaster />
-          </ThemeProvider>
-          <ReactQueryDevtools initialIsOpen={false} />
-        </AuthProvider>
-      </QueryClientProvider>
-    </BrowserRouter>
+                    {/* Affiliate Section Dashboard Routes */}
+                    <Route path="/dashboard/affiliates/profile" element={
+                      <ProtectedRoute>
+                        <AffiliateProfile />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/dashboard/affiliates/analytics" element={
+                      <ProtectedRoute>
+                        <AffiliateAnalytics />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/dashboard/affiliates/payments" element={
+                      <ProtectedRoute>
+                        <AffiliatePayments />
+                      </ProtectedRoute>
+                    } />
+
+                    {/* Affiliate Routes */}
+                    <Route path="/affiliate-application" element={<AffiliateApplication />} />
+                    <Route path="/affiliate/login" element={<AffiliateLogin />} />
+                    <Route path="/affiliate/dashboard" element={
+                      <ProtectedRoute>
+                        <AffiliateDashboard />
+                      </ProtectedRoute>
+                    } />
+
+                    {/* Admin Routes */}
+                    <Route path="/admin" element={
+                      <ProtectedRoute adminOnly={true}>
+                        <AdminDashboard />
+                      </ProtectedRoute>
+                    }>
+                      <Route index element={<AdminOverview />} />
+                      <Route path="products/*" element={<AdminProducts />} />
+                      <Route path="site-config" element={<SiteConfig />} />
+                      <Route path="email-templates" element={<EmailTemplatesPage />} />
+                      <Route path="subscriptions" element={<Subscriptions />} />
+                      <Route path="addresses" element={<AdminAddresses />} />
+                      <Route path="orders" element={<AdminOrders />} />
+                      <Route path="discount-codes" element={<DiscountCodes />} />
+                      <Route path="customers" element={<AdminCustomers />} />
+                      <Route path="customers/:userId" element={<CustomerProfile />} />
+                      <Route path="affiliate-applications" element={<AffiliateApplications />} />
+                      <Route path="affiliate-applications/:id" element={<AffiliateApplicationDetail />} />
+                      <Route path="security-settings" element={<SecuritySettings />} />
+                    </Route>
+
+                    {/* Fallback */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+
+                  <SnippyChat />
+                </EditableContentProvider>
+              </SkinAnalysisProvider>
+            </AdminEditProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </CartProvider>
+    </HelmetProvider>
   );
 }
 
