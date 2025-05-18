@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { User, Session } from '@supabase/supabase-js';
@@ -37,7 +38,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log("Setting up auth state listener...");
     
     let mounted = true;
+    let safetyTimeoutId: number | undefined;
 
+    // Set up a safety timeout to ensure loading state ends no matter what
+    safetyTimeoutId = window.setTimeout(() => {
+      if (mounted) {
+        console.log("Safety timeout triggered - forcing loading state to end");
+        setLoading(false);
+        setIsLoading(false);
+      }
+    }, 3000);
+
+    // Create auth subscription first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, currentSession) => {
         if (!mounted) return;
@@ -46,13 +58,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
+        // End loading state after a slight delay to avoid UI flicker
         setTimeout(() => {
           if (mounted) {
             setLoading(false);
             setIsLoading(false);
           }
-        }, 500);
+        }, 300);
 
+        // Check admin status if user is authenticated
         if (currentSession?.user) {
           checkAdminStatus(currentSession.user.id);
         } else {
@@ -61,15 +75,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
+    // Then check the initial session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       if (!mounted) return;
 
-      console.log("Initial session check:", currentSession);
+      console.log("Initial session check:", currentSession ? "Found session" : "No session found");
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
-      setLoading(false);
-      setIsLoading(false);
+      
+      // End loading after a slight delay
+      setTimeout(() => {
+        if (mounted) {
+          setLoading(false);
+          setIsLoading(false);
+        }
+      }, 300);
 
+      // Check admin status if user is authenticated
       if (currentSession?.user) {
         checkAdminStatus(currentSession.user.id);
       }
@@ -81,18 +103,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    const loadingTimeout = setTimeout(() => {
-      if (mounted) {
-        console.log("Safety timeout triggered - forcing loading state to end");
-        setLoading(false);
-        setIsLoading(false);
-      }
-    }, 3000);
-
     return () => {
       console.log("Cleaning up auth state listener...");
       mounted = false;
-      clearTimeout(loadingTimeout);
+      if (safetyTimeoutId) clearTimeout(safetyTimeoutId);
       subscription.unsubscribe();
     };
   }, []);
@@ -115,6 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleLogin = async (email: string, password: string) => {
     try {
       console.log("Login attempt for:", email);
+      setIsLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -127,11 +142,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error("Unexpected login error:", error);
       return { success: false, error };
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, userData?: any) => {
     try {
+      setIsLoading(true);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -142,13 +160,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { data, error };
     } catch (error) {
       return { error };
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleLogout = async () => {
     console.log("Logging out...");
+    setIsLoading(true);
     await supabase.auth.signOut();
     console.log("Logged out successfully");
+    setIsLoading(false);
   };
 
   const authInitialized = !loading && !isLoading;

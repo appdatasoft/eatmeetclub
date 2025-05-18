@@ -25,10 +25,17 @@ const Login = () => {
   // Test Supabase connection on component mount
   useEffect(() => {
     const checkConnection = async () => {
-      setConnectionChecking(true);
-      const isConnected = await checkSupabaseConnection();
-      setConnectionOk(isConnected);
-      setConnectionChecking(false);
+      try {
+        setConnectionChecking(true);
+        const isConnected = await checkSupabaseConnection();
+        console.log("Supabase connection check result:", isConnected);
+        setConnectionOk(isConnected);
+      } catch (error) {
+        console.error("Connection check error:", error);
+        setConnectionOk(false);
+      } finally {
+        setConnectionChecking(false);
+      }
     };
     
     checkConnection();
@@ -59,12 +66,20 @@ const Login = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (!isLoading && session) {
-      const redirectPath = getRedirectPath();
-      console.log("Already logged in, redirecting to:", redirectPath);
-      localStorage.removeItem('redirectAfterLogin');
-      navigate(redirectPath);
-    }
+    const redirectIfLoggedIn = () => {
+      if (!isLoading && session) {
+        const redirectPath = getRedirectPath();
+        console.log("Already logged in, redirecting to:", redirectPath);
+        localStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
+      }
+    };
+
+    // Check immediately and also after a timeout to ensure we catch late session changes
+    redirectIfLoggedIn();
+    const timeoutId = setTimeout(redirectIfLoggedIn, 1500);
+    
+    return () => clearTimeout(timeoutId);
   }, [session, navigate, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {

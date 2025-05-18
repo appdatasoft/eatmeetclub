@@ -29,8 +29,9 @@ import Signup from "@/pages/Signup";
 import ForgotPassword from "@/pages/ForgotPassword";
 import About from "@/pages/About";
 import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient"; // Using the consistent import
 import { EditableContentProvider } from "@/components/editor/EditableContentProvider";
+import Register from "@/pages/Register"; // Import the Register component
 
 function App() {
   // Validate Supabase connection on app startup
@@ -62,6 +63,7 @@ function App() {
           
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/membership-payment" element={<MembershipPayment />} />
           <Route path="/set-password" element={<SetPassword />} />
