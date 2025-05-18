@@ -3,6 +3,9 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { AlertCircle } from 'lucide-react';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -12,31 +15,41 @@ const AdminDashboard = () => {
     paidEvents: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
       setIsLoading(true);
+      setError(null);
       try {
         // Fetch user count
-        const { count: userCount } = await supabase
+        const { count: userCount, error: userError } = await supabase
           .from('user_roles')
           .select('*', { count: 'exact', head: true });
         
+        if (userError) throw new Error(userError.message);
+        
         // Fetch events count
-        const { count: eventsCount } = await supabase
+        const { count: eventsCount, error: eventsError } = await supabase
           .from('events')
           .select('*', { count: 'exact', head: true });
         
+        if (eventsError) throw new Error(eventsError.message);
+        
         // Fetch paid events count
-        const { count: paidEventsCount } = await supabase
+        const { count: paidEventsCount, error: paidError } = await supabase
           .from('events')
           .select('*', { count: 'exact', head: true })
           .eq('payment_status', 'completed');
         
+        if (paidError) throw new Error(paidError.message);
+        
         // Fetch restaurants count
-        const { count: restaurantsCount } = await supabase
+        const { count: restaurantsCount, error: restError } = await supabase
           .from('restaurants')
           .select('*', { count: 'exact', head: true });
+        
+        if (restError) throw new Error(restError.message);
         
         setStats({
           users: userCount || 0,
@@ -44,8 +57,9 @@ const AdminDashboard = () => {
           restaurants: restaurantsCount || 0,
           paidEvents: paidEventsCount || 0
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching stats:', error);
+        setError(error.message || "Failed to load admin dashboard data");
       } finally {
         setIsLoading(false);
       }
@@ -54,13 +68,26 @@ const AdminDashboard = () => {
     fetchStats();
   }, []);
 
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="text-center py-8">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Failed to Load Dashboard</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
       <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
       
       {isLoading ? (
         <div className="flex justify-center py-8">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+          <LoadingSpinner text="Loading dashboard data..." />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

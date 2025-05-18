@@ -5,6 +5,8 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { AlertCircle, Settings } from 'lucide-react';
+import { Button } from '../ui/button';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -16,20 +18,26 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     const checkAdminStatus = async () => {
       setIsLoading(true);
+      setError(null);
+      
       try {
         // Check if user is logged in
         const { data: sessionData } = await supabase.auth.getSession();
         
         if (!sessionData.session) {
+          console.log("No session found, redirecting to login");
           toast({
             title: "Authentication required",
             description: "You need to be logged in to access the admin area",
             variant: "destructive"
           });
+          // Store the current path for redirect after login
+          localStorage.setItem('redirectAfterLogin', location.pathname);
           navigate('/login');
           return;
         }
@@ -45,6 +53,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         }
         
         if (!data) {
+          console.log("User is not an admin, redirecting to dashboard");
           toast({
             title: "Access denied",
             description: "You don't have admin privileges",
@@ -57,19 +66,30 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         setIsAdmin(true);
       } catch (error: any) {
         console.error('Error checking admin status:', error);
+        setError(error.message || "Failed to verify admin status");
         toast({
           title: "Error",
           description: error.message || "Failed to verify admin status",
           variant: "destructive"
         });
-        navigate('/dashboard');
       } finally {
         setIsLoading(false);
       }
     };
     
+    // Add a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (isLoading) {
+        console.log("Admin check timed out, showing error state");
+        setIsLoading(false);
+        setError("Verification timed out. Please refresh the page or try again later.");
+      }
+    }, 10000); // 10 second timeout
+    
     checkAdminStatus();
-  }, [navigate, toast]);
+    
+    return () => clearTimeout(timeoutId);
+  }, [navigate, toast, location.pathname]);
   
   const isActive = (path: string) => {
     return location.pathname === path ? 'bg-brand-50 text-brand-600 font-medium' : 'text-gray-600 hover:bg-gray-50';
@@ -80,7 +100,36 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       <>
         <Navbar />
         <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+          <div className="text-center">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-500">Verifying admin credentials...</p>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Navbar />
+        <div className="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-sm p-6 max-w-md w-full text-center">
+            <div className="mb-6 text-red-500">
+              <AlertCircle size={50} className="mx-auto" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Admin Access Error</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+              <Button onClick={() => navigate('/dashboard')}>
+                Go to Dashboard
+              </Button>
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                Retry
+              </Button>
+            </div>
+          </div>
         </div>
         <Footer />
       </>
