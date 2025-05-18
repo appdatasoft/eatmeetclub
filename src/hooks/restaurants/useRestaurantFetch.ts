@@ -67,10 +67,7 @@ export const useRestaurantFetch = (restaurantId: string | undefined, retryTrigge
         }, {
           retries: 5,
           baseDelay: 1000,
-          maxDelay: 15000,
-          onRetry: (attempt, delay) => {
-            console.log(`Retry attempt ${attempt} for restaurant details with delay ${delay}ms`);
-          }
+          maxDelay: 15000
         });
         
         if (error) {

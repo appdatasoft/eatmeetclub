@@ -25,9 +25,9 @@ const RetryAlert: React.FC<RetryAlertProps> = ({
   const getVariant = () => {
     switch(severity) {
       case 'error': return 'destructive';
-      case 'info': return 'default';
       case 'warning':
-      default: return 'warning';
+      case 'info':
+      default: return 'default';
     }
   };
   

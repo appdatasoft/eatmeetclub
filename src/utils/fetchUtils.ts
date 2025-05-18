@@ -27,17 +27,19 @@ const requestTracker = {
   }
 };
 
+interface FetchRetryOptions {
+  retries?: number;
+  baseDelay?: number;
+  maxDelay?: number;
+  shouldRetry?: (error: any) => boolean;
+}
+
 /**
  * Executes a fetch operation with exponential backoff retries
  */
 export const fetchWithRetry = async <T>(
   fetchFn: () => Promise<T>,
-  options: {
-    retries?: number;
-    baseDelay?: number;
-    maxDelay?: number;
-    shouldRetry?: (error: any) => boolean;
-  } = {}
+  options: FetchRetryOptions = {}
 ): Promise<T> => {
   const {
     retries = 3,

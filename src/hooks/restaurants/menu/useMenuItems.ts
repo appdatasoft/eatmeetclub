@@ -62,10 +62,7 @@ export const useMenuItems = (restaurantId: string | undefined, retryTrigger: num
         }, {
           retries: 5,
           baseDelay: 1000,
-          maxDelay: 15000,
-          onRetry: (attempt, delay) => {
-            console.log(`Retry attempt ${attempt} for menu items with delay ${delay}ms`);
-          }
+          maxDelay: 15000
         });
 
         if (menuError) throw menuError;

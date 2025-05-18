@@ -23,9 +23,6 @@ export const useMenuItemMedia = () => {
           shouldRetry: (error) => {
             // Always retry network errors
             return true;
-          },
-          onRetry: (attempt, delay) => {
-            console.log(`Retrying media fetch (${attempt}) after ${delay}ms delay`);
           }
         }
       );
@@ -51,10 +48,7 @@ export const useMenuItemMedia = () => {
         { 
           retries: 5, 
           baseDelay: 1000,
-          maxDelay: 10000,
-          onRetry: (attempt, delay) => {
-            console.log(`Retrying ingredients fetch (${attempt}) after ${delay}ms delay`);
-          }
+          maxDelay: 10000
         }
       );
     } catch (error: any) {
