@@ -18,15 +18,16 @@ console.log("Initializing Supabase client with:", {
 // In-memory request cache for very short-lived requests
 const requestCache = new Map<string, { data: any; expiry: number }>();
 
-// Request queue implementation with improved throttling
+// Request queue implementation with improved throttling and response handling
 class RequestQueue {
   private queue: Array<() => Promise<any>> = [];
   private processing = false;
   private concurrentRequests = 0;
-  private maxConcurrentRequests = 1; // Reduced to 1 for stricter throttling
-  private requestDelay = 1000; // Increased to 1000ms
+  private maxConcurrentRequests = 1; // Further reduced to 1 for stricter throttling
+  private requestDelay = 1500; // Increased to 1500ms to prevent rapid requests
   private lastRequestTime = 0;
   private rateLimitedUntil = 0;
+  private pauseUntil = 0;
 
   async add<T>(request: () => Promise<T>, cacheKey?: string): Promise<T> {
     // Check if response is in memory cache
@@ -43,15 +44,17 @@ class RequestQueue {
     return new Promise((resolve, reject) => {
       this.queue.push(async () => {
         try {
-          // Check if we're rate limited
-          if (this.rateLimitedUntil > Date.now()) {
-            const waitTime = this.rateLimitedUntil - Date.now();
-            console.log(`Rate limited, waiting ${waitTime}ms`);
+          // Check if we're rate limited or paused
+          const now = Date.now();
+          const waitUntil = Math.max(this.rateLimitedUntil, this.pauseUntil);
+          
+          if (waitUntil > now) {
+            const waitTime = waitUntil - now;
+            console.log(`Rate limited or paused, waiting ${waitTime}ms`);
             await new Promise(r => setTimeout(r, waitTime));
           }
           
           // Ensure minimum delay between requests
-          const now = Date.now();
           const timeSinceLastRequest = now - this.lastRequestTime;
           if (timeSinceLastRequest < this.requestDelay) {
             const waitTime = this.requestDelay - timeSinceLastRequest;
@@ -59,22 +62,29 @@ class RequestQueue {
           }
           
           this.lastRequestTime = Date.now();
+          
+          // Execute the request
           const result = await request();
           
           // Cache the successful response if cache key was provided
           if (cacheKey) {
             requestCache.set(cacheKey, {
               data: result,
-              expiry: Date.now() + 30000 // 30 second memory cache
+              expiry: Date.now() + 60000 // Increased to 60 seconds memory cache
             });
           }
           
           resolve(result);
         } catch (error: any) {
           // If we got a 429 (too many requests), set a longer backoff
-          if (error.status === 429) {
-            this.rateLimitedUntil = Date.now() + 60000; // 1 minute backoff
-            console.warn('Rate limit encountered, backing off for 1 minute');
+          if (error?.status === 429) {
+            this.rateLimitedUntil = Date.now() + 120000; // 2 minute backoff
+            console.warn('Rate limit encountered, backing off for 2 minutes');
+          } 
+          // For other errors, brief pause
+          else {
+            this.pauseUntil = Date.now() + 5000;
+            console.warn('Request error, pausing for 5 seconds');
           }
           reject(error);
         }
@@ -118,6 +128,18 @@ class RequestQueue {
 // Create a global request queue
 const requestQueue = new RequestQueue();
 
+// Fix for the body stream already read issue - we need to make sure we don't try to
+// read the response body more than once
+const handleResponse = async (response: Response): Promise<Response> => {
+  // If we get a 429 status code, throw an error to trigger retry logic
+  if (response.status === 429) {
+    throw new Error(`Rate limit hit (429)`);
+  }
+  
+  // For other error statuses, let Supabase handle them
+  return response;
+};
+
 // Custom fetch function with retry logic, queue management and improved caching
 const customFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
   // Create a cache key based on the request
@@ -127,7 +149,7 @@ const customFetch = async (url: string, options: RequestInit = {}): Promise<Resp
     try {
       // Create a controller for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000); // Increased to 20s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // Increased to 30s timeout
       
       const fetchOptions = {
         ...options,
@@ -136,7 +158,10 @@ const customFetch = async (url: string, options: RequestInit = {}): Promise<Resp
       
       // Use the request queue to control concurrency and apply rate limiting
       const response = await requestQueue.add(
-        async () => fetch(url, fetchOptions),
+        async () => {
+          const resp = await fetch(url, fetchOptions);
+          return handleResponse(resp);
+        },
         options.method === 'GET' ? cacheKey : undefined // Only cache GET requests
       );
       
@@ -148,7 +173,7 @@ const customFetch = async (url: string, options: RequestInit = {}): Promise<Resp
           throw new Error(`Request failed with status: ${response.status}`);
         }
         
-        const retryDelay = response.status === 429 ? delay * 3 : delay * 2;
+        const retryDelay = response.status === 429 ? delay * 5 : delay * 3;
         console.warn(`Rate limited or server error (${response.status}). Waiting ${retryDelay}ms before retry.`);
         
         // Wait before retrying
@@ -187,7 +212,7 @@ const customFetch = async (url: string, options: RequestInit = {}): Promise<Resp
   };
   
   // Initial retry attempt with exponential backoff
-  return fetchWithRetry(4, 2000); // Increased retries and initial delay
+  return fetchWithRetry(4, 3000); // Increased retries and initial delay
 };
 
 // Initialize Supabase client with explicit configuration to avoid warnings

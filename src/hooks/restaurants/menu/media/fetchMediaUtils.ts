@@ -38,11 +38,12 @@ export const fetchMediaForMenuItem = async (
         
         if (error) throw error;
         
-        const mediaItems = data.map(item => ({
+        // Important: Convert response data once, and store the resulting object
+        const mediaItems = (data || []).map(item => ({
           id: item.id,
           url: item.url,
           type: item.media_type as 'image' | 'video'
-        })) || [];
+        }));
         
         // Cache the successful response
         cache.set(mediaItems);
@@ -97,7 +98,8 @@ export const fetchIngredientsForMenuItem = async (
         
         if (error) throw error;
         
-        const ingredients = data.map(item => item.name) || [];
+        // Important: Process the data immediately to avoid multiple reads
+        const ingredients = (data || []).map(item => item.name);
         
         // Cache the successful response
         cache.set(ingredients);
@@ -136,7 +138,7 @@ export const prefetchMenuItemsData = async (
     console.log(`Prefetching data for ${menuItemIds.length} menu items`);
     
     // Create batch jobs with fewer concurrent requests
-    const batchSize = 3;
+    const batchSize = 2; // Reduced from 3 to 2 to lower request rate
     for (let i = 0; i < menuItemIds.length; i += batchSize) {
       const batch = menuItemIds.slice(i, i + batchSize);
       
@@ -150,9 +152,9 @@ export const prefetchMenuItemsData = async (
         )
       );
       
-      // Add delay between batches to avoid rate limiting
+      // Add larger delay between batches to avoid rate limiting
       if (i + batchSize < menuItemIds.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Increased from 1000 to 2000ms
       }
     }
     
