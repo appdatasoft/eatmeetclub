@@ -10,6 +10,7 @@ interface AuthContextType {
   isLoading: boolean; // Added for compatibility
   isAdmin: boolean; // Added for compatibility
   handleLogout: () => Promise<void>; // Added for compatibility
+  handleLogin: (email: string, password: string) => Promise<{ success: boolean; error?: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, userData?: any) => Promise<{ error: any, data?: any }>;
   signOut: () => Promise<void>;
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   isAdmin: false,
   handleLogout: async () => {},
+  handleLogin: async () => ({ success: false }),
   signIn: async () => ({ error: null }),
   signUp: async () => ({ error: null }),
   signOut: async () => {},
@@ -81,6 +83,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const handleLogin = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        return { success: false, error };
+      }
+      
+      return { success: true };
+    } catch (error) {
+      return { success: false, error };
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -124,6 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading: loading, // Alias for compatibility
     isAdmin,
     handleLogout,
+    handleLogin,
     signIn,
     signUp,
     signOut,
