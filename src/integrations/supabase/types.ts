@@ -60,6 +60,137 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          storage_path: string
+          type: Database["public"]["Enums"]["contract_template_type"]
+          updated_at: string
+          updated_by: string | null
+          variables: Json | null
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          storage_path: string
+          type: Database["public"]["Enums"]["contract_template_type"]
+          updated_at?: string
+          updated_by?: string | null
+          variables?: Json | null
+          version?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          storage_path?: string
+          type?: Database["public"]["Enums"]["contract_template_type"]
+          updated_at?: string
+          updated_by?: string | null
+          variables?: Json | null
+          version?: string
+        }
+        Relationships: []
+      }
+      creator_payouts: {
+        Row: {
+          amount: number
+          created_at: string
+          creator_id: string
+          id: string
+          notes: string | null
+          payout_date: string | null
+          reference_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          creator_id: string
+          id?: string
+          notes?: string | null
+          payout_date?: string | null
+          reference_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          creator_id?: string
+          id?: string
+          notes?: string | null
+          payout_date?: string | null
+          reference_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_payouts_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "creators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creators: {
+        Row: {
+          bio: string | null
+          created_at: string
+          display_name: string
+          id: string
+          profile_image_url: string | null
+          slug: string
+          social_instagram: string | null
+          social_tiktok: string | null
+          social_twitter: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          display_name: string
+          id?: string
+          profile_image_url?: string | null
+          slug: string
+          social_instagram?: string | null
+          social_tiktok?: string | null
+          social_twitter?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          profile_image_url?: string | null
+          slug?: string
+          social_instagram?: string | null
+          social_tiktok?: string | null
+          social_twitter?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       event_menu_selections: {
         Row: {
           created_at: string | null
@@ -546,6 +677,154 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_links: {
+        Row: {
+          code: string
+          created_at: string
+          creator_id: string
+          id: string
+          name: string
+          target_id: string
+          target_type: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          creator_id: string
+          id?: string
+          name: string
+          target_id: string
+          target_type: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          creator_id?: string
+          id?: string
+          name?: string
+          target_id?: string
+          target_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_links_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "creators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_tracking: {
+        Row: {
+          commission_amount: number | null
+          created_at: string
+          creator_id: string
+          event_type: string
+          id: string
+          ip_hash: string | null
+          referral_link_id: string
+          revenue_amount: number | null
+          transaction_id: string | null
+          user_id: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          commission_amount?: number | null
+          created_at?: string
+          creator_id: string
+          event_type: string
+          id?: string
+          ip_hash?: string | null
+          referral_link_id: string
+          revenue_amount?: number | null
+          transaction_id?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          commission_amount?: number | null
+          created_at?: string
+          creator_id?: string
+          event_type?: string
+          id?: string
+          ip_hash?: string | null
+          referral_link_id?: string
+          revenue_amount?: number | null
+          transaction_id?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_tracking_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "creators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_tracking_referral_link_id_fkey"
+            columns: ["referral_link_id"]
+            isOneToOne: false
+            referencedRelation: "referral_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_contracts: {
+        Row: {
+          contract_url: string | null
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          restaurant_id: string | null
+          signed_at: string | null
+          signed_by: string | null
+          terms_version: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          contract_url?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          restaurant_id?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          terms_version?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          contract_url?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          restaurant_id?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          terms_version?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_contracts_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurant_menu_ingredients: {
         Row: {
           created_at: string
@@ -668,6 +947,57 @@ export type Database = {
           },
         ]
       }
+      restaurant_referrals: {
+        Row: {
+          accepted_at: string | null
+          created_at: string | null
+          declined_at: string | null
+          id: string
+          invited_at: string | null
+          referred_by_creator_id: string | null
+          restaurant_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string | null
+          declined_at?: string | null
+          id?: string
+          invited_at?: string | null
+          referred_by_creator_id?: string | null
+          restaurant_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string | null
+          declined_at?: string | null
+          id?: string
+          invited_at?: string | null
+          referred_by_creator_id?: string | null
+          restaurant_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_referrals_referred_by_creator_id_fkey"
+            columns: ["referred_by_creator_id"]
+            isOneToOne: false
+            referencedRelation: "creators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "restaurant_referrals_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           address: string
@@ -675,9 +1005,11 @@ export type Database = {
           created_at: string
           cuisine_type: string
           description: string | null
+          has_signed_contract: boolean | null
           id: string
           logo_url: string | null
           name: string
+          owner_email: string | null
           phone: string
           state: string
           updated_at: string
@@ -691,9 +1023,11 @@ export type Database = {
           created_at?: string
           cuisine_type: string
           description?: string | null
+          has_signed_contract?: boolean | null
           id?: string
           logo_url?: string | null
           name: string
+          owner_email?: string | null
           phone: string
           state: string
           updated_at?: string
@@ -707,9 +1041,11 @@ export type Database = {
           created_at?: string
           cuisine_type?: string
           description?: string | null
+          has_signed_contract?: boolean | null
           id?: string
           logo_url?: string | null
           name?: string
+          owner_email?: string | null
           phone?: string
           state?: string
           updated_at?: string
@@ -729,6 +1065,7 @@ export type Database = {
           purchase_date: string | null
           quantity: number
           service_fee: number
+          sold_by_creator_id: string | null
           total_amount: number
           user_id: string
         }
@@ -741,6 +1078,7 @@ export type Database = {
           purchase_date?: string | null
           quantity: number
           service_fee: number
+          sold_by_creator_id?: string | null
           total_amount: number
           user_id: string
         }
@@ -753,6 +1091,7 @@ export type Database = {
           purchase_date?: string | null
           quantity?: number
           service_fee?: number
+          sold_by_creator_id?: string | null
           total_amount?: number
           user_id?: string
         }
@@ -762,6 +1101,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_sold_by_creator_id_fkey"
+            columns: ["sold_by_creator_id"]
+            isOneToOne: false
+            referencedRelation: "creators"
             referencedColumns: ["id"]
           },
         ]
@@ -808,8 +1154,16 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      is_creator: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
+      contract_template_type:
+        | "restaurant"
+        | "restaurant_referral"
+        | "ticket_sales"
       memory_mood_type:
         | "cozy"
         | "romantic"
@@ -935,6 +1289,11 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      contract_template_type: [
+        "restaurant",
+        "restaurant_referral",
+        "ticket_sales",
+      ],
       memory_mood_type: [
         "cozy",
         "romantic",
