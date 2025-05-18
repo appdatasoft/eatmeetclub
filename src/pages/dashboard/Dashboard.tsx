@@ -5,7 +5,7 @@ import QuickActions from "@/components/dashboard/QuickActions";
 import UpcomingEvents from "@/components/dashboard/UpcomingEvents";
 import UserTickets from "@/components/dashboard/UserTickets";
 import { useMembershipStatus } from "@/hooks/useMembershipStatus";
-import useAuth from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 
 const Dashboard = () => {
   const { isActive } = useMembershipStatus();
