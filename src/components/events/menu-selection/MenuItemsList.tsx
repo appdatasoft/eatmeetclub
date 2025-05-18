@@ -25,8 +25,9 @@ const MenuItemsList: React.FC<MenuItemsListProps> = ({
   return (
     <div className="max-h-[400px] overflow-y-auto py-4">
       {loading ? (
-        <div className="flex justify-center items-center p-8">
+        <div className="flex justify-center items-center p-8" role="status" aria-live="polite">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="sr-only">Loading menu items</span>
         </div>
       ) : menuItems.length === 0 ? (
         <div className="text-center py-8">
@@ -61,6 +62,15 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, isSelected, onToggle }) => {
         isSelected ? 'border-primary bg-primary/5' : 'border-border'
       }`}
       onClick={onToggle}
+      role="button"
+      aria-pressed={isSelected}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onToggle();
+        }
+      }}
     >
       <div className="flex justify-between">
         <div className="flex-1">
@@ -73,7 +83,7 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, isSelected, onToggle }) => {
           <div className="text-muted-foreground mr-3">${item.price.toFixed(2)}</div>
           {isSelected && (
             <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-              <Check className="h-4 w-4 text-primary-foreground" />
+              <Check className="h-4 w-4 text-primary-foreground" data-testid="check-icon" />
             </div>
           )}
         </div>

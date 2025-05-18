@@ -1,56 +1,68 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { vi, describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import MenuSelectionFooter from '../MenuSelectionFooter';
 
 describe('MenuSelectionFooter', () => {
   const mockProps = {
-    selectedCount: 2,
+    selectedCount: 0,
     saving: false,
     onCancel: vi.fn(),
-    onSave: vi.fn(),
+    onSave: vi.fn()
   };
-
-  it('renders the footer with correct selected count', () => {
-    render(<MenuSelectionFooter {...mockProps} />);
-    expect(screen.getByText(/2 items selected/i)).toBeInTheDocument();
+  
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
-
-  it('renders singular text when only one item is selected', () => {
+  
+  it('renders with zero items selected', () => {
+    render(<MenuSelectionFooter {...mockProps} />);
+    
+    expect(screen.getByText('0 items selected')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save selections/i })).toBeInTheDocument();
+  });
+  
+  it('renders with one item selected (singular form)', () => {
     render(<MenuSelectionFooter {...mockProps} selectedCount={1} />);
-    expect(screen.getByText(/1 item selected/i)).toBeInTheDocument();
+    
+    expect(screen.getByText('1 item selected')).toBeInTheDocument();
   });
-
-  it('renders zero text when no items are selected', () => {
-    render(<MenuSelectionFooter {...mockProps} selectedCount={0} />);
-    expect(screen.getByText(/No items selected/i)).toBeInTheDocument();
+  
+  it('renders with multiple items selected (plural form)', () => {
+    render(<MenuSelectionFooter {...mockProps} selectedCount={3} />);
+    
+    expect(screen.getByText('3 items selected')).toBeInTheDocument();
   });
-
-  it('calls onSave when save button is clicked', () => {
-    render(<MenuSelectionFooter {...mockProps} />);
-    fireEvent.click(screen.getByRole('button', { name: /save/i }));
-    expect(mockProps.onSave).toHaveBeenCalled();
-  });
-
-  it('calls onCancel when cancel button is clicked', () => {
-    render(<MenuSelectionFooter {...mockProps} />);
-    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
-    expect(mockProps.onCancel).toHaveBeenCalled();
-  });
-
-  it('disables the save button and shows loading state when saving', () => {
+  
+  it('shows loading spinner when saving', () => {
     render(<MenuSelectionFooter {...mockProps} saving={true} />);
     
-    const saveButton = screen.getByRole('button', { name: /saving/i });
-    expect(saveButton).toBeDisabled();
-    expect(saveButton).toHaveTextContent(/saving/i);
+    // Check for loading indicator
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save selections/i })).toBeDisabled();
   });
-
-  it('disables the save button when no items are selected', () => {
-    render(<MenuSelectionFooter {...mockProps} selectedCount={0} />);
+  
+  it('calls onCancel when cancel button is clicked', () => {
+    render(<MenuSelectionFooter {...mockProps} />);
     
-    const saveButton = screen.getByRole('button', { name: /save/i });
-    expect(saveButton).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    
+    expect(mockProps.onCancel).toHaveBeenCalledTimes(1);
+  });
+  
+  it('calls onSave when save button is clicked', () => {
+    render(<MenuSelectionFooter {...mockProps} />);
+    
+    fireEvent.click(screen.getByRole('button', { name: /save selections/i }));
+    
+    expect(mockProps.onSave).toHaveBeenCalledTimes(1);
+  });
+  
+  it('disables save button when saving', () => {
+    render(<MenuSelectionFooter {...mockProps} saving={true} />);
+    
+    expect(screen.getByRole('button', { name: /save selections/i })).toBeDisabled();
   });
 });

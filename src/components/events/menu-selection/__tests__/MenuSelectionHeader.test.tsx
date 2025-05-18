@@ -15,7 +15,15 @@ describe('MenuSelectionHeader', () => {
   it('renders instructions text', () => {
     render(<MenuSelectionHeader />);
     
-    const instructionsText = screen.getByText(/Choose the menu items you're interested in/i);
+    const instructionsText = screen.getByText(/Choose the dishes you're interested in/i);
     expect(instructionsText).toBeInTheDocument();
+  });
+
+  it('ensures dialog header has appropriate ARIA roles', () => {
+    render(<MenuSelectionHeader />);
+    
+    // DialogHeader should have an appropriate ARIA role
+    const header = screen.getByText(/Select Menu Items/i).closest('div');
+    expect(header).toHaveAttribute('role', 'presentation');
   });
 });

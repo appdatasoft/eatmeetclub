@@ -8,7 +8,7 @@ import {
 
 const MenuSelectionHeader: React.FC = () => {
   return (
-    <DialogHeader>
+    <DialogHeader role="presentation">
       <DialogTitle>Select Menu Items</DialogTitle>
       <DialogDescription>
         Choose the dishes you're interested in. This will help generate questions for the team game.
