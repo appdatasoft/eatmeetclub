@@ -1,7 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { MediaItem } from '@/components/restaurants/menu/types/mediaTypes';
-import { createSessionCache } from '@/utils/fetchUtils';
+import { createSessionCache } from '@/utils/fetch';
 
 /**
  * Fetches media items for a specific menu item with better error handling and caching

@@ -2,7 +2,7 @@
 import { MediaItem } from '@/components/restaurants/menu';
 import { fetchMediaForMenuItem, fetchIngredientsForMenuItem } from './media/fetchMediaUtils';
 import { deleteMediaItem } from './media/mediaManagement';
-import { fetchWithRetry } from '@/utils/fetchUtils';
+import { fetchWithRetry } from '@/utils/fetch';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 

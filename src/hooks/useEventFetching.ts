@@ -1,11 +1,10 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase, retryFetch } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { EventDetails } from "@/types/event";
 import { useEventDataFetch } from "./events/useEventDataFetch";
 import { useEventOwnership } from "./events/useEventOwnership";
-import { fetchWithRetry } from "@/utils/fetchUtils";
+import { fetchWithRetry } from "@/utils/fetch";
 
 export const useEventFetching = (eventId?: string) => {
   const { toast } = useToast();

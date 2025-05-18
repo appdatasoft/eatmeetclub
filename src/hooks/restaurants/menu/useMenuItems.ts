@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
 import { useMenuItemMedia } from '@/hooks/restaurants/menu/useMenuItemMedia';
 import { useMenuItemsProcessor } from './useMenuItemsProcessor';
-import { fetchWithRetry, createSessionCache } from '@/utils/fetchUtils';
+import { fetchWithRetry, createSessionCache } from '@/utils/fetch';
 import { useToast } from '@/hooks/use-toast';
 import { prefetchMenuItemsData } from './media/fetchMediaUtils';
 
