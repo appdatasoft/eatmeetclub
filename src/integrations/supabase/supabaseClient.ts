@@ -1,7 +1,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
-import { customFetch } from './utils/fetchUtils';
+import { handleResponse } from './utils/responseUtils';
+import { requestQueue } from './utils/requestQueue';
 
 // Define hardcoded fallback values (only used if env variables are missing)
 const SUPABASE_URL = 'https://wocfwpedauuhlrfugxuu.supabase.co';
@@ -15,6 +16,21 @@ console.log("Initializing Supabase client with:", {
   url: supabaseUrl,
   keyLength: supabaseAnonKey?.length || 0
 });
+
+// Custom fetch function with retry logic, queue management and response handling
+const customFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+  // Queue the request with necessary handling
+  return await requestQueue.add(async () => {
+    // Always clone the request to ensure we don't encounter "already used" errors
+    const requestOptions = { ...options };
+    
+    // Perform the fetch with proper response handling
+    const response = await fetch(url, requestOptions);
+    
+    // Use the handleResponse utility to prevent "body stream already read" errors
+    return handleResponse(response);
+  }, options.method === 'GET' ? url : undefined);
+};
 
 // Initialize Supabase client with explicit configuration to avoid warnings
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {

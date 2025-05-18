@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { MediaItem } from '@/components/restaurants/menu/types/mediaTypes';
 import { createSessionCache } from '@/utils/fetch';
@@ -37,8 +38,11 @@ export const fetchMediaForMenuItem = async (
         
         if (error) throw error;
         
+        // Process response data immediately to avoid multiple reads
+        if (!data) return [];
+        
         // Important: Convert response data once, and store the resulting object
-        const mediaItems = (data || []).map(item => ({
+        const mediaItems = data.map(item => ({
           id: item.id,
           url: item.url,
           type: item.media_type as 'image' | 'video'
@@ -97,8 +101,11 @@ export const fetchIngredientsForMenuItem = async (
         
         if (error) throw error;
         
+        // Process response data immediately to avoid multiple reads
+        if (!data) return [];
+        
         // Important: Process the data immediately to avoid multiple reads
-        const ingredients = (data || []).map(item => item.name);
+        const ingredients = data.map(item => item.name);
         
         // Cache the successful response
         cache.set(ingredients);
@@ -137,23 +144,24 @@ export const prefetchMenuItemsData = async (
     console.log(`Prefetching data for ${menuItemIds.length} menu items`);
     
     // Create batch jobs with fewer concurrent requests
-    const batchSize = 2; // Reduced from 3 to 2 to lower request rate
+    const batchSize = 1; // Reduced to 1 to prevent overwhelming the server
     for (let i = 0; i < menuItemIds.length; i += batchSize) {
       const batch = menuItemIds.slice(i, i + batchSize);
       
-      // Fetch media and ingredients concurrently for the batch
-      await Promise.all(
-        batch.map(itemId => 
-          Promise.allSettled([
-            fetchMediaForMenuItem(restaurantId, itemId),
-            fetchIngredientsForMenuItem(itemId)
-          ])
-        )
-      );
+      // Process one item at a time to avoid race conditions
+      for (const itemId of batch) {
+        await Promise.allSettled([
+          fetchMediaForMenuItem(restaurantId, itemId),
+          fetchIngredientsForMenuItem(itemId)
+        ]);
+        
+        // Add a delay between individual items to reduce server load
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
       
       // Add larger delay between batches to avoid rate limiting
       if (i + batchSize < menuItemIds.length) {
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Increased from 1000 to 2000ms
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Increased from 2000 to 3000ms
       }
     }
     
