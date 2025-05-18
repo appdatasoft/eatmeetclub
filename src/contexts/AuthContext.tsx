@@ -46,7 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
-        // Safety timeout to ensure we don't get stuck in loading state
+        // Force loading state to end after a reasonable timeout
         setTimeout(() => {
           if (mounted) {
             setLoading(false);
@@ -87,9 +87,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
+    // Safety timeout to ensure loading state doesn't get stuck
+    const loadingTimeout = setTimeout(() => {
+      if (mounted) {
+        console.log("Safety timeout triggered - forcing loading state to end");
+        setLoading(false);
+        setIsLoading(false);
+      }
+    }, 3000);
+
     return () => {
       console.log("Cleaning up auth state listener...");
       mounted = false;
+      clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
   }, []);

@@ -8,15 +8,39 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import MainLayout from "@/components/layout/MainLayout";
+import { checkSupabaseConnection } from '@/lib/supabaseClient';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [connectionChecking, setConnectionChecking] = useState(true);
+  const [connectionOk, setConnectionOk] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const { handleLogin, session, isLoading } = useAuth();
+
+  // Test Supabase connection on component mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      setConnectionChecking(true);
+      const isConnected = await checkSupabaseConnection();
+      setConnectionOk(isConnected);
+      setConnectionChecking(false);
+    };
+    
+    checkConnection();
+    
+    // Check for stored email from previous flows
+    const storedEmail = localStorage.getItem('loginEmail');
+    if (storedEmail) {
+      setEmail(storedEmail);
+      // Clean up after using it
+      localStorage.removeItem('loginEmail');
+    }
+  }, []);
 
   // Extract the redirect path from location state or search params
   const getRedirectPath = () => {
@@ -96,13 +120,52 @@ const Login = () => {
     }
   };
 
+  // Show a connection error if we couldn't connect to Supabase
+  if (!connectionOk && !connectionChecking) {
+    return (
+      <MainLayout>
+        <div className="min-h-[calc(100vh-200px)] flex items-center justify-center bg-gray-50 px-4 py-12">
+          <Card className="w-full max-w-md shadow-lg">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl font-bold text-red-600">Connection Error</CardTitle>
+              <CardDescription>Unable to connect to authentication service</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-4 text-gray-700">
+                We're having trouble connecting to our authentication service. This might be due to:
+              </p>
+              <ul className="list-disc pl-5 mb-4 text-gray-700">
+                <li>Network connectivity issues</li>
+                <li>Service maintenance</li>
+                <li>Temporary outage</li>
+              </ul>
+              <Button 
+                onClick={() => window.location.reload()}
+                className="w-full"
+              >
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </MainLayout>
+    );
+  }
+
   // Show a more compact loading state that doesn't fill the entire screen
   const renderContent = () => {
-    if (isLoading) {
+    if (isLoading || connectionChecking) {
       return (
-        <div className="flex items-center justify-center p-8">
-          <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
-          <p className="ml-3 text-gray-500">Checking authentication...</p>
+        <div className="flex flex-col items-center justify-center p-8">
+          <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
+          <p className="text-gray-500">Checking authentication...</p>
+          
+          {/* Skeleton UI for better UX */}
+          <div className="w-full mt-8 space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
         </div>
       );
     }

@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -12,14 +13,29 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
   const { user, session, loading } = useAuth();
   const location = useLocation();
   
-  console.log("ProtectedRoute - loading:", loading, "authenticated:", !!session, "path:", location.pathname);
+  useEffect(() => {
+    console.log("ProtectedRoute - loading:", loading, "authenticated:", !!session, "path:", location.pathname);
+  }, [loading, session, location.pathname]);
 
   // Show loading state while auth is being checked
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
-        <p className="ml-3 text-gray-500">Verifying your credentials...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
+        <p className="text-gray-500 mb-8">Verifying your credentials...</p>
+        
+        {/* Skeleton UI for better UX */}
+        <div className="w-full max-w-3xl space-y-4">
+          <Skeleton className="h-12 w-full" />
+          <div className="flex gap-4">
+            <Skeleton className="h-32 w-32 rounded-md" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-6 w-2/3" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

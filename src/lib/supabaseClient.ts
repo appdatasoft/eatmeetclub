@@ -10,6 +10,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY;
 
+console.log("Initializing Supabase client with:", { 
+  url: supabaseUrl,
+  keyLength: supabaseAnonKey?.length || 0
+});
+
 // Initialize Supabase client with explicit configuration to avoid warnings
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -19,3 +24,19 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     storage: localStorage
   }
 });
+
+// Add a debug helper to check if the client is working
+export const checkSupabaseConnection = async () => {
+  try {
+    const { error } = await supabase.from('app_config').select('key').limit(1);
+    if (error) {
+      console.error('Supabase connection check failed:', error);
+      return false;
+    }
+    console.log('Supabase connection successful');
+    return true;
+  } catch (err) {
+    console.error('Failed to connect to Supabase:', err);
+    return false;
+  }
+};
