@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from "@/components/theme-provider"
@@ -6,28 +7,28 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster } from "@/components/ui/toaster"
 
 // Import components and pages
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import Dashboard from './pages/dashboard/Dashboard';
-import EventsManagement from './pages/EventsManagement';
-import CreateEvent from './pages/CreateEvent';
-import Memories from './pages/Memories';
-import CreateMemory from './pages/CreateMemory';
-import MemoryDetail from './pages/MemoryDetail';
-import EditMemory from './pages/EditMemory';
-import AddRestaurant from './pages/AddRestaurant';
-import RestaurantMenu from './pages/RestaurantMenu';
-import Settings from './pages/Settings';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import ConfigPage from './pages/admin/ConfigPage';
-import UsersPage from './pages/admin/UsersPage';
-import ProtectedRoute from './components/ProtectedRoute';
-import PublicRoute from './components/PublicRoute';
-import NotFound from './pages/NotFound';
-import EventDetail from './pages/EventDetail';
-import TicketSuccess from './pages/TicketSuccess';
-import PaymentsPage from './pages/dashboard/PaymentsPage';
+import Home from '@/pages/Home';
+import Login from '@/pages/Login';
+import Signup from '@/pages/Signup';
+import Dashboard from '@/pages/dashboard/Dashboard';
+import EventsManagement from '@/pages/EventsManagement';
+import CreateEvent from '@/pages/CreateEvent';
+import Memories from '@/pages/Memories';
+import CreateMemory from '@/pages/CreateMemory';
+import MemoryDetail from '@/pages/MemoryDetail';
+import EditMemory from '@/pages/EditMemory';
+import AddRestaurant from '@/pages/AddRestaurant';
+import RestaurantMenu from '@/pages/RestaurantMenu';
+import Settings from '@/pages/Settings';
+import AdminDashboard from '@/pages/admin/AdminDashboard';
+import ConfigPage from '@/pages/admin/ConfigPage';
+import UsersPage from '@/pages/admin/UsersPage';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import PublicRoute from '@/components/PublicRoute';
+import NotFound from '@/pages/NotFound';
+import EventDetail from '@/pages/EventDetail';
+import TicketSuccess from '@/pages/TicketSuccess';
+import PaymentsPage from '@/pages/dashboard/PaymentsPage.tsx';
 
 const queryClient = new QueryClient();
 

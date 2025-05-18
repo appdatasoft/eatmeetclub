@@ -1,2 +1,4 @@
 
-export { default } from './PaymentsPage';
+import PaymentsPage from './PaymentsPage.tsx';
+
+export default PaymentsPage;
