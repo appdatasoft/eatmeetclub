@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { User, Session } from '@supabase/supabase-js';
@@ -9,6 +8,7 @@ interface AuthContextType {
   loading: boolean;
   isLoading: boolean;
   isAdmin: boolean;
+  authInitialized: boolean;
   handleLogout: () => Promise<void>;
   handleLogin: (email: string, password: string) => Promise<{ success: boolean; error?: any }>;
   signUp: (email: string, password: string, userData?: any) => Promise<{ error: any, data?: any }>;
@@ -20,6 +20,7 @@ export const AuthContext = createContext<AuthContextType>({
   loading: true,
   isLoading: true,
   isAdmin: false,
+  authInitialized: false,
   handleLogout: async () => {},
   handleLogin: async () => ({ success: false }),
   signUp: async () => ({ error: null }),
@@ -36,8 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log("Setting up auth state listener...");
     
     let mounted = true;
-    
-    // Set up auth state listener FIRST to avoid missing auth events
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, currentSession) => {
         if (!mounted) return;
@@ -45,16 +45,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log("Auth state changed:", _event);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
-        
-        // Force loading state to end after a reasonable timeout
+
         setTimeout(() => {
           if (mounted) {
             setLoading(false);
             setIsLoading(false);
           }
         }, 500);
-        
-        // Check admin status if user is logged in
+
         if (currentSession?.user) {
           checkAdminStatus(currentSession.user.id);
         } else {
@@ -63,19 +61,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       if (!mounted) return;
-      
-      console.log("Initial session check:", currentSession ? "logged in" : "not logged in");
+
+      console.log("Initial session check:", currentSession);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
-      
-      // Ensure we exit loading state
       setLoading(false);
       setIsLoading(false);
-      
-      // Check admin status if user is logged in
+
       if (currentSession?.user) {
         checkAdminStatus(currentSession.user.id);
       }
@@ -87,7 +81,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    // Safety timeout to ensure loading state doesn't get stuck
     const loadingTimeout = setTimeout(() => {
       if (mounted) {
         console.log("Safety timeout triggered - forcing loading state to end");
@@ -103,17 +96,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
     };
   }, []);
-  
+
   const checkAdminStatus = async (userId: string) => {
     try {
       const { data, error } = await supabase.rpc('is_admin', { user_id: userId });
-      
       if (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);
         return;
       }
-      
       setIsAdmin(!!data);
     } catch (error) {
       console.error('Failed to check admin status:', error);
@@ -124,18 +115,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleLogin = async (email: string, password: string) => {
     try {
       console.log("Login attempt for:", email);
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      
       if (error) {
         console.error("Login error:", error.message);
         return { success: false, error };
       }
-      
-      console.log("Login successful for:", email);
       return { success: true, data };
     } catch (error) {
       console.error("Unexpected login error:", error);
@@ -157,12 +144,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error };
     }
   };
-  
+
   const handleLogout = async () => {
     console.log("Logging out...");
     await supabase.auth.signOut();
     console.log("Logged out successfully");
   };
+
+  const authInitialized = !loading && !isLoading;
 
   const value = {
     user,
@@ -173,6 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     handleLogout,
     handleLogin,
     signUp,
+    authInitialized,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
