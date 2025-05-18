@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,31 +85,22 @@ const RestaurantDetailsPage: React.FC = () => {
         }
       }
       
-      // Fetch restaurant details with retry logic
-      const { data: restaurantData, error: restaurantError } = await fetchWithRetry(
-        async () => {
+      // Fetch restaurant details with retry logic - IMPORTANT: Use Promise.all for parallel requests
+      const [restaurantResponse, eventsResponse] = await Promise.all([
+        // Restaurant details fetch
+        fetchWithRetry(async () => {
           return await supabase
             .from("restaurants")
             .select("*")
             .eq("id", id)
             .single();
-        },
-        {
-          retries: 4,
+        }, {
+          retries: 3,
           baseDelay: 1000
-        }
-      );
-
-      if (restaurantError) {
-        throw restaurantError;
-      }
-
-      setRestaurant(restaurantData);
-      setIsOwner(user && restaurantData.user_id === user.id);
-      
-      // Fetch related events with retry logic
-      const { data: eventsData, error: eventsError } = await fetchWithRetry(
-        async () => {
+        }),
+        
+        // Events fetch
+        fetchWithRetry(async () => {
           return await supabase
             .from("events")
             .select(`
@@ -125,21 +115,27 @@ const RestaurantDetailsPage: React.FC = () => {
             .eq("restaurant_id", id)
             .eq("published", true)
             .order("date", { ascending: true });
-        },
-        {
-          retries: 3,
+        }, {
+          retries: 2,
           baseDelay: 800
-        }
-      );
-
-      if (eventsError) throw eventsError;
-
-      setEvents(eventsData || []);
+        })
+      ]);
+      
+      // Handle restaurant fetch results
+      if (restaurantResponse.error) throw restaurantResponse.error;
+      if (!restaurantResponse.data) throw new Error("Restaurant not found");
+      
+      setRestaurant(restaurantResponse.data);
+      setIsOwner(user && restaurantResponse.data.user_id === user.id);
+      
+      // Handle events fetch results
+      if (eventsResponse.error) throw eventsResponse.error;
+      setEvents(eventsResponse.data || []);
       
       // Cache the successful response
       sessionStorage.setItem(cacheKey, JSON.stringify({
-        restaurantData,
-        eventsData,
+        restaurantData: restaurantResponse.data,
+        eventsData: eventsResponse.data,
         timestamp: Date.now()
       }));
       

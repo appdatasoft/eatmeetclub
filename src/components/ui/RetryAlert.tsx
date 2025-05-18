@@ -1,69 +1,73 @@
 
 import React from 'react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
 interface RetryAlertProps {
   title?: string;
   message: string;
   onRetry: () => void;
-  isRetrying?: boolean;
+  isRetrying: boolean;
+  severity?: 'info' | 'warning' | 'error';
   showSpinner?: boolean;
-  severity?: 'warning' | 'error' | 'info';
 }
 
-const RetryAlert: React.FC<RetryAlertProps> = ({ 
-  title = "Connection Issue",
-  message, 
-  onRetry, 
-  isRetrying = false,
-  showSpinner = true,
-  severity = 'warning'
+const RetryAlert: React.FC<RetryAlertProps> = ({
+  title,
+  message,
+  onRetry,
+  isRetrying,
+  severity = 'warning',
+  showSpinner = true
 }) => {
-  // Determine the alert variant based on severity
-  const getVariant = () => {
-    switch(severity) {
-      case 'error': return 'destructive';
-      case 'warning':
-      case 'info':
-      default: return 'default';
+  // Map severity to color variants
+  const variantMap = {
+    info: {
+      variant: "default",
+      icon: <AlertCircle className="h-4 w-4" />,
+      bgColor: "bg-blue-50 border-blue-200"
+    },
+    warning: {
+      variant: "default",
+      icon: <AlertCircle className="h-4 w-4" />,
+      bgColor: "bg-yellow-50 border-yellow-200"
+    },
+    error: {
+      variant: "destructive",
+      icon: <AlertCircle className="h-4 w-4" />,
+      bgColor: ""
     }
   };
-  
-  // Determine the icon based on severity
-  const Icon = AlertTriangle;
-  
+
+  const { icon, bgColor } = variantMap[severity];
+
   return (
-    <Alert variant={getVariant()} className="mb-4">
-      <Icon className="h-4 w-4 mr-2" />
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full">
-        <div>
-          {title && <AlertTitle className="mb-1">{title}</AlertTitle>}
-          <AlertDescription className="text-sm">
-            {message}
-          </AlertDescription>
-        </div>
+    <Alert variant="default" className={`${bgColor} mb-4`}>
+      {icon}
+      {title && <h4 className="font-medium">{title}</h4>}
+      <AlertDescription className="flex items-center justify-between">
+        <span>{message}</span>
         <Button 
-          variant={severity === 'error' ? "destructive" : "outline"} 
+          variant="outline" 
           size="sm" 
           onClick={onRetry}
           disabled={isRetrying}
-          className="mt-2 sm:mt-0 sm:ml-4 flex items-center"
+          className="ml-4 whitespace-nowrap"
         >
           {isRetrying && showSpinner ? (
             <>
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
               Retrying...
             </>
           ) : (
             <>
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className="h-4 w-4 mr-1" />
               Retry
             </>
           )}
         </Button>
-      </div>
+      </AlertDescription>
     </Alert>
   );
 };

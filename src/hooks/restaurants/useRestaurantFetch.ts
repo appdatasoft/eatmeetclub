@@ -11,6 +11,13 @@ export interface Restaurant {
   user_id: string;
   description?: string;
   logo_url?: string | null;
+  address: string;
+  city: string;
+  state: string;
+  zipcode: string;
+  phone: string;
+  cuisine_type: string;
+  website?: string;
 }
 
 export const useRestaurantFetch = (restaurantId: string | undefined, retryTrigger: number = 0) => {
@@ -57,7 +64,7 @@ export const useRestaurantFetch = (restaurantId: string | undefined, retryTrigge
           }
         }
         
-        // Fetch with retry if cache is not available or expired
+        // Use the enhanced fetchWithRetry function
         const { data, error } = await fetchWithRetry(async () => {
           return await supabase
             .from('restaurants')
@@ -65,9 +72,9 @@ export const useRestaurantFetch = (restaurantId: string | undefined, retryTrigge
             .eq('id', restaurantId)
             .single();
         }, {
-          retries: 5,
+          retries: 3,
           baseDelay: 1000,
-          maxDelay: 15000
+          maxDelay: 10000
         });
         
         if (error) {
@@ -81,10 +88,10 @@ export const useRestaurantFetch = (restaurantId: string | undefined, retryTrigge
           return;
         }
         
-        console.log('Restaurant data from useRestaurantFetch:', data);
+        // Response exists, save it
         setRestaurant(data);
         
-        // Cache the restaurant data
+        // Cache the result to avoid repeated fetches
         sessionStorage.setItem(cacheKey, JSON.stringify({
           data,
           timestamp: Date.now()
@@ -95,7 +102,6 @@ export const useRestaurantFetch = (restaurantId: string | undefined, retryTrigge
         
         // Clear any previous errors
         setError(null);
-        
       } catch (err: any) {
         console.error('Error in fetchRestaurant:', err);
         setError(err.message);
@@ -123,7 +129,7 @@ export const useRestaurantFetch = (restaurantId: string | undefined, retryTrigge
       sessionStorage.removeItem(`restaurant_${restaurantId}`);
     }
     
-    // This will trigger the effect to run again
+    // This will trigger the effect to run again and retry the fetch
     setRestaurant(null);
   };
 
