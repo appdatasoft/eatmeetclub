@@ -2,6 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { AlertCircle } from "lucide-react";
 
 interface EventNotFoundProps {
   error?: string | null;
@@ -13,6 +14,9 @@ const EventNotFound: React.FC<EventNotFoundProps> = ({ error }) => {
   return (
     <div className="container-custom py-12 text-center">
       <div className="max-w-md mx-auto">
+        <div className="mb-6 text-red-500">
+          <AlertCircle size={50} className="mx-auto" />
+        </div>
         <h1 className="text-3xl font-bold mb-4">Event Not Found</h1>
         
         {error ? (

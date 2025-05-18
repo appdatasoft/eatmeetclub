@@ -32,6 +32,7 @@ import { EditableContentProvider } from "@/components/editor/EditableContentProv
 import Register from "@/pages/Register";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AuthRedirect from "@/components/auth/AuthRedirect";
+import Settings from "@/pages/dashboard/Settings";
 
 function App() {
   return (
@@ -117,6 +118,11 @@ function App() {
           <Route path="/dashboard/payment-success" element={
             <ProtectedRoute>
               <PaymentSuccessPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/dashboard/settings" element={
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           } />
           <Route path="/dashboard/admin-settings" element={
