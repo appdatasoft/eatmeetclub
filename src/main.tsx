@@ -7,10 +7,6 @@ import './index.css';
 
 // Optional providers
 import { AuthProvider } from './contexts/AuthContext';
-import { CartProvider } from './contexts/CartContext';
-import { AdminEditProvider } from './contexts/AdminEditContext';
-import { SkinAnalysisProvider } from './contexts/SkinAnalysisContext';
-import { HelmetProvider } from 'react-helmet-async';
 
 // Create a client for React Query with better error handling
 const queryClient = new QueryClient({
@@ -26,18 +22,10 @@ const queryClient = new QueryClient({
 // Render the application
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <CartProvider>
-            <AdminEditProvider>
-              <SkinAnalysisProvider>
-                <App />
-              </SkinAnalysisProvider>
-            </AdminEditProvider>
-          </CartProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </HelmetProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </QueryClientProvider>
   </React.StrictMode>
 );
