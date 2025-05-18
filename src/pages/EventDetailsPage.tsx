@@ -1,4 +1,3 @@
-
 import { useParams } from "react-router-dom";
 import { useEventFetch } from "@/hooks/useEventFetch";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,7 +17,7 @@ import EventSkeleton from "@/components/events/EventDetails/EventSkeleton";
 import EventNotFound from "@/components/events/EventDetails/EventNotFound";
 import DeleteEventDialog from "@/components/events/EventDetails/DeleteEventDialog";
 import EditCoverDialog from "@/components/events/EventDetails/EditCoverDialog";
-import MenuSelectionModal from "@/components/events/MenuSelectionModal";
+import MenuSelectionModal from "@/components/events/menu-selection";
 import { Button } from "@/components/ui/button";
 import { UtensilsCrossed } from "lucide-react";
 
