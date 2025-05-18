@@ -7,16 +7,18 @@ import { useMenuItemsProcessor } from './useMenuItemsProcessor';
 import { fetchWithRetry } from '@/utils/fetchUtils';
 import { useToast } from '@/hooks/use-toast';
 
-export const useMenuItems = (restaurantId: string | undefined) => {
+export const useMenuItems = (restaurantId: string | undefined, retryTrigger: number = 0) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [fetchCount, setFetchCount] = useState(0);
   
   const { toast } = useToast();
   const { fetchMediaForMenuItem, fetchIngredientsForMenuItem } = useMenuItemMedia();
   const { processMenuItems } = useMenuItemsProcessor(fetchMediaForMenuItem, fetchIngredientsForMenuItem);
 
+  // This effect runs when restaurantId or retryTrigger changes
   useEffect(() => {
     const fetchMenuItems = async () => {
       if (!restaurantId) {
@@ -28,9 +30,30 @@ export const useMenuItems = (restaurantId: string | undefined) => {
       try {
         setIsLoading(true);
         setIsRetrying(true);
-        console.log(`Fetching menu items for restaurant: ${restaurantId}`);
+        console.log(`Fetching menu items for restaurant: ${restaurantId} (attempt: ${fetchCount})`);
 
-        // Fetch menu items with retry logic
+        // Use cache for very recent data to avoid loading spinner flash
+        const cacheKey = `menu_items_${restaurantId}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        
+        if (cachedData && retryTrigger === 0) {
+          try {
+            const { data, timestamp } = JSON.parse(cachedData);
+            // Use cache only if less than 30 seconds old
+            if (Date.now() - timestamp < 30000) {
+              console.log('Using cached menu items data');
+              setMenuItems(data);
+              setIsLoading(false);
+              setIsRetrying(false);
+              return;
+            }
+          } catch (e) {
+            console.warn("Error parsing cached menu items", e);
+            sessionStorage.removeItem(cacheKey);
+          }
+        }
+
+        // Fetch menu items with enhanced retry logic
         const { data: menuData, error: menuError } = await fetchWithRetry(async () => {
           return await supabase
             .from('restaurant_menu_items')
@@ -38,7 +61,11 @@ export const useMenuItems = (restaurantId: string | undefined) => {
             .eq('restaurant_id', restaurantId);
         }, {
           retries: 5,
-          baseDelay: 800
+          baseDelay: 1000,
+          maxDelay: 15000,
+          onRetry: (attempt, delay) => {
+            console.log(`Retry attempt ${attempt} for menu items with delay ${delay}ms`);
+          }
         });
 
         if (menuError) throw menuError;
@@ -49,10 +76,23 @@ export const useMenuItems = (restaurantId: string | undefined) => {
           // Process the menu items with the dedicated processor
           const processed = await processMenuItems(menuData, restaurantId);
           setMenuItems(processed);
+          
+          // Cache the processed data
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify({
+              data: processed,
+              timestamp: Date.now()
+            }));
+          } catch (e) {
+            console.warn("Could not cache menu items data", e);
+          }
         } else {
           console.log('No menu items found');
           setMenuItems([]);
         }
+        
+        // Clear any previous errors
+        setError(null);
       } catch (err: any) {
         console.error('Error fetching menu items:', err);
         setError(err.message || 'Failed to load menu items');
@@ -65,21 +105,25 @@ export const useMenuItems = (restaurantId: string | undefined) => {
       } finally {
         setIsLoading(false);
         setIsRetrying(false);
+        setFetchCount(prev => prev + 1);
       }
     };
 
     fetchMenuItems();
-  }, [restaurantId, processMenuItems, toast]);
+  }, [restaurantId, retryTrigger, processMenuItems, toast, fetchCount]);
 
   // Add a retry function for manual retry
   const retryFetch = async () => {
     setError(null);
     setIsLoading(true);
     
-    // Re-trigger the effect by updating a dependency
-    setMenuItems([]);
+    // Clear the cache to force a fresh fetch
+    if (restaurantId) {
+      sessionStorage.removeItem(`menu_items_${restaurantId}`);
+    }
     
-    // The effect will run again with the same restaurantId
+    // Force a new fetch by updating fetchCount
+    setFetchCount(prev => prev + 1);
   };
 
   return { 

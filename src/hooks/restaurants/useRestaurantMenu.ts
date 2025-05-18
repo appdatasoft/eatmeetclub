@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -16,16 +17,29 @@ export interface Restaurant {
   user_id: string;
 }
 
-export const useRestaurantMenu = (restaurantId: string | undefined) => {
+export const useRestaurantMenu = (restaurantId: string | undefined, retryTrigger: number = 0) => {
   const [isSaving, setIsSaving] = useState(false);
   
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Use our new hooks
-  const { restaurant, isLoading: restaurantLoading, error, isOwner } = useRestaurantFetch(restaurantId);
-  const { menuItems, setMenuItems, isLoading: menuItemsLoading } = useMenuItems(restaurantId);
+  // Use our hooks with explicit retry trigger
+  const { 
+    restaurant, 
+    isLoading: restaurantLoading, 
+    error, 
+    isOwner, 
+    retryFetch: retryRestaurantFetch 
+  } = useRestaurantFetch(restaurantId, retryTrigger);
+  
+  const { 
+    menuItems, 
+    setMenuItems, 
+    isLoading: menuItemsLoading,
+    retryFetch: retryMenuItemsFetch 
+  } = useMenuItems(restaurantId, retryTrigger);
+  
   const { 
     isDialogOpen, 
     currentItem, 
@@ -35,7 +49,16 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
     setIsDialogOpen,
     setCurrentItem 
   } = useMenuItemDialog(menuItems);
+  
   const { handleDeleteItem } = useMenuItemDelete(restaurantId || '', menuItems, setMenuItems, toast);
+  
+  // Combined retry function that retries both restaurant and menu items
+  const retryFetch = async () => {
+    await Promise.all([
+      retryRestaurantFetch(),
+      retryMenuItemsFetch()
+    ]);
+  };
   
   // Handle save item
   const handleSaveItem = async (item: MenuItemFormValues): Promise<boolean | void> => {
@@ -87,7 +110,7 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
       console.error('Error saving menu item:', err);
       toast({
         title: "Error",
-        description: err.message || "Failed to save menu item",
+        description: err.message || "Failed to save menu item. Please try again.",
         variant: "destructive",
       });
       return false;
@@ -109,6 +132,7 @@ export const useRestaurantMenu = (restaurantId: string | undefined) => {
     handleEditItem,
     handleDeleteItem,
     handleSaveItem,
-    handleDialogClose
+    handleDialogClose,
+    retryFetch
   };
 };

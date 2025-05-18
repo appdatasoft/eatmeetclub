@@ -1,4 +1,3 @@
-
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -8,12 +7,22 @@ import MenuItemsList from '@/components/restaurants/menu/MenuItemsList';
 import MenuItemDialog from '@/components/restaurants/menu/MenuItemDialog';
 import MenuLoadingState from '@/components/restaurants/menu/MenuLoadingState';
 import MenuErrorState from '@/components/restaurants/menu/MenuErrorState';
+import { useState, useEffect } from 'react';
+import RetryAlert from '@/components/ui/RetryAlert';
+import RestaurantFallback from '@/components/restaurants/details/RestaurantFallback';
+import { useToast } from '@/hooks/use-toast';
+import { RefreshCw } from 'lucide-react';
 
 const RestaurantMenu = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const eventId = searchParams.get('eventId');
   const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // Add state for manual retry
+  const [isManualRetry, setIsManualRetry] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
   const {
     restaurant,
@@ -28,8 +37,9 @@ const RestaurantMenu = () => {
     handleEditItem,
     handleDeleteItem,
     handleSaveItem,
-    handleDialogClose
-  } = useRestaurantMenu(id);
+    handleDialogClose,
+    retryFetch
+  } = useRestaurantMenu(id, retryCount);
 
   const goBack = () => {
     if (eventId) {
@@ -38,6 +48,27 @@ const RestaurantMenu = () => {
       navigate('/dashboard');
     }
   };
+  
+  const handleRetry = () => {
+    setIsManualRetry(true);
+    // Increment retry count to trigger a new fetch
+    setRetryCount(prev => prev + 1);
+    
+    toast({
+      title: "Retrying...",
+      description: "Attempting to load restaurant menu data again.",
+    });
+    
+    // Call the retry function from the hook
+    retryFetch();
+  };
+  
+  // Reset manual retry flag when loading completes
+  useEffect(() => {
+    if (!isLoading && isManualRetry) {
+      setIsManualRetry(false);
+    }
+  }, [isLoading]);
 
   if (isLoading) {
     return <MenuLoadingState />;
@@ -47,18 +78,21 @@ const RestaurantMenu = () => {
     return (
       <MenuErrorState 
         title="Error Loading Menu"
-        description={error}
+        description={error + " We're experiencing high server load. Please try again."}
         onBack={goBack}
+        onRetry={handleRetry}
+        isRetrying={isManualRetry}
       />
     );
   }
 
   if (!restaurant) {
     return (
-      <MenuErrorState 
-        title="Restaurant not found"
+      <RestaurantFallback
+        onRetry={handleRetry}
+        isRetrying={isManualRetry}
+        title="Restaurant Not Found"
         description="The restaurant you're looking for doesn't exist or you don't have permission to view it."
-        onBack={goBack}
       />
     );
   }
@@ -76,6 +110,16 @@ const RestaurantMenu = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Warning alert for rate limiting issues */}
+        <RetryAlert
+          title="Connection Issues"
+          message="We're experiencing high server load. If you encounter loading issues, please use the retry button."
+          onRetry={handleRetry}
+          isRetrying={isManualRetry}
+          severity="info"
+          showSpinner={false}
+        />
+
         <MenuHeader 
           restaurantName={restaurant?.name} 
           handleAddItem={handleAddItem} 
@@ -85,10 +129,30 @@ const RestaurantMenu = () => {
           menuItems={menuItems} 
           handleEditItem={handleEditItem} 
           handleDeleteItem={handleDeleteItem} 
+          isLoading={isLoading}
         />
 
-        <Button variant="outline" onClick={goBack}>
+        <Button variant="outline" onClick={goBack} className="mr-2">
           Back
+        </Button>
+        
+        {/* Additional retry button at the bottom */}
+        <Button 
+          variant="secondary" 
+          onClick={handleRetry} 
+          disabled={isManualRetry}
+        >
+          {isManualRetry ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Loading...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh Menu
+            </>
+          )}
         </Button>
       </div>
 

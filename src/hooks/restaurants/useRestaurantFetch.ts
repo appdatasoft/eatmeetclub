@@ -13,7 +13,7 @@ export interface Restaurant {
   logo_url?: string | null;
 }
 
-export const useRestaurantFetch = (restaurantId: string | undefined) => {
+export const useRestaurantFetch = (restaurantId: string | undefined, retryTrigger: number = 0) => {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,15 +38,17 @@ export const useRestaurantFetch = (restaurantId: string | undefined) => {
         const cacheKey = `restaurant_${restaurantId}`;
         const cachedData = sessionStorage.getItem(cacheKey);
         
-        if (cachedData) {
+        // Only use cache if not a manual retry
+        if (cachedData && retryTrigger === 0) {
           try {
             const { data, timestamp } = JSON.parse(cachedData);
-            // Use cache for 5 minutes
-            if (Date.now() - timestamp < 300000) {
+            // Use cache for 2 minutes
+            if (Date.now() - timestamp < 120000) {
               console.log('Using cached restaurant data');
               setRestaurant(data);
               setIsOwner(user?.id === data.user_id);
               setIsLoading(false);
+              setError(null);
               return;
             }
           } catch (e) {
@@ -63,8 +65,12 @@ export const useRestaurantFetch = (restaurantId: string | undefined) => {
             .eq('id', restaurantId)
             .single();
         }, {
-          retries: 4,
-          baseDelay: 1000
+          retries: 5,
+          baseDelay: 1000,
+          maxDelay: 15000,
+          onRetry: (attempt, delay) => {
+            console.log(`Retry attempt ${attempt} for restaurant details with delay ${delay}ms`);
+          }
         });
         
         if (error) {
@@ -90,6 +96,9 @@ export const useRestaurantFetch = (restaurantId: string | undefined) => {
         // Check if user is owner
         setIsOwner(user?.id === data.user_id);
         
+        // Clear any previous errors
+        setError(null);
+        
       } catch (err: any) {
         console.error('Error in fetchRestaurant:', err);
         setError(err.message);
@@ -105,7 +114,7 @@ export const useRestaurantFetch = (restaurantId: string | undefined) => {
     };
     
     fetchRestaurant();
-  }, [restaurantId, user, toast]);
+  }, [restaurantId, user, toast, retryTrigger]);
 
   // Add a retry function
   const retryFetch = async () => {
