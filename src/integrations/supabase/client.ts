@@ -10,12 +10,211 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY;
 
-// Add logging for debugging initialization
 console.log("Initializing Supabase client with:", { 
   url: supabaseUrl,
   keyLength: supabaseAnonKey?.length || 0
 });
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+// In-memory request cache for very short-lived requests
+const requestCache = new Map<string, { data: any; expiry: number }>();
+
+// Request queue implementation with improved throttling
+class RequestQueue {
+  private queue: Array<() => Promise<any>> = [];
+  private processing = false;
+  private concurrentRequests = 0;
+  private maxConcurrentRequests = 1; // Reduced to 1 for stricter throttling
+  private requestDelay = 1000; // Increased to 1000ms
+  private lastRequestTime = 0;
+  private rateLimitedUntil = 0;
+
+  async add<T>(request: () => Promise<T>, cacheKey?: string): Promise<T> {
+    // Check if response is in memory cache
+    if (cacheKey && requestCache.has(cacheKey)) {
+      const cached = requestCache.get(cacheKey);
+      if (cached && cached.expiry > Date.now()) {
+        console.log(`Using in-memory cache for ${cacheKey}`);
+        return cached.data;
+      } else if (cached) {
+        requestCache.delete(cacheKey); // Expired cache
+      }
+    }
+    
+    return new Promise((resolve, reject) => {
+      this.queue.push(async () => {
+        try {
+          // Check if we're rate limited
+          if (this.rateLimitedUntil > Date.now()) {
+            const waitTime = this.rateLimitedUntil - Date.now();
+            console.log(`Rate limited, waiting ${waitTime}ms`);
+            await new Promise(r => setTimeout(r, waitTime));
+          }
+          
+          // Ensure minimum delay between requests
+          const now = Date.now();
+          const timeSinceLastRequest = now - this.lastRequestTime;
+          if (timeSinceLastRequest < this.requestDelay) {
+            const waitTime = this.requestDelay - timeSinceLastRequest;
+            await new Promise(r => setTimeout(r, waitTime));
+          }
+          
+          this.lastRequestTime = Date.now();
+          const result = await request();
+          
+          // Cache the successful response if cache key was provided
+          if (cacheKey) {
+            requestCache.set(cacheKey, {
+              data: result,
+              expiry: Date.now() + 30000 // 30 second memory cache
+            });
+          }
+          
+          resolve(result);
+        } catch (error: any) {
+          // If we got a 429 (too many requests), set a longer backoff
+          if (error.status === 429) {
+            this.rateLimitedUntil = Date.now() + 60000; // 1 minute backoff
+            console.warn('Rate limit encountered, backing off for 1 minute');
+          }
+          reject(error);
+        }
+      });
+      
+      this.processQueue();
+    });
+  }
+
+  private async processQueue() {
+    if (this.processing || this.concurrentRequests >= this.maxConcurrentRequests) {
+      return;
+    }
+
+    this.processing = true;
+
+    while (this.queue.length > 0 && this.concurrentRequests < this.maxConcurrentRequests) {
+      const request = this.queue.shift();
+      if (!request) continue;
+
+      this.concurrentRequests++;
+      
+      try {
+        await request();
+      } catch (error) {
+        console.error('Error processing queued request:', error);
+      } finally {
+        this.concurrentRequests--;
+      }
+    }
+
+    this.processing = false;
+    
+    // If there are still items and we have capacity, process more
+    if (this.queue.length > 0 && this.concurrentRequests < this.maxConcurrentRequests) {
+      this.processQueue();
+    }
+  }
+}
+
+// Create a global request queue
+const requestQueue = new RequestQueue();
+
+// Custom fetch function with retry logic, queue management and improved caching
+const customFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+  // Create a cache key based on the request
+  const cacheKey = `${url}-${JSON.stringify(options.body || {})}-${options.method || 'GET'}`;
+  
+  const fetchWithRetry = async (retries: number, delay: number): Promise<Response> => {
+    try {
+      // Create a controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // Increased to 20s timeout
+      
+      const fetchOptions = {
+        ...options,
+        signal: controller.signal
+      };
+      
+      // Use the request queue to control concurrency and apply rate limiting
+      const response = await requestQueue.add(
+        async () => fetch(url, fetchOptions),
+        options.method === 'GET' ? cacheKey : undefined // Only cache GET requests
+      );
+      
+      clearTimeout(timeoutId);
+      
+      // If rate limited (429) or server error (5xx), add longer retry delay
+      if (response.status === 429 || (response.status >= 500 && response.status < 600)) {
+        if (retries === 0) {
+          throw new Error(`Request failed with status: ${response.status}`);
+        }
+        
+        const retryDelay = response.status === 429 ? delay * 3 : delay * 2;
+        console.warn(`Rate limited or server error (${response.status}). Waiting ${retryDelay}ms before retry.`);
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return fetchWithRetry(retries - 1, retryDelay);
+      }
+      
+      if (response.ok) {
+        return response;
+      }
+      
+      if (retries === 0) {
+        throw new Error(`Request failed with status: ${response.status}`);
+      }
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return fetchWithRetry(retries - 1, delay * 2);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.warn('Request timed out, retrying...');
+        if (retries === 0) throw new Error('Request timed out after multiple retries');
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return fetchWithRetry(retries - 1, delay * 2);
+      }
+      
+      if (retries === 0) throw error;
+      
+      // For network errors, retry
+      console.warn(`Fetch error: ${error.message}, retrying...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return fetchWithRetry(retries - 1, delay * 2);
+    }
+  };
+  
+  // Initial retry attempt with exponential backoff
+  return fetchWithRetry(4, 2000); // Increased retries and initial delay
+};
+
+// Initialize Supabase client with explicit configuration to avoid warnings
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: localStorage
+  },
+  global: {
+    fetch: customFetch
+  }
+});
+
+// Add a debug helper to check if the client is working
+export const checkSupabaseConnection = async () => {
+  try {
+    const { error } = await supabase.from('app_config').select('key').limit(1);
+    if (error) {
+      console.error('Supabase connection check failed:', error);
+      return false;
+    }
+    console.log('Supabase connection successful');
+    return true;
+  } catch (err) {
+    console.error('Failed to connect to Supabase:', err);
+    return false;
+  }
+};
