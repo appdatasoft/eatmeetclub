@@ -1,10 +1,11 @@
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { CartProvider } from "./contexts/CartContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AdminEditProvider } from "./contexts/AdminEditContext";
 import { SkinAnalysisProvider } from "./contexts/SkinAnalysisContext";
-import { EditableContentProvider } from "./components/editor/EditableContentProvider"; // ✅ Added
+import { EditableContentProvider } from "./components/editor/EditableContentProvider"; 
 
 import Index from "./pages/Index";
 import Products from "./pages/Products";
@@ -27,6 +28,7 @@ import UserDiscountCodes from "./pages/dashboard/DiscountCodes";
 import Checkout from "./pages/Checkout";
 import UserDetailsForm from "./pages/UserDetailsForm";
 import PaymentConfirmation from "./pages/PaymentConfirmation";
+import Login from "./pages/Login";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOverview from "./pages/admin/AdminOverview";
@@ -51,6 +53,7 @@ import AffiliateAnalytics from "./pages/dashboard/affiliates/Analytics";
 import AffiliatePayments from "./pages/dashboard/affiliates/Payments";
 
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
 import SnippyChat from "./components/SnippyChat";
 import SecuritySettings from './pages/admin/SecuritySettings';
 
@@ -69,7 +72,7 @@ function App() {
           <AuthProvider>
             <AdminEditProvider>
               <SkinAnalysisProvider>
-                <EditableContentProvider> {/* ✅ Added here */}
+                <EditableContentProvider>
                   <Routes>
                     {/* Public Routes */}
                     <Route path="/" element={<Index />} />
@@ -89,6 +92,11 @@ function App() {
                     <Route path="/payment-confirmation" element={<PaymentConfirmation />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/login" element={
+                      <PublicRoute>
+                        <Login />
+                      </PublicRoute>
+                    } />
 
                     {/* Protected Dashboard Routes */}
                     <Route path="/dashboard" element={
@@ -145,7 +153,7 @@ function App() {
 
                     {/* Admin Routes */}
                     <Route path="/admin" element={
-                      <ProtectedRoute adminOnly={true}>
+                      <ProtectedRoute>
                         <AdminDashboard />
                       </ProtectedRoute>
                     }>

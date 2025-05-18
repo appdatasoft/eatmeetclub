@@ -8,7 +8,7 @@ interface PublicRouteProps {
 }
 
 const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
-  const { session, loading } = useAuth();
+  const { user, session, loading } = useAuth();
   
   console.log("PublicRoute - loading:", loading, "authenticated:", !!session);
 
