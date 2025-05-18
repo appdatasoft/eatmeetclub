@@ -6,7 +6,7 @@ export class RequestQueue {
   private queue: Array<() => Promise<any>> = [];
   private processing = false;
   private concurrentRequests = 0;
-  private maxConcurrentRequests = 1; // Further reduced to 1 for stricter throttling
+  private maxConcurrentRequests = 1; // Reduced to 1 for stricter throttling
   private requestDelay = 1500; // Increased to 1500ms to prevent rapid requests
   private lastRequestTime = 0;
   private rateLimitedUntil = 0;
@@ -53,7 +53,7 @@ export class RequestQueue {
           if (cacheKey) {
             requestCache.set(cacheKey, {
               data: result,
-              expiry: Date.now() + 60000 // Increased to 60 seconds memory cache
+              expiry: Date.now() + 60000 // 60 seconds memory cache
             });
           }
           

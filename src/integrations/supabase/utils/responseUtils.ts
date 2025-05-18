@@ -11,11 +11,8 @@ export const handleResponse = async (response: Response): Promise<Response> => {
     throw new Error(`Rate limit hit (429)`);
   }
   
-  // Clone the response before any processing to ensure we don't try to read it multiple times
-  const clonedResponse = response.clone();
-  
-  // For other error statuses, let Supabase handle them
-  return clonedResponse;
+  // Always clone the response before any processing
+  return response.clone();
 };
 
 // Safely extract JSON from a response without causing "body stream already read" errors

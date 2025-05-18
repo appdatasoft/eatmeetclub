@@ -21,41 +21,44 @@ const AdminDashboard = () => {
     const fetchStats = async () => {
       setIsLoading(true);
       setError(null);
+      
       try {
-        // Fetch user count
-        const { count: userCount, error: userError } = await supabase
-          .from('user_roles')
-          .select('*', { count: 'exact', head: true });
+        // Use Promise.all to fetch all stats in parallel
+        const [userResult, eventsResult, paidEventsResult, restaurantsResult] = await Promise.all([
+          // Fetch user count
+          supabase
+            .from('user_roles')
+            .select('*', { count: 'exact', head: true }),
+            
+          // Fetch events count
+          supabase
+            .from('events')
+            .select('*', { count: 'exact', head: true }),
+            
+          // Fetch paid events count
+          supabase
+            .from('events')
+            .select('*', { count: 'exact', head: true })
+            .eq('payment_status', 'completed'),
+            
+          // Fetch restaurants count
+          supabase
+            .from('restaurants')
+            .select('*', { count: 'exact', head: true })
+        ]);
         
-        if (userError) throw new Error(userError.message);
+        // Check for errors
+        if (userResult.error) throw new Error(userResult.error.message);
+        if (eventsResult.error) throw new Error(eventsResult.error.message);
+        if (paidEventsResult.error) throw new Error(paidEventsResult.error.message);
+        if (restaurantsResult.error) throw new Error(restaurantsResult.error.message);
         
-        // Fetch events count
-        const { count: eventsCount, error: eventsError } = await supabase
-          .from('events')
-          .select('*', { count: 'exact', head: true });
-        
-        if (eventsError) throw new Error(eventsError.message);
-        
-        // Fetch paid events count
-        const { count: paidEventsCount, error: paidError } = await supabase
-          .from('events')
-          .select('*', { count: 'exact', head: true })
-          .eq('payment_status', 'completed');
-        
-        if (paidError) throw new Error(paidError.message);
-        
-        // Fetch restaurants count
-        const { count: restaurantsCount, error: restError } = await supabase
-          .from('restaurants')
-          .select('*', { count: 'exact', head: true });
-        
-        if (restError) throw new Error(restError.message);
-        
+        // Update the stats
         setStats({
-          users: userCount || 0,
-          events: eventsCount || 0,
-          restaurants: restaurantsCount || 0,
-          paidEvents: paidEventsCount || 0
+          users: userResult.count || 0,
+          events: eventsResult.count || 0,
+          restaurants: restaurantsResult.count || 0,
+          paidEvents: paidEventsResult.count || 0
         });
       } catch (error: any) {
         console.error('Error fetching stats:', error);
