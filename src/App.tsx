@@ -29,6 +29,7 @@ import NotFound from './pages/NotFound';
 import EventDetail from './pages/EventDetails';
 import TicketSuccess from './pages/TicketSuccess';
 import PaymentsPage from './pages/dashboard/PaymentsPage';
+import BecomeMember from './BecomeMember';
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ function App() {
               <Route path="/ticket-success" element={<TicketSuccess />} />
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+              <Route path="/become-member" element={<BecomeMember />} />
 
               {/* Dashboard routes */}
               <Route path="/dashboard" element={<Dashboard />} />
@@ -65,10 +67,6 @@ function App() {
               <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
               <Route path="/admin/config" element={<ProtectedRoute requiredRole="admin"><ConfigPage /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><UsersPage /></ProtectedRoute>} />
-              
-              {/* Auth routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
               
               {/* Fallback */}
               <Route path="*" element={<NotFound />} />
