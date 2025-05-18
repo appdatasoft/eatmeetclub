@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import EventDetailsContainer from "./EventDetailsContainer";
 import { TicketPurchase } from "@/components/events/TicketPurchase";
 import EventActionButtons from "./EventActionButtons";
+import EventAiAgent from "./EventAiAgent";
 import { EventDetails } from "@/types/event";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -52,6 +53,32 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
   };
   const locationStr = `${restaurant.address}, ${restaurant.city}, ${restaurant.state} ${restaurant.zipcode}`;
 
+  // Get user team ID if available
+  const [userTeamId, setUserTeamId] = React.useState<string | undefined>(undefined);
+  
+  React.useEffect(() => {
+    const fetchUserTeam = async () => {
+      if (!user?.id || !event?.id) return;
+      
+      try {
+        const { data } = await supabase
+          .from('event_team_members')
+          .select('team_id')
+          .eq('user_id', user.id)
+          .eq('event_id', event.id)
+          .single();
+          
+        if (data) {
+          setUserTeamId(data.team_id);
+        }
+      } catch (error) {
+        console.error('Error fetching user team:', error);
+      }
+    };
+    
+    fetchUserTeam();
+  }, [user?.id, event?.id]);
+
   return (
     <div className="container-custom py-4 md:py-8">
       {canEditEvent && (
@@ -68,14 +95,26 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
       
       <div className="grid grid-cols-1 gap-4 md:gap-6 lg:gap-8 lg:grid-cols-3">
         {/* Main content */}
-        <EventDetailsContainer
-          event={event}
-          ticketsRemaining={ticketsRemaining}
-          ticketsPercentage={ticketsPercentage}
-          location={locationStr}
-          eventUrl={eventUrl}
-          isCurrentUserOwner={isCurrentUserOwner}
-        />
+        <div className="lg:col-span-2">
+          <EventDetailsContainer
+            event={event}
+            ticketsRemaining={ticketsRemaining}
+            ticketsPercentage={ticketsPercentage}
+            location={locationStr}
+            eventUrl={eventUrl}
+            isCurrentUserOwner={isCurrentUserOwner}
+          />
+          
+          {/* Add the AI Agent component */}
+          {event.published && (
+            <div className="mt-6">
+              <EventAiAgent 
+                event={event} 
+                userTeamId={userTeamId}
+              />
+            </div>
+          )}
+        </div>
 
         {/* Ticket purchase sidebar */}
         <div className="lg:col-span-1">

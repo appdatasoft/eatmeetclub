@@ -1,10 +1,10 @@
 
 import { useParams } from "react-router-dom";
-import { useEventFetch } from "@/hooks/eventDetails";
+import { useEventFetch } from "@/hooks/useEventFetch";
 import { useAuth } from "@/hooks/useAuth";
 import { useEventAccess } from "@/hooks/useEventAccess";
 import { useEventActions } from "@/hooks/useEventActions";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 
 // Layout components
@@ -18,6 +18,9 @@ import EventSkeleton from "@/components/events/EventDetails/EventSkeleton";
 import EventNotFound from "@/components/events/EventDetails/EventNotFound";
 import DeleteEventDialog from "@/components/events/EventDetails/DeleteEventDialog";
 import EditCoverDialog from "@/components/events/EventDetails/EditCoverDialog";
+import MenuSelectionModal from "@/components/events/MenuSelectionModal";
+import { Button } from "@/components/ui/button";
+import { UtensilsCrossed } from "lucide-react";
 
 // Import types
 import { EventDetails } from "@/hooks/types/eventTypes";
@@ -33,6 +36,8 @@ const EventDetailsPage = () => {
     isCurrentUserOwner, 
     refreshEventDetails 
   } = useEventFetch(id);
+  
+  const [isMenuSelectionOpen, setIsMenuSelectionOpen] = useState(false);
   
   // Show error toast if there's an error that's not a "not found" error
   useEffect(() => {
@@ -125,6 +130,19 @@ const EventDetailsPage = () => {
           coverImage={coverImageUrl}
         />
 
+        {user && (
+          <div className="container-custom pt-4">
+            <Button
+              variant="outline"
+              className="border-dashed"
+              onClick={() => setIsMenuSelectionOpen(true)}
+            >
+              <UtensilsCrossed className="h-4 w-4 mr-2" />
+              Select Menu Items
+            </Button>
+          </div>
+        )}
+
         <EventDetailsContent
           event={event as EventDetails}
           ticketsRemaining={ticketsRemaining}
@@ -155,6 +173,15 @@ const EventDetailsPage = () => {
         onSave={handleSaveCover}
         isUploading={isUploadingCover}
       />
+      
+      {event && (
+        <MenuSelectionModal
+          eventId={event.id}
+          restaurantId={event.restaurant.id}
+          isOpen={isMenuSelectionOpen}
+          onClose={() => setIsMenuSelectionOpen(false)}
+        />
+      )}
     </>
   );
 };
