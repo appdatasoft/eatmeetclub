@@ -28,21 +28,17 @@ import EditEvent from "@/pages/EditEvent";
 import Signup from "@/pages/Signup";
 import ForgotPassword from "@/pages/ForgotPassword";
 import About from "@/pages/About";
-import { useAuth } from "@/hooks/useAuth";
 import { EditableContentProvider } from "@/components/editor/EditableContentProvider";
 import Register from "@/pages/Register";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 function App() {
-  // Get auth state from context
-  const { authInitialized } = useAuth();
-
   return (
     <BrowserRouter>
       <EditableContentProvider>
         <Routes>
-          {/* Route to home page */}
+          {/* Public routes */}
           <Route path="/" element={<Index />} />
-          
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/register" element={<Register />} />
@@ -55,26 +51,72 @@ function App() {
           <Route path="/mission" element={<Mission />} />
           <Route path="/about" element={<About />} />
           
-          {/* New routes for events and venues */}
+          {/* Public routes with optional authentication */}
           <Route path="/events" element={<Events />} />
           <Route path="/event/:id" element={<EventDetailsPage />} />
           <Route path="/venues" element={<VenuesPage />} />
           <Route path="/restaurant/:id" element={<RestaurantDetailsPage />} />
-          <Route path="/edit-event/:id" element={<EditEvent />} />
+          
+          {/* Protected routes */}
+          <Route path="/edit-event/:id" element={
+            <ProtectedRoute>
+              <EditEvent />
+            </ProtectedRoute>
+          } />
           
           {/* Admin routes */}
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/config" element={<ConfigPage />} />
-          <Route path="/admin/users" element={<UsersPage />} />
+          <Route path="/admin" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/config" element={
+            <ProtectedRoute adminOnly={true}>
+              <ConfigPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/users" element={
+            <ProtectedRoute adminOnly={true}>
+              <UsersPage />
+            </ProtectedRoute>
+          } />
           
           {/* Dashboard routes */}
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/events" element={<EventsManagement />} />
-          <Route path="/dashboard/create-event" element={<CreateEvent />} />
-          <Route path="/dashboard/payment-success" element={<PaymentSuccessPage />} />
-          <Route path="/dashboard/admin-settings" element={<AdminSettings />} />
-          <Route path="/dashboard/add-restaurant" element={<AddRestaurant />} />
-          <Route path="/dashboard/restaurant-menu/:id" element={<RestaurantMenu />} />
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/dashboard/events" element={
+            <ProtectedRoute>
+              <EventsManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/dashboard/create-event" element={
+            <ProtectedRoute>
+              <CreateEvent />
+            </ProtectedRoute>
+          } />
+          <Route path="/dashboard/payment-success" element={
+            <ProtectedRoute>
+              <PaymentSuccessPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/dashboard/admin-settings" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminSettings />
+            </ProtectedRoute>
+          } />
+          <Route path="/dashboard/add-restaurant" element={
+            <ProtectedRoute>
+              <AddRestaurant />
+            </ProtectedRoute>
+          } />
+          <Route path="/dashboard/restaurant-menu/:id" element={
+            <ProtectedRoute>
+              <RestaurantMenu />
+            </ProtectedRoute>
+          } />
           
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />

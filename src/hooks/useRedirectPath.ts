@@ -16,6 +16,13 @@ export const useRedirectPath = () => {
     const storedPath = localStorage.getItem('redirectAfterLogin');
     
     // Prioritize: redirect param > location state > localStorage > default
-    return redirectParam || fromPath || storedPath || '/dashboard';
+    const redirectPath = redirectParam || fromPath || storedPath || '/dashboard';
+    
+    // Clear stored path once we've used it
+    if (storedPath) {
+      localStorage.removeItem('redirectAfterLogin');
+    }
+    
+    return redirectPath;
   };
 };
