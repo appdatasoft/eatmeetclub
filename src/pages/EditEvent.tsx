@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -56,14 +55,16 @@ const EditEvent = () => {
       setError(null);
       
       // Use retryFetch to handle potential network issues
-      const { data, error } = await retryFetch(() => 
-        supabase
+      const { data, error } = await retryFetch(async () => {
+        const response = await supabase
           .from('events')
           .select('*, restaurant:restaurants(*)')
           .eq('id', id)
-          .single()
-      );
-        
+          .single();
+          
+        return response;
+      });
+      
       if (error) throw error;
       
       setEvent(data);
@@ -99,12 +100,16 @@ const EditEvent = () => {
   
   const fetchRestaurants = async () => {
     try {
-      const { data, error } = await retryFetch(() => 
-        supabase
+      const response = await retryFetch(async () => {
+        const response = await supabase
           .from('restaurants')
           .select('id, name')
-          .order('name', { ascending: true })
-      );
+          .order('name', { ascending: true });
+          
+        return response;
+      });
+      
+      const { data, error } = response;
       
       if (error) throw error;
       setRestaurants(data || []);

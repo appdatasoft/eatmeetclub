@@ -40,7 +40,7 @@ const MenuHeader: React.FC<MenuHeaderProps> = ({ restaurantName, handleAddItem }
       </div>
       
       {eventId && (
-        <Alert variant="info" className="bg-blue-50 border border-blue-200 text-blue-800">
+        <Alert className="bg-blue-50 border border-blue-200">
           <AlertCircle className="h-4 w-4 mr-2" />
           <AlertDescription>
             Any changes you make to this menu will be specific to this event.

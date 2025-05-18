@@ -5,12 +5,14 @@ import { useToast } from "@/hooks/use-toast";
 import { EventDetails } from "@/types/event";
 import { useEventDataFetch } from "./events/useEventDataFetch";
 import { useEventOwnership } from "./events/useEventOwnership";
+import { fetchWithRetry } from "@/utils/fetchUtils";
 
 export const useEventFetching = (eventId?: string) => {
   const { toast } = useToast();
   const [event, setEvent] = useState<EventDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // Use specialized hooks to fetch data and check ownership
   const { fetchEventWithDetails } = useEventDataFetch();
@@ -22,15 +24,23 @@ export const useEventFetching = (eventId?: string) => {
       return;
     }
     
+    if (isRetrying) return; // Prevent multiple simultaneous retries
+    
     try {
       setLoading(true);
       setError(null);
       
-      // Fetch the event data with retry mechanism
-      const eventData = await retryFetch(
+      // Add a retry flag to prevent UI flashing during retries
+      setIsRetrying(true);
+      
+      // Fetch the event data with retry mechanism and exponential backoff
+      const eventData = await fetchWithRetry(
         () => fetchEventWithDetails(eventId),
-        3,  // max 3 retries
-        1500 // starting delay of 1.5s
+        {
+          retries: 5,
+          baseDelay: 1000,
+          maxDelay: 15000
+        }
       );
       
       if (eventData) {
@@ -50,6 +60,7 @@ export const useEventFetching = (eventId?: string) => {
       });
     } finally {
       setLoading(false);
+      setIsRetrying(false);
     }
   }, [eventId, fetchEventWithDetails, checkOwnership, toast, setIsCurrentUserOwner]);
 
@@ -61,6 +72,7 @@ export const useEventFetching = (eventId?: string) => {
     event,
     error,
     loading,
+    isRetrying,
     isCurrentUserOwner,
     fetchEventDetails,
     refreshEventDetails: fetchEventDetails

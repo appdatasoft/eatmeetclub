@@ -15,6 +15,115 @@ console.log("Initializing Supabase client with:", {
   keyLength: supabaseAnonKey?.length || 0
 });
 
+// Request queue implementation to prevent too many concurrent requests
+class RequestQueue {
+  private queue: Array<() => Promise<any>> = [];
+  private processing = false;
+  private concurrentRequests = 0;
+  private maxConcurrentRequests = 3;
+  private requestDelay = 300; // ms between requests
+
+  async add<T>(request: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.queue.push(async () => {
+        try {
+          const result = await request();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      });
+      
+      this.processQueue();
+    });
+  }
+
+  private async processQueue() {
+    if (this.processing || this.concurrentRequests >= this.maxConcurrentRequests) {
+      return;
+    }
+
+    this.processing = true;
+
+    while (this.queue.length > 0 && this.concurrentRequests < this.maxConcurrentRequests) {
+      const request = this.queue.shift();
+      if (!request) continue;
+
+      this.concurrentRequests++;
+      
+      try {
+        // Add a small delay between requests
+        await new Promise(resolve => setTimeout(resolve, this.requestDelay));
+        await request();
+      } catch (error) {
+        console.error('Error processing queued request:', error);
+      } finally {
+        this.concurrentRequests--;
+      }
+    }
+
+    this.processing = false;
+    
+    // If there are still items and we have capacity, process more
+    if (this.queue.length > 0 && this.concurrentRequests < this.maxConcurrentRequests) {
+      this.processQueue();
+    }
+  }
+}
+
+// Create a global request queue
+const requestQueue = new RequestQueue();
+
+// Custom fetch function with retry logic and queue management
+const customFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+  const fetchWithRetry = async (retries: number, delay: number): Promise<Response> => {
+    try {
+      // Create a controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      
+      const fetchOptions = {
+        ...options,
+        signal: controller.signal
+      };
+      
+      const response = await fetch(url, fetchOptions);
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        return response;
+      }
+      
+      if (retries === 0) {
+        throw new Error(`Request failed with status: ${response.status}`);
+      }
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return fetchWithRetry(retries - 1, delay * 2);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.warn('Request timed out, retrying...');
+        if (retries === 0) throw new Error('Request timed out after multiple retries');
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return fetchWithRetry(retries - 1, delay * 2);
+      }
+      
+      if (retries === 0) throw error;
+      
+      // For network errors, retry
+      console.warn(`Fetch error: ${error.message}, retrying...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return fetchWithRetry(retries - 1, delay * 2);
+    }
+  };
+  
+  // Queue the request with retry logic
+  return requestQueue.add(() => fetchWithRetry(3, 1000));
+};
+
 // Initialize Supabase client with explicit configuration to avoid warnings
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -24,16 +133,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     storage: localStorage
   },
   global: {
-    // Add fetch configuration with timeout and retry logic
-    fetch: (url, options = {}) => {
-      const fetchOptions = {
-        ...options,
-        // Set reasonable timeouts
-        signal: options.signal || (AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined),
-      };
-      
-      return fetch(url, fetchOptions);
-    }
+    fetch: customFetch
   }
 });
 

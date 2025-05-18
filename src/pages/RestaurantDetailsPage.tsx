@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/layout/Navbar";
@@ -14,9 +15,12 @@ import RestaurantMenu from "@/components/restaurants/details/RestaurantMenu";
 import RestaurantDetailsSkeleton from "@/components/restaurants/details/RestaurantDetailsSkeleton";
 import RestaurantErrorState from "@/components/restaurants/details/RestaurantErrorState";
 import RestaurantLogoUploader from "@/components/restaurants/details/RestaurantLogoUploader";
+import RestaurantFallback from "@/components/restaurants/details/RestaurantFallback";
 import EditableField from "@/components/restaurants/details/EditableField";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Image } from "lucide-react";
+import { fetchWithRetry } from "@/utils/fetchUtils";
+import RetryAlert from "@/components/ui/RetryAlert";
 
 const RestaurantDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,64 +31,148 @@ const RestaurantDetailsPage: React.FC = () => {
   const [events, setEvents] = useState<any[]>([]);
   const { user } = useAuth();
   const [isOwner, setIsOwner] = useState(false);
-
-  // Fetch restaurant data and events
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  
+  const timeoutRef = useRef<number | null>(null);
+  
+  // Safety timeout to prevent infinite loading
   useEffect(() => {
-    const fetchRestaurantDetails = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Fetch restaurant details
-        const { data: restaurantData, error: restaurantError } = await supabase
-          .from("restaurants")
-          .select("*")
-          .eq("id", id)
-          .single();
-
-        if (restaurantError) {
-          throw restaurantError;
-        }
-
-        setRestaurant(restaurantData);
-        setIsOwner(user && restaurantData.user_id === user.id);
-        
-        // Fetch related events for this restaurant
-        const { data: eventsData, error: eventsError } = await supabase
-          .from("events")
-          .select(`
-            id, 
-            title, 
-            date, 
-            time, 
-            price,
-            cover_image,
-            published
-          `)
-          .eq("restaurant_id", id)
-          .eq("published", true)
-          .order("date", { ascending: true });
-
-        if (eventsError) throw eventsError;
-
-        setEvents(eventsData || []);
-      } catch (err: any) {
-        console.error("Error fetching restaurant details:", err);
-        setError(err.message);
-        toast({
-          title: "Error loading restaurant",
-          description: err.message,
-          variant: "destructive"
-        });
-      } finally {
+    if (isLoading) {
+      timeoutRef.current = window.setTimeout(() => {
         setIsLoading(false);
+        if (!restaurant) {
+          setError("Loading timed out. Please try again.");
+        }
+      }, 20000); // 20 seconds timeout
+    }
+    
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
     };
+  }, [isLoading, restaurant]);
 
+  // Fetch restaurant data and events
+  const fetchRestaurantDetails = useCallback(async () => {
+    if (!id) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      setIsRetrying(true);
+      
+      // Try to get from cache first
+      const cacheKey = `restaurant_details_${id}`;
+      const cachedData = sessionStorage.getItem(cacheKey);
+      
+      if (cachedData && retryCount === 0) {
+        try {
+          const { restaurantData, eventsData, timestamp } = JSON.parse(cachedData);
+          // Use cache for 5 minutes
+          if (Date.now() - timestamp < 300000) {
+            setRestaurant(restaurantData);
+            setIsOwner(user && restaurantData.user_id === user.id);
+            setEvents(eventsData || []);
+            setIsLoading(false);
+            setIsRetrying(false);
+            return;
+          }
+        } catch (e) {
+          console.warn("Error parsing cached restaurant details", e);
+          sessionStorage.removeItem(cacheKey);
+        }
+      }
+      
+      // Fetch restaurant details with retry logic
+      const { data: restaurantData, error: restaurantError } = await fetchWithRetry(
+        async () => {
+          return await supabase
+            .from("restaurants")
+            .select("*")
+            .eq("id", id)
+            .single();
+        },
+        {
+          retries: 4,
+          baseDelay: 1000
+        }
+      );
+
+      if (restaurantError) {
+        throw restaurantError;
+      }
+
+      setRestaurant(restaurantData);
+      setIsOwner(user && restaurantData.user_id === user.id);
+      
+      // Fetch related events with retry logic
+      const { data: eventsData, error: eventsError } = await fetchWithRetry(
+        async () => {
+          return await supabase
+            .from("events")
+            .select(`
+              id, 
+              title, 
+              date, 
+              time, 
+              price,
+              cover_image,
+              published
+            `)
+            .eq("restaurant_id", id)
+            .eq("published", true)
+            .order("date", { ascending: true });
+        },
+        {
+          retries: 3,
+          baseDelay: 800
+        }
+      );
+
+      if (eventsError) throw eventsError;
+
+      setEvents(eventsData || []);
+      
+      // Cache the successful response
+      sessionStorage.setItem(cacheKey, JSON.stringify({
+        restaurantData,
+        eventsData,
+        timestamp: Date.now()
+      }));
+      
+    } catch (err: any) {
+      console.error("Error fetching restaurant details:", err);
+      setError(err.message);
+      
+      toast({
+        title: "Error loading restaurant",
+        description: err.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+      setIsRetrying(false);
+    }
+  }, [id, toast, user, retryCount]);
+
+  useEffect(() => {
     if (id) {
       fetchRestaurantDetails();
     }
-  }, [id, toast, user]);
+  }, [id, fetchRestaurantDetails]);
+  
+  const handleRetry = () => {
+    // Clear cache to force a fresh fetch
+    if (id) {
+      sessionStorage.removeItem(`restaurant_details_${id}`);
+    }
+    
+    setRetryCount(prevCount => prevCount + 1);
+    fetchRestaurantDetails();
+  };
 
   // Handle field updates
   const handleUpdateField = async (field: string, value: string) => {
@@ -132,13 +220,35 @@ const RestaurantDetailsPage: React.FC = () => {
     return <RestaurantDetailsSkeleton />;
   }
 
-  if (error || !restaurant) {
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow container-custom py-8">
+          <RestaurantFallback onRetry={handleRetry} isRetrying={isRetrying} />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!restaurant) {
     return <RestaurantErrorState />;
   }
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
+      
+      {error && !isLoading && restaurant && (
+        <div className="container-custom mt-4">
+          <RetryAlert 
+            message="Some restaurant data could not be loaded. You can continue browsing or retry loading all data."
+            onRetry={handleRetry}
+            isRetrying={isRetrying}
+          />
+        </div>
+      )}
       
       <main className="flex-grow">
         <div className="bg-primary/10 py-12">

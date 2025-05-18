@@ -59,7 +59,7 @@ const EventDetailsContainer: React.FC<EventDetailsContainerProps> = ({
       />
       
       {hasIncompleteRestaurantData && isCurrentUserOwner && (
-        <Alert variant="warning" className="mb-4 bg-yellow-50 border-yellow-200">
+        <Alert variant="destructive" className="mb-4 bg-yellow-50 border-yellow-200">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             Restaurant information appears to be incomplete. Please update the restaurant details.
