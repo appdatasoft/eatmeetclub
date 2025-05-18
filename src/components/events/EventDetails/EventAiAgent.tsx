@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Send, Loader2 } from 'lucide-react';
@@ -8,12 +7,8 @@ import { Input } from '@/components/ui/input';
 import { EventDetails } from '@/types/event';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-}
+import { useEventAiAgent } from '@/hooks/ai-agent';
+import { AiAgentMessage } from '@/hooks/ai-agent/types';
 
 interface EventAiAgentProps {
   event: EventDetails;
@@ -22,7 +17,7 @@ interface EventAiAgentProps {
 
 const EventAiAgent = ({ event, userTeamId }: EventAiAgentProps) => {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<AiAgentMessage[]>([]);
   const [newMessage, setNewMessage] = useState<string>('');
   const [isSending, setIsSending] = useState<boolean>(false);
   const [hasTeams, setHasTeams] = useState<boolean>(false);
@@ -51,13 +46,20 @@ const EventAiAgent = ({ event, userTeamId }: EventAiAgentProps) => {
     checkEventTeams();
   }, [event?.id]);
   
+  // Use our refactored hook
+  const {
+    sendMessage,
+    isLoading
+  } = useEventAiAgent(event);
+  
   // Load initial welcome message
   useEffect(() => {
     if (messages.length === 0 && event) {
       const welcomeMessage = {
         id: 'welcome',
         role: 'assistant' as const,
-        content: `Welcome to ${event.title}! ${userTeamId ? "You're part of a team for this event. " : ""}How can I help you today?`
+        content: `Welcome to ${event.title}! ${userTeamId ? "You're part of a team for this event. " : ""}How can I help you today?`,
+        timestamp: new Date()
       };
       
       setMessages([welcomeMessage]);
@@ -70,7 +72,8 @@ const EventAiAgent = ({ event, userTeamId }: EventAiAgentProps) => {
     const userMessage = {
       id: `user-${Date.now()}`,
       role: 'user' as const,
-      content: newMessage
+      content: newMessage,
+      timestamp: new Date()
     };
     
     setMessages(prev => [...prev, userMessage]);
@@ -92,7 +95,8 @@ const EventAiAgent = ({ event, userTeamId }: EventAiAgentProps) => {
       const assistantMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant' as const,
-        content: data.message || "I'm sorry, I couldn't process your request."
+        content: data.message || "I'm sorry, I couldn't process your request.",
+        timestamp: new Date()
       };
       
       setMessages(prev => [...prev, assistantMessage]);
@@ -102,7 +106,8 @@ const EventAiAgent = ({ event, userTeamId }: EventAiAgentProps) => {
       const errorMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant' as const,
-        content: "I'm sorry, there was an error processing your request. Please try again later."
+        content: "I'm sorry, there was an error processing your request. Please try again later.",
+        timestamp: new Date()
       };
       
       setMessages(prev => [...prev, errorMessage]);
