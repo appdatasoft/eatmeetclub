@@ -38,7 +38,13 @@ const Login = () => {
       }
     };
     
-    checkConnection();
+    // Set a timeout to prevent the connection check from hanging
+    const connectionTimeout = setTimeout(() => {
+      setConnectionChecking(false);
+      console.log("Connection check timed out, continuing anyway");
+    }, 3000);
+    
+    checkConnection().finally(() => clearTimeout(connectionTimeout));
     
     // Check for stored email from previous flows
     const storedEmail = localStorage.getItem('loginEmail');
@@ -135,41 +141,9 @@ const Login = () => {
     }
   };
 
-  // Show a connection error if we couldn't connect to Supabase
-  if (!connectionOk && !connectionChecking) {
-    return (
-      <MainLayout>
-        <div className="min-h-[calc(100vh-200px)] flex items-center justify-center bg-gray-50 px-4 py-12">
-          <Card className="w-full max-w-md shadow-lg">
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold text-red-600">Connection Error</CardTitle>
-              <CardDescription>Unable to connect to authentication service</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-4 text-gray-700">
-                We're having trouble connecting to our authentication service. This might be due to:
-              </p>
-              <ul className="list-disc pl-5 mb-4 text-gray-700">
-                <li>Network connectivity issues</li>
-                <li>Service maintenance</li>
-                <li>Temporary outage</li>
-              </ul>
-              <Button 
-                onClick={() => window.location.reload()}
-                className="w-full"
-              >
-                Try Again
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </MainLayout>
-    );
-  }
-
   // Show a more compact loading state that doesn't fill the entire screen
   const renderContent = () => {
-    if (isLoading || connectionChecking) {
+    if (isLoading) {
       return (
         <div className="flex flex-col items-center justify-center p-8">
           <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
@@ -185,6 +159,11 @@ const Login = () => {
       );
     }
 
+    // Simplified connection checking UI - don't block the form rendering
+    if (connectionChecking) {
+      console.log("Still checking connection, but showing the form anyway");
+    }
+
     return (
       <div className="w-full max-w-md">
         <Card className="shadow-lg">
@@ -193,6 +172,11 @@ const Login = () => {
             <CardDescription>Enter your credentials to continue</CardDescription>
           </CardHeader>
           <CardContent>
+            {!connectionOk && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-3 mb-4">
+                <p className="text-sm">Connection issue detected. You may experience delays.</p>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -227,7 +211,7 @@ const Login = () => {
             <div className="mt-4 text-center text-sm">
               <p>Don't have an account? <a href="/register" className="text-primary hover:underline">Sign up</a></p>
               <p className="mt-2">
-                <a href="/reset-password" className="text-primary hover:underline">Forgot your password?</a>
+                <a href="/forgot-password" className="text-primary hover:underline">Forgot your password?</a>
               </p>
             </div>
           </CardContent>

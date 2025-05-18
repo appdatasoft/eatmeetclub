@@ -28,31 +28,13 @@ import EditEvent from "@/pages/EditEvent";
 import Signup from "@/pages/Signup";
 import ForgotPassword from "@/pages/ForgotPassword";
 import About from "@/pages/About";
-import { useEffect } from "react";
-import { supabase } from "@/lib/supabaseClient"; // Using the consistent import
+import { useAuth } from "@/hooks/useAuth";
 import { EditableContentProvider } from "@/components/editor/EditableContentProvider";
-import Register from "@/pages/Register"; // Import the Register component
+import Register from "@/pages/Register";
 
 function App() {
-  // Validate Supabase connection on app startup
-  useEffect(() => {
-    // Simple health check to verify Supabase connection
-    const checkSupabaseConnection = async () => {
-      try {
-        // Minimal request to check if Supabase is responding
-        const { error } = await supabase.from('app_config').select('key').limit(1);
-        if (error) {
-          console.error('Supabase connection check failed:', error);
-        } else {
-          console.log('Supabase connection successful');
-        }
-      } catch (err) {
-        console.error('Failed to connect to Supabase:', err);
-      }
-    };
-    
-    checkSupabaseConnection();
-  }, []);
+  // Get auth state from context
+  const { authInitialized } = useAuth();
 
   return (
     <BrowserRouter>

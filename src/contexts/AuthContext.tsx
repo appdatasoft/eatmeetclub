@@ -33,21 +33,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
     console.log("Setting up auth state listener...");
     
     let mounted = true;
-    let safetyTimeoutId: number | undefined;
-
+    
     // Set up a safety timeout to ensure loading state ends no matter what
-    safetyTimeoutId = window.setTimeout(() => {
+    const safetyTimeoutId = window.setTimeout(() => {
       if (mounted) {
         console.log("Safety timeout triggered - forcing loading state to end");
         setLoading(false);
         setIsLoading(false);
+        setAuthInitialized(true);
       }
-    }, 3000);
+    }, 5000); // Increased timeout to 5 seconds
 
     // Create auth subscription first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -63,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (mounted) {
             setLoading(false);
             setIsLoading(false);
+            setAuthInitialized(true);
           }
         }, 300);
 
@@ -88,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (mounted) {
           setLoading(false);
           setIsLoading(false);
+          setAuthInitialized(true);
         }
       }, 300);
 
@@ -100,13 +103,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (mounted) {
         setLoading(false);
         setIsLoading(false);
+        setAuthInitialized(true);
       }
     });
 
     return () => {
       console.log("Cleaning up auth state listener...");
       mounted = false;
-      if (safetyTimeoutId) clearTimeout(safetyTimeoutId);
+      clearTimeout(safetyTimeoutId);
       subscription.unsubscribe();
     };
   }, []);
@@ -172,8 +176,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log("Logged out successfully");
     setIsLoading(false);
   };
-
-  const authInitialized = !loading && !isLoading;
 
   const value = {
     user,
