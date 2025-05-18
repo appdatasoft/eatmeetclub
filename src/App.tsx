@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from "@/components/theme-provider"
@@ -7,7 +6,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster } from "@/components/ui/toaster"
 
 // Import components and pages
-import Home from './pages/Home';
+import Home from './pages/Index';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/dashboard/Dashboard';
