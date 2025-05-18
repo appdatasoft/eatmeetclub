@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEventFetch } from "@/hooks/useEventFetch";
 import { useAuth } from "@/hooks/useAuth";
 import { useEventAccess } from "@/hooks/useEventAccess";
@@ -19,13 +19,16 @@ import DeleteEventDialog from "@/components/events/EventDetails/DeleteEventDialo
 import EditCoverDialog from "@/components/events/EventDetails/EditCoverDialog";
 import MenuSelectionModal from "@/components/events/menu-selection";
 import { Button } from "@/components/ui/button";
-import { UtensilsCrossed } from "lucide-react";
+import { UtensilsCrossed, Menu as MenuIcon } from "lucide-react";
 
 // Import types
 import { EventDetails } from "@/hooks/types/eventTypes";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 
 const EventDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   
   const { 
@@ -37,6 +40,7 @@ const EventDetailsPage = () => {
   } = useEventFetch(id);
   
   const [isMenuSelectionOpen, setIsMenuSelectionOpen] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   
   // Show error toast if there's an error that's not a "not found" error
   useEffect(() => {
@@ -73,6 +77,24 @@ const EventDetailsPage = () => {
     }
   };
   
+  const handleRetry = () => {
+    setIsRetrying(true);
+    refreshEventDetails()
+      .finally(() => setIsRetrying(false));
+  };
+  
+  const handleManageMenu = () => {
+    if (event && event.restaurant && event.restaurant.id) {
+      navigate(`/dashboard/restaurant-menu/${event.restaurant.id}?eventId=${event.id}&eventName=${encodeURIComponent(event.title)}`);
+    } else {
+      toast({
+        title: "Error",
+        description: "Restaurant information is missing",
+        variant: "destructive"
+      });
+    }
+  };
+  
   // Get current URL for QR code
   const eventUrl = window.location.href;
 
@@ -92,7 +114,22 @@ const EventDetailsPage = () => {
     return (
       <>
         <Navbar />
-        <EventNotFound error={error} />
+        <div className="container-custom py-8">
+          <EventNotFound error={error} />
+          {error && !error.includes("not found") && (
+            <div className="mt-4">
+              <Button 
+                variant="outline"
+                onClick={handleRetry}
+                disabled={isRetrying}
+                className="flex items-center"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} />
+                {isRetrying ? 'Retrying...' : 'Retry Loading'}
+              </Button>
+            </div>
+          )}
+        </div>
         <Footer />
       </>
     );
@@ -129,18 +166,30 @@ const EventDetailsPage = () => {
           coverImage={coverImageUrl}
         />
 
-        {user && (
-          <div className="container-custom pt-4">
-            <Button
-              variant="outline"
-              className="border-dashed"
-              onClick={() => setIsMenuSelectionOpen(true)}
-            >
-              <UtensilsCrossed className="h-4 w-4 mr-2" />
-              Select Menu Items
-            </Button>
+        <div className="container-custom pt-4">
+          <div className="flex flex-wrap gap-2">
+            {user && (
+              <Button
+                variant="outline"
+                className="border-dashed"
+                onClick={() => setIsMenuSelectionOpen(true)}
+              >
+                <UtensilsCrossed className="h-4 w-4 mr-2" />
+                Select Menu Items
+              </Button>
+            )}
+            
+            {canEditEvent && event.restaurant && event.restaurant.id && (
+              <Button
+                variant="outline"
+                onClick={handleManageMenu}
+              >
+                <MenuIcon className="h-4 w-4 mr-2" />
+                Manage Menu
+              </Button>
+            )}
           </div>
-        )}
+        </div>
 
         <EventDetailsContent
           event={event as EventDetails}

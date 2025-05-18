@@ -22,6 +22,18 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storage: localStorage
+  },
+  global: {
+    // Add fetch configuration with timeout and retry logic
+    fetch: (url, options = {}) => {
+      const fetchOptions = {
+        ...options,
+        // Set reasonable timeouts
+        signal: options.signal || (AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined),
+      };
+      
+      return fetch(url, fetchOptions);
+    }
   }
 });
 
@@ -39,4 +51,25 @@ export const checkSupabaseConnection = async () => {
     console.error('Failed to connect to Supabase:', err);
     return false;
   }
+};
+
+// Helper function to retry failed requests
+export const retryFetch = async (
+  fetchFn: () => Promise<any>, 
+  maxRetries = 3, 
+  delay = 1000
+): Promise<any> => {
+  let lastError;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fetchFn();
+    } catch (error) {
+      console.warn(`Fetch attempt ${attempt + 1} failed, retrying in ${delay}ms...`, error);
+      lastError = error;
+      await new Promise(resolve => setTimeout(resolve, delay));
+      // Exponential backoff
+      delay = delay * 1.5;
+    }
+  }
+  throw lastError;
 };

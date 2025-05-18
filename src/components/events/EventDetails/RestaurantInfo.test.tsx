@@ -9,7 +9,11 @@ describe("RestaurantInfo", () => {
       id: "restaurant-123",
       name: "Test Restaurant",
       description: "A test restaurant description", 
-      logo_url: undefined
+      logo_url: undefined,
+      address: '',
+      city: '',
+      state: '',
+      zipcode: ''
     },
     isCurrentUserOwner: false
   };

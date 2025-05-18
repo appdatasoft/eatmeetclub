@@ -1,13 +1,15 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase, retryFetch } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import EventForm from "@/components/events/EventForm";
 import { useAuth } from "@/hooks/useAuth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 
 const EditEvent = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,89 +21,113 @@ const EditEvent = () => {
   const [canEdit, setCanEdit] = useState(false);
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
   
+  const timeoutRef = useRef<number | null>(null);
+  
+  // Safety timeout to prevent infinite loading
   useEffect(() => {
-    // Safety timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      if (isLoading) {
+    if (isLoading) {
+      timeoutRef.current = window.setTimeout(() => {
         setIsLoading(false);
+        setError("Loading timed out. Please try again.");
         toast({
           title: "Loading timeout",
           description: "Could not load event details. Please try again.",
           variant: "destructive"
         });
-      }
-    }, 10000); // 10 seconds timeout
+      }, 10000); // 10 seconds timeout
+    }
     
-    return () => clearTimeout(timeoutId);
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
   }, [isLoading, toast]);
   
-  useEffect(() => {
-    const fetchEventDetails = async () => {
-      if (!id || !user?.id) return;
+  const fetchEventData = async () => {
+    if (!id || !user?.id) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
       
-      try {
-        setIsLoading(true);
-        
-        const { data, error } = await supabase
+      // Use retryFetch to handle potential network issues
+      const { data, error } = await retryFetch(() => 
+        supabase
           .from('events')
           .select('*, restaurant:restaurants(*)')
           .eq('id', id)
-          .single();
-          
-        if (error) throw error;
+          .single()
+      );
         
-        setEvent(data);
-        setSelectedRestaurantId(data.restaurant_id);
-        
-        // Check if user is owner or admin
-        const isOwner = user?.id === data.user_id;
-        setCanEdit(isOwner || isAdmin);
-        
-        // If published and not admin/owner, or if user doesn't have edit rights, redirect
-        if (data.published && !isOwner && !isAdmin) {
-          toast({
-            title: "Cannot Edit Published Event",
-            description: "Published events cannot be edited.",
-            variant: "destructive"
-          });
-          navigate('/dashboard');
-          return;
-        }
-        
-      } catch (error: any) {
-        console.error('Error fetching event:', error);
+      if (error) throw error;
+      
+      setEvent(data);
+      setSelectedRestaurantId(data.restaurant_id);
+      
+      // Check if user is owner or admin
+      const isOwner = user?.id === data.user_id;
+      setCanEdit(isOwner || isAdmin);
+      
+      // If published and not admin/owner, or if user doesn't have edit rights, redirect
+      if (data.published && !isOwner && !isAdmin) {
         toast({
-          title: "Error",
-          description: error.message || "Failed to load event details",
+          title: "Cannot Edit Published Event",
+          description: "Published events cannot be edited.",
           variant: "destructive"
         });
         navigate('/dashboard');
-      } finally {
-        setIsLoading(false);
+        return;
       }
-    };
-    
-    // Fetch restaurants for dropdown
-    const fetchRestaurants = async () => {
-      try {
-        const { data, error } = await supabase
+      
+    } catch (error: any) {
+      console.error('Error fetching event:', error);
+      setError(error.message || "Failed to load event details");
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load event details",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const fetchRestaurants = async () => {
+    try {
+      const { data, error } = await retryFetch(() => 
+        supabase
           .from('restaurants')
           .select('id, name')
-          .order('name', { ascending: true });
-        
-        if (error) throw error;
-        setRestaurants(data || []);
-      } catch (error) {
-        console.error('Error fetching restaurants:', error);
-      }
-    };
-    
+          .order('name', { ascending: true })
+      );
+      
+      if (error) throw error;
+      setRestaurants(data || []);
+    } catch (error: any) {
+      console.error('Error fetching restaurants:', error);
+      // Don't show toast for this as it's not critical
+    }
+  };
+  
+  const handleRetry = () => {
+    setIsRetrying(true);
+    Promise.all([fetchEventData(), fetchRestaurants()])
+      .finally(() => {
+        setIsRetrying(false);
+      });
+  };
+  
+  useEffect(() => {
     if (user) {
-      fetchEventDetails();
+      fetchEventData();
       fetchRestaurants();
     }
-  }, [id, navigate, toast, user, isAdmin]);
+  }, [id, user, isAdmin]);
   
   const handleUpdateEvent = async (eventData: any) => {
     if (!canEdit || !id) {
@@ -174,6 +200,32 @@ const EditEvent = () => {
       <div className="space-y-6">
         <h1 className="text-3xl font-bold">Edit Event</h1>
         
+        {error && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            <AlertDescription>{error}</AlertDescription>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="ml-auto" 
+              onClick={handleRetry}
+              disabled={isRetrying}
+            >
+              {isRetrying ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Retrying...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </>
+              )}
+            </Button>
+          </Alert>
+        )}
+        
         {!isLoading && event ? (
           canEdit ? (
             <Card>
@@ -207,7 +259,13 @@ const EditEvent = () => {
         ) : (
           <Card>
             <CardContent className="flex justify-center py-6">
-              <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+              {isLoading ? (
+                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+              ) : (
+                <Button variant="outline" onClick={handleRetry} disabled={isRetrying}>
+                  {isRetrying ? "Retrying..." : "Retry Loading"}
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
