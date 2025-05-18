@@ -1,7 +1,9 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface RestaurantInfoProps {
   restaurant: {
@@ -12,6 +14,7 @@ interface RestaurantInfoProps {
     state?: string;
     zipcode?: string;
     description?: string;
+    logo_url?: string;
   };
   isCurrentUserOwner: boolean;
 }
@@ -22,9 +25,31 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ restaurant, isCurrentUs
     ? `${restaurant.address}, ${restaurant.city || ''} ${restaurant.state || ''} ${restaurant.zipcode || ''}`
     : 'Location information not available';
 
+  const isKnownRestaurant = restaurant.id !== 'unknown';
+
   return (
     <div className="restaurant-info bg-white rounded-lg shadow-sm p-6 mb-6">
-      <h3 className="text-xl font-semibold mb-2">{restaurant?.name || 'Unknown Restaurant'}</h3>
+      <div className="flex items-center gap-4 mb-4">
+        <Avatar className="h-16 w-16">
+          {restaurant.logo_url ? (
+            <AvatarImage src={restaurant.logo_url} alt={restaurant.name} />
+          ) : (
+            <AvatarFallback data-testid="avatar-fallback" className="text-lg">
+              {restaurant.name?.slice(0, 2).toUpperCase() || "R"}
+            </AvatarFallback>
+          )}
+        </Avatar>
+        
+        <div>
+          {isKnownRestaurant ? (
+            <Link to={`/restaurant/${restaurant.id}`} className="hover:underline">
+              <h3 className="text-xl font-semibold">{restaurant.name || 'Unknown Restaurant'}</h3>
+            </Link>
+          ) : (
+            <h3 className="text-xl font-semibold">{restaurant.name || 'Unknown Restaurant'}</h3>
+          )}
+        </div>
+      </div>
       
       {restaurant?.description && (
         <p className="text-gray-700 mb-4">{restaurant.description}</p>
@@ -37,15 +62,23 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ restaurant, isCurrentUs
         </div>
       </div>
 
-      {(isCurrentUserOwner || user) && (
-        <div className="mt-4 flex">
+      <div className="mt-4 flex flex-wrap gap-2">
+        {isKnownRestaurant && (
+          <Link to={`/restaurant/${restaurant.id}`}>
+            <Button variant="outline" size="sm">
+              View Restaurant Profile
+            </Button>
+          </Link>
+        )}
+
+        {(isCurrentUserOwner || user) && isKnownRestaurant && (
           <Link to={`/dashboard/restaurant-menu/${restaurant.id}`}>
             <Button variant="outline" className="flex items-center gap-2">
               <span>Manage Menu</span>
             </Button>
           </Link>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

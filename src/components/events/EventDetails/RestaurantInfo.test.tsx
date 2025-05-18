@@ -5,10 +5,13 @@ import { describe, it, expect } from "vitest";
 
 describe("RestaurantInfo", () => {
   const defaultProps = {
-    id: "restaurant-123",
-    name: "Test Restaurant",
-    description: "A test restaurant description", 
-    logoUrl: undefined
+    restaurant: {
+      id: "restaurant-123",
+      name: "Test Restaurant",
+      description: "A test restaurant description", 
+      logo_url: undefined
+    },
+    isCurrentUserOwner: false
   };
 
   it("renders without crashing", () => {
@@ -28,8 +31,11 @@ describe("RestaurantInfo", () => {
 
   it("renders restaurant logo when a valid URL is provided", () => {
     const propsWithLogo = {
-      ...defaultProps,
-      logoUrl: "https://example.com/logo.png"
+      restaurant: {
+        ...defaultProps.restaurant,
+        logo_url: "https://example.com/logo.png"
+      },
+      isCurrentUserOwner: false
     };
     
     render(<RestaurantInfo {...propsWithLogo} />);
@@ -47,8 +53,11 @@ describe("RestaurantInfo", () => {
 
   it("does not render link when restaurant id is 'unknown'", () => {
     const propsWithUnknownId = {
-      ...defaultProps,
-      id: "unknown"
+      restaurant: {
+        ...defaultProps.restaurant,
+        id: "unknown"
+      },
+      isCurrentUserOwner: false
     };
     
     render(<RestaurantInfo {...propsWithUnknownId} />);
@@ -62,8 +71,11 @@ describe("RestaurantInfo", () => {
 
   it("does not render view profile link when id is 'unknown'", () => {
     const propsWithUnknownId = {
-      ...defaultProps,
-      id: "unknown"
+      restaurant: {
+        ...defaultProps.restaurant,
+        id: "unknown"
+      },
+      isCurrentUserOwner: false
     };
     
     render(<RestaurantInfo {...propsWithUnknownId} />);
