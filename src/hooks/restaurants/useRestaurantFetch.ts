@@ -40,6 +40,7 @@ export const useRestaurantFetch = (restaurantId: string | undefined, retryTrigge
       try {
         console.log('Fetching restaurant details for:', restaurantId);
         setIsLoading(true);
+        setError(null);
         
         // Use cache when available
         const cacheKey = `restaurant_${restaurantId}`;
@@ -55,8 +56,11 @@ export const useRestaurantFetch = (restaurantId: string | undefined, retryTrigge
               setRestaurant(data);
               setIsOwner(user?.id === data.user_id);
               setIsLoading(false);
-              setError(null);
               return;
+            } else {
+              // Cache expired, remove it
+              console.log('Cache expired, removing');
+              sessionStorage.removeItem(cacheKey);
             }
           } catch (e) {
             console.warn("Error parsing cached restaurant", e);
@@ -64,7 +68,7 @@ export const useRestaurantFetch = (restaurantId: string | undefined, retryTrigge
           }
         }
         
-        // Use the enhanced fetchWithRetry function
+        // Use the enhanced fetchWithRetry function with proper cloning
         const { data, error } = await fetchWithRetry(async () => {
           return await supabase
             .from('restaurants')
@@ -88,20 +92,20 @@ export const useRestaurantFetch = (restaurantId: string | undefined, retryTrigge
           return;
         }
         
+        // Create a safe clone to ensure we don't run into issues
+        const safeData = JSON.parse(JSON.stringify(data));
+        
         // Response exists, save it
-        setRestaurant(data);
+        setRestaurant(safeData);
         
         // Cache the result to avoid repeated fetches
         sessionStorage.setItem(cacheKey, JSON.stringify({
-          data,
+          data: safeData,
           timestamp: Date.now()
         }));
         
         // Check if user is owner
-        setIsOwner(user?.id === data.user_id);
-        
-        // Clear any previous errors
-        setError(null);
+        setIsOwner(user?.id === safeData.user_id);
       } catch (err: any) {
         console.error('Error in fetchRestaurant:', err);
         setError(err.message);

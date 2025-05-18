@@ -30,7 +30,24 @@ export const fetchWithRetry = async <T>(
     try {
       // Use request queue to throttle requests
       return await requestQueue.add(async () => {
-        return await fetchFn();
+        // Execute the fetch function and immediately clone any response
+        // to prevent "body stream already read" errors
+        const result = await fetchFn();
+        
+        // If there's data, create a safe deep clone
+        if (result.data) {
+          try {
+            // Deep clone the data to ensure it can be read multiple times
+            const safeClone = JSON.parse(JSON.stringify(result.data));
+            return { data: safeClone, error: null };
+          } catch (cloneError) {
+            console.warn('Error cloning response data:', cloneError);
+            // If cloning fails, return the original result
+            return result;
+          }
+        }
+        
+        return result;
       }, `fetchWithRetry-${attempt}`);
     } catch (error: any) {
       lastError = error;
@@ -88,12 +105,17 @@ export const fetchWithCache = async (
 
   // Perform the actual fetch with proper cloning
   const response = await fetch(url, options);
+  
+  // IMPORTANT: Clone the response before any processing to prevent "body stream already read" errors
   const clonedResponse = response.clone();
   
   // Cache successful GET responses
   if (response.ok && (options.method === 'GET' || !options.method)) {
     try {
-      const data = await clonedResponse.clone().json();
+      // Create another clone for caching to avoid reading the original response
+      const dataResponse = clonedResponse.clone();
+      const data = await dataResponse.json();
+      
       sessionStorage.setItem(effectiveCacheKey, JSON.stringify({
         data,
         expiry: Date.now() + cacheDuration

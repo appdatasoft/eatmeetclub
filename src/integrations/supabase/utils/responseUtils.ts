@@ -11,7 +11,7 @@ export const handleResponse = async (response: Response): Promise<Response> => {
     throw new Error(`Rate limit hit (429)`);
   }
   
-  // Always clone the response before any processing
+  // Always clone the response before any processing to prevent "body stream already read" errors
   return response.clone();
 };
 
@@ -23,6 +23,18 @@ export const extractResponseData = async <T>(response: Response): Promise<T> => 
     return await clonedResponse.json();
   } catch (error) {
     console.error("Failed to extract response data:", error);
+    throw error;
+  }
+};
+
+// Helper to safely read text from a response
+export const extractResponseText = async (response: Response): Promise<string> => {
+  try {
+    // Always clone the response before reading it
+    const clonedResponse = response.clone();
+    return await clonedResponse.text();
+  } catch (error) {
+    console.error("Failed to extract response text:", error);
     throw error;
   }
 };
