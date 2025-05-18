@@ -124,40 +124,55 @@ Deno.serve(async (req) => {
     // Get team info if team_id is provided
     let teamData = null
     if (team_id) {
-      const { data: teamInfo, error: teamError } = await supabaseAdmin
-        .from('event_teams')
-        .select(`
-          id, 
-          name,
-          score,
-          members:event_team_members (
+      try {
+        const { data: teamInfo, error: teamError } = await supabaseAdmin
+          .from('event_teams')
+          .select(`
             id, 
-            name
-          )
-        `)
-        .eq('id', team_id)
-        .eq('event_id', event_id)
-        .single()
-      
-      if (!teamError) {
-        teamData = teamInfo
+            name,
+            score,
+            members:event_team_members (
+              id, 
+              name
+            )
+          `)
+          .eq('id', team_id)
+          .eq('event_id', event_id)
+          .single()
+        
+        if (!teamError && teamInfo) {
+          teamData = teamInfo
+        }
+      } catch (teamError) {
+        console.error('Error fetching team info:', teamError)
+        // Continue without team info
       }
     }
     
     // Get user's menu selections for this event
-    const { data: menuSelections, error: menuError } = await supabaseAdmin
-      .from('event_menu_selections')
-      .select(`
-        id,
-        menu_item:menu_item_id (
-          id, 
-          name,
-          description,
-          price
-        )
-      `)
-      .eq('event_id', event_id)
-      .eq('user_id', user.id)
+    let menuSelections = []
+    try {
+      const { data: selections, error: menuError } = await supabaseAdmin
+        .from('event_menu_selections')
+        .select(`
+          id,
+          menu_item:menu_item_id (
+            id, 
+            name,
+            description,
+            price
+          )
+        `)
+        .eq('event_id', event_id)
+        .eq('user_id', user.id)
+      
+      if (!menuError) {
+        menuSelections = selections || []
+      }
+    } catch (menuError) {
+      console.error('Error fetching menu selections:', menuError)
+      // Continue without menu selections
+    }
     
     // Basic response generation logic
     let response = ''

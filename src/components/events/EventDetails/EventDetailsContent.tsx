@@ -8,6 +8,7 @@ import EventActionButtons from "./EventActionButtons";
 import EventAiAgent from "./EventAiAgent";
 import { EventDetails } from "@/types/event";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { supabase } from "@/integrations/supabase/client"; // Add this import
 
 interface EventDetailsContentProps {
   event: EventDetails;

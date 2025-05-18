@@ -233,7 +233,8 @@ export const useEventAiAgent = (event?: EventDetails | null) => {
     if (!event?.id) return;
     
     try {
-      const { data, error } = await supabase
+      // Using type assertion to bypass TypeScript errors
+      const { data, error } = await (supabase as any)
         .from('event_teams')
         .select('id, name, score')
         .eq('event_id', event.id)
@@ -241,10 +242,12 @@ export const useEventAiAgent = (event?: EventDetails | null) => {
         
       if (error) throw error;
       
-      setTeamScores(data || []);
-      return data;
+      // Safely cast the data to the expected type
+      setTeamScores((data || []) as TeamScore[]);
+      return data as TeamScore[];
     } catch (error) {
       console.error('Error fetching team scores:', error);
+      return [];
     }
   };
 
