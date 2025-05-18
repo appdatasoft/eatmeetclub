@@ -36,34 +36,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    console.log("Setting up auth state listener...");
+    
+    // Set up auth state listener FIRST to avoid missing auth events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      (_event, currentSession) => {
+        console.log("Auth state changed:", _event);
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
         setLoading(false);
         
         // Check admin status if user is logged in
-        if (session?.user) {
-          checkAdminStatus(session.user.id);
+        if (currentSession?.user) {
+          checkAdminStatus(currentSession.user.id);
         } else {
           setIsAdmin(false);
         }
       }
     );
 
-    // Initial session fetch
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log("Initial session check:", currentSession ? "logged in" : "not logged in");
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
       setLoading(false);
       
       // Check admin status if user is logged in
-      if (session?.user) {
-        checkAdminStatus(session.user.id);
+      if (currentSession?.user) {
+        checkAdminStatus(currentSession.user.id);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log("Cleaning up auth state listener...");
+      subscription.unsubscribe();
+    };
   }, []);
   
   const checkAdminStatus = async (userId: string) => {
@@ -91,11 +99,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) {
+        console.error("Login error:", error.message);
         return { success: false, error };
       }
       
       return { success: true };
     } catch (error) {
+      console.error("Unexpected login error:", error);
       return { success: false, error };
     }
   };

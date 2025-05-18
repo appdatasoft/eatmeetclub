@@ -27,7 +27,10 @@ export const useMembershipStatus = () => {
         user_id: user.id
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error checking membership:", error.message);
+        throw error;
+      }
       
       setIsActive(!!data);
       
@@ -40,7 +43,10 @@ export const useMembershipStatus = () => {
           .eq('status', 'active')
           .single();
           
-        if (membershipError) throw membershipError;
+        if (membershipError) {
+          console.error("Error fetching membership details:", membershipError.message);
+          throw membershipError;
+        }
         
         setMembership(membershipData);
         setExpiresAt(membershipData?.renewal_at || null);
@@ -59,8 +65,17 @@ export const useMembershipStatus = () => {
   };
   
   useEffect(() => {
-    refreshMembership();
+    if (user) {
+      refreshMembership();
+    } else {
+      setIsLoading(false);
+      setIsActive(false);
+      setMembership(null);
+      setExpiresAt(null);
+    }
   }, [user]);
 
   return { isActive, isLoading, expiresAt, membership, refreshMembership };
 };
+
+export default useMembershipStatus;

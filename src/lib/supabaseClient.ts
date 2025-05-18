@@ -10,5 +10,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY;
 
-// Initialize Supabase client - ensure we only create one instance
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+// Initialize Supabase client with explicit configuration to avoid warnings
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: localStorage
+  }
+});
