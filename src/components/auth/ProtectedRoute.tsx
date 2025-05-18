@@ -24,7 +24,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   
   console.log("ProtectedRoute - loading:", loading, "authenticated:", !!session, "path:", location.pathname);
 
-  // Show loading state while auth is being checked
+  // Show loading state while auth is being checked (but with a maximum timeout)
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">

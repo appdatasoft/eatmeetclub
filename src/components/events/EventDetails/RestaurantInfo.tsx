@@ -1,68 +1,48 @@
-
-import React from "react";
-import { Link } from "react-router-dom";
-import { Building } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
 
 interface RestaurantInfoProps {
-  id?: string;
-  name: string;
-  description: string;
-  logoUrl?: string | null;
+  restaurant: {
+    id: string;
+    name: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zipcode?: string;
+    description?: string;
+  };
+  isCurrentUserOwner: boolean;
 }
 
-const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ 
-  id, 
-  name, 
-  description,
-  logoUrl
-}) => {
-  const isValidRestaurant = id && id !== "unknown";
-  const restaurantName = name || "Unknown Restaurant";
-  
-  // Use the actual description if available, otherwise provide a fallback
-  const restaurantDescription = description || 
-    `${restaurantName} specializes in sustainable, locally-sourced cuisine with a focus on seasonal ingredients.`;
-  
+const RestaurantInfo: React.FC<RestaurantInfoProps> = ({ restaurant, isCurrentUserOwner }) => {
+  const { user } = useAuth();
+  const locationStr = restaurant?.address 
+    ? `${restaurant.address}, ${restaurant.city || ''} ${restaurant.state || ''} ${restaurant.zipcode || ''}`
+    : 'Location information not available';
+
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm">
-      <h2 className="text-xl font-semibold mb-4">About the Restaurant</h2>
-      <div className="flex items-center mb-4">
-        <div className="relative">
-          <Avatar className="w-12 h-12 mr-4">
-            {logoUrl ? (
-              <AvatarImage 
-                src={logoUrl} 
-                alt={restaurantName} 
-                className="object-cover"
-              />
-            ) : (
-              <AvatarFallback data-testid="avatar-fallback">
-                <Building className="h-6 w-6 text-gray-400" />
-              </AvatarFallback>
-            )}
-          </Avatar>
-        </div>
-        <div>
-          {isValidRestaurant ? (
-            <Link to={`/restaurant/${id}`} className="font-medium hover:text-primary hover:underline">
-              {restaurantName}
-            </Link>
-          ) : (
-            <h3 className="font-medium">{restaurantName}</h3>
-          )}
-          <p className="text-sm text-gray-500">Serving delicious meals</p>
+    <div className="restaurant-info bg-white rounded-lg shadow-sm p-6 mb-6">
+      <h3 className="text-xl font-semibold mb-2">{restaurant?.name || 'Unknown Restaurant'}</h3>
+      
+      {restaurant?.description && (
+        <p className="text-gray-700 mb-4">{restaurant.description}</p>
+      )}
+      
+      <div className="flex flex-col space-y-2 mb-4">
+        <div className="flex items-start">
+          <span className="text-gray-500 w-20">Location:</span>
+          <span className="text-gray-800">{locationStr}</span>
         </div>
       </div>
-      <p className="text-gray-700 mb-4">{restaurantDescription}</p>
-      
-      {isValidRestaurant && (
-        <div className="flex justify-between items-center">
-          <Link 
-            to={`/restaurant/${id}`}
-            className="text-primary hover:underline font-medium"
-          >
-            View Restaurant Profile
+
+      {(isCurrentUserOwner || user) && (
+        <div className="mt-4 flex">
+          <Link to={`/dashboard/restaurant-menu/${restaurant.id}`}>
+            <Button variant="outline" className="flex items-center gap-2">
+              <span>Manage Menu</span>
+            </Button>
           </Link>
         </div>
       )}

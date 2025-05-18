@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import EventForm from "@/components/events/EventForm";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,8 +21,25 @@ const EditEvent = () => {
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
   
   useEffect(() => {
+    // Safety timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (isLoading) {
+        setIsLoading(false);
+        toast({
+          title: "Loading timeout",
+          description: "Could not load event details. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }, 10000); // 10 seconds timeout
+    
+    return () => clearTimeout(timeoutId);
+  }, [isLoading, toast]);
+  
+  useEffect(() => {
     const fetchEventDetails = async () => {
-      if (!id) return;
+      if (!id || !user?.id) return;
+      
       try {
         setIsLoading(true);
         

@@ -31,6 +31,7 @@ import About from "@/pages/About";
 import { EditableContentProvider } from "@/components/editor/EditableContentProvider";
 import Register from "@/pages/Register";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import AuthRedirect from "@/components/auth/AuthRedirect";
 
 function App() {
   return (
@@ -39,10 +40,26 @@ function App() {
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/login" element={
+            <AuthRedirect>
+              <Login />
+            </AuthRedirect>
+          } />
+          <Route path="/signup" element={
+            <AuthRedirect>
+              <Signup />
+            </AuthRedirect>
+          } />
+          <Route path="/register" element={
+            <AuthRedirect>
+              <Register />
+            </AuthRedirect>
+          } />
+          <Route path="/forgot-password" element={
+            <AuthRedirect>
+              <ForgotPassword />
+            </AuthRedirect>
+          } />
           <Route path="/membership-payment" element={<MembershipPayment />} />
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/become-member" element={<BecomeMember />} />
