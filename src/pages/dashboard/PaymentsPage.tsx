@@ -31,7 +31,7 @@ const PaymentsPage = () => {
         <h1 className="text-2xl font-bold">Payments</h1>
         
         {stripeMode?.mode === "test" && (
-          <Alert variant="warning" className="bg-amber-50 border-amber-200">
+          <Alert variant="default" className="bg-amber-50 border-amber-200">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             <AlertDescription className="text-amber-700">
               You are in Stripe Test Mode. No real payments will be processed.
