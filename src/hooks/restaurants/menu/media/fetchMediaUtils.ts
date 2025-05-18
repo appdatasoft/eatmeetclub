@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { MediaItem } from '@/components/restaurants/menu/types/mediaTypes';
 
 /**
- * Fetches media items for a specific menu item with better error handling
+ * Fetches media items for a specific menu item with better error handling and caching
  */
 export const fetchMediaForMenuItem = async (
   restaurantId: string,
@@ -17,8 +17,9 @@ export const fetchMediaForMenuItem = async (
     if (cachedData) {
       try {
         const { data, timestamp } = JSON.parse(cachedData);
-        // Use cache for 5 minutes
-        if (Date.now() - timestamp < 300000) {
+        // Increase cache time to 10 minutes to reduce API calls
+        if (Date.now() - timestamp < 600000) {
+          console.log('Using cached menu media data');
           return data;
         }
       } catch (e) {
@@ -41,7 +42,7 @@ export const fetchMediaForMenuItem = async (
       type: item.media_type as 'image' | 'video'
     })) || [];
     
-    // Cache the data
+    // Cache the data with longer timeout
     sessionStorage.setItem(cacheKey, JSON.stringify({
       data: mediaItems,
       timestamp: Date.now()
@@ -56,7 +57,7 @@ export const fetchMediaForMenuItem = async (
 };
 
 /**
- * Fetches ingredient list for a specific menu item with better error handling
+ * Fetches ingredient list for a specific menu item with better error handling and caching
  */
 export const fetchIngredientsForMenuItem = async (
   menuItemId: string
@@ -69,8 +70,9 @@ export const fetchIngredientsForMenuItem = async (
     if (cachedData) {
       try {
         const { data, timestamp } = JSON.parse(cachedData);
-        // Use cache for 5 minutes
-        if (Date.now() - timestamp < 300000) {
+        // Increase cache time to 10 minutes to reduce API calls
+        if (Date.now() - timestamp < 600000) {
+          console.log('Using cached ingredients data');
           return data;
         }
       } catch (e) {
@@ -88,7 +90,7 @@ export const fetchIngredientsForMenuItem = async (
     
     const ingredients = data.map(item => item.name) || [];
     
-    // Cache the data
+    // Cache the data with longer timeout
     sessionStorage.setItem(cacheKey, JSON.stringify({
       data: ingredients,
       timestamp: Date.now()

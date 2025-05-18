@@ -27,7 +27,7 @@ const requestTracker = {
   }
 };
 
-interface FetchRetryOptions {
+export interface FetchRetryOptions {
   retries?: number;
   baseDelay?: number;
   maxDelay?: number;

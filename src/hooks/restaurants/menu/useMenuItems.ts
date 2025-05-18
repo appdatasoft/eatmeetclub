@@ -39,8 +39,8 @@ export const useMenuItems = (restaurantId: string | undefined, retryTrigger: num
         if (cachedData && retryTrigger === 0) {
           try {
             const { data, timestamp } = JSON.parse(cachedData);
-            // Use cache only if less than 30 seconds old
-            if (Date.now() - timestamp < 30000) {
+            // Use cache if less than 2 minutes old
+            if (Date.now() - timestamp < 120000) {
               console.log('Using cached menu items data');
               setMenuItems(data);
               setIsLoading(false);
@@ -86,6 +86,11 @@ export const useMenuItems = (restaurantId: string | undefined, retryTrigger: num
         } else {
           console.log('No menu items found');
           setMenuItems([]);
+          // Cache empty array to prevent repeated fetches
+          sessionStorage.setItem(cacheKey, JSON.stringify({
+            data: [],
+            timestamp: Date.now()
+          }));
         }
         
         // Clear any previous errors
@@ -96,7 +101,7 @@ export const useMenuItems = (restaurantId: string | undefined, retryTrigger: num
         
         toast({
           title: "Error loading menu",
-          description: "Could not load menu items. Please try again.",
+          description: "Could not load menu items due to high server load. Please try again.",
           variant: "destructive"
         });
       } finally {

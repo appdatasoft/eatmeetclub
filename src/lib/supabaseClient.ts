@@ -20,8 +20,8 @@ class RequestQueue {
   private queue: Array<() => Promise<any>> = [];
   private processing = false;
   private concurrentRequests = 0;
-  private maxConcurrentRequests = 3;
-  private requestDelay = 300; // ms between requests
+  private maxConcurrentRequests = 2; // Reduced from 3 to 2
+  private requestDelay = 500; // Increased from 300ms to 500ms
 
   async add<T>(request: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
@@ -52,7 +52,7 @@ class RequestQueue {
       this.concurrentRequests++;
       
       try {
-        // Add a small delay between requests
+        // Add a longer delay between requests
         await new Promise(resolve => setTimeout(resolve, this.requestDelay));
         await request();
       } catch (error) {
@@ -80,7 +80,7 @@ const customFetch = async (url: string, options: RequestInit = {}): Promise<Resp
     try {
       // Create a controller for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // Increased from 10s to 15s timeout
       
       const fetchOptions = {
         ...options,
@@ -89,6 +89,20 @@ const customFetch = async (url: string, options: RequestInit = {}): Promise<Resp
       
       const response = await fetch(url, fetchOptions);
       clearTimeout(timeoutId);
+      
+      // If rate limited (429) or server error (5xx), add longer retry delay
+      if (response.status === 429 || (response.status >= 500 && response.status < 600)) {
+        if (retries === 0) {
+          throw new Error(`Request failed with status: ${response.status}`);
+        }
+        
+        const retryDelay = response.status === 429 ? delay * 2 : delay;
+        console.warn(`Rate limited or server error (${response.status}). Waiting ${retryDelay}ms before retry.`);
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return fetchWithRetry(retries - 1, retryDelay * 2);
+      }
       
       if (response.ok) {
         return response;
