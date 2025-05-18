@@ -9,7 +9,15 @@ type ToastProps = {
 };
 
 export const useToast = () => {
-  const showToast = ({ title, description, variant, action }: ToastProps) => {
+  const showToast = (props: ToastProps | string) => {
+    // Handle string case for direct usage
+    if (typeof props === 'string') {
+      sonnerToast(props);
+      return;
+    }
+    
+    const { title, description, variant, action } = props;
+    
     if (variant === "destructive") {
       sonnerToast.error(title, {
         description,
@@ -25,11 +33,30 @@ export const useToast = () => {
 
   return {
     toast: showToast,
-    toasts: [] // Add this to fix the toaster.tsx error
+    toasts: [] // Keep this to fix the toaster.tsx error
   };
 };
 
-// Export the toast function directly
-export const toast = (title?: string, options?: any) => {
-  sonnerToast(title, options);
+// Export the toast function directly for convenience
+export const toast = (props: ToastProps | string, options?: any) => {
+  if (typeof props === 'string') {
+    sonnerToast(props, options);
+    return;
+  }
+  
+  const { title, description, variant, action } = props;
+  
+  if (variant === "destructive") {
+    sonnerToast.error(title, {
+      description,
+      action,
+      ...options
+    });
+  } else {
+    sonnerToast(title, {
+      description,
+      action,
+      ...options
+    });
+  }
 };
