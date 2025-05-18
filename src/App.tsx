@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from "@/components/theme-provider"
@@ -22,10 +23,10 @@ import Settings from './pages/dashboard/Settings';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ConfigPage from './pages/admin/ConfigPage';
 import UsersPage from './pages/admin/UsersPage';
-import ProtectedRoute from './components/ProtectedRoute';
-import PublicRoute from './components/PublicRoute';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import PublicRoute from '@/components/PublicRoute';
 import NotFound from './pages/NotFound';
-import EventDetail from './pages/EventDetail';
+import EventDetail from './pages/EventDetails';
 import TicketSuccess from './pages/TicketSuccess';
 import PaymentsPage from './pages/dashboard/PaymentsPage';
 
