@@ -7,6 +7,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isLoading: boolean; // Add this property
   isAdmin: boolean;
   handleLogout: () => Promise<void>;
   handleLogin: (email: string, password: string) => Promise<{ success: boolean; error?: any }>;
@@ -17,6 +18,7 @@ export const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   loading: true,
+  isLoading: true, // Add this property
   isAdmin: false,
   handleLogout: async () => {},
   handleLogin: async () => ({ success: false }),
@@ -27,6 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // Add this state
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -39,6 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         setLoading(false);
+        setIsLoading(false); // Update this state too
         
         // Check admin status if user is logged in
         if (currentSession?.user) {
@@ -55,6 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       setLoading(false);
+      setIsLoading(false); // Update this state too
       
       // Check admin status if user is logged in
       if (currentSession?.user) {
@@ -128,6 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     session,
     loading,
+    isLoading, // Add this property
     isAdmin,
     handleLogout,
     handleLogin,

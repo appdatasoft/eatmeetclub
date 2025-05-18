@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,7 +76,6 @@ export const useMembershipVerification = () => {
       description: productInfo?.name 
         ? `You already have an active "${productInfo.name}" membership. Please log in to access your account.` 
         : "You already have an active membership. Please log in to access your account.",
-      duration: 5000,
     });
     
     navigate('/login');

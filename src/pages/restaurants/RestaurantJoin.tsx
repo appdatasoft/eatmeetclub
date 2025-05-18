@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
@@ -23,7 +22,6 @@ const RestaurantJoin = () => {
       toast({
         title: "Registration submitted",
         description: "We'll review your application and get back to you soon.",
-        duration: 5000,
       });
       navigate('/');
     }, 1500);
