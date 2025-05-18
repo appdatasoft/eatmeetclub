@@ -35,14 +35,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log("Setting up auth state listener...");
     
+    let mounted = true;
+    
     // Set up auth state listener FIRST to avoid missing auth events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, currentSession) => {
+        if (!mounted) return;
+        
         console.log("Auth state changed:", _event);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
-        setLoading(false);
-        setIsLoading(false);
+        
+        // Safety timeout to ensure we don't get stuck in loading state
+        setTimeout(() => {
+          if (mounted) {
+            setLoading(false);
+            setIsLoading(false);
+          }
+        }, 500);
         
         // Check admin status if user is logged in
         if (currentSession?.user) {
@@ -55,9 +65,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      if (!mounted) return;
+      
       console.log("Initial session check:", currentSession ? "logged in" : "not logged in");
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
+      
+      // Ensure we exit loading state
       setLoading(false);
       setIsLoading(false);
       
@@ -65,10 +79,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (currentSession?.user) {
         checkAdminStatus(currentSession.user.id);
       }
+    }).catch(error => {
+      console.error("Error checking session:", error);
+      if (mounted) {
+        setLoading(false);
+        setIsLoading(false);
+      }
     });
 
     return () => {
       console.log("Cleaning up auth state listener...");
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);

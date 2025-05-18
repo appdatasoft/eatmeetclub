@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import MainLayout from "@/components/layout/MainLayout";
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -95,17 +96,18 @@ const Login = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
-        <p className="ml-3 text-gray-500">Checking authentication...</p>
-      </div>
-    );
-  }
+  // Show a more compact loading state that doesn't fill the entire screen
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center p-8">
+          <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
+          <p className="ml-3 text-gray-500">Checking authentication...</p>
+        </div>
+      );
+    }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    return (
       <div className="w-full max-w-md">
         <Card className="shadow-lg">
           <CardHeader className="space-y-1">
@@ -153,7 +155,15 @@ const Login = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    );
+  };
+
+  return (
+    <MainLayout>
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center bg-gray-50 px-4 py-12">
+        {renderContent()}
+      </div>
+    </MainLayout>
   );
 };
 
