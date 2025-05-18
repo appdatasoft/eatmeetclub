@@ -1,60 +1,36 @@
 
-import React from 'react';
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import Hero from "@/components/home/Hero";
+import HowItWorks from "@/components/home/HowItWorks";
+import FeaturedEvents from "@/components/home/FeaturedEvents";
+import Testimonials from "@/components/home/Testimonials";
+import CallToAction from "@/components/home/CallToAction";
+import { useEditableContent } from "@/components/editor/EditableContentProvider";
+import EditModeToggle from "@/components/editor/EditModeToggle";
 
 const Index = () => {
-  const { session } = useAuth();
-  const navigate = useNavigate();
-
+  const { isLoading, canEdit } = useEditableContent();
+  
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      <header className="container mx-auto px-4 py-6">
-        <nav className="flex justify-between items-center">
-          <div className="font-bold text-xl text-blue-800">Eat Meet Club</div>
-          <div className="space-x-2">
-            {session ? (
-              <>
-                <Button variant="ghost" onClick={() => navigate('/dashboard')}>
-                  Dashboard
-                </Button>
-                <Button variant="outline" onClick={() => navigate('/profile')}>
-                  Profile
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="ghost" onClick={() => navigate('/login')}>
-                  Log in
-                </Button>
-                <Button onClick={() => navigate('/register')}>
-                  Sign up
-                </Button>
-              </>
-            )}
+    <div className="flex flex-col min-h-screen w-full">
+      <Navbar />
+      {canEdit && <EditModeToggle />}
+      <main className="flex-grow w-full">
+        {isLoading ? (
+          <div className="py-12 md:py-24 flex items-center justify-center bg-gray-200">
+            <p>Loading content...</p>
           </div>
-        </nav>
-      </header>
-
-      <main className="container mx-auto px-4 py-16">
-        <div className="text-center max-w-3xl mx-auto">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-blue-900 mb-6">
-            Welcome to Eat Meet Club
-          </h1>
-          <p className="text-xl text-gray-700 mb-10">
-            Connect with food lovers, discover new restaurants, and enjoy meals together.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" onClick={() => navigate(session ? '/dashboard' : '/register')}>
-              {session ? 'Go to Dashboard' : 'Join Now'}
-            </Button>
-            <Button variant="outline" size="lg" onClick={() => navigate('/about')}>
-              Learn More
-            </Button>
-          </div>
-        </div>
+        ) : (
+          <Hero />
+        )}
+        <HowItWorks />
+        <FeaturedEvents />
+        <Testimonials />
+        <CallToAction />
       </main>
+      <Footer />
     </div>
   );
 };
