@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -122,6 +121,7 @@ serve(async (req) => {
       if (action === "initiate") {
         // Facebook App credentials
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
+        // Always use the same consistent redirect URL
         const redirectUrl = redirectUri || "https://www.eatmeetclub.com/api/auth/callback/facebook";
 
         if (!clientId) {
@@ -154,7 +154,8 @@ serve(async (req) => {
 
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         const clientSecret = Deno.env.get("FACEBOOK_APP_SECRET");
-        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
+        // Always use the same consistent redirect URL
+        const redirectUrl = redirectUri || "https://www.eatmeetclub.com/api/auth/callback/facebook";
 
         if (!clientId || !clientSecret) {
           return new Response(
@@ -260,6 +261,7 @@ serve(async (req) => {
       if (action === "initiate") {
         // Instagram App credentials (same as Facebook App since it uses Facebook's OAuth)
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
+        // Always use the same consistent redirect URL
         const redirectUrl = redirectUri || "https://www.eatmeetclub.com/api/auth/callback/facebook";
 
         if (!clientId) {
@@ -272,7 +274,7 @@ serve(async (req) => {
         console.log(`Initiating Instagram OAuth flow with client ID: ${clientId.substring(0, 6)}... and redirect: ${redirectUrl}`);
 
         // Generate authorization URL using Facebook OAuth dialog for Instagram permissions
-        const authUrl = new URL("https://www.facebook.com/v18.0/dialog/oauth");
+        const authUrl = new URL("https://www.facebook.com/v19.0/dialog/oauth");
         authUrl.searchParams.append("client_id", clientId);
         authUrl.searchParams.append("redirect_uri", redirectUrl);
         authUrl.searchParams.append("scope", "instagram_basic,pages_show_list,public_profile");
@@ -306,7 +308,8 @@ serve(async (req) => {
 
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         const clientSecret = Deno.env.get("FACEBOOK_APP_SECRET");
-        const redirectUrl = redirectUri || "http://localhost:5173";
+        // Always use the same consistent redirect URL
+        const redirectUrl = redirectUri || "https://www.eatmeetclub.com/api/auth/callback/facebook";
 
         if (!clientId || !clientSecret) {
           return new Response(
@@ -330,12 +333,12 @@ serve(async (req) => {
           });
           
           console.log("Token request params:", {
-            url: "https://graph.facebook.com/v18.0/oauth/access_token",
+            url: "https://graph.facebook.com/v19.0/oauth/access_token",
             client_id_prefix: clientId.substring(0, 6) + "...",
             redirect_uri: redirectUrl,
           });
           
-          const tokenResponse = await fetch("https://graph.facebook.com/v18.0/oauth/access_token", {
+          const tokenResponse = await fetch("https://graph.facebook.com/v19.0/oauth/access_token", {
             method: "POST",
             headers: {
               "Content-Type": "application/x-www-form-urlencoded"
@@ -375,7 +378,7 @@ serve(async (req) => {
 
           // First, get Facebook user's pages (needed for Instagram Graph API)
           const pagesResponse = await fetch(
-            `https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`
+            `https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}`
           );
           
           const pagesData = await pagesResponse.json();
@@ -413,7 +416,7 @@ serve(async (req) => {
             
             try {
               const instagramAccountResponse = await fetch(
-                `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account{id,username,profile_picture_url}&access_token=${pageAccessToken}`
+                `https://graph.facebook.com/v19.0/${page.id}?fields=instagram_business_account{id,username,profile_picture_url}&access_token=${pageAccessToken}`
               );
               
               const instagramAccountData = await instagramAccountResponse.json();

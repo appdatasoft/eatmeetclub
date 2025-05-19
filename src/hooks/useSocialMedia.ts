@@ -312,7 +312,7 @@ export const useSocialMedia = () => {
       // Store state in sessionStorage for verification after redirect
       sessionStorage.setItem('facebook_oauth_state', state);
       
-      // Get the redirect URI
+      // Get the redirect URI - always use the same consistent redirect URL
       const redirectUri = `https://www.eatmeetclub.com/api/auth/callback/facebook`;
       
       // Use the Supabase URL from environment or fallback
