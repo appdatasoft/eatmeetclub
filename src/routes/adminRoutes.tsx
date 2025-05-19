@@ -12,6 +12,7 @@ import AdminTemplates from "@/pages/admin/AdminTemplates";
 import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminPayment from "@/pages/admin/AdminPayment";
 import AdminFees from "@/pages/admin/AdminFees";
+import AdminSocialMedia from "@/pages/admin/AdminSocialMedia";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 export const AdminRoutes = () => {
@@ -75,6 +76,11 @@ export const AdminRoutes = () => {
       <Route path="fees" element={
         <ProtectedRoute adminOnly={true}>
           <AdminFees />
+        </ProtectedRoute>
+      } />
+      <Route path="social-media" element={
+        <ProtectedRoute adminOnly={true}>
+          <AdminSocialMedia />
         </ProtectedRoute>
       } />
       <Route path="events" element={

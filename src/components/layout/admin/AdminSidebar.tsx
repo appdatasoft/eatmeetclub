@@ -8,7 +8,8 @@ import {
   Globe, 
   ShoppingCart,
   CreditCard,
-  DollarSign
+  DollarSign,
+  Instagram
 } from 'lucide-react';
 
 const AdminSidebar = () => {
@@ -136,6 +137,15 @@ const AdminSidebar = () => {
               >
                 <DollarSign className="h-4 w-4 mr-2" />
                 <span>Fees</span>
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/admin/social-media" 
+                className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/social-media')}`}
+              >
+                <Instagram className="h-4 w-4 mr-2" />
+                <span>Social Media</span>
               </Link>
             </li>
             <li>
