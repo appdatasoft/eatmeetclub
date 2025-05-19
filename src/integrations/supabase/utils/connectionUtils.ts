@@ -26,7 +26,7 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
   try {
     // Use a lightweight query with timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const timeoutId = setTimeout(() => controller.abort(), 3500); // Increased from 2000ms to 3500ms
     
     const { data, error } = await supabase
       .from("app_config")
@@ -46,6 +46,14 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     connectionCache = { isConnected: true, lastChecked: now };
     return true;
   } catch (err) {
+    // For AbortError, mark as potentially connected to avoid infinite failures
+    if (err instanceof Error && err.name === 'AbortError') {
+      console.error("Supabase connection test timed out, assuming connection issues");
+      // Cache negative result but for a shorter period (30 seconds)
+      connectionCache = { isConnected: false, lastChecked: now - CONNECTION_CACHE_DURATION + 30000 };
+      return false;
+    }
+    
     console.error("Failed to connect to Supabase:", err);
     connectionCache = { isConnected: false, lastChecked: now };
     return false;

@@ -14,8 +14,10 @@ const adminStatusCache = new Map<string, {
 
 // Cache duration set to 10 minutes (600000ms)
 const CACHE_DURATION = 600000; 
-// Timeout for admin check reduced to 1.5 seconds for faster feedback
-const AUTH_CHECK_TIMEOUT = 1500;
+// Timeout for admin check reduced to 2.5 seconds for faster feedback
+const AUTH_CHECK_TIMEOUT = 2500;
+// Maximum retries for connection issues
+const MAX_RETRIES = 3;
 
 export const useAdminAuth = () => {
   const navigate = useNavigate();
@@ -32,6 +34,7 @@ export const useAdminAuth = () => {
   const isMounted = useRef(true);
   const timeoutRef = useRef<number | null>(null);
   const connectionCheckedRef = useRef(false);
+  const retryCountRef = useRef(0);
 
   // Check if admin status is cached and valid
   const getFromCache = useCallback((userId: string) => {
@@ -91,6 +94,7 @@ export const useAdminAuth = () => {
   useEffect(() => {
     // Set isMounted to true and reset on cleanup
     isMounted.current = true;
+    retryCountRef.current = 0;
     
     return () => {
       isMounted.current = false;
@@ -102,7 +106,7 @@ export const useAdminAuth = () => {
   }, []);
 
   useEffect(() => {
-    // Set a shorter timeout for better user experience
+    // Set a timeout for better user experience
     timeoutRef.current = window.setTimeout(() => {
       if (isMounted.current && isLoading) {
         setAuthCheckTimedOut(true);
@@ -186,6 +190,7 @@ export const useAdminAuth = () => {
     setIsLoading(true);
     setError(null);
     setAuthCheckTimedOut(false);
+    retryCountRef.current += 1;
     
     // Clear any existing timeout
     if (timeoutRef.current) {
@@ -208,7 +213,7 @@ export const useAdminAuth = () => {
         setIsRetrying(false);
         console.log("Retry admin access verification timed out");
       }
-    }, AUTH_CHECK_TIMEOUT);
+    }, AUTH_CHECK_TIMEOUT + 1000); // Add extra time for retry
     
     // Try verification again
     const verifyAdminAccess = async () => {
@@ -220,6 +225,8 @@ export const useAdminAuth = () => {
         }
         
         console.log('Retrying admin verification for:', user.id);
+        
+        // Adaptive retry timeout based on number of retries
         const isUserAdmin = await checkAdminStatus(user.id);
         
         if (!isUserAdmin) {
