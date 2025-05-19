@@ -1,6 +1,6 @@
 
 import { Link, useLocation } from 'react-router-dom';
-import { Calendar, FileText, Mail, MessageSquare, Globe } from 'lucide-react';
+import { Calendar, FileText, Mail, MessageSquare, Globe, Template } from 'lucide-react';
 
 const AdminSidebar = () => {
   const location = useLocation();
@@ -50,6 +50,15 @@ const AdminSidebar = () => {
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
                 <span>SMS</span>
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/admin/templates" 
+                className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/templates')}`}
+              >
+                <Template className="h-4 w-4 mr-2" />
+                <span>Templates</span>
               </Link>
             </li>
             <li>

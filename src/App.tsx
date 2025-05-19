@@ -39,6 +39,7 @@ import AdminEmails from "@/pages/admin/AdminEmails";
 import AdminSMS from "@/pages/admin/AdminSMS";
 import AdminVenus from "@/pages/admin/AdminVenus";
 import AdminEvents from "@/pages/admin/AdminEvents";
+import AdminTemplates from "@/pages/admin/AdminTemplates";
 
 function App() {
   return (
@@ -111,6 +112,11 @@ function App() {
           <Route path="/admin/sms" element={
             <ProtectedRoute adminOnly={true}>
               <AdminSMS />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/templates" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminTemplates />
             </ProtectedRoute>
           } />
           <Route path="/admin/venus" element={
