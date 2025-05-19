@@ -22,16 +22,31 @@ export const handleResponse = (response: Response): Response => {
  */
 export const safeJsonParse = async <T>(response: Response): Promise<T> => {
   // Always clone the response before reading
-  const clonedResponse = response.clone();
+  let responseToUse;
   
   try {
-    return await clonedResponse.json() as T;
+    // Try to clone - if this fails (e.g. with opaque responses), we'll use the original
+    responseToUse = response.clone();
+  } catch (cloneError) {
+    console.warn('Failed to clone response, using original:', cloneError);
+    responseToUse = response;
+  }
+  
+  try {
+    return await responseToUse.json() as T;
   } catch (error) {
     console.warn('Error parsing JSON response:', error);
     
     // Attempt to read as text as fallback
     try {
-      const textContent = await response.text();
+      let textResponse;
+      try {
+        textResponse = response.clone();
+      } catch (cloneError) {
+        textResponse = response;
+      }
+      
+      const textContent = await textResponse.text();
       
       if (!textContent || textContent.trim() === '') {
         console.warn('Empty response body');

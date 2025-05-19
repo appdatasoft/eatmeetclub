@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { RefreshCw, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { supabase } from '@/integrations/supabase/client';
+import { safeJsonParse } from '@/integrations/supabase/utils/responseUtils';
 
 interface User {
   id: string;
@@ -29,15 +31,17 @@ const UsersPage = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isPromoting, setIsPromoting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const fetchUsers = async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      // Get all users from auth
-      const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+      // Get all users from auth with proper response handling
+      const { data: authResponse, error: authError } = await supabase.auth.admin.listUsers();
       
-      if (userError) {
-        throw userError;
+      if (authError) {
+        throw authError;
       }
       
       // Get roles
@@ -55,7 +59,9 @@ const UsersPage = () => {
         return acc;
       }, {});
       
-      const formattedUsers = userData.users.map((user: any) => ({
+      const userData = authResponse?.users || [];
+      
+      const formattedUsers = userData.map((user: any) => ({
         id: user.id,
         email: user.email,
         role: (roleMap[user.id] || 'user') as 'admin' | 'user',
@@ -65,6 +71,7 @@ const UsersPage = () => {
       setUsers(formattedUsers);
     } catch (error: any) {
       console.error('Error fetching users:', error);
+      setError(error.message || "Failed to load users");
       toast({
         title: "Error",
         description: error.message || "Failed to load users",
@@ -124,19 +131,40 @@ const UsersPage = () => {
     setShowConfirm(false);
     setSelectedUser(null);
   };
+  
+  const handleRetry = () => {
+    fetchUsers();
+  };
 
   return (
     <AdminLayout>
       <h1 className="text-2xl font-bold mb-6">User Management</h1>
       
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>All Users</CardTitle>
+          {error && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRetry}
+              className="flex items-center gap-1"
+            >
+              <RefreshCw className="h-4 w-4" /> Retry
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8">
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+            </div>
+          ) : error ? (
+            <div className="p-6 text-center">
+              <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">Failed to load users</h3>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <Button onClick={handleRetry}>Try Again</Button>
             </div>
           ) : (
             <div className="overflow-x-auto">

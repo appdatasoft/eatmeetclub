@@ -1,5 +1,5 @@
 
-import { AlertCircle, RefreshCw, Database, Shield, RotateCcw } from 'lucide-react';
+import { AlertCircle, RefreshCw, Database, Shield, RotateCcw, FileWarning } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Navbar from '../Navbar';
 import Footer from '../Footer';
@@ -25,17 +25,40 @@ const AdminErrorState = ({
   const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   // Format the error message for better readability
-  const formattedError = error.includes('Unable to connect') 
-    ? 'Unable to connect to database. Please check your connection.' 
-    : error;
+  let formattedError = error;
+  let errorIcon = <AlertCircle size={50} className="mx-auto text-red-500" />;
+  let possibleSolutions = (
+    <ul className="text-blue-700 text-sm space-y-2 list-disc pl-5">
+      <li>Check your internet connection</li>
+      <li>Verify that you have admin privileges</li>
+      <li>Try disabling any browser extensions that might block connections</li>
+      <li>Clear browser cache and cookies</li>
+    </ul>
+  );
+  
+  // Handle specific error types
+  if (error.includes('Unable to connect')) {
+    formattedError = 'Unable to connect to database. Please check your connection.';
+  } else if (error.includes('body stream already read')) {
+    formattedError = 'Response stream error: The response was already read';
+    errorIcon = <FileWarning size={50} className="mx-auto text-amber-500" />;
+    possibleSolutions = (
+      <ul className="text-blue-700 text-sm space-y-2 list-disc pl-5">
+        <li>Try reloading the page</li>
+        <li>Clear your browser cache</li>
+        <li>This is often a temporary issue with response handling</li>
+        <li>Use the Force Reload button below to clear cached responses</li>
+      </ul>
+    );
+  }
 
   return (
     <>
       <Navbar />
       <div className="bg-gray-50 min-h-screen flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-sm p-6 max-w-md w-full">
-          <div className="mb-6 text-red-500 text-center">
-            <AlertCircle size={50} className="mx-auto" />
+          <div className="mb-6 text-center">
+            {errorIcon}
           </div>
           <h2 className="text-2xl font-bold mb-2 text-center">Admin Access Error</h2>
           <p className="text-gray-600 mb-6 text-center">{formattedError}</p>
@@ -43,12 +66,7 @@ const AdminErrorState = ({
           {/* Possible solutions */}
           <div className="mb-6 bg-blue-50 p-4 rounded-md">
             <h3 className="font-medium text-blue-800 mb-2">Possible Solutions:</h3>
-            <ul className="text-blue-700 text-sm space-y-2 list-disc pl-5">
-              <li>Check your internet connection</li>
-              <li>Verify that you have admin privileges</li>
-              <li>Try disabling any browser extensions that might block connections</li>
-              <li>Clear browser cache and cookies</li>
-            </ul>
+            {possibleSolutions}
           </div>
 
           {/* Action buttons */}
