@@ -115,6 +115,24 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
         return;
       }
       
+      if (!emailSubject.trim()) {
+        toast({
+          title: "Error",
+          description: "Please enter an email subject",
+          variant: "destructive" 
+        });
+        return;
+      }
+      
+      if (selectedRecipients.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please select at least one recipient",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       console.log("Sending test email with:", {
         recipients: selectedRecipients,
         subject: emailSubject,
@@ -340,7 +358,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
                   type="button" 
                   onClick={handleSendTestEmail} 
                   variant="outline"
-                  disabled={isSaving || !emailSubject || selectedRecipients.length === 0}
+                  disabled={isSaving}
                 >
                   <Mail className="mr-2 h-4 w-4" /> Send Test Email
                 </Button>

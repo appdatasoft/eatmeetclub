@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { templates } from '@/lib/fetch-client/templates-api';
@@ -342,13 +343,29 @@ export const useTemplateOperations = () => {
       
       if (error) {
         console.error('Error sending test email:', error);
-        throw error;
+        toast({
+          title: "Failed to send test email",
+          description: error.message,
+          variant: "destructive"
+        });
+        return false;
       }
+      
+      console.log("Email sent successfully:", data);
+      toast({
+        title: "Test email sent",
+        description: `Email successfully sent to ${recipients.join(', ')}`
+      });
       
       return true;
     } catch (error: any) {
       console.error('Error in sendTestEmail:', error);
-      throw error;
+      toast({
+        title: "Error sending test email",
+        description: error.message || "An error occurred while sending the test email",
+        variant: "destructive"
+      });
+      return false;
     }
   };
   

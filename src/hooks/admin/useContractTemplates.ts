@@ -160,12 +160,21 @@ export const useContractTemplates = (templateType: string) => {
       console.log("Content preview:", content.substring(0, 100) + "...");
       
       // Call the template operations function with correct parameters
-      return await templateOperations.sendTestEmail(
+      const result = await templateOperations.sendTestEmail(
         selectedRecipients,
         emailSubject,
         content,
         templateData.id
       );
+      
+      if (result) {
+        toast({
+          title: "Success",
+          description: `Test email sent to ${selectedRecipients.join(", ")}`,
+        });
+      }
+      
+      return result;
     } catch (error) {
       console.error("Error sending test email:", error);
       toast({
