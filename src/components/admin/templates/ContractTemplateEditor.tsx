@@ -117,7 +117,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
                   </SelectTrigger>
                   <SelectContent>
                     {availableFields.map((field) => (
-                      <SelectItem key={field.id} value={field.name}>
+                      <SelectItem key={field.name} value={field.name}>
                         {field.label}
                       </SelectItem>
                     ))}
