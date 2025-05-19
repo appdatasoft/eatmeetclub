@@ -5,7 +5,7 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Calendar, FileText, Mail, MessageSquare, Venus } from 'lucide-react';
 import { Button } from '../ui/button';
 import { get } from '@/lib/fetch-client';
 import { useAuth } from '@/hooks/useAuth';
@@ -186,25 +186,70 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                     <li>
                       <Link 
                         to="/admin" 
-                        className={`block px-3 py-2 rounded-md ${isActive('/admin')}`}
+                        className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin')}`}
                       >
-                        Overview
+                        <span>Overview</span>
+                      </Link>
+                    </li>
+                    <li>
+                      <Link 
+                        to="/admin/contracts" 
+                        className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/contracts')}`}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        <span>Contracts</span>
+                      </Link>
+                    </li>
+                    <li>
+                      <Link 
+                        to="/admin/emails" 
+                        className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/emails')}`}
+                      >
+                        <Mail className="h-4 w-4 mr-2" />
+                        <span>Emails</span>
+                      </Link>
+                    </li>
+                    <li>
+                      <Link 
+                        to="/admin/sms" 
+                        className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/sms')}`}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        <span>SMS</span>
+                      </Link>
+                    </li>
+                    <li>
+                      <Link 
+                        to="/admin/venus" 
+                        className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/venus')}`}
+                      >
+                        <Venus className="h-4 w-4 mr-2" />
+                        <span>Venus</span>
+                      </Link>
+                    </li>
+                    <li>
+                      <Link 
+                        to="/admin/events" 
+                        className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/events')}`}
+                      >
+                        <Calendar className="h-4 w-4 mr-2" />
+                        <span>Events</span>
                       </Link>
                     </li>
                     <li>
                       <Link 
                         to="/admin/config" 
-                        className={`block px-3 py-2 rounded-md ${isActive('/admin/config')}`}
+                        className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/config')}`}
                       >
-                        Configuration
+                        <span>Configuration</span>
                       </Link>
                     </li>
                     <li>
                       <Link 
                         to="/admin/users" 
-                        className={`block px-3 py-2 rounded-md ${isActive('/admin/users')}`}
+                        className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/users')}`}
                       >
-                        Manage Users
+                        <span>Manage Users</span>
                       </Link>
                     </li>
                   </ul>

@@ -34,6 +34,11 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AuthRedirect from "@/components/auth/AuthRedirect";
 import Settings from "@/pages/dashboard/Settings";
 import UserProfilePage from "@/pages/UserProfilePage";
+import AdminContracts from "@/pages/admin/AdminContracts";
+import AdminEmails from "@/pages/admin/AdminEmails";
+import AdminSMS from "@/pages/admin/AdminSMS";
+import AdminVenus from "@/pages/admin/AdminVenus";
+import AdminEvents from "@/pages/admin/AdminEvents";
 
 function App() {
   return (
@@ -91,6 +96,31 @@ function App() {
           <Route path="/admin" element={
             <ProtectedRoute adminOnly={true}>
               <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/contracts" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminContracts />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/emails" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminEmails />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/sms" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminSMS />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/venus" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminVenus />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/events" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminEvents />
             </ProtectedRoute>
           } />
           <Route path="/admin/config" element={
