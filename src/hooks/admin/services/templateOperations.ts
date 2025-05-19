@@ -72,20 +72,30 @@ export const useTemplateOperations = () => {
   // Improved function to fetch users for email recipients dropdown
   const fetchUserOptions = async (): Promise<UserOption[]> => {
     try {
-      // Fetch users from the auth.users table using data API
-      const { data: authUsers, error } = await supabase
-        .from('users')
-        .select('id, email, raw_user_meta_data')
-        .order('email');
+      // Get the current Supabase session
+      const { data: authData } = await supabase.auth.getSession();
       
-      if (error) {
-        console.error('Error fetching users:', error);
+      if (!authData.session) {
+        console.warn('No authenticated session available');
         return [];
       }
       
+      // Fetch users data using admin API call
+      const response = await fetch(`${window.location.origin}/functions/get-users`, {
+        headers: {
+          'Authorization': `Bearer ${authData.session.access_token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch users: ${response.statusText}`);
+      }
+      
+      const users = await response.json();
+      
       // Format users data into UserOption format
-      return (authUsers || []).map(user => {
-        const metadata = user.raw_user_meta_data || {};
+      return users.map((user: any) => {
+        const metadata = user.user_metadata || {};
         return {
           id: user.id,
           firstName: metadata.first_name || '',
@@ -114,8 +124,6 @@ export const useTemplateOperations = () => {
           displayName: 'Demo Account <demo@example.com>'
         }
       ];
-    } finally {
-      // No need to update loading state here as it's handled by the calling component
     }
   };
   

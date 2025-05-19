@@ -121,7 +121,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
         templateContent: template.substring(0, 100) + "..."
       });
       
-      const result = await sendTestEmail(template);
+      const result = await sendTestEmail(selectedRecipients, emailSubject, template, templateData.id);
       
       if (result) {
         toast({
@@ -129,7 +129,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
           description: "Test email sent successfully"
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in handleSendTestEmail:", error);
       toast({
         title: "Error",

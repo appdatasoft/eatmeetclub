@@ -197,18 +197,17 @@ export const templates = {
         })
       });
       
-      const result = await response.json();
-      
       if (!response.ok) {
-        // Create a custom error object instead of adding to Error
-        const customError = new Error(result.message || "Failed to send email");
-        console.error("Email sending error:", customError.message, "Status:", response.status);
+        const result = await response.json().catch(() => ({ message: "Unknown error" }));
+        const errorMsg = result.message || `Failed to send email (${response.status})`;
+        console.error("Email sending error:", errorMsg, "Status:", response.status);
         return { 
           data: null, 
-          error: customError
+          error: new Error(errorMsg)
         };
       }
       
+      const result = await response.json();
       return { data: result, error: null };
     } catch (error: any) {
       console.error("Error sending test email:", error);
