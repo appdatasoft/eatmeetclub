@@ -124,6 +124,7 @@ export const useContractTemplates = (templateType: string) => {
     }
   };
   
+  // Fixed implementation: Forward the content and internally use saved state values for recipients and subject
   const sendTestEmail = async (content: string): Promise<boolean> => {
     if (!templateData) {
       toast({
@@ -155,6 +156,7 @@ export const useContractTemplates = (templateType: string) => {
     setIsSaving(true);
     
     try {
+      // Use the operation function with all necessary parameters
       return await templateOperations.sendTestEmail(
         selectedRecipients,
         emailSubject,
