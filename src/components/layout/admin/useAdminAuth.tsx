@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { checkSupabaseConnection } from '@/integrations/supabase/utils/connectionUtils';
+import { checkSupabaseConnection, resetConnectionCache } from '@/integrations/supabase/utils/connectionUtils';
 
 // Create a persistent cache with longer expiration
 const adminStatusCache = new Map<string, {
@@ -12,10 +12,10 @@ const adminStatusCache = new Map<string, {
   timestamp: number;
 }>();
 
-// Cache duration set to 10 minutes (600000ms)
-const CACHE_DURATION = 600000; 
-// Timeout for admin check reduced to 2.5 seconds for faster feedback
-const AUTH_CHECK_TIMEOUT = 2500;
+// Cache duration set to 5 minutes (300000ms)
+const CACHE_DURATION = 300000; 
+// Timeout for admin check - 4 seconds for better user experience while still allowing time for connection
+const AUTH_CHECK_TIMEOUT = 4000;
 // Maximum retries for connection issues
 const MAX_RETRIES = 3;
 
@@ -55,23 +55,23 @@ export const useAdminAuth = () => {
   }, []);
 
   // Optimized admin check function to minimize database calls
-  const checkAdminStatus = useCallback(async (userId: string) => {
-    // Try from cache first
-    const cachedStatus = getFromCache(userId);
-    if (cachedStatus !== null) {
-      return cachedStatus;
+  const checkAdminStatus = useCallback(async (userId: string, forceConnectionCheck = false) => {
+    // Try from cache first (unless we're doing a forced check after retries)
+    if (!forceConnectionCheck) {
+      const cachedStatus = getFromCache(userId);
+      if (cachedStatus !== null) {
+        return cachedStatus;
+      }
     }
     
     console.log('Checking admin status from database');
     try {
       // First ensure connection is working
-      if (!connectionCheckedRef.current) {
-        const isConnected = await checkSupabaseConnection();
-        connectionCheckedRef.current = true;
-        
-        if (!isConnected) {
-          throw new Error("Unable to connect to database. Please check your connection.");
-        }
+      const isConnected = await checkSupabaseConnection(forceConnectionCheck);
+      connectionCheckedRef.current = true;
+      
+      if (!isConnected) {
+        throw new Error("Unable to connect to database. Please check your connection.");
       }
       
       // Proceed with admin check
@@ -159,11 +159,15 @@ export const useAdminAuth = () => {
           console.error('Admin verification error:', error);
           setError(error.message || "Failed to verify admin status");
           setIsLoading(false);
-          toast({
-            title: "Error",
-            description: error.message || "Failed to verify admin status",
-            variant: "destructive"
-          });
+          // Don't show repeated toast messages for connection errors
+          // as they can become annoying when there are multiple retries
+          if (!error.message?.includes('connect to database')) {
+            toast({
+              title: "Error",
+              description: error.message || "Failed to verify admin status",
+              variant: "destructive"
+            });
+          }
           // Clear timeout since we've handled the error
           if (timeoutRef.current) {
             window.clearTimeout(timeoutRef.current);
@@ -197,23 +201,27 @@ export const useAdminAuth = () => {
       window.clearTimeout(timeoutRef.current);
     }
     
-    // If using cache and failed, clear cache for this user
+    // If using cache and failed, clear cache for this user and reset connection cache
     if (user) {
       adminStatusCache.delete(user.id);
     }
     
-    // Reset connection check flag to force a fresh check
+    // Reset connection check flag and connection cache to force a fresh check
     connectionCheckedRef.current = false;
+    if (retryCountRef.current > 1) {
+      resetConnectionCache();
+    }
     
     // Set a new timeout for the retry
+    const retryTimeout = Math.min(AUTH_CHECK_TIMEOUT + (retryCountRef.current * 1000), 8000);
     timeoutRef.current = window.setTimeout(() => {
       if (isMounted.current) {
         setAuthCheckTimedOut(true);
         setIsLoading(false);
         setIsRetrying(false);
-        console.log("Retry admin access verification timed out");
+        console.log(`Retry admin access verification timed out after ${retryTimeout}ms`);
       }
-    }, AUTH_CHECK_TIMEOUT + 1000); // Add extra time for retry
+    }, retryTimeout);
     
     // Try verification again
     const verifyAdminAccess = async () => {
@@ -226,8 +234,8 @@ export const useAdminAuth = () => {
         
         console.log('Retrying admin verification for:', user.id);
         
-        // Adaptive retry timeout based on number of retries
-        const isUserAdmin = await checkAdminStatus(user.id);
+        // Force connection check on retry attempts
+        const isUserAdmin = await checkAdminStatus(user.id, true);
         
         if (!isUserAdmin) {
           console.log('Access denied on retry: Not an admin');
@@ -257,11 +265,14 @@ export const useAdminAuth = () => {
           setError(error.message || "Failed to verify admin status");
           setIsLoading(false);
           setIsRetrying(false);
-          toast({
-            title: "Error",
-            description: error.message || "Failed to verify admin status",
-            variant: "destructive"
-          });
+          // Only show toast for non-connection errors to avoid notification spam
+          if (!error.message?.includes('connect to database')) {
+            toast({
+              title: "Error",
+              description: error.message || "Failed to verify admin status",
+              variant: "destructive"
+            });
+          }
           // Clear timeout since we've handled the error
           if (timeoutRef.current) {
             window.clearTimeout(timeoutRef.current);

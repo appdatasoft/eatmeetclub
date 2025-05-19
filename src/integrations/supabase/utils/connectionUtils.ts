@@ -4,30 +4,40 @@ import { supabase } from "../client";
 // Add a connection status cache to prevent redundant checks
 let connectionCache = {
   isConnected: false,
-  lastChecked: 0
+  lastChecked: 0,
+  failureCount: 0
 };
 
-// Cache duration of 5 minutes (300000ms)
-const CONNECTION_CACHE_DURATION = 300000;
+// Cache duration reduced to 2 minutes (120000ms) for more frequent checks when needed
+const CONNECTION_CACHE_DURATION = 120000;
+// Maximum allowed consecutive failures before suggesting different solutions
+const MAX_FAILURES = 5;
+// Different timeout values for connection scenarios
+const NORMAL_TIMEOUT = 5000;
+const RETRY_TIMEOUT = 7000; 
 
 /**
  * Tests the Supabase connection and returns a boolean indicating success
  * Uses a cached result if available and recent
+ * @param {boolean} forceCheck - Force a fresh connection check bypassing cache
  */
-export const checkSupabaseConnection = async (): Promise<boolean> => {
-  // Return cached result if recent enough
+export const checkSupabaseConnection = async (forceCheck = false): Promise<boolean> => {
+  // Return cached result if recent enough and not forcing check
   const now = Date.now();
-  if (now - connectionCache.lastChecked < CONNECTION_CACHE_DURATION) {
+  if (!forceCheck && now - connectionCache.lastChecked < CONNECTION_CACHE_DURATION) {
     console.log("Using cached connection status:", connectionCache.isConnected);
     return connectionCache.isConnected;
   }
   
-  console.log("Testing Supabase connection");
+  console.log("Testing Supabase connection" + (forceCheck ? " (forced check)" : ""));
   try {
-    // Use a lightweight query with timeout
+    // Use a lightweight query with proper timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500); // Increased from 2000ms to 3500ms
+    // Use longer timeout for retries
+    const timeout = connectionCache.failureCount > 0 ? RETRY_TIMEOUT : NORMAL_TIMEOUT;
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
     
+    // Try to fetch a small amount of data with minimal impact
     const { data, error } = await supabase
       .from("app_config")
       .select("key")
@@ -38,27 +48,50 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
 
     if (error) {
       console.error("Supabase connection test failed:", error.message);
-      connectionCache = { isConnected: false, lastChecked: now };
+      updateConnectionCache(false, now);
       return false;
     }
 
     console.log("Supabase connection successful");
-    connectionCache = { isConnected: true, lastChecked: now };
+    // Reset failure count on success
+    updateConnectionCache(true, now, 0);
     return true;
   } catch (err) {
-    // For AbortError, mark as potentially connected to avoid infinite failures
-    if (err instanceof Error && err.name === 'AbortError') {
-      console.error("Supabase connection test timed out, assuming connection issues");
-      // Cache negative result but for a shorter period (30 seconds)
-      connectionCache = { isConnected: false, lastChecked: now - CONNECTION_CACHE_DURATION + 30000 };
-      return false;
+    // For AbortError, mark connection issues with progressive backoff
+    if (err instanceof Error) {
+      if (err.name === 'AbortError') {
+        console.error("Supabase connection test timed out after " + 
+          (connectionCache.failureCount > 0 ? RETRY_TIMEOUT : NORMAL_TIMEOUT) + "ms");
+        
+        // Use progressive backoff for cache time based on consecutive failures
+        const adjustedCacheTime = Math.min(30000 * Math.pow(1.5, connectionCache.failureCount), 180000);
+        updateConnectionCache(false, now - CONNECTION_CACHE_DURATION + adjustedCacheTime);
+        return false;
+      }
+      
+      console.error("Failed to connect to Supabase:", err.message);
+    } else {
+      console.error("Unknown connection error:", err);
     }
     
-    console.error("Failed to connect to Supabase:", err);
-    connectionCache = { isConnected: false, lastChecked: now };
+    updateConnectionCache(false, now);
     return false;
   }
 };
+
+/**
+ * Update connection cache with failure tracking
+ */
+function updateConnectionCache(isConnected: boolean, timestamp: number, failureCount?: number) {
+  connectionCache = { 
+    isConnected, 
+    lastChecked: timestamp,
+    // If failure count is explicitly provided, use it; otherwise increment on failure or reset on success
+    failureCount: failureCount !== undefined ? 
+      failureCount : 
+      (isConnected ? 0 : connectionCache.failureCount + 1)
+  };
+}
 
 /**
  * Checks if a user is logged in and returns a boolean
@@ -77,4 +110,29 @@ export const isUserLoggedIn = async (): Promise<boolean> => {
     console.error("Error in isUserLoggedIn:", err);
     return false;
   }
+};
+
+/**
+ * Get connection diagnostics information to help troubleshoot issues
+ */
+export const getConnectionDiagnostics = (): Record<string, any> => {
+  return {
+    isConnected: connectionCache.isConnected,
+    lastChecked: new Date(connectionCache.lastChecked).toISOString(),
+    consecutiveFailures: connectionCache.failureCount,
+    networkOnline: typeof navigator !== 'undefined' ? navigator.onLine : 'unknown',
+    cacheExpires: new Date(connectionCache.lastChecked + CONNECTION_CACHE_DURATION).toISOString()
+  };
+};
+
+/**
+ * Reset connection cache to force a fresh check
+ */
+export const resetConnectionCache = (): void => {
+  connectionCache = {
+    isConnected: false,
+    lastChecked: 0,
+    failureCount: 0
+  };
+  console.log("Connection cache has been reset");
 };
