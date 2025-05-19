@@ -1,4 +1,5 @@
 
+
 # A string used to distinguish different Supabase projects on the same host. Defaults to the working
 # directory name when running `supabase init`.
 project_id = "wocfwpedauuhlrfugxuu"
@@ -84,3 +85,4 @@ verify_jwt = false
 verify_jwt = false
 [functions.meta-deauth]
 verify_jwt = false
+

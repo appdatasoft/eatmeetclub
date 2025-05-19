@@ -131,11 +131,11 @@ serve(async (req) => {
           );
         }
 
-        // Generate authorization URL
+        // Generate authorization URL - using only public_profile scope which is available without app review
         const authUrl = new URL("https://www.facebook.com/v19.0/dialog/oauth");
         authUrl.searchParams.append("client_id", clientId);
         authUrl.searchParams.append("redirect_uri", redirectUrl);
-        authUrl.searchParams.append("scope", "public_profile,email,pages_show_list,pages_read_engagement");
+        authUrl.searchParams.append("scope", "public_profile,email"); // Removed scopes that require app review
         authUrl.searchParams.append("response_type", "code");
         authUrl.searchParams.append("state", state || `facebook_${Math.random().toString(36).substring(2, 15)}`);
 
@@ -273,11 +273,12 @@ serve(async (req) => {
 
         console.log(`Initiating Instagram OAuth flow with client ID: ${clientId.substring(0, 6)}... and redirect: ${redirectUrl}`);
 
-        // Generate authorization URL using Facebook OAuth dialog for Instagram permissions
+        // Generate authorization URL using Facebook OAuth dialog with basic permissions only
+        // Removed Instagram-specific scopes that require app review
         const authUrl = new URL("https://www.facebook.com/v19.0/dialog/oauth");
         authUrl.searchParams.append("client_id", clientId);
         authUrl.searchParams.append("redirect_uri", redirectUrl);
-        authUrl.searchParams.append("scope", "instagram_basic,pages_show_list,public_profile");
+        authUrl.searchParams.append("scope", "public_profile,email"); // Using only public_profile which is available in dev mode
         authUrl.searchParams.append("response_type", "code");
         if (state) {
           authUrl.searchParams.append("state", state);
@@ -292,7 +293,7 @@ serve(async (req) => {
             debug: {
               clientId: clientId.substring(0, 6) + "...",
               redirectUrl: redirectUrl,
-              scope: "instagram_basic,pages_show_list,public_profile"
+              scope: "public_profile,email" // Updated scopes
             }
           }),
           { headers: corsHeaders, status: 200 }
@@ -374,88 +375,40 @@ serve(async (req) => {
           // Get user profile information 
           const accessToken = tokenData.access_token;
           
-          console.log("Successfully obtained access token, getting Instagram account details");
-
-          // First, get Facebook user's pages (needed for Instagram Graph API)
-          const pagesResponse = await fetch(
-            `https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}`
+          // Get Facebook user's basic profile info only since we don't have Instagram permissions
+          const userProfileResponse = await fetch(
+            `https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`
           );
           
-          const pagesData = await pagesResponse.json();
+          const userData = await userProfileResponse.json();
           
-          if (pagesData.error) {
-            console.error("Error fetching Facebook pages:", pagesData.error);
+          if (!userProfileResponse.ok || userData.error) {
+            console.error("Error getting user profile:", userData);
             return new Response(
               JSON.stringify({ 
-                error: "Failed to fetch Facebook pages associated with account",
-                details: pagesData.error
+                error: "Failed to get user profile information",
+                details: userData.error || "Unknown error"
               }),
               { headers: corsHeaders, status: 400 }
             );
           }
           
-          if (!pagesData.data || pagesData.data.length === 0) {
-            console.error("No Facebook pages found for user");
-            return new Response(
-              JSON.stringify({ 
-                error: "No Facebook pages found associated with this account. Instagram Business/Creator requires a connected Facebook page.",
-                details: "User needs to create a Facebook page first"
-              }),
-              { headers: corsHeaders, status: 400 }
-            );
-          }
-          
-          // Get Instagram business account for the page
-          let instagramAccountId = null;
-          let instagramUsername = null;
-          
-          // Try to find Instagram business account connected to any of the pages
-          for (const page of pagesData.data) {
-            console.log(`Checking page ${page.name} for Instagram account`);
-            const pageAccessToken = page.access_token;
-            
-            try {
-              const instagramAccountResponse = await fetch(
-                `https://graph.facebook.com/v19.0/${page.id}?fields=instagram_business_account{id,username,profile_picture_url}&access_token=${pageAccessToken}`
-              );
-              
-              const instagramAccountData = await instagramAccountResponse.json();
-              
-              if (instagramAccountData.instagram_business_account) {
-                instagramAccountId = instagramAccountData.instagram_business_account.id;
-                instagramUsername = instagramAccountData.instagram_business_account.username;
-                console.log(`Found Instagram business account: ${instagramUsername}`);
-                break;
-              }
-            } catch (err) {
-              console.error(`Error checking Instagram account for page ${page.name}:`, err);
-            }
-          }
-          
-          if (!instagramAccountId) {
-            return new Response(
-              JSON.stringify({ 
-                error: "No Instagram business account found connected to your Facebook pages", 
-                details: "Make sure you have connected your Instagram business account to one of your Facebook pages"
-              }),
-              { headers: corsHeaders, status: 400 }
-            );
-          }
-
-          // Save the connection to the database
+          // Since we can't get Instagram data without advanced permissions, store the connection as "partial"
           const { data: connection, error } = await supabase
             .from('social_media_connections')
             .upsert({
               user_id: user.id,
               platform: "Instagram",
-              username: instagramUsername,
-              profile_url: `https://instagram.com/${instagramUsername}`,
+              username: userData.name || "User",
+              profile_url: null, // We don't have Instagram profile URL without permissions
               is_connected: true,
               oauth_token: accessToken,
               oauth_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days
               meta_data: { 
-                instagram_account_id: instagramAccountId,
-                connected_at: new Date().toISOString()
+                facebook_user_id: userData.id,
+                connected_at: new Date().toISOString(),
+                limited_access: true,
+                note: "Limited access due to app development mode. Full Instagram integration requires app review."
               }
             }, { onConflict: 'user_id, platform' })
             .select()
@@ -473,7 +426,8 @@ serve(async (req) => {
             JSON.stringify({ 
               success: true,
               connection, 
-              message: `Successfully connected Instagram account for ${instagramUsername}` 
+              message: `Connected with limited access. Full Instagram integration requires app review.`,
+              limited_access: true
             }),
             { headers: corsHeaders, status: 200 }
           );

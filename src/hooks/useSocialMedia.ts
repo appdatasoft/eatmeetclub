@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
@@ -70,9 +71,7 @@ export const useSocialMedia = () => {
           
           // Supabase URL for the edge function
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
-          const redirectUri = platform === 'Facebook' 
-            ? `https://www.eatmeetclub.com/api/auth/callback/facebook` 
-            : `${window.location.origin}${window.location.pathname}`;
+          const redirectUri = `https://eatmeetclub.com/api/auth/callback/facebook`;
           
           // Complete OAuth flow by exchanging code for token
           const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
@@ -96,10 +95,18 @@ export const useSocialMedia = () => {
           
           const result = await response.json();
           
-          toast({
-            title: `${platform} Connected`,
-            description: result.message || `Successfully connected your ${platform} account`,
-          });
+          // Check if this is a limited access connection
+          if (result.limited_access) {
+            toast({
+              title: `${platform} Connected with Limited Access`,
+              description: `Your ${platform} account was connected with limited functionality. Full integration requires app review by Facebook.`,
+            });
+          } else {
+            toast({
+              title: `${platform} Connected`,
+              description: result.message || `Successfully connected your ${platform} account`,
+            });
+          }
           
           // Refresh connections list
           await fetchConnections();
@@ -382,7 +389,7 @@ export const useSocialMedia = () => {
       // Use the Supabase URL from environment or fallback
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
       
-      // Initiate OAuth flow by getting authorization URL (now via Facebook)
+      // Initiate OAuth flow by getting authorization URL
       const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
         method: 'POST',
         headers: {

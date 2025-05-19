@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Facebook, Instagram, Twitter, Map, Globe, Youtube, AlertCircle, Link2Off } from "lucide-react";
+import { Facebook, Instagram, Twitter, Map, Globe, Youtube, AlertCircle, Link2Off, AlertTriangle } from "lucide-react";
 import { useEditableContent } from '@/components/editor/EditableContentProvider';
 import EditableText from '@/components/editor/EditableText';
 import { useToast } from '@/hooks/use-toast';
@@ -33,8 +33,6 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
   useEffect(() => {
     fetchConnections();
   }, []);
-
-  // All OAuth callback handling is now in useSocialMedia hook
 
   const handleConnectAccount = async (platform: string) => {
     try {
@@ -73,6 +71,8 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
 
   const renderConnectionButton = (platform: string) => {
     const isConnected = getConnectionStatus(platform);
+    const connection = connections.find(conn => conn.platform === platform);
+    const hasLimitedAccess = connection?.meta_data?.limited_access;
     
     if (isConnected) {
       return (
@@ -82,15 +82,22 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
             size="sm"
             onClick={() => {
               // Show details for already connected account
-              const connection = connections.find(conn => conn.platform === platform);
               if (connection) {
                 setSelectedConnection(connection);
                 setIsModalOpen(true);
               }
             }}
             disabled={isLoading || oauthPending}
+            className={hasLimitedAccess ? "text-amber-500 border-amber-200" : ""}
           >
-            Connected
+            {hasLimitedAccess ? (
+              <>
+                <AlertTriangle className="h-4 w-4 mr-1" />
+                Limited Access
+              </>
+            ) : (
+              "Connected"
+            )}
           </Button>
           <Button 
             variant="outline" 
@@ -129,6 +136,15 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
         </Alert>
       )}
       
+      {(isAdmin) && (
+        <Alert className="mb-4 border-amber-200 text-amber-800 bg-amber-50">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Instagram and Facebook advanced integrations require app approval from Meta. Until then, only basic profile information can be accessed.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <Card>
         <CardHeader>
           <CardTitle>Social Media Accounts</CardTitle>
@@ -149,6 +165,27 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
             <EditableText
               id={`${isAdmin ? 'admin' : 'user'}-instagram-description`}
               defaultContent="Connect your Instagram account to share your food experiences and attract more followers."
+              className="text-sm text-gray-600"
+            />
+            {connections.find(conn => conn.platform === "Instagram")?.meta_data?.limited_access && (
+              <div className="mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded-sm">
+                <span className="font-semibold">Limited Access:</span> Full Instagram integration requires app review by Meta. Currently operating with basic access.
+              </div>
+            )}
+          </div>
+
+          {/* Facebook */}
+          <div className="border rounded-md p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <Facebook className="h-5 w-5 text-blue-600" />
+                <h3 className="font-medium">Facebook Page</h3>
+              </div>
+              {renderConnectionButton("Facebook")}
+            </div>
+            <EditableText
+              id={`${isAdmin ? 'admin' : 'user'}-facebook-description`}
+              defaultContent="Connect your Facebook page to expand your presence and share events with your community."
               className="text-sm text-gray-600"
             />
           </div>
@@ -181,22 +218,6 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
             <EditableText
               id={`${isAdmin ? 'admin' : 'user'}-youtube-description`}
               defaultContent="Connect your YouTube channel to share videos and grow your audience."
-              className="text-sm text-gray-600"
-            />
-          </div>
-
-          {/* Facebook */}
-          <div className="border rounded-md p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <Facebook className="h-5 w-5 text-blue-600" />
-                <h3 className="font-medium">Facebook Page</h3>
-              </div>
-              {renderConnectionButton("Facebook")}
-            </div>
-            <EditableText
-              id={`${isAdmin ? 'admin' : 'user'}-facebook-description`}
-              defaultContent="Connect your Facebook page to expand your presence and share events with your community."
               className="text-sm text-gray-600"
             />
           </div>
