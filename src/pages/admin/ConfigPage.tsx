@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useToast } from '@/hooks/use-toast';
@@ -10,6 +9,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { supabase } from '@/integrations/supabase/client';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface ConfigFormValues {
   EVENT_CREATION_FEE: string;
@@ -31,6 +32,7 @@ const ConfigPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("general");
   const [configs, setConfigs] = useState<ConfigItem[]>([]);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   
   const form = useForm<ConfigFormValues>({
     defaultValues: {
@@ -45,6 +47,8 @@ const ConfigPage = () => {
   useEffect(() => {
     const fetchConfigs = async () => {
       setIsLoading(true);
+      setFetchError(null);
+      
       try {
         // First get configs from admin_config (new implementation)
         const { data: adminConfigData, error: adminConfigError } = await supabase
@@ -56,8 +60,18 @@ const ConfigPage = () => {
           .from('app_config')
           .select('*');
         
-        if (adminConfigError && appConfigError) {
-          throw new Error("Failed to load configuration from either table");
+        // Check if we got data from either table
+        const hasAdminConfigData = adminConfigData && adminConfigData.length > 0;
+        const hasAppConfigData = appConfigData && appConfigData.length > 0;
+        
+        if (!hasAdminConfigData && !hasAppConfigData) {
+          console.warn("No configuration data found in either table");
+          setFetchError("No configuration data found. Using default values.");
+          // Continue with default values
+        } else if (adminConfigError && appConfigError) {
+          console.error("Failed to load configuration:", { adminConfigError, appConfigError });
+          setFetchError("Failed to load configuration from database. Using default values.");
+          // Continue with default values
         }
         
         // Combine and process the data
@@ -133,11 +147,8 @@ const ConfigPage = () => {
         form.reset(configMap as unknown as ConfigFormValues);
       } catch (error: any) {
         console.error('Error fetching configs:', error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to load configuration",
-          variant: "destructive"
-        });
+        setFetchError(error.message || "Failed to load configuration. Using default values.");
+        // We don't reset the form here as we're using default values
       } finally {
         setIsLoading(false);
       }
@@ -151,7 +162,11 @@ const ConfigPage = () => {
       setIsLoading(true);
       
       // Get current user session
-      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        throw new Error("Authentication required: " + sessionError.message);
+      }
+      
       if (!sessionData.session) {
         throw new Error("Authentication required");
       }
@@ -224,6 +239,9 @@ const ConfigPage = () => {
         title: "Configuration updated",
         description: "The changes have been saved successfully"
       });
+      
+      // Clear any previous error
+      setFetchError(null);
     } catch (error: any) {
       console.error('Error updating config:', error);
       toast({
@@ -239,6 +257,14 @@ const ConfigPage = () => {
   return (
     <AdminLayout>
       <h1 className="text-2xl font-bold mb-6">System Configuration</h1>
+      
+      {fetchError && (
+        <Alert variant="warning" className="mb-6">
+          <AlertTriangle className="h-5 w-5" />
+          <AlertTitle>Warning</AlertTitle>
+          <AlertDescription>{fetchError}</AlertDescription>
+        </Alert>
+      )}
       
       {isLoading && configs.length === 0 ? (
         <div className="flex justify-center py-8">

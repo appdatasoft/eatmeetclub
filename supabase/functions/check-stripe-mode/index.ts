@@ -41,6 +41,11 @@ serve(async (req) => {
       });
     }
     
+    // Log the error but don't fail yet, try the fallback
+    if (adminConfigError) {
+      console.warn("Failed to fetch from admin_config:", adminConfigError);
+    }
+    
     // Fall back to older app_config table if needed
     const { data, error } = await supabase
       .from("app_config")
