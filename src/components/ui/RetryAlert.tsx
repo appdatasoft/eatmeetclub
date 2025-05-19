@@ -7,16 +7,55 @@ interface RetryAlertProps {
   message: string;
   onRetry: () => void;
   isRetrying?: boolean;
+  title?: string;
+  severity?: 'warning' | 'error' | 'info';
+  showSpinner?: boolean;
 }
 
-const RetryAlert = ({ message, onRetry, isRetrying = false }: RetryAlertProps) => {
+const RetryAlert = ({ 
+  message, 
+  onRetry, 
+  isRetrying = false, 
+  title = "Connection Error",
+  severity = 'warning',
+  showSpinner = true
+}: RetryAlertProps) => {
+  const severityClasses = {
+    warning: {
+      bg: 'bg-amber-50',
+      border: 'border-amber-200',
+      text: 'text-amber-800',
+      description: 'text-amber-700',
+      icon: 'text-amber-500',
+      button: 'bg-white hover:bg-amber-50 text-amber-700 border-amber-300'
+    },
+    error: {
+      bg: 'bg-red-50',
+      border: 'border-red-200',
+      text: 'text-red-800',
+      description: 'text-red-700',
+      icon: 'text-red-500',
+      button: 'bg-white hover:bg-red-50 text-red-700 border-red-300'
+    },
+    info: {
+      bg: 'bg-blue-50',
+      border: 'border-blue-200',
+      text: 'text-blue-800',
+      description: 'text-blue-700',
+      icon: 'text-blue-500',
+      button: 'bg-white hover:bg-blue-50 text-blue-700 border-blue-300'
+    }
+  };
+  
+  const classes = severityClasses[severity];
+
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-4">
+    <div className={`${classes.bg} border ${classes.border} rounded-md p-4 mb-4`}>
       <div className="flex items-start">
-        <AlertCircle className="h-5 w-5 text-amber-500 mr-3 mt-0.5" />
+        <AlertCircle className={`h-5 w-5 ${classes.icon} mr-3 mt-0.5`} />
         <div className="flex-1">
-          <h3 className="text-sm font-medium text-amber-800">Connection Error</h3>
-          <div className="mt-1 text-sm text-amber-700">
+          <h3 className={`text-sm font-medium ${classes.text}`}>{title}</h3>
+          <div className={`mt-1 text-sm ${classes.description}`}>
             <p>{message}</p>
           </div>
           <div className="mt-3">
@@ -25,11 +64,11 @@ const RetryAlert = ({ message, onRetry, isRetrying = false }: RetryAlertProps) =
               variant="outline" 
               onClick={onRetry}
               disabled={isRetrying}
-              className="bg-white hover:bg-amber-50 text-amber-700 border-amber-300"
+              className={classes.button}
             >
               {isRetrying ? (
                 <>
-                  <RefreshCcw className="mr-2 h-3 w-3 animate-spin" />
+                  {showSpinner && <RefreshCcw className="mr-2 h-3 w-3 animate-spin" />}
                   <span>Retrying...</span>
                 </>
               ) : (

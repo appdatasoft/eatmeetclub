@@ -8,7 +8,7 @@ interface DashboardLoadingStateProps {
 const DashboardLoadingState = ({ message = "Loading your dashboard..." }: DashboardLoadingStateProps) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh]">
-      <LoadingSpinner size="medium" text={message} />
+      <LoadingSpinner size="md" text={message} />
     </div>
   );
 };

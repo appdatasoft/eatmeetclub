@@ -112,10 +112,10 @@ const RestaurantMenu = () => {
       <div className="space-y-6">
         {/* Warning alert for rate limiting issues */}
         <RetryAlert
-          title="Connection Issues"
           message="We're experiencing high server load. If you encounter loading issues, please use the retry button."
           onRetry={handleRetry}
           isRetrying={isManualRetry}
+          title="Connection Issues"
           severity="info"
           showSpinner={false}
         />

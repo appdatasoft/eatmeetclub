@@ -277,7 +277,7 @@ const UserProfilePage: React.FC = () => {
     return (
       <MainLayout>
         <div className="container-custom py-12 flex items-center justify-center">
-          <LoadingSpinner size="large" text="Loading authentication..." />
+          <LoadingSpinner size="lg" text="Loading authentication..." />
         </div>
       </MainLayout>
     );
@@ -341,10 +341,10 @@ const UserProfilePage: React.FC = () => {
       <MainLayout>
         <div className="container-custom py-12">
           <RetryAlert
-            title="Failed to load profile"
             message={error}
             onRetry={handleRetry}
             isRetrying={isRetrying}
+            title="Failed to load profile"
             severity="error"
           />
           <div className="text-center mt-8">
