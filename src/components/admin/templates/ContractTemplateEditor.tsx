@@ -15,6 +15,7 @@ import {
 import { Save, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from '@/hooks/use-toast';
 
 interface ContractTemplateEditorProps {
   templateType: 'venue' | 'salesRep' | 'ticket';
@@ -24,6 +25,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
   const [template, setTemplate] = useState<string>('');
   const [selectedField, setSelectedField] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState<boolean>(false);
+  const { toast } = useToast();
   
   const { 
     templateData, 
@@ -41,11 +43,39 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
   }, [templateData]);
 
   const handleSave = async () => {
-    if (!templateData?.id) {
-      console.error("No template data available");
-      return;
+    try {
+      if (!templateData?.id) {
+        console.error("No template data available");
+        toast({
+          title: "Error",
+          description: "No template selected to save",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log("Saving template:", {
+        id: templateData.id,
+        content: template,
+        type: templateType
+      });
+      
+      const result = await saveTemplate(template);
+      
+      if (result) {
+        toast({
+          title: "Success",
+          description: "Template saved successfully"
+        });
+      }
+    } catch (error) {
+      console.error("Error in handleSave:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save template",
+        variant: "destructive"
+      });
     }
-    await saveTemplate(template);
   };
 
   const handleInsertField = () => {

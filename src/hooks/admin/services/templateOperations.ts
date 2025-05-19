@@ -14,12 +14,14 @@ export const useTemplateOperations = () => {
     try {
       const apiTemplateType = mapToAPITemplateType(templateType);
       
+      console.log("Fetching templates for type:", apiTemplateType);
       const response = await templates.getAll(apiTemplateType);
       
       if (response.error) {
         throw new Error(response.error.message);
       }
 
+      console.log("Fetched templates:", response.data);
       // Convert the response data to our local ContractTemplate type
       return (response.data || []) as ContractTemplate[];
     } catch (err: any) {
@@ -32,14 +34,26 @@ export const useTemplateOperations = () => {
     try {
       const apiTemplateType = mapToAPITemplateType(templateType);
       
-      const response = await templates.update(templateId, { 
+      console.log("Saving template with ID:", templateId);
+      console.log("Template content:", content);
+      console.log("Template type:", apiTemplateType);
+      
+      // Create a properly formatted update payload
+      const updatePayload = { 
         content,
         type: apiTemplateType
-      });
+      };
+      
+      console.log("Update payload:", updatePayload);
+      
+      const response = await templates.update(templateId, updatePayload);
       
       if (response.error) {
+        console.error("API error response:", response.error);
         throw new Error(response.error.message);
       }
+      
+      console.log("Template save response:", response);
       
       toast({
         title: "Template Saved",
@@ -99,9 +113,13 @@ export const useTemplateOperations = () => {
 
   const updateTemplate = async (id: string, template: Partial<ContractTemplate>): Promise<boolean> => {
     try {
+      console.log("Updating template with ID:", id);
+      console.log("Update data:", template);
+      
       const response = await templates.update(id, template);
       
       if (response.error) {
+        console.error("API error response:", response.error);
         throw new Error(response.error.message);
       }
       

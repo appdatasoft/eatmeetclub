@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -70,6 +71,12 @@ export const useContractTemplates = (templateType: string) => {
     setIsSaving(true);
     
     try {
+      console.log("Saving template:", { 
+        id: templateData.id,
+        content,
+        templateType 
+      });
+      
       const result = await templateOperations.saveTemplate(
         templateData.id, 
         content,
