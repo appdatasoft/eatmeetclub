@@ -101,10 +101,10 @@ export const useInlineEdit = () => {
       try {
         const cached = sessionStorage.getItem(cacheKey);
         if (cached) {
-          const { data, expiry } = JSON.parse(cached);
-          if (expiry > Date.now()) {
+          const parsedCache = JSON.parse(cached);
+          if (parsedCache.expiry > Date.now()) {
             console.log(`Using cached content for ${page_path}`);
-            return data as Record<string, EditableContent>;
+            return parsedCache.data as Record<string, EditableContent>;
           }
         }
       } catch (e) {
@@ -112,7 +112,7 @@ export const useInlineEdit = () => {
       }
       
       // Fetch with retry and safe response handling
-      const { data, error } = await fetchWithRetry(
+      const result = await fetchWithRetry(
         async () => {
           return await supabase
             .from('page_content')
@@ -125,13 +125,16 @@ export const useInlineEdit = () => {
         }
       );
       
-      if (error) {
-        console.error("Error fetching content:", error);
-        throw error;
+      // Handle the response data safely
+      if (result.error) {
+        console.error("Error fetching content:", result.error);
+        throw result.error;
       }
       
+      const data = result.data;
+      
       // Convert array to object with element_id as keys
-      if (data) {
+      if (data && Array.isArray(data)) {
         data.forEach(item => {
           contentMap[item.element_id] = item as EditableContent;
         });
@@ -145,6 +148,8 @@ export const useInlineEdit = () => {
         } catch (e) {
           console.warn('Cache write error:', e);
         }
+      } else {
+        console.warn('Unexpected response format from page_content query:', data);
       }
       
       return contentMap;

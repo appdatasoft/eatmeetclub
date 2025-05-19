@@ -128,12 +128,7 @@ export const useEventFetching = (eventId?: string) => {
         } else {
           console.log("Background refresh found no changes");
           // Update the cache expiry anyway
-          if ('refresh' in cache) {
-            (cache as any).refresh();
-          } else {
-            // Fallback if refresh method doesn't exist: set the same data again to update expiry
-            cache.set(currentEvent);
-          }
+          cache.refresh();
         }
       }
     } catch (error) {

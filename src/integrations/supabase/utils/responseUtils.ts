@@ -1,3 +1,4 @@
+
 /**
  * Helper functions for handling responses in a safe way
  * This is critical to prevent "body stream already read" errors
@@ -21,9 +22,6 @@ export const handleResponse = async (response: Response): Promise<Response> => {
     const contentType = response.headers.get('content-type');
     let responseData;
     
-    // Clone the response to avoid "body already read" errors
-    const clonedResponse = response.clone();
-    
     // Handle empty responses first to avoid JSON parse errors
     if (response.status === 204 || response.headers.get('content-length') === '0') {
       responseData = {};
@@ -33,6 +31,9 @@ export const handleResponse = async (response: Response): Promise<Response> => {
       });
       return createResponseFromCache(responseData, response.status, response.headers, contentType);
     }
+    
+    // Always clone before reading the body
+    const clonedResponse = response.clone();
     
     if (contentType && contentType.includes('application/json')) {
       try {
@@ -170,10 +171,13 @@ export const extractResponseData = async <T>(response: Response): Promise<T> => 
       return {} as T;
     }
     
+    // Always clone the response before reading the body
+    const clonedResponse = response.clone();
+    
     if (contentType && contentType.includes('application/json')) {
       try {
         // First check if there's any content to parse
-        const text = await response.clone().text();
+        const text = await clonedResponse.text();
         if (!text || text.trim() === '') {
           return {} as T;
         }
@@ -189,7 +193,7 @@ export const extractResponseData = async <T>(response: Response): Promise<T> => 
         return {} as T;
       }
     } else {
-      const text = await response.text();
+      const text = await clonedResponse.text();
       if (!text || text.trim() === '') {
         return {} as T;
       }
@@ -213,7 +217,9 @@ export const extractResponseText = async (response: Response): Promise<string> =
       throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
     }
     
-    return await response.text();
+    // Always clone the response before reading the body
+    const clonedResponse = response.clone();
+    return await clonedResponse.text();
   } catch (error) {
     console.error("Failed to extract response text:", error);
     throw error;
@@ -237,9 +243,12 @@ export const getResponseData = async <T>(
     const contentType = response.headers.get('Content-Type');
     let data: T;
     
+    // Clone the response before reading it
+    const clonedResponse = response.clone();
+    
     if (contentType && contentType.includes('application/json')) {
       try {
-        data = await response.json() as T;
+        data = await clonedResponse.json() as T;
       } catch (jsonError) {
         console.error("JSON parse error:", jsonError);
         // Handle empty or malformed JSON responses
@@ -255,7 +264,7 @@ export const getResponseData = async <T>(
         }
       }
     } else {
-      const text = await response.text();
+      const text = await clonedResponse.text();
       try {
         data = JSON.parse(text) as T;
       } catch {

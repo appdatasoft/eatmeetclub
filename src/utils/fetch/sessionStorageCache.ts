@@ -10,6 +10,12 @@ interface CacheOptions {
   useLocalStorage?: boolean; // Use localStorage instead of sessionStorage
 }
 
+interface CacheEntry<T> {
+  data: T;
+  expiry: number;
+  timestamp: number;
+}
+
 export const createSessionCache = <T>(
   key: string, 
   ttl = 5 * 60 * 1000, // Default 5 minute TTL
@@ -22,14 +28,14 @@ export const createSessionCache = <T>(
   } = options;
   
   const storage = useLocalStorage ? localStorage : sessionStorage;
-  const memoryCache = new Map<string, any>();
+  const memoryCache = new Map<string, CacheEntry<T>>();
   const storageKey = `${storagePrefix}${key}`;
   
   // Helper function to safely parse JSON
-  const safeJSONParse = (data: string | null) => {
+  const safeJSONParse = (data: string | null): CacheEntry<T> | null => {
     if (!data) return null;
     try {
-      return JSON.parse(data);
+      return JSON.parse(data) as CacheEntry<T>;
     } catch (e) {
       console.warn(`Invalid JSON in cache: ${storageKey}`);
       return null;
@@ -42,7 +48,7 @@ export const createSessionCache = <T>(
      */
     set: (data: T): void => {
       try {
-        const cacheEntry = {
+        const cacheEntry: CacheEntry<T> = {
           data,
           expiry: Date.now() + ttl,
           timestamp: Date.now()
@@ -164,7 +170,7 @@ export const createSessionCache = <T>(
      */
     refresh: (): void => {
       try {
-        // Get current cached data
+        // Get current cached data from memory first
         const memoryCachedItem = memoryCache.get(key);
         if (memoryCachedItem) {
           // Update expiry time
@@ -177,18 +183,19 @@ export const createSessionCache = <T>(
           } catch (storageError) {
             console.warn('Failed to refresh item in sessionStorage:', storageError);
           }
-        } else {
-          // Check storage if not in memory
-          const storedItem = storage.getItem(storageKey);
-          if (storedItem) {
-            const cachedItem = safeJSONParse(storedItem);
-            if (cachedItem) {
-              cachedItem.expiry = Date.now() + ttl;
-              
-              // Update both memory and storage
-              memoryCache.set(key, cachedItem);
-              storage.setItem(storageKey, JSON.stringify(cachedItem));
-            }
+          return;
+        }
+        
+        // If not in memory, check storage
+        const storedItem = storage.getItem(storageKey);
+        if (storedItem) {
+          const cachedItem = safeJSONParse(storedItem);
+          if (cachedItem) {
+            cachedItem.expiry = Date.now() + ttl;
+            
+            // Update both memory and storage
+            memoryCache.set(key, cachedItem);
+            storage.setItem(storageKey, JSON.stringify(cachedItem));
           }
         }
       } catch (error) {
