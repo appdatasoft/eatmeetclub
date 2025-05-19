@@ -11,7 +11,7 @@ interface EditableImageProps {
   defaultImage?: string;
   className?: string;
   alt?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'custom';
   shape?: 'circle' | 'square' | 'rounded';
 }
 
@@ -29,11 +29,12 @@ const EditableImage: React.FC<EditableImageProps> = ({
   // Get image from contentMap if it exists, otherwise use default
   const imageUrl = contentMap[id]?.content || defaultImage;
   
-  // Size classes
+  // Size classes - only apply if not using custom className for sizing
   const sizeClasses = {
     sm: 'w-12 h-12',
     md: 'w-16 h-16',
     lg: 'w-24 h-24',
+    custom: '', // Custom size will be defined in className
   };
   
   // Shape classes
@@ -45,7 +46,7 @@ const EditableImage: React.FC<EditableImageProps> = ({
   
   // Placeholder for when no image is available
   const placeholderBg = 'bg-brand-100 flex items-center justify-center';
-  const placeholderContent = <Image className="text-brand-500" size={size === 'sm' ? 16 : size === 'md' ? 24 : 32} />;
+  const placeholderContent = <Image className="text-brand-500" size={size === 'sm' ? 16 : size === 'md' ? 24 : size === 'lg' ? 32 : 48} />;
   
   // Handle saving the uploaded image
   const handleSaveImage = async (url: string) => {
@@ -78,6 +79,9 @@ const EditableImage: React.FC<EditableImageProps> = ({
     return null;
   }
   
+  // Use the appropriate size class if not custom
+  const appliedSizeClass = size === 'custom' ? '' : sizeClasses[size];
+  
   return (
     <>
       <div className={`group relative ${editModeEnabled ? 'outline outline-1 outline-dashed outline-blue-300 hover:outline-blue-500' : ''}`}>
@@ -85,10 +89,10 @@ const EditableImage: React.FC<EditableImageProps> = ({
           <img
             src={imageUrl}
             alt={alt}
-            className={`${sizeClasses[size]} ${shapeClasses[shape]} object-cover ${className}`}
+            className={`${appliedSizeClass} ${shapeClasses[shape]} object-cover ${className}`}
           />
         ) : (
-          <div className={`${sizeClasses[size]} ${shapeClasses[shape]} ${placeholderBg} ${className}`}>
+          <div className={`${appliedSizeClass} ${shapeClasses[shape]} ${placeholderBg} ${className}`}>
             {placeholderContent}
           </div>
         )}

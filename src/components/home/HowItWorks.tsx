@@ -26,18 +26,18 @@ const HowItWorks = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-5xl mx-auto">
           <div className="flex flex-col items-center text-center">
-            <div className="mb-4 relative">
+            <div className="mb-6 relative w-48 h-48">
               <EditableImage
                 id="step-1-image"
-                size="lg"
+                size="custom"
                 shape="circle"
-                className="bg-brand-100"
+                className="w-48 h-48 bg-brand-100"
                 alt="Step 1"
                 defaultImage=""
               />
               {!editModeEnabled && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <span className="text-brand-500 text-2xl font-bold">1</span>
+                  <span className="text-brand-500 text-3xl font-bold">1</span>
                 </div>
               )}
             </div>
@@ -56,18 +56,18 @@ const HowItWorks = () => {
           </div>
           
           <div className="flex flex-col items-center text-center">
-            <div className="mb-4 relative">
+            <div className="mb-6 relative w-48 h-48">
               <EditableImage
                 id="step-2-image"
-                size="lg"
+                size="custom"
                 shape="circle"
-                className="bg-brand-100"
+                className="w-48 h-48 bg-brand-100"
                 alt="Step 2"
                 defaultImage=""
               />
               {!editModeEnabled && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <span className="text-brand-500 text-2xl font-bold">2</span>
+                  <span className="text-brand-500 text-3xl font-bold">2</span>
                 </div>
               )}
             </div>
@@ -86,18 +86,18 @@ const HowItWorks = () => {
           </div>
           
           <div className="flex flex-col items-center text-center">
-            <div className="mb-4 relative">
+            <div className="mb-6 relative w-48 h-48">
               <EditableImage
                 id="step-3-image"
-                size="lg"
+                size="custom"
                 shape="circle"
-                className="bg-brand-100"
+                className="w-48 h-48 bg-brand-100"
                 alt="Step 3"
                 defaultImage=""
               />
               {!editModeEnabled && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <span className="text-brand-500 text-2xl font-bold">3</span>
+                  <span className="text-brand-500 text-3xl font-bold">3</span>
                 </div>
               )}
             </div>
