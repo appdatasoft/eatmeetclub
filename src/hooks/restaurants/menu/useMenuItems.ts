@@ -1,10 +1,9 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
 import { useMenuItemMedia } from '@/hooks/restaurants/menu/useMenuItemMedia';
 import { useMenuItemsProcessor } from './useMenuItemsProcessor';
-import { fetchWithRetry } from '@/utils/fetch';
+import { fetchWithRetry } from '@/utils/fetchUtils';
 import { useToast } from '@/hooks/use-toast';
 import { createSessionCache } from '@/utils/fetch/sessionStorageCache';
 
@@ -158,9 +157,7 @@ export const useMenuItems = (restaurantId: string | undefined, retryTrigger: num
     // Clear the cache to force a fresh fetch
     if (restaurantId) {
       const cacheKey = `menu_items_${restaurantId}`;
-      const cache = createSessionCache<MenuItem[]>(cacheKey, 0, {
-        staleWhileRevalidate: false
-      });
+      const cache = createSessionCache<MenuItem[]>(cacheKey, 0);
       cache.remove();
     }
     
