@@ -38,8 +38,15 @@ export const handleResponse = async (response: Response): Promise<Response> => {
         const textResponse = await response.clone().text();
         console.log("Raw response text:", textResponse);
         
-        // If the text is empty, return an empty JSON object
-        responseData = textResponse ? JSON.parse(textResponse) : {};
+        // If the text is empty or invalid JSON, return an empty object to prevent parsing errors
+        try {
+          responseData = textResponse ? JSON.parse(textResponse) : {};
+        } catch (parseError) {
+          console.error("Failed to parse response as JSON:", parseError);
+          // Return an empty object or array as fallback
+          responseData = textResponse ? { rawText: textResponse } : {};
+        }
+        
         responseBodyCache.set(cacheKey, {
           type: 'json',
           data: responseData
@@ -101,7 +108,16 @@ export const createResponseFromCache = (
     newHeaders.set('Content-Type', 'application/json');
   }
   
-  const body = typeof data === 'object' ? JSON.stringify(data) : String(data);
+  // Safely stringify the body data with fallbacks for circular references
+  let body;
+  try {
+    body = typeof data === 'object' ? JSON.stringify(data) : String(data);
+  } catch (stringifyError) {
+    console.error("Error stringifying response data:", stringifyError);
+    // Provide a fallback response if JSON stringify fails
+    body = JSON.stringify({ error: "Failed to stringify response data" });
+  }
+  
   return new Response(body, {
     status,
     headers: newHeaders
@@ -111,9 +127,33 @@ export const createResponseFromCache = (
 // Safely extract JSON from a response without causing "body stream already read" errors
 export const extractResponseData = async <T>(response: Response): Promise<T> => {
   try {
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    }
+    
     const contentType = response.headers.get('Content-Type');
+    
+    // Handle empty responses
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return {} as T;
+    }
+    
     if (contentType && contentType.includes('application/json')) {
-      return await response.json() as T;
+      try {
+        return await response.json() as T;
+      } catch (jsonError) {
+        console.error("Failed to parse JSON response:", jsonError);
+        // Try to get text and parse it manually
+        const text = await response.clone().text();
+        if (!text) {
+          return {} as T;
+        }
+        try {
+          return JSON.parse(text) as T;
+        } catch {
+          return text as unknown as T;
+        }
+      }
     } else {
       const text = await response.text();
       try {
@@ -131,6 +171,10 @@ export const extractResponseData = async <T>(response: Response): Promise<T> => 
 // Helper to safely read text from a response
 export const extractResponseText = async (response: Response): Promise<string> => {
   try {
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    }
+    
     return await response.text();
   } catch (error) {
     console.error("Failed to extract response text:", error);
@@ -156,7 +200,22 @@ export const getResponseData = async <T>(
     let data: T;
     
     if (contentType && contentType.includes('application/json')) {
-      data = await response.json() as T;
+      try {
+        data = await response.json() as T;
+      } catch (jsonError) {
+        console.error("JSON parse error:", jsonError);
+        // Handle empty or malformed JSON responses
+        const text = await response.clone().text();
+        console.log("Response text content:", text.substring(0, 100) + (text.length > 100 ? '...' : ''));
+        
+        try {
+          data = text ? JSON.parse(text) as T : {} as T;
+        } catch (parseError) {
+          console.warn("Secondary JSON parse error:", parseError);
+          // Return empty object as fallback
+          data = {} as T;
+        }
+      }
     } else {
       const text = await response.text();
       try {
