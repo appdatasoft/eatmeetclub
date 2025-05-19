@@ -1,4 +1,3 @@
-
 /**
  * Helper functions for handling responses in a safe way
  * This is critical to prevent "body stream already read" errors
@@ -55,19 +54,28 @@ export const createResponseFromCache = (
   headers?: Headers,
   contentType?: string | null
 ): Response => {
-  const responseInit: ResponseInit = {
-    status,
-    headers: new Headers(headers)
-  };
+  // Create a new headers object
+  const newHeaders = new Headers();
   
+  // Copy all headers if they exist
+  if (headers) {
+    headers.forEach((value, key) => {
+      newHeaders.set(key, value);
+    });
+  }
+  
+  // Set content type if provided
   if (contentType) {
-    responseInit.headers?.set('Content-Type', contentType);
+    newHeaders.set('Content-Type', contentType);
   } else if (typeof data === 'object') {
-    responseInit.headers?.set('Content-Type', 'application/json');
+    newHeaders.set('Content-Type', 'application/json');
   }
   
   const body = typeof data === 'object' ? JSON.stringify(data) : String(data);
-  return new Response(body, responseInit);
+  return new Response(body, {
+    status,
+    headers: newHeaders
+  });
 };
 
 // Safely extract JSON from a response without causing "body stream already read" errors

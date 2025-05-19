@@ -92,7 +92,8 @@ const UserProfilePage: React.FC = () => {
       
       try {
         // Check if viewing own profile
-        const isSelfProfile = currentUser && ((!id && currentUser) || id === currentUser.id);
+        // Use !! to ensure this is a boolean rather than User object
+        const isSelfProfile = !!currentUser && ((!id && currentUser) || id === currentUser.id);
         if (isSelfProfile) {
           console.log("User is viewing their own profile");
           setIsSelf(true);
