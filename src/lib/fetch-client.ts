@@ -1,439 +1,238 @@
 
 /**
- * Enhanced fetch client with performance optimization, caching, and retry logic
+ * Enhanced Fetch Client with optimized performance
  */
 
-import { createSessionCache } from '@/utils/fetch/sessionStorageCache';
+import { createSessionCache } from "@/utils/fetch/sessionStorageCache";
+import { supabase } from "@/integrations/supabase/client";
 
-// Configuration types
-export interface FetchClientOptions extends RequestInit {
-  retries?: number;
-  cacheTime?: number; // in ms
-  staleTime?: number; // in ms
-  disableCache?: boolean;
-  cachePriority?: 'memory' | 'storage' | 'both';
-  background?: boolean; // fetch in background without blocking UI
-  dedupe?: boolean; // deduplicate requests (default: true)
-  retryDelay?: number; // base delay in ms before retrying
-  maxDelay?: number; // max delay for exponential backoff
+export interface FetchClientOptions {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: any;
+  credentials?: RequestCredentials;
+  mode?: RequestMode;
+  cache?: RequestCache;
+  cacheTime?: number; // Time in ms to cache the response
+  retries?: number; // Number of retry attempts
+  retryDelay?: number; // Base delay between retries in ms
+  timeout?: number; // Request timeout in ms
+  fallbackToSupabase?: boolean; // Whether to try Supabase as fallback
+  supabseFallbackFn?: () => Promise<any>; // Function to call Supabase as fallback
 }
 
-// Response types
-export interface FetchResponse<T> {
+export interface FetchResponse<T = any> {
   data: T | null;
   error: Error | null;
-  status: number;
-  statusText: string;
-  headers: Headers;
-  isCached: boolean;
-  isStale: boolean;
+  status?: number;
+  headers?: Headers;
 }
 
-// Memory cache implementation
-const memoryCache = new Map<string, {
-  data: any;
-  expiry: number; // absolute expiry time
-  staleAt: number; // when the data becomes stale but still usable
-  timestamp: number; // when the data was cached
-}>();
+// Cache for responses
+const responseCache = new Map<string, { data: any, expires: number }>();
 
-// Request deduplication registry
-const pendingRequests = new Map<string, Promise<FetchResponse<any>>>();
+// Generate a cache key from request details
+const getCacheKey = (url: string, options: FetchClientOptions = {}): string => {
+  const { method = 'GET', body } = options;
+  const bodyStr = body ? JSON.stringify(body) : '{}';
+  return `${method}:${url}:${bodyStr}`;
+};
 
-// Configuration constants
-const DEFAULT_RETRY_DELAY = 800; // ms
-const DEFAULT_MAX_DELAY = 8000; // ms
-const DEFAULT_CACHE_TIME = 60 * 1000; // 1 minute
-const DEFAULT_STALE_TIME = 30 * 1000; // 30 seconds
+// Prefetch data to improve perceived performance
+export const prefetch = (url: string, options: FetchClientOptions = {}): void => {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), 8000); // 8 second timeout
+  
+  fetchClient(url, { 
+    ...options, 
+    signal: controller.signal,
+    priority: 'low' as any // TypeScript doesn't recognize this fetch option yet
+  }).catch(() => {
+    // Silently ignore prefetch errors
+  });
+};
 
-/**
- * Enhanced fetch client with caching, retries, and performance optimization
- */
-export async function fetchClient<T = any>(
-  url: string, 
-  options: FetchClientOptions = {}
-): Promise<FetchResponse<T>> {
+// Clear cache for a specific key or all cache if no key provided
+export const clearCache = (key?: string): void => {
+  if (key) {
+    responseCache.delete(key);
+  } else {
+    responseCache.clear();
+  }
+};
+
+// Main fetch client function with optimized retry logic and caching
+export const fetchClient = async <T = any>(
+  url: string,
+  options: FetchClientOptions & { signal?: AbortSignal } = {}
+): Promise<FetchResponse<T>> => {
   const {
+    method = 'GET',
+    headers = {},
+    body,
+    credentials = 'same-origin',
+    mode = 'cors',
+    cache = 'no-cache',
+    cacheTime = 60000, // Default 1 minute cache
     retries = 2,
-    cacheTime = DEFAULT_CACHE_TIME,
-    staleTime = DEFAULT_STALE_TIME,
-    disableCache = false,
-    cachePriority = 'both',
-    background = false,
-    dedupe = true,
-    retryDelay = DEFAULT_RETRY_DELAY,
-    maxDelay = DEFAULT_MAX_DELAY,
-    ...fetchOptions
+    retryDelay = 800,
+    timeout = 10000, // 10 second timeout
+    fallbackToSupabase = false,
+    supabseFallbackFn,
+    signal,
   } = options;
 
-  // Create a unique cache key
-  const method = fetchOptions.method?.toUpperCase() || 'GET';
-  const cacheKey = `${method}:${url}:${JSON.stringify(fetchOptions.body || {})}`;
-
-  // Only deduplicate GET requests or if explicitly requested
-  if (dedupe && (method === 'GET' || options.dedupe)) {
-    const existingRequest = pendingRequests.get(cacheKey);
-    if (existingRequest) {
-      return existingRequest;
+  // Create cache key for this request
+  const cacheKey = getCacheKey(url, options);
+  
+  // Use session storage for more persistent caching
+  if (method === 'GET' && cacheTime > 0) {
+    const sessionCache = createSessionCache<T>(cacheKey, cacheTime);
+    const cachedData = sessionCache.get();
+    if (cachedData) {
+      return { data: cachedData, error: null };
     }
   }
+  
+  // Prepare request headers
+  const requestHeaders = new Headers(headers);
+  if (!requestHeaders.has('Content-Type') && body && typeof body === 'object') {
+    requestHeaders.set('Content-Type', 'application/json');
+  }
+  if (!requestHeaders.has('Accept')) {
+    requestHeaders.set('Accept', 'application/json');
+  }
 
-  // Function to execute the actual fetch with retries
-  const executeRequest = async (attemptsLeft: number, delay: number): Promise<FetchResponse<T>> => {
+  // Prepare request options
+  const fetchOptions: RequestInit = {
+    method,
+    headers: requestHeaders,
+    credentials,
+    mode,
+    cache,
+    signal,
+  };
+
+  // Add body if present
+  if (body) {
+    fetchOptions.body = typeof body === 'string' ? body : JSON.stringify(body);
+  }
+
+  // Fetch with retry logic
+  let attemptCount = 0;
+  let lastError: any = null;
+
+  while (attemptCount <= retries) {
     try {
-      console.log(`Fetching ${url} (${attemptsLeft} attempts left)`);
-      
-      // Add default headers if not provided
-      const headers = new Headers(fetchOptions.headers || {});
-      if (!headers.has('Accept')) {
-        headers.set('Accept', 'application/json');
-      }
-      
-      if (method !== 'GET' && !headers.has('Content-Type') && fetchOptions.body) {
-        headers.set('Content-Type', 'application/json');
-      }
+      // Create timeout controller
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+      // Use user-provided signal if available, otherwise use our timeout controller
+      const finalSignal = signal || controller.signal;
+      
+      // Execute fetch with timeout
       const response = await fetch(url, {
         ...fetchOptions,
-        headers,
-        method,
+        signal: finalSignal
       });
-
-      let data: T | null = null;
-      let error: Error | null = null;
-
-      if (response.ok) {
-        // Only try to parse if there's content
-        if (response.status !== 204) { // No Content
-          try {
-            // Clone the response before reading to avoid "body already read" errors
-            const contentType = response.headers.get('content-type') || '';
-            
-            if (contentType.includes('application/json')) {
-              data = await response.clone().json();
-            } else if (contentType.includes('text/')) {
-              const text = await response.clone().text();
-              // Try to parse as JSON if it looks like JSON
-              if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
-                try {
-                  data = JSON.parse(text) as T;
-                } catch {
-                  data = text as unknown as T;
-                }
-              } else {
-                data = text as unknown as T;
-              }
-            } else {
-              // For other content types, just store response
-              data = { response } as unknown as T;
-            }
-          } catch (err) {
-            console.error('Error parsing response:', err);
-            error = new Error(`Failed to parse response: ${(err as Error).message}`);
-          }
-        }
-      } else {
-        // Handle error response
-        let errorMessage = `HTTP error ${response.status}: ${response.statusText}`;
-        
-        try {
-          const contentType = response.headers.get('content-type') || '';
-          if (contentType.includes('application/json')) {
-            const errorData = await response.clone().json();
-            errorMessage = errorData.message || errorData.error || errorMessage;
-          } else {
-            const errorText = await response.clone().text();
-            if (errorText) errorMessage += ` - ${errorText}`;
-          }
-        } catch {
-          // If we can't parse the error, use the status text
-        }
-        
-        error = new Error(errorMessage);
-      }
-
-      const result: FetchResponse<T> = {
-        data,
-        error,
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers,
-        isCached: false,
-        isStale: false
-      };
-
-      // For successful responses, update cache (if enabled and it's a GET request)
-      if (response.ok && !disableCache && method === 'GET') {
-        const now = Date.now();
-        
-        // Update memory cache
-        if (cachePriority === 'memory' || cachePriority === 'both') {
-          memoryCache.set(cacheKey, {
-            data,
-            expiry: now + cacheTime,
-            staleAt: now + staleTime,
-            timestamp: now
-          });
-        }
-        
-        // Update session storage cache
-        if (cachePriority === 'storage' || cachePriority === 'both') {
-          const storageCache = createSessionCache<T>(cacheKey, cacheTime, {
-            staleWhileRevalidate: true
-          });
-          storageCache.set(data as T);
-        }
-      }
-
-      return result;
-    } catch (err) {
-      // For network or other errors, retry if we have attempts left
-      if (attemptsLeft > 0) {
-        console.warn(`Request to ${url} failed, retrying in ${delay}ms...`, err);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        // Exponential backoff with jitter
-        const nextDelay = Math.min(delay * 1.5 * (0.9 + Math.random() * 0.2), maxDelay);
-        return executeRequest(attemptsLeft - 1, nextDelay);
-      }
       
-      // No attempts left, propagate the error
+      // Clear timeout
+      clearTimeout(timeoutId);
+
+      // Handle response
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      // Parse response
+      let data: T;
+      try {
+        data = await response.json();
+      } catch (e) {
+        // If not JSON, try to get text
+        const text = await response.text();
+        data = text as unknown as T;
+      }
+
+      // Cache successful response
+      if (method === 'GET' && cacheTime > 0) {
+        const sessionCache = createSessionCache<T>(cacheKey, cacheTime);
+        sessionCache.set(data);
+      }
+
       return {
-        data: null,
-        error: err instanceof Error ? err : new Error(String(err)),
-        status: 0,
-        statusText: 'Network Error',
-        headers: new Headers(),
-        isCached: false,
-        isStale: false
+        data,
+        error: null,
+        status: response.status,
+        headers: response.headers
       };
-    }
-  };
+    } catch (error: any) {
+      lastError = error;
+      attemptCount++;
 
-  // Function to check cache and execute the request if needed
-  const fetchWithCache = async (): Promise<FetchResponse<T>> => {
-    // Only use cache for GET requests
-    if (method !== 'GET' || disableCache) {
-      return executeRequest(retries, retryDelay);
-    }
-
-    // Check memory cache first (faster)
-    if (cachePriority === 'memory' || cachePriority === 'both') {
-      const cached = memoryCache.get(cacheKey);
-      const now = Date.now();
+      // Check if it's a timeout or abort error
+      if (error.name === 'AbortError') {
+        console.error(`Request to ${url} timed out`);
+        break; // Don't retry timeouts
+      }
       
-      if (cached) {
-        // If data is not expired, return it
-        if (cached.expiry >= now) {
-          console.log(`Using memory cached data for ${url}`);
-          return {
-            data: cached.data,
-            error: null,
-            status: 200,
-            statusText: 'OK (from cache)',
-            headers: new Headers(),
-            isCached: true,
-            isStale: cached.staleAt < now
-          };
-        }
-        
-        // If data is stale but we can use it temporarily
-        if (cached.staleAt < now && cached.expiry >= now) {
-          // If background refresh is enabled, trigger a refresh
-          if (background) {
-            console.log(`Using stale data for ${url}, refreshing in background`);
-            // Don't await, let it run in background
-            setTimeout(() => {
-              executeRequest(retries, 0).then(freshResult => {
-                // Update cache with fresh data
-                if (freshResult.data && !freshResult.error) {
-                  memoryCache.set(cacheKey, {
-                    data: freshResult.data,
-                    expiry: Date.now() + cacheTime,
-                    staleAt: Date.now() + staleTime,
-                    timestamp: Date.now()
-                  });
-                }
-              }).catch(() => {
-                // Silently fail for background refreshes
-              });
-            }, 0);
+      // Exit retry loop if we've reached max retries
+      if (attemptCount > retries) {
+        // Try fallback to Supabase if configured
+        if (fallbackToSupabase && supabseFallbackFn) {
+          try {
+            console.log(`Falling back to Supabase for ${url}`);
+            const data = await supabseFallbackFn();
+            
+            // Cache successful fallback response
+            if (method === 'GET' && cacheTime > 0) {
+              const sessionCache = createSessionCache<T>(cacheKey, cacheTime);
+              sessionCache.set(data);
+            }
+            
+            return { data, error: null };
+          } catch (fallbackError: any) {
+            console.error(`Supabase fallback failed for ${url}:`, fallbackError);
+            return {
+              data: null,
+              error: new Error(`Fetch and fallback failed: ${fallbackError.message}`)
+            };
           }
-          
-          return {
-            data: cached.data,
-            error: null,
-            status: 200,
-            statusText: 'OK (from stale cache)',
-            headers: new Headers(),
-            isCached: true,
-            isStale: true
-          };
         }
-        
-        // If expired, remove from cache
-        memoryCache.delete(cacheKey);
+        break;
       }
+
+      // Wait before retry with exponential backoff and jitter
+      const delay = retryDelay * Math.pow(2, attemptCount - 1) * (0.5 + Math.random() * 0.5);
+      console.log(`Retrying ${url} (${attemptCount}/${retries}) after ${delay}ms`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
-    
-    // Check session storage cache if enabled
-    if (cachePriority === 'storage' || cachePriority === 'both') {
-      const storageCache = createSessionCache<T>(cacheKey, cacheTime, {
-        staleWhileRevalidate: true
-      });
-      
-      const cachedData = storageCache.get();
-      if (cachedData) {
-        console.log(`Using storage cached data for ${url}`);
-        
-        const isStale = storageCache.isStale();
-        
-        // If stale and background refresh enabled, update in background
-        if (isStale && background) {
-          console.log(`Data is stale, refreshing in background`);
-          setTimeout(() => {
-            executeRequest(retries, 0).then(freshResult => {
-              if (freshResult.data && !freshResult.error) {
-                storageCache.set(freshResult.data);
-              }
-            }).catch(() => {
-              // Silently fail for background refreshes
-            });
-          }, 0);
-        }
-        
-        return {
-          data: cachedData,
-          error: null,
-          status: 200, 
-          statusText: isStale ? 'OK (from stale storage cache)' : 'OK (from storage cache)',
-          headers: new Headers(),
-          isCached: true,
-          isStale
-        };
-      }
-    }
-    
-    // No cache hit, execute the request
-    return executeRequest(retries, retryDelay);
+  }
+
+  return {
+    data: null,
+    error: lastError || new Error('Request failed'),
   };
+};
 
-  // Create the promise for this request
-  const requestPromise = fetchWithCache();
-  
-  // Store in pending requests map for deduplication
-  if (dedupe) {
-    pendingRequests.set(cacheKey, requestPromise);
-    // Remove from pending after completion
-    requestPromise.finally(() => {
-      pendingRequests.delete(cacheKey);
-    });
-  }
-  
-  return requestPromise;
-}
-
-/**
- * Clear all caches or specific cache entries
- */
-export function clearCache(key?: string): void {
-  if (key) {
-    // Clear specific cache entry
-    memoryCache.delete(key);
-    try {
-      sessionStorage.removeItem(`app_cache_${key}`);
-    } catch (e) {
-      console.warn('Failed to clear session storage cache', e);
-    }
-  } else {
-    // Clear all caches
-    memoryCache.clear();
-    try {
-      // Clear all session storage caches with our prefix
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const k = sessionStorage.key(i);
-        if (k && k.startsWith('app_cache_')) {
-          sessionStorage.removeItem(k);
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to clear all session storage caches', e);
-    }
-  }
-}
-
-/**
- * GET convenience method
- */
-export async function get<T = any>(
-  url: string,
-  options: Omit<FetchClientOptions, 'method'> = {}
-): Promise<FetchResponse<T>> {
+// Helper methods for common HTTP verbs
+export const get = <T = any>(url: string, options: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
   return fetchClient<T>(url, { ...options, method: 'GET' });
-}
+};
 
-/**
- * POST convenience method
- */
-export async function post<T = any>(
-  url: string,
-  data: any,
-  options: Omit<FetchClientOptions, 'method' | 'body'> = {}
-): Promise<FetchResponse<T>> {
-  return fetchClient<T>(url, {
-    ...options,
-    method: 'POST',
-    body: JSON.stringify(data),
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    }
-  });
-}
+export const post = <T = any>(url: string, data: any, options: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
+  return fetchClient<T>(url, { ...options, method: 'POST', body: data });
+};
 
-/**
- * PUT convenience method
- */
-export async function put<T = any>(
-  url: string,
-  data: any,
-  options: Omit<FetchClientOptions, 'method' | 'body'> = {}
-): Promise<FetchResponse<T>> {
-  return fetchClient<T>(url, {
-    ...options,
-    method: 'PUT',
-    body: JSON.stringify(data),
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    }
-  });
-}
+export const put = <T = any>(url: string, data: any, options: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
+  return fetchClient<T>(url, { ...options, method: 'PUT', body: data });
+};
 
-/**
- * DELETE convenience method
- */
-export async function del<T = any>(
-  url: string,
-  options: Omit<FetchClientOptions, 'method'> = {}
-): Promise<FetchResponse<T>> {
+export const patch = <T = any>(url: string, data: any, options: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
+  return fetchClient<T>(url, { ...options, method: 'PATCH', body: data });
+};
+
+export const del = <T = any>(url: string, options: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
   return fetchClient<T>(url, { ...options, method: 'DELETE' });
-}
-
-/**
- * PATCH convenience method
- */
-export async function patch<T = any>(
-  url: string,
-  data: any,
-  options: Omit<FetchClientOptions, 'method' | 'body'> = {}
-): Promise<FetchResponse<T>> {
-  return fetchClient<T>(url, {
-    ...options,
-    method: 'PATCH',
-    body: JSON.stringify(data),
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    }
-  });
-}
+};

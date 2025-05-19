@@ -1,105 +1,78 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { MediaItem } from '../types';
-import { createSessionCache } from '@/utils/fetch/sessionStorageCache';
+import { createSessionCache } from '@/utils/fetch';
 
-// Fetch media for a menu item with improved caching and response handling
-export const fetchMenuItemMedia = async (restaurantId: string, itemId: string): Promise<MediaItem[]> => {
+// Cache durations
+const MEDIA_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+const INGREDIENTS_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
+/**
+ * Fetch media for a specific menu item with improved caching
+ */
+export const fetchMenuItemMedia = async (restaurantId: string, menuItemId: string): Promise<MediaItem[]> => {
+  const cacheKey = `menu_item_media_${restaurantId}_${menuItemId}`;
+  const mediaCache = createSessionCache<MediaItem[]>(cacheKey, MEDIA_CACHE_DURATION);
+  
+  // Check cache first
+  const cached = mediaCache.get();
+  if (cached) {
+    console.log(`Using cached media for menu item ${menuItemId}`);
+    return cached;
+  }
+  
   try {
-    // Use session cache to prevent multiple fetches
-    const cacheKey = `menu_item_media_${restaurantId}_${itemId}`;
-    const cache = createSessionCache<MediaItem[]>(cacheKey, 5 * 60 * 1000);
-    
-    // Check cache first
-    const cachedMedia = cache.get();
-    if (cachedMedia) {
-      return cachedMedia;
-    }
-
     const { data, error } = await supabase
       .from('restaurant_menu_media')
       .select('*')
-      .eq('restaurant_id', restaurantId)
-      .eq('menu_item_id', itemId);
-
-    if (error) {
-      console.error('Error fetching menu item media:', error);
-      return [];
-    }
-
-    const media = data?.map(item => ({
+      .eq('menu_item_id', menuItemId);
+      
+    if (error) throw error;
+    
+    const mediaItems: MediaItem[] = data?.map(item => ({
       id: item.id,
-      type: item.media_type || 'image',
       url: item.url,
-      menuItemId: item.menu_item_id
-    })) as MediaItem[] || [];
-
-    // Cache the result
-    cache.set(media);
-    return media;
-  } catch (error) {
-    console.error('Error in fetchMenuItemMedia:', error);
+      type: item.media_type as 'image' | 'video'
+    })) || [];
+    
+    // Store in cache
+    mediaCache.set(mediaItems);
+    return mediaItems;
+  } catch (err) {
+    console.error(`Error fetching media for menu item ${menuItemId}:`, err);
     return [];
   }
 };
 
-// Fetch ingredients for a menu item with improved caching and response handling
-export const fetchMenuItemIngredients = async (itemId: string): Promise<string[]> => {
+/**
+ * Fetch ingredients for a specific menu item with improved caching
+ */
+export const fetchMenuItemIngredients = async (menuItemId: string): Promise<string[]> => {
+  const cacheKey = `menu_item_ingredients_${menuItemId}`;
+  const ingredientsCache = createSessionCache<string[]>(cacheKey, INGREDIENTS_CACHE_DURATION);
+  
+  // Check cache first
+  const cached = ingredientsCache.get();
+  if (cached) {
+    console.log(`Using cached ingredients for menu item ${menuItemId}`);
+    return cached;
+  }
+  
   try {
-    // Use session cache to prevent multiple fetches
-    const cacheKey = `menu_item_ingredients_${itemId}`;
-    const cache = createSessionCache<string[]>(cacheKey, 5 * 60 * 1000);
-    
-    // Check cache first
-    const cachedIngredients = cache.get();
-    if (cachedIngredients) {
-      return cachedIngredients;
-    }
-
     const { data, error } = await supabase
       .from('restaurant_menu_ingredients')
       .select('name')
-      .eq('menu_item_id', itemId);
-
-    if (error) {
-      console.error('Error fetching menu item ingredients:', error);
-      return [];
-    }
-
-    const ingredients = data?.map(item => item.name) || [];
-
-    // Cache the result
-    cache.set(ingredients);
-    return ingredients;
-  } catch (error) {
-    console.error('Error in fetchMenuItemIngredients:', error);
-    return [];
-  }
-};
-
-// Prefetch additional data for menu items in the background
-export const prefetchMenuItemsData = async (restaurantId: string, itemIds: string[]): Promise<void> => {
-  try {
-    // Process in chunks to avoid overloading the browser
-    const chunkSize = 3;
+      .eq('menu_item_id', menuItemId);
+      
+    if (error) throw error;
     
-    for (let i = 0; i < itemIds.length; i += chunkSize) {
-      const chunk = itemIds.slice(i, i + chunkSize);
-      
-      await Promise.all(chunk.map(async (itemId) => {
-        // Prefetch media
-        await fetchMenuItemMedia(restaurantId, itemId);
-        
-        // Prefetch ingredients
-        await fetchMenuItemIngredients(itemId);
-      }));
-      
-      // Small delay between chunks to prevent overwhelming the network
-      if (i + chunkSize < itemIds.length) {
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-    }
-  } catch (error) {
-    console.error('Error prefetching menu items data:', error);
+    const ingredients: string[] = data?.map(item => item.name) || [];
+    
+    // Store in cache
+    ingredientsCache.set(ingredients);
+    return ingredients;
+  } catch (err) {
+    console.error(`Error fetching ingredients for menu item ${menuItemId}:`, err);
+    return [];
   }
 };

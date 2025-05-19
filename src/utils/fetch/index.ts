@@ -19,7 +19,7 @@ export { createSessionCache } from './sessionStorageCache';
 export { createOfflineCache } from './localStorageCache';
 export { requestTracker } from './requestTracker';
 
-// Export new unified fetch client
+// Export new unified fetch client with improved performance
 export {
   fetchClient,
   get,
@@ -28,6 +28,7 @@ export {
   del,
   patch,
   clearCache,
+  prefetch,  // Add prefetching capability
   type FetchClientOptions,
   type FetchResponse
 } from '@/lib/fetch-client';

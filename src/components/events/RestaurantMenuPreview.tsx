@@ -25,18 +25,17 @@ export const RestaurantMenuPreview: React.FC<RestaurantMenuProps> = ({ restauran
     }
   }, [error, toast]);
 
-  if (isLoading) {
-    return <LoadingSkeleton />;
-  }
-
-  if (!menuItems || menuItems.length === 0) {
-    return <EmptyMenuState />;
-  }
-
   return (
     <div className="bg-white h-full p-4 overflow-y-auto">
       <h2 className="text-xl font-semibold mb-4">Menu</h2>
-      <MenuList menuItems={menuItems} />
+      
+      {isLoading ? (
+        <LoadingSkeleton />
+      ) : !menuItems || menuItems.length === 0 ? (
+        <EmptyMenuState />
+      ) : (
+        <MenuList menuItems={menuItems} />
+      )}
     </div>
   );
 };
