@@ -197,6 +197,66 @@ export const useSocialMedia = () => {
       setIsLoading(false);
     }
   };
+
+  const disconnectSocialMedia = async (platform: string) => {
+    if (!user) {
+      setError('User not authenticated');
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in to disconnect your social media account',
+        variant: 'destructive',
+      });
+      return null;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Get the JWT token for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session found');
+      }
+
+      // First, find the connection to disconnect
+      const connection = connections.find(conn => conn.platform === platform);
+      
+      if (!connection) {
+        throw new Error(`No connected ${platform} account found`);
+      }
+      
+      // For OAuth connections like Instagram, we may need to revoke access
+      if (platform === 'Instagram' && connection.oauth_token) {
+        // We could call an edge function to revoke the OAuth token if needed
+        // For now, we'll just delete the database entry
+      }
+      
+      // Delete the connection from the database
+      const { error: deleteError } = await supabase
+        .from('social_media_connections')
+        .delete()
+        .eq('id', connection.id);
+        
+      if (deleteError) throw deleteError;
+      
+      // Update local state by removing the disconnected connection
+      setConnections(connections.filter(conn => conn.id !== connection.id));
+      
+      return true;
+    } catch (err: any) {
+      console.error('Error disconnecting social media:', err);
+      setError(err.message);
+      toast({
+        title: 'Disconnection Failed',
+        description: err.message || 'Failed to disconnect social media account',
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const connectInstagramOAuth = async () => {
     try {
@@ -270,6 +330,7 @@ export const useSocialMedia = () => {
     error,
     fetchConnections,
     connectSocialMedia,
+    disconnectSocialMedia,
     getConnectionStatus: (platform: string) => {
       return connections.find(conn => conn.platform === platform)?.is_connected || false;
     }

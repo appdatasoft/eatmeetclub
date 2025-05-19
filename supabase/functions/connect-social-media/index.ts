@@ -14,7 +14,7 @@ const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
 // Define the expected request body structure for social media connections
 interface SocialMediaConnectionRequest {
   platform: string;
-  action?: 'initiate' | 'callback';
+  action?: 'initiate' | 'callback' | 'disconnect';
   code?: string;
   redirectUri?: string;
 }
@@ -76,7 +76,11 @@ Deno.serve(async (req) => {
       return await handleInstagramAuth(action, code, redirectUri, user.id, supabase, corsHeaders);
     } else {
       // For other platforms, use the simulated connection flow (fallback)
-      return await handleSimulatedConnection(platform, user.id, supabase, corsHeaders);
+      if (action === 'disconnect') {
+        return await handleDisconnect(platform, user.id, supabase, corsHeaders);
+      } else {
+        return await handleSimulatedConnection(platform, user.id, supabase, corsHeaders);
+      }
     }
 
   } catch (error) {
@@ -98,6 +102,11 @@ async function handleInstagramAuth(
 ) {
   if (!supabase || !userId || !corsHeaders) {
     throw new Error('Missing required parameters');
+  }
+
+  // If this is a disconnect request
+  if (action === 'disconnect') {
+    return await handleDisconnect('Instagram', userId, supabase, corsHeaders);
   }
 
   // If this is the initial OAuth request
@@ -322,4 +331,67 @@ async function handleSimulatedConnection(
     JSON.stringify({ success: true, data: result.data[0] }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
+}
+
+async function handleDisconnect(
+  platform: string,
+  userId: string,
+  supabase: any,
+  corsHeaders: Record<string, string>
+) {
+  try {
+    console.log(`Processing disconnect request for ${platform}`);
+    
+    // Find the connection to disconnect
+    const { data: connection, error: fetchError } = await supabase
+      .from('social_media_connections')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('platform', platform)
+      .maybeSingle();
+      
+    if (fetchError) {
+      console.error('Error fetching connection to disconnect:', fetchError);
+      throw fetchError;
+    }
+    
+    if (!connection) {
+      return new Response(
+        JSON.stringify({ error: `No ${platform} connection found for this user` }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // For Instagram connections, we could potentially revoke the OAuth token
+    if (platform === 'Instagram' && connection.oauth_token) {
+      // Instagram doesn't have a straightforward token revocation API
+      // If needed in the future, we could implement token revocation here
+      console.log('Note: Instagram OAuth token is not being explicitly revoked');
+    }
+    
+    // Delete the connection from database
+    const { error: deleteError } = await supabase
+      .from('social_media_connections')
+      .delete()
+      .eq('id', connection.id);
+      
+    if (deleteError) {
+      console.error('Error deleting social media connection:', deleteError);
+      throw deleteError;
+    }
+    
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: `Successfully disconnected ${platform} account` 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.error(`Error disconnecting ${platform} account:`, error);
+    return new Response(
+      JSON.stringify({ error: error.message || `Failed to disconnect ${platform} account` }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
 }

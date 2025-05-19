@@ -1,8 +1,7 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Facebook, Instagram, Twitter, Map, Globe, Youtube, AlertCircle } from "lucide-react";
+import { Facebook, Instagram, Twitter, Map, Globe, Youtube, AlertCircle, Link2Off } from "lucide-react";
 import { useEditableContent } from '@/components/editor/EditableContentProvider';
 import EditableText from '@/components/editor/EditableText';
 import { useToast } from '@/hooks/use-toast';
@@ -23,7 +22,8 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
     oauthPending,
     fetchConnections, 
     connectSocialMedia,
-    getConnectionStatus 
+    getConnectionStatus,
+    disconnectSocialMedia
   } = useSocialMedia();
   
   const [selectedConnection, setSelectedConnection] = useState<SocialMediaConnection | null>(null);
@@ -52,31 +52,67 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
     }
   };
 
-  const renderConnectButton = (platform: string) => {
+  const handleDisconnectAccount = async (platform: string) => {
+    try {
+      await disconnectSocialMedia(platform);
+      toast({
+        title: 'Account Disconnected',
+        description: `Successfully disconnected your ${platform} account.`,
+      });
+    } catch (error) {
+      toast({
+        title: `${platform} Disconnection Error`,
+        description: `There was a problem disconnecting from ${platform}. Please try again.`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const renderConnectionButton = (platform: string) => {
     const isConnected = getConnectionStatus(platform);
     
-    return (
-      <Button 
-        variant={isConnected ? "default" : "outline"} 
-        size="sm"
-        onClick={() => {
-          if (isConnected) {
-            // Show details for already connected account
-            const connection = connections.find(conn => conn.platform === platform);
-            if (connection) {
-              setSelectedConnection(connection);
-              setIsModalOpen(true);
-            }
-          } else {
-            // Connect new account
-            handleConnectAccount(platform);
-          }
-        }}
-        disabled={isLoading || oauthPending}
-      >
-        {isConnected ? "Connected" : "Connect"}
-      </Button>
-    );
+    if (isConnected) {
+      return (
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              // Show details for already connected account
+              const connection = connections.find(conn => conn.platform === platform);
+              if (connection) {
+                setSelectedConnection(connection);
+                setIsModalOpen(true);
+              }
+            }}
+            disabled={isLoading || oauthPending}
+          >
+            Connected
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="text-red-500 border-red-200 hover:bg-red-50"
+            onClick={() => handleDisconnectAccount(platform)}
+            disabled={isLoading || oauthPending}
+          >
+            <Link2Off className="h-4 w-4 mr-1" />
+            <span>Disconnect</span>
+          </Button>
+        </div>
+      );
+    } else {
+      return (
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => handleConnectAccount(platform)}
+          disabled={isLoading || oauthPending}
+        >
+          Connect
+        </Button>
+      );
+    }
   };
 
   return (
@@ -105,7 +141,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
                 <Instagram className="h-5 w-5 text-pink-600" />
                 <h3 className="font-medium">Instagram</h3>
               </div>
-              {renderConnectButton("Instagram")}
+              {renderConnectionButton("Instagram")}
             </div>
             <EditableText
               id={`${isAdmin ? 'admin' : 'user'}-instagram-description`}
@@ -121,7 +157,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
                 <Twitter className="h-5 w-5 text-blue-500" />
                 <h3 className="font-medium">X (Twitter)</h3>
               </div>
-              {renderConnectButton("X/Twitter")}
+              {renderConnectionButton("X/Twitter")}
             </div>
             <EditableText
               id={`${isAdmin ? 'admin' : 'user'}-twitter-description`}
@@ -137,7 +173,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
                 <Youtube className="h-5 w-5 text-red-600" />
                 <h3 className="font-medium">YouTube</h3>
               </div>
-              {renderConnectButton("YouTube")}
+              {renderConnectionButton("YouTube")}
             </div>
             <EditableText
               id={`${isAdmin ? 'admin' : 'user'}-youtube-description`}
@@ -153,7 +189,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
                 <Facebook className="h-5 w-5 text-blue-600" />
                 <h3 className="font-medium">Facebook Page</h3>
               </div>
-              {renderConnectButton("Facebook")}
+              {renderConnectionButton("Facebook")}
             </div>
             <EditableText
               id={`${isAdmin ? 'admin' : 'user'}-facebook-description`}
@@ -169,7 +205,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
                 <Globe className="h-5 w-5 text-green-600" />
                 <h3 className="font-medium">Google Business</h3>
               </div>
-              {renderConnectButton("Google Business")}
+              {renderConnectionButton("Google Business")}
             </div>
             <EditableText
               id={`${isAdmin ? 'admin' : 'user'}-google-business-description`}
@@ -185,7 +221,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
                 <Map className="h-5 w-5 text-red-600" />
                 <h3 className="font-medium">Google Maps</h3>
               </div>
-              {renderConnectButton("Google Maps")}
+              {renderConnectionButton("Google Maps")}
             </div>
             <EditableText
               id={`${isAdmin ? 'admin' : 'user'}-google-maps-description`}
@@ -201,7 +237,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
                 <span className="font-bold text-black">TikTok</span>
                 <h3 className="font-medium">TikTok</h3>
               </div>
-              {renderConnectButton("TikTok")}
+              {renderConnectionButton("TikTok")}
             </div>
             <EditableText
               id={`${isAdmin ? 'admin' : 'user'}-tiktok-description`}
@@ -217,7 +253,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
                 <span className="font-bold text-red-500">Yelp</span>
                 <h3 className="font-medium">Yelp</h3>
               </div>
-              {renderConnectButton("Yelp")}
+              {renderConnectionButton("Yelp")}
             </div>
             <EditableText
               id={`${isAdmin ? 'admin' : 'user'}-yelp-description`}
