@@ -1,7 +1,7 @@
-// pages/admin/config.tsx
+// src/pages/admin/config.tsx
 
 import { useEffect, useState } from 'react';
-import { fetcher } from '../../lib/fetcher'; // Adjust path as needed
+import { fetcher } from '../../lib/fetcher'; // Adjust path if needed
 
 type AdminConfig = {
   siteTitle: string;
@@ -17,7 +17,8 @@ export default function AdminConfigPage() {
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        const data = await fetcher<AdminConfig>('/api/admin/config');
+        // ✅ Fixed: fetching static JSON file from public directory
+        const data = await fetcher<AdminConfig>('/api/admin/config.json');
         setConfig(data);
       } catch (err: any) {
         setError(err.message || 'Failed to load config');
