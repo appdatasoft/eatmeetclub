@@ -1,4 +1,3 @@
-
 import { requestTracker } from './fetch/requestTracker';
 
 export interface FetchRetryOptions {
@@ -6,6 +5,7 @@ export interface FetchRetryOptions {
   baseDelay?: number;
   maxDelay?: number;
   headers?: Record<string, string>;
+  shouldRetry?: (error: any) => boolean;
 }
 
 /**
@@ -19,7 +19,8 @@ export const fetchWithRetry = async <T>(
     retries = 3, 
     baseDelay = 1000, 
     maxDelay = 10000,
-    headers = {}
+    headers = {},
+    shouldRetry
   } = options;
   
   // Use a closure to properly maintain the request context through retries
@@ -48,6 +49,11 @@ export const fetchWithRetry = async <T>(
       
       // If we have no more retries, throw the error
       if (attemptsLeft <= 1) {
+        throw error;
+      }
+      
+      // If shouldRetry is defined and returns false, throw the error
+      if (shouldRetry && !shouldRetry(error)) {
         throw error;
       }
       
