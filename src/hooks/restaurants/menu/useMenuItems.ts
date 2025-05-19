@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MenuItem } from '@/types/menuItem';
@@ -5,17 +6,21 @@ import { createOfflineCache } from '@/utils/fetch/localStorageCache';
 
 const menuItemsCache = createOfflineCache<MenuItem[]>('menuItems');
 
-export const useMenuItems = () => {
+export const useMenuItems = (restaurantId?: string, retryTrigger = 0) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    loadMenuItems();
-  }, []);
+    if (restaurantId) {
+      loadMenuItems();
+    }
+  }, [restaurantId, retryTrigger]);
 
   const loadMenuItems = async () => {
-    setLoading(true);
+    if (!restaurantId) return;
+    
+    setIsLoading(true);
     setError(null);
 
     try {
@@ -23,12 +28,13 @@ export const useMenuItems = () => {
 
       if (cachedMenuItems) {
         setMenuItems(cachedMenuItems);
-        setLoading(false);
+        setIsLoading(false);
       }
 
       const { data, error } = await supabase
-        .from('menu_items')
+        .from('restaurant_menu_items')
         .select('*')
+        .eq('restaurant_id', restaurantId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -43,19 +49,20 @@ export const useMenuItems = () => {
       setError(err);
       console.error("Unexpected error:", err);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const refreshMenuItems = async () => {
     const shouldRefresh = menuItemsCache.isStale();
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
 
     try {
       const { data, error } = await supabase
-        .from('menu_items')
+        .from('restaurant_menu_items')
         .select('*')
+        .eq('restaurant_id', restaurantId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -73,14 +80,21 @@ export const useMenuItems = () => {
       setError(err);
       console.error("Unexpected error:", err);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
+  };
+
+  // Added function for retrying fetch
+  const retryFetch = async () => {
+    await loadMenuItems();
   };
 
   return {
     menuItems,
-    loading,
+    isLoading,
     error,
     refreshMenuItems,
+    setMenuItems,
+    retryFetch
   };
 };

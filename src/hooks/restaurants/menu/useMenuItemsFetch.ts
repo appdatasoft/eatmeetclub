@@ -2,9 +2,9 @@
 import { useRestaurantFetch } from './useRestaurantFetch';
 import { useMenuItems } from './useMenuItems';
 
-export const useMenuItemsFetch = (restaurantId: string | undefined, userId: string | undefined) => {
-  const { restaurant, isLoading: isRestaurantLoading, isOwner, error: restaurantError } = useRestaurantFetch(restaurantId, userId);
-  const { menuItems, setMenuItems, isLoading: areMenuItemsLoading, error: menuItemsError } = useMenuItems(restaurantId);
+export const useMenuItemsFetch = (restaurantId?: string) => {
+  const { restaurant, isLoading: isRestaurantLoading, isOwner, error: restaurantError } = useRestaurantFetch(restaurantId, undefined);
+  const { menuItems, setMenuItems, isLoading: areMenuItemsLoading, error: menuItemsError, retryFetch } = useMenuItems(restaurantId);
   
   const isLoading = isRestaurantLoading || areMenuItemsLoading;
   const error = restaurantError || menuItemsError;
@@ -15,6 +15,7 @@ export const useMenuItemsFetch = (restaurantId: string | undefined, userId: stri
     isLoading,
     isOwner,
     setMenuItems,
-    error
+    error,
+    retryFetch
   };
 };

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
+import { MenuItem } from '@/types/menuItem';
 import { useMenuItems } from '@/hooks/restaurants/menu/useMenuItems';
 import { useRestaurantFetch } from '@/hooks/restaurants/useRestaurantFetch';
 import { useMenuItemDialog } from '@/hooks/restaurants/menu/useMenuItemDialog';
