@@ -7,7 +7,7 @@ interface AdminLoadingStateProps {
   text?: string;
 }
 
-const AdminLoadingState = ({ text = "Verifying admin credentials..." }: AdminLoadingStateProps) => {
+const AdminLoadingState = ({ text = "Loading admin panel..." }: AdminLoadingStateProps) => {
   return (
     <>
       <Navbar />

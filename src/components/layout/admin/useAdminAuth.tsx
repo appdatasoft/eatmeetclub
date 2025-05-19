@@ -1,9 +1,12 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+
+// Create a simple in-memory cache for admin status
+const adminStatusCache = new Map<string, boolean>();
 
 export const useAdminAuth = () => {
   const navigate = useNavigate();
@@ -15,40 +18,64 @@ export const useAdminAuth = () => {
   const [authCheckTimedOut, setAuthCheckTimedOut] = useState(false);
   const { user } = useAuth();
 
+  // Memoized admin check function to prevent recreating on each render
+  const checkAdminStatus = useCallback(async (userId: string) => {
+    // Check cache first
+    if (adminStatusCache.has(userId)) {
+      return adminStatusCache.get(userId);
+    }
+    
+    try {
+      const { data, error } = await supabase.rpc('is_admin', { user_id: userId });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      // Cache the result for 5 minutes
+      adminStatusCache.set(userId, !!data);
+      
+      // Set up a timeout to invalidate the cache
+      setTimeout(() => {
+        adminStatusCache.delete(userId);
+      }, 5 * 60 * 1000); // 5 minutes
+      
+      return !!data;
+    } catch (err) {
+      console.error('Error checking admin status:', err);
+      return false;
+    }
+  }, []);
+
   useEffect(() => {
     // Track if component is mounted to prevent state updates after unmount
     let isMounted = true;
+    let timeoutId: number;
     
-    const checkAdminStatus = async () => {
+    // Set a shorter timeout for better user experience
+    timeoutId = window.setTimeout(() => {
+      if (isMounted) {
+        setAuthCheckTimedOut(true);
+        setIsLoading(false);
+        setError("Verification timed out. Please try again.");
+      }
+    }, 2000); // Reduced timeout to 2 seconds
+    
+    const verifyAdminAccess = async () => {
       if (!isMounted) return;
-      
-      setIsLoading(true);
-      setError(null);
       
       try {
         if (!user) {
-          console.log("No session found, redirecting to login");
-          toast({
-            title: "Authentication required",
-            description: "You need to be logged in to access the admin area",
-            variant: "destructive"
-          });
           // Store the current path for redirect after login
           localStorage.setItem('redirectAfterLogin', location.pathname);
           navigate('/login');
           return;
         }
         
-        // Check if user is admin with safer implementation
-        const { data, error } = await supabase.rpc('is_admin', { user_id: user.id });
+        // Check admin status with optimized function
+        const isUserAdmin = await checkAdminStatus(user.id);
         
-        if (error) {
-          console.error("Admin check error:", error);
-          throw new Error(error.message);
-        }
-        
-        if (!data) {
-          console.log("User is not an admin, redirecting to dashboard");
+        if (!isUserAdmin) {
           toast({
             title: "Access denied",
             description: "You don't have admin privileges",
@@ -59,44 +86,29 @@ export const useAdminAuth = () => {
         }
         
         if (isMounted) {
-          console.log("Admin check passed, allowing access");
           setIsAdmin(true);
+          setIsLoading(false);
         }
       } catch (error: any) {
-        console.error('Error checking admin status:', error);
         if (isMounted) {
           setError(error.message || "Failed to verify admin status");
+          setIsLoading(false);
           toast({
             title: "Error",
             description: error.message || "Failed to verify admin status",
             variant: "destructive"
           });
         }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
       }
     };
     
-    // Add a timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      if (isMounted && isLoading) {
-        console.log("Admin check timed out");
-        setAuthCheckTimedOut(true);
-        setIsLoading(false);
-        setError("Verification timed out. Please refresh the page or try again later.");
-      }
-    }, 3000); // Reduced from 5 to 3 seconds for faster feedback
+    verifyAdminAccess();
     
-    checkAdminStatus();
-    
-    // Cleanup function to prevent memory leaks and state updates after unmount
     return () => {
       isMounted = false;
       clearTimeout(timeoutId);
     };
-  }, [navigate, toast, location.pathname, user]);
+  }, [navigate, toast, location.pathname, user, checkAdminStatus]);
 
   const handleRetry = () => {
     window.location.reload();

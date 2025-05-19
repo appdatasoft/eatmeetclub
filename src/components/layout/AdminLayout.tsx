@@ -1,5 +1,6 @@
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import AdminSidebar from './admin/AdminSidebar';
@@ -14,6 +15,18 @@ interface AdminLayoutProps {
 
 const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { isAdmin, isLoading, error, authCheckTimedOut, handleRetry } = useAdminAuth();
+  const navigate = useNavigate();
+
+  // Add effect to redirect non-admin users faster
+  useEffect(() => {
+    if (!isLoading && !isAdmin && !error) {
+      // Use a short timeout to ensure redirect happens after render
+      const redirectTimeout = setTimeout(() => {
+        navigate('/dashboard');
+      }, 100);
+      return () => clearTimeout(redirectTimeout);
+    }
+  }, [isLoading, isAdmin, error, navigate]);
 
   if (isLoading && !authCheckTimedOut) {
     return <AdminLoadingState />;
@@ -29,7 +42,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       <>
         <Navbar />
         <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-          <p className="text-gray-500">Redirecting...</p>
+          <p className="text-gray-500">Redirecting to dashboard...</p>
         </div>
         <Footer />
       </>
