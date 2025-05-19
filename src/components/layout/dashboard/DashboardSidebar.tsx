@@ -1,7 +1,7 @@
 
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { PlusCircle, CreditCard, Instagram, User } from 'lucide-react';
+import { PlusCircle, CreditCard, Instagram, User, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const DashboardSidebar = () => {
@@ -72,7 +72,7 @@ const DashboardSidebar = () => {
                 className={`block px-3 py-2 rounded-md ${isActive('/dashboard/social-media')}`}
               >
                 <div className="flex items-center">
-                  <Instagram className="h-4 w-4 mr-2" />
+                  <Share2 className="h-4 w-4 mr-2" />
                   <span>Social Media</span>
                 </div>
               </Link>

@@ -102,6 +102,18 @@ async function handleInstagramAuth(
 
   // If this is the initial OAuth request
   if (action === 'initiate') {
+    console.log('Initiating Instagram auth. Client ID:', INSTAGRAM_CLIENT_ID ? 'Provided' : 'Missing');
+    
+    // Validate Instagram API credentials
+    if (!INSTAGRAM_CLIENT_ID || !INSTAGRAM_CLIENT_SECRET) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Instagram API credentials are missing. Please configure INSTAGRAM_CLIENT_ID and INSTAGRAM_CLIENT_SECRET in your environment variables.' 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     // Instagram OAuth authorization URL
     const instagramAuthUrl = new URL('https://api.instagram.com/oauth/authorize');
     
@@ -121,6 +133,13 @@ async function handleInstagramAuth(
   // Handle OAuth callback with code
   else if (action === 'callback' && code && redirectUri) {
     try {
+      console.log('Handling Instagram callback. Code received, exchanging for token...');
+      
+      // Validate Instagram API credentials
+      if (!INSTAGRAM_CLIENT_ID || !INSTAGRAM_CLIENT_SECRET) {
+        throw new Error('Instagram API credentials are missing. Please configure INSTAGRAM_CLIENT_ID and INSTAGRAM_CLIENT_SECRET in your environment variables.');
+      }
+      
       // Exchange code for access token
       const tokenResponse = await fetch('https://api.instagram.com/oauth/access_token', {
         method: 'POST',
@@ -138,12 +157,15 @@ async function handleInstagramAuth(
       
       if (!tokenResponse.ok) {
         const errorData = await tokenResponse.json();
+        console.error('Instagram token exchange error:', errorData);
         throw new Error(`Instagram token exchange failed: ${JSON.stringify(errorData)}`);
       }
       
       const tokenData = await tokenResponse.json();
       const accessToken = tokenData.access_token;
       const instagramUserId = tokenData.user_id;
+      
+      console.log('Token received, fetching user profile...');
       
       // Get user profile info
       const profileResponse = await fetch(
@@ -152,11 +174,14 @@ async function handleInstagramAuth(
       
       if (!profileResponse.ok) {
         const errorData = await profileResponse.json();
+        console.error('Instagram profile fetch error:', errorData);
         throw new Error(`Instagram profile fetch failed: ${JSON.stringify(errorData)}`);
       }
       
       const profileData = await profileResponse.json();
       const username = profileData.username;
+      
+      console.log('Profile received, storing connection in database...');
       
       // Store connection in database
       const { data: existingConnection } = await supabase
@@ -200,8 +225,11 @@ async function handleInstagramAuth(
       }
       
       if (result.error) {
+        console.error('Database error:', result.error);
         throw result.error;
       }
+      
+      console.log('Instagram connection successfully stored');
       
       return new Response(
         JSON.stringify({ 

@@ -1,70 +1,41 @@
 
 import { Route, Routes } from "react-router-dom";
 import Dashboard from "@/pages/dashboard/Dashboard";
-import EventsManagement from "@/pages/dashboard/EventsManagement";
-import CreateEvent from "@/pages/dashboard/CreateEvent";
-import PaymentSuccessPage from "@/pages/dashboard/PaymentSuccessPage";
-import Settings from "@/pages/dashboard/Settings";
-import AdminSettings from "@/pages/dashboard/AdminSettings";
 import AddRestaurant from "@/pages/dashboard/AddRestaurant";
+import CreateEvent from "@/pages/dashboard/CreateEvent";
+import EventsManagement from "@/pages/dashboard/EventsManagement";
+import MyAccount from "@/pages/dashboard/MyAccount";
+import Settings from "@/pages/dashboard/Settings";
 import RestaurantMenu from "@/pages/dashboard/RestaurantMenu";
+import PaymentsPage from "@/pages/dashboard/PaymentsPage";
 import SocialMedia from "@/pages/dashboard/SocialMedia";
-import EditEvent from "@/pages/EditEvent";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import Memories from "@/pages/dashboard/Memories";
+import CreateMemory from "@/pages/dashboard/CreateMemory";
+import MemoryDetail from "@/pages/dashboard/MemoryDetail";
+import EditMemory from "@/pages/dashboard/EditMemory";
+import EventPayment from "@/pages/dashboard/EventPayment";
+import PaymentSuccessPage from "@/pages/dashboard/PaymentSuccessPage";
 
-export const DashboardRoutes = () => {
+const DashboardRoutes = () => {
   return (
     <Routes>
-      <Route index element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="events" element={
-        <ProtectedRoute>
-          <EventsManagement />
-        </ProtectedRoute>
-      } />
-      <Route path="create-event" element={
-        <ProtectedRoute>
-          <CreateEvent />
-        </ProtectedRoute>
-      } />
-      <Route path="payment-success" element={
-        <ProtectedRoute>
-          <PaymentSuccessPage />
-        </ProtectedRoute>
-      } />
-      <Route path="settings" element={
-        <ProtectedRoute>
-          <Settings />
-        </ProtectedRoute>
-      } />
-      <Route path="social-media" element={
-        <ProtectedRoute>
-          <SocialMedia />
-        </ProtectedRoute>
-      } />
-      <Route path="admin-settings" element={
-        <ProtectedRoute adminOnly={true}>
-          <AdminSettings />
-        </ProtectedRoute>
-      } />
-      <Route path="add-restaurant" element={
-        <ProtectedRoute>
-          <AddRestaurant />
-        </ProtectedRoute>
-      } />
-      <Route path="restaurant-menu/:id" element={
-        <ProtectedRoute>
-          <RestaurantMenu />
-        </ProtectedRoute>
-      } />
-      <Route path="../edit-event/:id" element={
-        <ProtectedRoute>
-          <EditEvent />
-        </ProtectedRoute>
-      } />
+      <Route index element={<Dashboard />} />
+      <Route path="/add-restaurant" element={<AddRestaurant />} />
+      <Route path="/restaurant-menu/:id" element={<RestaurantMenu />} />
+      <Route path="/create-event" element={<CreateEvent />} />
+      <Route path="/events" element={<EventsManagement />} />
+      <Route path="/my-account" element={<MyAccount />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="/payments" element={<PaymentsPage />} />
+      <Route path="/social-media" element={<SocialMedia />} />
+      <Route path="/memories" element={<Memories />} />
+      <Route path="/create-memory" element={<CreateMemory />} />
+      <Route path="/memory/:id" element={<MemoryDetail />} />
+      <Route path="/memory/:id/edit" element={<EditMemory />} />
+      <Route path="/event-payment/:eventId" element={<EventPayment />} />
+      <Route path="/payment-success/:paymentId" element={<PaymentSuccessPage />} />
     </Routes>
   );
 };
+
+export { DashboardRoutes };
