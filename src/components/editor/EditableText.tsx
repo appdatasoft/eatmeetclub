@@ -20,7 +20,14 @@ const EditableText: React.FC<EditableTextProps> = ({
   tag = 'div',
   children,
 }) => {
-  const { contentMap, isEditing, handleEdit, handleSave, handleCancel, canEdit } = useEditableContent();
+  const { 
+    contentMap, 
+    isEditing, 
+    handleEdit, 
+    handleSave, 
+    handleCancel, 
+    canEdit 
+  } = useEditableContent();
   
   // Get content from the map if it exists, otherwise use children or defaultContent
   const content = contentMap[id]?.content || (

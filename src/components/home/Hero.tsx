@@ -7,7 +7,7 @@ import HeroContent from "./HeroContent";
 import DiningScene from "@/assets/dining-scene.svg";
 
 const Hero = () => {
-  const { contentMap, editModeEnabled, handleSave, canEdit } = useEditableContent();
+  const { contentMap, editModeEnabled, canEdit, saveContent } = useEditableContent();
   const [isEditingBackground, setIsEditingBackground] = useState(false);
   const [isEditingHeroImage, setIsEditingHeroImage] = useState(false);
   
@@ -31,12 +31,7 @@ const Hero = () => {
   // Handler to save background image
   const handleSaveBackground = async (url: string) => {
     if (canEdit) {
-      await handleSave({
-        page_path: window.location.pathname,
-        element_id: "hero-background",
-        content: url,
-        content_type: "image",
-      });
+      await saveContent("hero-background", url, "image");
       setIsEditingBackground(false);
     }
   };
@@ -44,12 +39,7 @@ const Hero = () => {
   // Handler to save hero image
   const handleSaveHeroImage = async (url: string) => {
     if (canEdit) {
-      await handleSave({
-        page_path: window.location.pathname,
-        element_id: "hero-image",
-        content: url,
-        content_type: "image",
-      });
+      await saveContent("hero-image", url, "image");
       setIsEditingHeroImage(false);
     }
   };

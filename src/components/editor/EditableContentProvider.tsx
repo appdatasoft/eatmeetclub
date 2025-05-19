@@ -10,7 +10,14 @@ interface EditableContextType {
   setEditModeEnabled: (value: boolean) => void;
   saveContent: (id: string, content: string, contentType?: string) => Promise<boolean>;
   isLoading: boolean;
-  fetchPageContent: () => Promise<void>; // Added function to fetch page content
+  fetchPageContent: () => Promise<void>;
+  
+  // Add missing properties and functions
+  isEditing: string | null;
+  handleEdit: (id: string) => void;
+  handleSave: (content: EditableContent) => Promise<boolean>;
+  handleCancel: () => void;
+  toggleEditMode: () => void;
 }
 
 const EditableContext = createContext<EditableContextType>({
@@ -20,15 +27,29 @@ const EditableContext = createContext<EditableContextType>({
   setEditModeEnabled: () => {},
   saveContent: async () => false,
   isLoading: false,
-  fetchPageContent: async () => {}, // Default implementation
+  fetchPageContent: async () => {},
+  
+  // Add missing properties and functions to default context
+  isEditing: null,
+  handleEdit: () => {},
+  handleSave: async () => false,
+  handleCancel: () => {},
+  toggleEditMode: () => {},
 });
 
-export const useEditableContent = () => useContext(EditableContext);
+export const useEditableContent = () => {
+  const context = useContext(EditableContext);
+  if (context === undefined) {
+    throw new Error('useEditableContent must be used within an EditableContentProvider');
+  }
+  return context;
+};
 
 export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { saveContent: saveInlineContent, fetchContent, isLoading, canEdit } = useInlineEdit();
   const [contentMap, setContentMap] = useState<Record<string, EditableContent>>({});
   const [editModeEnabled, setEditModeEnabled] = useState(false);
+  const [isEditing, setIsEditing] = useState<string | null>(null);
   
   const fetchPageContent = async () => {
     try {
@@ -86,6 +107,38 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     return success;
   };
   
+  // Add new handlers for edit functionality
+  const handleEdit = (id: string) => {
+    setIsEditing(id);
+  };
+  
+  const handleSave = async (content: EditableContent) => {
+    const success = await saveInlineContent(content);
+    
+    if (success) {
+      // Update local state
+      setContentMap((prev) => ({
+        ...prev,
+        [content.element_id]: content,
+      }));
+      setIsEditing(null);
+      toast.success('Content saved successfully');
+    } else {
+      toast.error('Failed to save content');
+    }
+    
+    return success;
+  };
+  
+  const handleCancel = () => {
+    setIsEditing(null);
+  };
+  
+  // Toggle edit mode function
+  const toggleEditMode = () => {
+    setEditModeEnabled(prev => !prev);
+  };
+  
   const contextValue = {
     contentMap,
     canEdit,
@@ -93,7 +146,12 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     setEditModeEnabled,
     saveContent,
     isLoading,
-    fetchPageContent, // Expose the function to components
+    fetchPageContent,
+    isEditing,
+    handleEdit,
+    handleSave,
+    handleCancel,
+    toggleEditMode,
   };
   
   return (
