@@ -1,12 +1,21 @@
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { checkSupabaseConnection } from '@/integrations/supabase/utils/connectionUtils';
 
-// Create a simple in-memory cache for admin status
-const adminStatusCache = new Map<string, boolean>();
+// Create a persistent cache with longer expiration
+const adminStatusCache = new Map<string, {
+  isAdmin: boolean;
+  timestamp: number;
+}>();
+
+// Cache duration set to 10 minutes (600000ms)
+const CACHE_DURATION = 600000; 
+// Timeout for admin check reduced to 1.5 seconds for faster feedback
+const AUTH_CHECK_TIMEOUT = 1500;
 
 export const useAdminAuth = () => {
   const navigate = useNavigate();
@@ -16,53 +25,97 @@ export const useAdminAuth = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [authCheckTimedOut, setAuthCheckTimedOut] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const { user } = useAuth();
+  
+  // Add refs to track component mount state and pending operations
+  const isMounted = useRef(true);
+  const timeoutRef = useRef<number | null>(null);
+  const connectionCheckedRef = useRef(false);
 
-  // Memoized admin check function to prevent recreating on each render
+  // Check if admin status is cached and valid
+  const getFromCache = useCallback((userId: string) => {
+    const cached = adminStatusCache.get(userId);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      console.log('Using cached admin status');
+      return cached.isAdmin;
+    }
+    return null;
+  }, []);
+
+  // Update cache with new admin status
+  const updateCache = useCallback((userId: string, isAdmin: boolean) => {
+    adminStatusCache.set(userId, {
+      isAdmin,
+      timestamp: Date.now()
+    });
+  }, []);
+
+  // Optimized admin check function to minimize database calls
   const checkAdminStatus = useCallback(async (userId: string) => {
-    // Check cache first
-    if (adminStatusCache.has(userId)) {
-      return adminStatusCache.get(userId);
+    // Try from cache first
+    const cachedStatus = getFromCache(userId);
+    if (cachedStatus !== null) {
+      return cachedStatus;
     }
     
+    console.log('Checking admin status from database');
     try {
+      // First ensure connection is working
+      if (!connectionCheckedRef.current) {
+        const isConnected = await checkSupabaseConnection();
+        connectionCheckedRef.current = true;
+        
+        if (!isConnected) {
+          throw new Error("Unable to connect to database. Please check your connection.");
+        }
+      }
+      
+      // Proceed with admin check
       const { data, error } = await supabase.rpc('is_admin', { user_id: userId });
       
       if (error) {
         throw new Error(error.message);
       }
       
-      // Cache the result for 5 minutes
-      adminStatusCache.set(userId, !!data);
-      
-      // Set up a timeout to invalidate the cache
-      setTimeout(() => {
-        adminStatusCache.delete(userId);
-      }, 5 * 60 * 1000); // 5 minutes
+      // Cache the result
+      updateCache(userId, !!data);
       
       return !!data;
     } catch (err) {
       console.error('Error checking admin status:', err);
-      return false;
+      throw err;
     }
+  }, [getFromCache, updateCache]);
+
+  useEffect(() => {
+    // Set isMounted to true and reset on cleanup
+    isMounted.current = true;
+    
+    return () => {
+      isMounted.current = false;
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
-    // Track if component is mounted to prevent state updates after unmount
-    let isMounted = true;
-    let timeoutId: number;
-    
     // Set a shorter timeout for better user experience
-    timeoutId = window.setTimeout(() => {
-      if (isMounted) {
+    timeoutRef.current = window.setTimeout(() => {
+      if (isMounted.current && isLoading) {
         setAuthCheckTimedOut(true);
         setIsLoading(false);
-        setError("Verification timed out. Please try again.");
+        console.log("Admin access verification timed out");
       }
-    }, 2000); // Reduced timeout to 2 seconds
+    }, AUTH_CHECK_TIMEOUT);
     
     const verifyAdminAccess = async () => {
-      if (!isMounted) return;
+      if (!isMounted.current) return;
+      
+      // Reset states at the beginning
+      setAuthCheckTimedOut(false);
       
       try {
         if (!user) {
@@ -72,10 +125,12 @@ export const useAdminAuth = () => {
           return;
         }
         
+        console.log('Verifying admin status for:', user.id);
         // Check admin status with optimized function
         const isUserAdmin = await checkAdminStatus(user.id);
         
         if (!isUserAdmin) {
+          console.log('Access denied: Not an admin');
           toast({
             title: "Access denied",
             description: "You don't have admin privileges",
@@ -85,12 +140,19 @@ export const useAdminAuth = () => {
           return;
         }
         
-        if (isMounted) {
+        if (isMounted.current) {
+          console.log('Admin access verified');
           setIsAdmin(true);
           setIsLoading(false);
+          // Clear timeout as we've completed successfully
+          if (timeoutRef.current) {
+            window.clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
         }
       } catch (error: any) {
-        if (isMounted) {
+        if (isMounted.current) {
+          console.error('Admin verification error:', error);
           setError(error.message || "Failed to verify admin status");
           setIsLoading(false);
           toast({
@@ -98,6 +160,11 @@ export const useAdminAuth = () => {
             description: error.message || "Failed to verify admin status",
             variant: "destructive"
           });
+          // Clear timeout since we've handled the error
+          if (timeoutRef.current) {
+            window.clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
         }
       }
     };
@@ -105,20 +172,107 @@ export const useAdminAuth = () => {
     verifyAdminAccess();
     
     return () => {
-      isMounted = false;
-      clearTimeout(timeoutId);
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     };
   }, [navigate, toast, location.pathname, user, checkAdminStatus]);
 
-  const handleRetry = () => {
-    window.location.reload();
-  };
+  const handleRetry = useCallback(() => {
+    if (isRetrying) return;
+    
+    setIsRetrying(true);
+    setIsLoading(true);
+    setError(null);
+    setAuthCheckTimedOut(false);
+    
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+    }
+    
+    // If using cache and failed, clear cache for this user
+    if (user) {
+      adminStatusCache.delete(user.id);
+    }
+    
+    // Reset connection check flag to force a fresh check
+    connectionCheckedRef.current = false;
+    
+    // Set a new timeout for the retry
+    timeoutRef.current = window.setTimeout(() => {
+      if (isMounted.current) {
+        setAuthCheckTimedOut(true);
+        setIsLoading(false);
+        setIsRetrying(false);
+        console.log("Retry admin access verification timed out");
+      }
+    }, AUTH_CHECK_TIMEOUT);
+    
+    // Try verification again
+    const verifyAdminAccess = async () => {
+      try {
+        if (!user) {
+          localStorage.setItem('redirectAfterLogin', location.pathname);
+          navigate('/login');
+          return;
+        }
+        
+        console.log('Retrying admin verification for:', user.id);
+        const isUserAdmin = await checkAdminStatus(user.id);
+        
+        if (!isUserAdmin) {
+          console.log('Access denied on retry: Not an admin');
+          toast({
+            title: "Access denied",
+            description: "You don't have admin privileges",
+            variant: "destructive"
+          });
+          navigate('/dashboard');
+          return;
+        }
+        
+        if (isMounted.current) {
+          console.log('Admin access verified on retry');
+          setIsAdmin(true);
+          setIsLoading(false);
+          setIsRetrying(false);
+          // Clear timeout as we've completed successfully
+          if (timeoutRef.current) {
+            window.clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
+        }
+      } catch (error: any) {
+        if (isMounted.current) {
+          console.error('Admin verification retry error:', error);
+          setError(error.message || "Failed to verify admin status");
+          setIsLoading(false);
+          setIsRetrying(false);
+          toast({
+            title: "Error",
+            description: error.message || "Failed to verify admin status",
+            variant: "destructive"
+          });
+          // Clear timeout since we've handled the error
+          if (timeoutRef.current) {
+            window.clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
+        }
+      }
+    };
+    
+    verifyAdminAccess();
+  }, [user, navigate, location.pathname, toast, checkAdminStatus, isRetrying]);
 
   return {
     isAdmin,
     isLoading,
     error,
     authCheckTimedOut,
+    isRetrying,
     handleRetry
   };
 };

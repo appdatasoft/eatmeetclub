@@ -1,5 +1,5 @@
 
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Navbar from '../Navbar';
 import Footer from '../Footer';
@@ -8,9 +8,10 @@ import { useNavigate } from 'react-router-dom';
 interface AdminErrorStateProps {
   error: string;
   onRetry: () => void;
+  isRetrying?: boolean;
 }
 
-const AdminErrorState = ({ error, onRetry }: AdminErrorStateProps) => {
+const AdminErrorState = ({ error, onRetry, isRetrying = false }: AdminErrorStateProps) => {
   const navigate = useNavigate();
 
   return (
@@ -27,8 +28,23 @@ const AdminErrorState = ({ error, onRetry }: AdminErrorStateProps) => {
             <Button onClick={() => navigate('/dashboard')}>
               Go to Dashboard
             </Button>
-            <Button variant="outline" onClick={onRetry}>
-              Retry
+            <Button 
+              variant="outline" 
+              onClick={onRetry} 
+              disabled={isRetrying}
+              className="relative"
+            >
+              {isRetrying ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  <span>Retrying...</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  <span>Retry</span>
+                </>
+              )}
             </Button>
           </div>
         </div>

@@ -1,5 +1,5 @@
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -8,35 +8,50 @@ import AdminContent from './admin/AdminContent';
 import AdminErrorState from './admin/AdminErrorState';
 import AdminLoadingState from './admin/AdminLoadingState';
 import { useAdminAuth } from './admin/useAdminAuth';
+import { RetryAlert } from '@/components/ui/RetryAlert';
 
 interface AdminLayoutProps {
   children: ReactNode;
 }
 
 const AdminLayout = ({ children }: AdminLayoutProps) => {
-  const { isAdmin, isLoading, error, authCheckTimedOut, handleRetry } = useAdminAuth();
+  const { isAdmin, isLoading, error, authCheckTimedOut, handleRetry, isRetrying } = useAdminAuth();
   const navigate = useNavigate();
+  const [redirecting, setRedirecting] = useState(false);
 
   // Add effect to redirect non-admin users faster
   useEffect(() => {
     if (!isLoading && !isAdmin && !error) {
+      setRedirecting(true);
       // Use a short timeout to ensure redirect happens after render
       const redirectTimeout = setTimeout(() => {
         navigate('/dashboard');
-      }, 100);
+      }, 50); // Reduced from 100ms to 50ms
       return () => clearTimeout(redirectTimeout);
     }
   }, [isLoading, isAdmin, error, navigate]);
 
   if (isLoading && !authCheckTimedOut) {
-    return <AdminLoadingState />;
+    return <AdminLoadingState text="Verifying admin access..." />;
+  }
+
+  if (authCheckTimedOut) {
+    return <AdminErrorState 
+      error="Verification timed out. Please try again." 
+      onRetry={handleRetry} 
+      isRetrying={isRetrying}
+    />;
   }
 
   if (error) {
-    return <AdminErrorState error={error} onRetry={handleRetry} />;
+    return <AdminErrorState 
+      error={error} 
+      onRetry={handleRetry}
+      isRetrying={isRetrying}
+    />;
   }
 
-  if (!isAdmin) {
+  if (!isAdmin || redirecting) {
     // Return minimal loading component while redirecting
     return (
       <>
