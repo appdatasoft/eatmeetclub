@@ -1,5 +1,5 @@
 
-import { Route } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import ConfigPage from "@/pages/admin/ConfigPage";
 import UsersPage from "@/pages/admin/UsersPage";
@@ -16,83 +16,82 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 export const AdminRoutes = () => {
   return (
-    <>
-      {/* Admin routes */}
-      <Route path="/admin" element={
+    <Routes>
+      <Route index element={
         <ProtectedRoute adminOnly={true}>
           <AdminDashboard />
         </ProtectedRoute>
       } />
-      <Route path="/admin/contracts" element={
+      <Route path="contracts" element={
         <ProtectedRoute adminOnly={true}>
           <AdminContracts />
         </ProtectedRoute>
       } />
-      <Route path="/admin/contracts/venue" element={
+      <Route path="contracts/venue" element={
         <ProtectedRoute adminOnly={true}>
           <AdminContracts />
         </ProtectedRoute>
       } />
-      <Route path="/admin/contracts/signup-referral" element={
+      <Route path="contracts/signup-referral" element={
         <ProtectedRoute adminOnly={true}>
           <AdminContracts />
         </ProtectedRoute>
       } />
-      <Route path="/admin/contracts/ticket-fee" element={
+      <Route path="contracts/ticket-fee" element={
         <ProtectedRoute adminOnly={true}>
           <AdminContracts />
         </ProtectedRoute>
       } />
-      <Route path="/admin/orders" element={
+      <Route path="orders" element={
         <ProtectedRoute adminOnly={true}>
           <AdminOrders />
         </ProtectedRoute>
       } />
-      <Route path="/admin/emails" element={
+      <Route path="emails" element={
         <ProtectedRoute adminOnly={true}>
           <AdminEmails />
         </ProtectedRoute>
       } />
-      <Route path="/admin/sms" element={
+      <Route path="sms" element={
         <ProtectedRoute adminOnly={true}>
           <AdminSMS />
         </ProtectedRoute>
       } />
-      <Route path="/admin/templates" element={
+      <Route path="templates" element={
         <ProtectedRoute adminOnly={true}>
           <AdminTemplates />
         </ProtectedRoute>
       } />
-      <Route path="/admin/venus" element={
+      <Route path="venus" element={
         <ProtectedRoute adminOnly={true}>
           <AdminVenus />
         </ProtectedRoute>
       } />
-      <Route path="/admin/payment" element={
+      <Route path="payment" element={
         <ProtectedRoute adminOnly={true}>
           <AdminPayment />
         </ProtectedRoute>
       } />
-      <Route path="/admin/fees" element={
+      <Route path="fees" element={
         <ProtectedRoute adminOnly={true}>
           <AdminFees />
         </ProtectedRoute>
       } />
-      <Route path="/admin/events" element={
+      <Route path="events" element={
         <ProtectedRoute adminOnly={true}>
           <AdminEvents />
         </ProtectedRoute>
       } />
-      <Route path="/admin/config" element={
+      <Route path="config" element={
         <ProtectedRoute adminOnly={true}>
           <ConfigPage />
         </ProtectedRoute>
       } />
-      <Route path="/admin/users" element={
+      <Route path="users" element={
         <ProtectedRoute adminOnly={true}>
           <UsersPage />
         </ProtectedRoute>
       } />
-    </>
+    </Routes>
   );
 };

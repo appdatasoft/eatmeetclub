@@ -14,16 +14,14 @@ function App() {
       <AuthProvider>
         <EditableContentProvider>
           <Routes>
-            {/* Use Route elements to render route components */}
-            <Route>
-              <Route path="*" element={<PublicRoutes />} />
-            </Route>
-            <Route>
-              <Route path="/admin/*" element={<AdminRoutes />} />
-            </Route>
-            <Route>
-              <Route path="/dashboard/*" element={<DashboardRoutes />} />
-            </Route>
+            {/* Public routes */}
+            <PublicRoutes />
+            
+            {/* Admin routes */}
+            <Route path="/admin/*" element={<AdminRoutes />} />
+            
+            {/* Dashboard routes */}
+            <Route path="/dashboard/*" element={<DashboardRoutes />} />
             
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />

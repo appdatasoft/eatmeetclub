@@ -1,5 +1,5 @@
 
-import { Route } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 import MembershipPayment from "@/pages/MembershipPayment";
@@ -23,8 +23,7 @@ import AuthRedirect from "@/components/auth/AuthRedirect";
 export const PublicRoutes = () => {
   return (
     <>
-      {/* Public routes */}
-      <Route path="/" element={<Index />} />
+      <Route index element={<Index />} />
       <Route path="/login" element={
         <AuthRedirect>
           <Login />
