@@ -15,6 +15,7 @@ const FacebookAuthCallback: React.FC = () => {
   const { toast } = useToast();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Processing authentication...');
+  const [debugInfo, setDebugInfo] = useState<Record<string, any>>({});
   const { fetchConnections } = useSocialMedia();
   
   useEffect(() => {
@@ -34,7 +35,18 @@ const FacebookAuthCallback: React.FC = () => {
           state,
           error,
           errorReason,
-          errorDescription
+          errorDescription,
+          allSearchParams: Object.fromEntries([...searchParams.entries()])
+        });
+        
+        setDebugInfo({
+          code: code ? `${code.substring(0, 10)}...` : 'null',
+          state,
+          error,
+          errorReason,
+          errorDescription,
+          url: window.location.href,
+          time: new Date().toISOString()
         });
         
         if (error || errorReason || errorDescription) {
@@ -51,7 +63,12 @@ const FacebookAuthCallback: React.FC = () => {
         }
         
         // Get the current session
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setDebugInfo(prev => ({ ...prev, sessionError }));
+        }
         
         if (!session) {
           console.log('No active session found, redirecting to login');
@@ -77,66 +94,91 @@ const FacebookAuthCallback: React.FC = () => {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
         const redirectUri = 'https://eatmeetclub.com/api/auth/callback/facebook';
         
-        console.log(`Calling edge function with platform: ${platform}, redirectUri: ${redirectUri}`);
+        console.log(`Calling edge function with platform: ${platform}, redirectUri: ${redirectUri}, supabaseUrl: ${supabaseUrl}`);
         
-        const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`
-          },
-          body: JSON.stringify({
-            platform,
-            action: 'callback',
-            code,
-            redirectUri,
-            state
-          })
-        });
+        // Add artificial delay to ensure supabase auth is fully initialized
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        console.log(`Edge function response status: ${response.status}`);
+        const edgeFunctionUrl = `${supabaseUrl}/functions/v1/connect-social-media`;
+        console.log(`Edge function URL: ${edgeFunctionUrl}`);
         
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Error response:', errorText);
-          let errorData;
+        try {
+          const response = await fetch(edgeFunctionUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`
+            },
+            body: JSON.stringify({
+              platform,
+              action: 'callback',
+              code,
+              redirectUri,
+              state
+            })
+          });
+          
+          console.log(`Edge function response status: ${response.status}`);
+          setDebugInfo(prev => ({ 
+            ...prev, 
+            edgeFunctionStatus: response.status,
+            edgeFunctionUrl,
+            requestTime: new Date().toISOString()
+          }));
+          
+          const responseText = await response.text();
+          console.log('Raw edge function response:', responseText);
+          
+          let result;
           try {
-            errorData = JSON.parse(errorText);
+            result = JSON.parse(responseText);
+            console.log('Parsed response:', result);
+            setDebugInfo(prev => ({ ...prev, edgeFunctionResponse: result }));
           } catch (e) {
-            errorData = { error: errorText };
+            console.error('Error parsing response:', e);
+            setDebugInfo(prev => ({ 
+              ...prev, 
+              parseError: e.message, 
+              rawResponse: responseText.substring(0, 500) 
+            }));
+            throw new Error(`Failed to parse response: ${e.message}`);
           }
-          console.error('Error processing callback:', errorData);
-          throw new Error(errorData.error || `Failed to complete ${platform} authentication`);
+          
+          if (!response.ok) {
+            throw new Error(result.error || `Failed to complete ${platform} authentication`);
+          }
+          
+          // Refresh the connections list to reflect the new connection
+          await fetchConnections();
+          
+          // Show success message
+          setStatus('success');
+          setMessage(`Your ${platform} account has been successfully connected!`);
+          
+          // Create a custom toast message
+          toast({
+            title: `${platform} Connected`,
+            description: result.limited_access 
+              ? `Your ${platform} account was connected with limited functionality.` 
+              : `Your ${platform} account has been successfully connected!`,
+            variant: 'default',
+          });
+          
+          // Redirect after a short delay
+          setTimeout(() => {
+            navigate('/dashboard/social-media', { replace: true });
+          }, 2000);
+        } catch (fetchError) {
+          console.error('Fetch error:', fetchError);
+          setDebugInfo(prev => ({ ...prev, fetchError: fetchError.message }));
+          throw fetchError;
         }
-        
-        const result = await response.json();
-        console.log('Connection result:', result);
-        
-        // Refresh the connections list to reflect the new connection
-        await fetchConnections();
-        
-        // Show success message
-        setStatus('success');
-        setMessage(`Your ${platform} account has been successfully connected!`);
-        
-        // Create a custom toast message
-        toast({
-          title: `${platform} Connected`,
-          description: result.limited_access 
-            ? `Your ${platform} account was connected with limited functionality.` 
-            : `Your ${platform} account has been successfully connected!`,
-          variant: 'default',
-        });
-        
-        // Redirect after a short delay
-        setTimeout(() => {
-          navigate('/dashboard/social-media', { replace: true });
-        }, 2000);
         
       } catch (err: any) {
         console.error('Error processing callback:', err);
         setStatus('error');
         setMessage(err.message || 'Failed to process authentication');
+        setDebugInfo(prev => ({ ...prev, finalError: err.message, stack: err.stack }));
         
         toast({
           title: 'Connection Failed',
@@ -178,6 +220,13 @@ const FacebookAuthCallback: React.FC = () => {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{message}</AlertDescription>
           </Alert>
+        )}
+        
+        {status === 'error' && Object.keys(debugInfo).length > 0 && (
+          <div className="mt-4 border border-gray-300 rounded p-4 overflow-auto max-h-60 text-xs">
+            <h3 className="font-bold mb-2">Debug Information</h3>
+            <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+          </div>
         )}
         
         <div className="flex justify-center mt-6">

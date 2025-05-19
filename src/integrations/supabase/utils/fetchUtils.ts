@@ -15,14 +15,28 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
       
       const fetchOptions = {
         ...options,
-        signal: controller.signal
+        signal: controller.signal,
+        // Add cache control headers to prevent caching issues with CORS preflight
+        headers: {
+          ...options.headers,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
       };
+      
+      console.log(`Fetching ${url} with method ${options.method || 'GET'}`);
       
       // Use the request queue to control concurrency and apply rate limiting
       const response = await requestQueue.add(
         async () => {
-          const resp = await fetch(url, fetchOptions);
-          return handleResponse(resp);
+          try {
+            const resp = await fetch(url, fetchOptions);
+            console.log(`Response received from ${url}: status ${resp.status}`);
+            return handleResponse(resp);
+          } catch (error) {
+            console.error(`Fetch error for ${url}:`, error);
+            throw error;
+          }
         },
         options.method === 'GET' ? cacheKey : undefined // Only cache GET requests
       );
