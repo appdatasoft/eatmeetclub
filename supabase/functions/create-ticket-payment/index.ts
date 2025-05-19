@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@12.0.0?target=deno";
@@ -22,7 +23,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Missing Authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -47,27 +48,27 @@ serve(async (req) => {
       console.error("Authentication error:", userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Parse request body
     const { purchaseData } = await req.json();
-    const { eventId, quantity, unitPrice, serviceFee, totalAmount } = purchaseData;
+    const { eventId, quantity } = purchaseData;
 
     console.log("Processing purchase data:", purchaseData);
 
-    if (!eventId || !quantity || !unitPrice) {
+    if (!eventId || !quantity) {
       return new Response(
         JSON.stringify({ error: 'Missing required purchase information' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Verify event exists
     const { data: event, error: eventError } = await supabaseClient
       .from('events')
-      .select('title, tickets_sold, capacity')
+      .select('title, tickets_sold, capacity, price')
       .eq('id', eventId)
       .single();
 
@@ -75,7 +76,7 @@ serve(async (req) => {
       console.error("Event not found:", eventError);
       return new Response(
         JSON.stringify({ error: 'Event not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -84,7 +85,7 @@ serve(async (req) => {
     if (quantity > ticketsAvailable) {
       return new Response(
         JSON.stringify({ error: `Only ${ticketsAvailable} tickets available` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -107,15 +108,21 @@ serve(async (req) => {
           origin = `${url.protocol}//${url.host}`;
         } catch (e) {
           console.error("Failed to parse referrer:", e);
-          origin = 'https://fallback-url.com';
+          origin = 'https://eatmeetclub.lovable.app';
         }
       } else {
         // Last resort fallback
-        origin = 'https://fallback-url.com';
+        origin = 'https://eatmeetclub.lovable.app';
       }
     }
     
     console.log("Origin for redirect URLs:", origin);
+    
+    // Calculate pricing
+    const unitPrice = event.price;
+    const subtotal = unitPrice * quantity;
+    const serviceFee = subtotal * 0.05; // 5% service fee
+    const totalAmount = subtotal + serviceFee;
     
     // Create a Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({

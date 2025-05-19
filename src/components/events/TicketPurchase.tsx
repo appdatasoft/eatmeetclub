@@ -38,11 +38,6 @@ export const TicketPurchase: React.FC<TicketPurchaseProps> = ({
   };
 
   const handlePurchase = () => {
-    if (!user) {
-      navigate("/login", { state: { from: location.pathname } });
-      return;
-    }
-
     if (onPurchase) {
       onPurchase(ticketCount);
     }

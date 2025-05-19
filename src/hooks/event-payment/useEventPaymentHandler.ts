@@ -60,7 +60,7 @@ export const useEventPaymentHandler = (
       // Calculate service fee (configured % of total)
       const unitPrice = event.price;
       const subtotal = unitPrice * ticketCount;
-      const serviceFee = subtotal * (serviceFeePercent / 100); // Use configured % service fee
+      const serviceFee = subtotal * (serviceFeePercent / 100); 
       const totalAmount = subtotal + serviceFee;
       
       // Store ticket purchase details in localStorage for access after payment
@@ -70,13 +70,33 @@ export const useEventPaymentHandler = (
         quantity: ticketCount,
         unitPrice: event.price,
         serviceFee: serviceFee,
-        totalAmount: totalAmount
+        totalAmount: totalAmount,
+        restaurantName: event.restaurant?.name || '',
+        restaurantAddress: event.restaurant?.address || '',
+        restaurantCity: event.restaurant?.city || '',
+        date: event.date,
+        time: event.time
       }));
+      
+      console.log("Creating payment with:", {
+        eventId: event.id,
+        quantity: ticketCount,
+        userId: user.id
+      });
       
       const paymentResult = await createTicketPayment(event.id, ticketCount, user.id);
       
+      if (!paymentResult) {
+        throw new Error("Failed to create payment session");
+      }
+      
+      if (paymentResult.error) {
+        throw new Error(paymentResult.error);
+      }
+      
       if (paymentResult.url) {
-        // Redirect to the payment page
+        // Redirect to the payment page - use window.location for full page navigation
+        console.log("Redirecting to payment URL:", paymentResult.url);
         window.location.href = paymentResult.url;
       } else {
         throw new Error("No checkout URL returned from payment service");
@@ -88,7 +108,6 @@ export const useEventPaymentHandler = (
         description: error.message || "Failed to process ticket purchase. Please try again.",
         variant: "destructive"
       });
-    } finally {
       setIsPaymentProcessing(false);
     }
   };

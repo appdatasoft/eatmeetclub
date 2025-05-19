@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface PaymentResponse {
   url?: string;
   error?: string;
+  sessionId?: string;
 }
 
 export const createTicketPayment = async (
@@ -19,6 +20,10 @@ export const createTicketPayment = async (
     if (!token) {
       throw new Error("User not authenticated");
     }
+
+    console.log("Invoking create-ticket-payment function with:", {
+      eventId, quantity, userId
+    });
 
     // Call the Supabase Edge Function to create a payment
     const response = await supabase.functions.invoke('create-ticket-payment', {
@@ -36,13 +41,30 @@ export const createTicketPayment = async (
       }
     });
 
+    console.log("Payment function response:", response);
+
     if (response.error) {
-      throw new Error(response.error.message || "Payment creation failed");
+      console.error("Error from payment function:", response.error);
+      return { 
+        error: response.error.message || "Payment creation failed"
+      };
     }
 
-    return response.data || {};
+    if (!response.data?.url) {
+      console.error("No URL in response:", response.data);
+      return { 
+        error: "No checkout URL returned"
+      };
+    }
+
+    return {
+      url: response.data.url,
+      sessionId: response.data.sessionId
+    };
   } catch (error: any) {
     console.error("Error creating ticket payment:", error);
-    throw error;
+    return {
+      error: error.message || "Failed to create payment session"
+    };
   }
 };
