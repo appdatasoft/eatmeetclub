@@ -33,7 +33,7 @@ export const fetchMenuItemMedia = async (restaurantId: string, itemId: string): 
       type: item.media_type || 'image',
       url: item.url,
       menuItemId: item.menu_item_id
-    })) || [];
+    })) as MediaItem[] || [];
 
     // Cache the result
     cache.set(media);

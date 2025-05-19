@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
@@ -16,7 +17,11 @@ export const useMenuItems = (restaurantId: string | undefined, retryTrigger: num
   
   const { toast } = useToast();
   const { fetchMediaForMenuItem, fetchIngredientsForMenuItem } = useMenuItemMedia();
-  const { processMenuItems } = useMenuItemsProcessor(fetchMediaForMenuItem, fetchIngredientsForMenuItem);
+  const { processMenuItems } = useMenuItemsProcessor(
+    // Make sure we properly type these functions
+    (restaurantId: string, menuItemId: string) => fetchMediaForMenuItem(restaurantId, menuItemId),
+    (menuItemId: string) => fetchIngredientsForMenuItem(menuItemId)
+  );
 
   // This function fetches menu items with retries and caching
   const fetchMenuItems = useCallback(async () => {

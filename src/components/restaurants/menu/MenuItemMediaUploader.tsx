@@ -1,11 +1,18 @@
 
 import React, { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { MediaItem, MediaUploaderProps } from "./types/mediaTypes";
+import { MediaItem } from "./types/mediaTypes";
 import { uploadFileToStorage, deleteFileFromStorage, extractPathFromUrl } from "./utils/uploadUtils";
 import MediaPreview from "./MediaPreview";
 import UploadButton from "./UploadButton";
 import ProgressBar from "./ProgressBar";
+
+interface MediaUploaderProps {
+  initialMediaItems?: MediaItem[];
+  onChange: (items: MediaItem[]) => void;
+  restaurantId: string;
+  menuItemId: string;
+}
 
 const MenuItemMediaUploader: React.FC<MediaUploaderProps> = ({
   initialMediaItems = [],

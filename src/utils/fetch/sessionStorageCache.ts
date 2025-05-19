@@ -10,7 +10,7 @@ interface CacheEntry<T> {
 }
 
 interface SessionCache<T = any> {
-  set: (key: string, data: T, ttlMs?: number) => void;
+  set: (data: T, ttlMs?: number) => void;
   get: () => T | null;
   isStale: () => boolean;
   remove: () => void;

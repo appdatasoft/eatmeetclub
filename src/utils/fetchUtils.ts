@@ -1,6 +1,6 @@
 
 import { handleResponse, createResponseFromCachedData } from '@/integrations/supabase/utils/responseUtils';
-import { requestQueue } from '@/integrations/supabase/utils/requestQueue';
+import { requestTracker } from '@/utils/fetch/requestTracker';
 import { createSessionCache } from './fetch/sessionStorageCache';
 
 export interface FetchRetryOptions {
@@ -17,9 +17,9 @@ export interface FetchRetryOptions {
  * Utility for fetching data with retry logic and safe response handling
  */
 export const fetchWithRetry = async <T>(
-  fetchFn: () => Promise<{ data: T | null; error: any }>,
+  fetchFn: () => Promise<T>,
   options: FetchRetryOptions = {}
-): Promise<{ data: T | null; error: any }> => {
+): Promise<T> => {
   const {
     retries = 3,
     baseDelay = 1000,
@@ -31,7 +31,7 @@ export const fetchWithRetry = async <T>(
 
   // Check cache first if cacheKey is provided
   if (cacheKey) {
-    const cache = createSessionCache<{ data: T | null; error: any }>(
+    const cache = createSessionCache<T>(
       cacheKey,
       cacheTTL,
       { staleWhileRevalidate: options.staleWhileRevalidate }
@@ -45,7 +45,7 @@ export const fetchWithRetry = async <T>(
       if (cache.isStale() && options.staleWhileRevalidate) {
         console.log(`Stale cache for key: ${cacheKey}, refreshing in background`);
         setTimeout(() => {
-          refreshDataInBackground(fetchFn, cacheKey, cacheTTL);
+          refreshDataInBackground(fetchFn, cache);
         }, 10);
       }
       
@@ -58,72 +58,66 @@ export const fetchWithRetry = async <T>(
   
   while (attempt <= retries) {
     try {
-      // Use request queue to throttle requests
-      const result = await requestQueue.add(async () => {
-        // Execute the fetch function
-        const response = await fetchFn();
-        
-        // If there's data, create a safe deep clone
-        if (response.data) {
-          try {
-            // Deep clone the data to ensure it can be read multiple times
-            const safeClone = JSON.parse(JSON.stringify(response.data));
-            return { data: safeClone, error: null };
-          } catch (cloneError) {
-            console.warn('Error cloning response data:', cloneError);
-            // If cloning fails, return the original result
-            return response;
-          }
-        }
-        
-        return response;
-      }, `fetchWithRetry-${attempt}`);
+      // Wait for request throttling
+      await requestTracker.checkAndWait();
+      
+      // Execute the fetch function
+      const result = await fetchFn();
+      
+      // Release the request slot
+      requestTracker.releaseRequest();
       
       // Store in cache if successful and cacheKey is provided
-      if (cacheKey && result.data) {
-        const cache = createSessionCache<typeof result>(cacheKey, cacheTTL, {
-          staleWhileRevalidate: options.staleWhileRevalidate
-        });
+      if (cacheKey) {
+        const cache = createSessionCache<T>(
+          cacheKey, 
+          cacheTTL,
+          { staleWhileRevalidate: options.staleWhileRevalidate }
+        );
         cache.set(result);
       }
       
       return result;
     } catch (error: any) {
+      // Release the request slot even on error
+      requestTracker.releaseRequest();
+      
       lastError = error;
+      attempt++;
       
       // Check if we should retry this error
-      if (!shouldRetry(error) || attempt >= retries) {
+      if (!shouldRetry(error) || attempt > retries) {
         break;
       }
       
       // Calculate delay with exponential backoff
-      const delay = Math.min(baseDelay * Math.pow(2, attempt), maxDelay);
-      console.log(`Retry attempt ${attempt + 1}/${retries} after ${delay}ms`);
+      const jitter = Math.random() * 500; // Add randomness
+      const delay = Math.min(
+        baseDelay * Math.pow(2, attempt - 1) + jitter,
+        maxDelay
+      );
+      
+      console.log(`Retry attempt ${attempt}/${retries} after ${delay}ms`);
       
       // Wait before next attempt
       await new Promise(resolve => setTimeout(resolve, delay));
-      attempt++;
     }
   }
 
-  return { data: null, error: lastError };
+  throw lastError;
 };
 
 // Background refresh function to update cache without blocking UI
 async function refreshDataInBackground<T>(
-  fetchFn: () => Promise<{ data: T | null; error: any }>,
-  cacheKey: string,
-  cacheTTL: number
+  fetchFn: () => Promise<T>,
+  cache: ReturnType<typeof createSessionCache<T>>
 ): Promise<void> {
   try {
     const result = await fetchFn();
-    if (!result.error && result.data) {
-      const cache = createSessionCache<{ data: T | null; error: any }>(cacheKey, cacheTTL);
-      cache.set(result);
-      console.log(`Background refresh complete for: ${cacheKey}`);
-    }
+    cache.set(result);
+    console.log(`Background refresh complete`);
   } catch (error) {
-    console.error(`Background refresh failed for: ${cacheKey}`, error);
+    console.error(`Background refresh failed`, error);
   }
 }
 

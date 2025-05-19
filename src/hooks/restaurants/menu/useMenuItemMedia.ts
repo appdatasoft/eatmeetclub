@@ -1,5 +1,5 @@
 
-import { MediaItem } from '@/components/restaurants/menu';
+import { MediaItem } from '@/components/restaurants/menu/types/mediaTypes';
 import { fetchMediaForMenuItem, fetchIngredientsForMenuItem } from './media/fetchMediaUtils';
 import { deleteMediaItem } from './media/mediaManagement';
 import { fetchWithRetry } from '@/utils/fetch';
@@ -11,7 +11,7 @@ export const useMenuItemMedia = () => {
   const { toast } = useToast();
   
   // Wrap the fetch functions with enhanced retry logic
-  const fetchMediaWithRetry = async (restaurantId: string, menuItemId: string) => {
+  const fetchMediaWithRetry = async (restaurantId: string, menuItemId: string): Promise<MediaItem[]> => {
     setIsRetrying(true);
     try {
       const result = await fetchWithRetry(
@@ -26,7 +26,12 @@ export const useMenuItemMedia = () => {
           }
         }
       );
-      return result;
+      
+      // Format the result to match expected return type
+      if (result && Array.isArray(result)) {
+        return result;
+      }
+      return [];
     } catch (error: any) {
       console.error(`Failed to fetch media after multiple retries:`, error);
       toast({
@@ -40,10 +45,10 @@ export const useMenuItemMedia = () => {
     }
   };
   
-  const fetchIngredientsWithRetry = async (menuItemId: string) => {
+  const fetchIngredientsWithRetry = async (menuItemId: string): Promise<string[]> => {
     setIsRetrying(true);
     try {
-      return await fetchWithRetry(
+      const result = await fetchWithRetry(
         () => fetchIngredientsForMenuItem(menuItemId),
         { 
           retries: 5, 
@@ -51,6 +56,12 @@ export const useMenuItemMedia = () => {
           maxDelay: 10000
         }
       );
+      
+      // Format the result to match expected return type
+      if (result && Array.isArray(result)) {
+        return result;
+      }
+      return [];
     } catch (error: any) {
       console.error(`Failed to fetch ingredients after multiple retries:`, error);
       return [];
@@ -59,10 +70,10 @@ export const useMenuItemMedia = () => {
     }
   };
   
-  const deleteMediaWithRetry = async (filePath: string) => {
+  const deleteMediaWithRetry = async (filePath: string): Promise<boolean> => {
     setIsRetrying(true);
     try {
-      return await fetchWithRetry(
+      const result = await fetchWithRetry(
         () => deleteMediaItem(filePath),
         { 
           retries: 3, 
@@ -70,6 +81,9 @@ export const useMenuItemMedia = () => {
           maxDelay: 5000
         }
       );
+      
+      // Format the result to match expected return type
+      return !!result;
     } catch (error: any) {
       console.error(`Failed to delete media after multiple retries:`, error);
       toast({

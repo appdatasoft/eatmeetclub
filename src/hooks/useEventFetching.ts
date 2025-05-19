@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useCallback } from "react";
-import { supabase, retryFetch } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { EventDetails } from "@/types/event";
 import { useEventDataFetch } from "./events/useEventDataFetch";
@@ -33,14 +34,7 @@ export const useEventFetching = (eventId?: string) => {
       setIsRetrying(true);
       
       // Fetch the event data with retry mechanism and exponential backoff
-      const eventData = await fetchWithRetry(
-        () => fetchEventWithDetails(eventId),
-        {
-          retries: 5,
-          baseDelay: 1000,
-          maxDelay: 15000
-        }
-      );
+      const eventData = await fetchEventWithDetails(eventId);
       
       if (eventData) {
         setEvent(eventData);

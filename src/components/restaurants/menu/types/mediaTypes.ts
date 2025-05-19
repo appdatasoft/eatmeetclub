@@ -5,3 +5,10 @@ export interface MediaItem {
   url: string;
   menuItemId?: string;
 }
+
+export interface MediaUploaderProps {
+  initialMediaItems?: MediaItem[];
+  onChange: (items: MediaItem[]) => void;
+  restaurantId: string;
+  menuItemId: string;
+}

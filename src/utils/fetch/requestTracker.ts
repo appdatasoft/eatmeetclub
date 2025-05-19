@@ -62,11 +62,16 @@ class RequestTracker {
     this.activeRequests++;
   }
   
+  // Mark a request as completed and release the slot
+  releaseRequest(): void {
+    this.activeRequests = Math.max(0, this.activeRequests - 1);
+  }
+  
   // Mark a request as successful and update rate limit info
   recordSuccess(remainingLimit?: number, resetAt?: number): void {
     this.stats.successfulRequests++;
     this.stats.consecutiveFailures = 0;
-    this.activeRequests--;
+    this.releaseRequest();
     
     // Update rate limit info if provided
     if (remainingLimit !== undefined) {
@@ -85,7 +90,7 @@ class RequestTracker {
   recordFailure(isRateLimit = false): void {
     this.stats.failedRequests++;
     this.stats.consecutiveFailures++;
-    this.activeRequests--;
+    this.releaseRequest();
     
     // If it's a rate limit error, update rate limit info
     if (isRateLimit) {
