@@ -43,16 +43,16 @@ export const useAdminFees = () => {
 
       // Default values
       const config: FeeConfig = {
-        restaurant_monthly_fee: 50,
-        signup_commission_value: 10,
+        restaurant_monthly_fee: 400, // Updated default value to match screenshot
+        signup_commission_value: 10, // Updated default value to match screenshot
         signup_commission_type: 'percentage',
-        ticket_commission_value: 5,
+        ticket_commission_value: 5, // Updated default value to match screenshot
         ticket_commission_type: 'percentage'
       };
 
       // Update with data from database
       if (feeData && feeData.length > 0) {
-        for (const item of feeData) {
+        feeData.forEach(item => {
           if (item.key === 'restaurant_monthly_fee') {
             config.restaurant_monthly_fee = parseFloat(item.value);
           } else if (item.key === 'signup_commission_value') {
@@ -64,6 +64,26 @@ export const useAdminFees = () => {
           } else if (item.key === 'ticket_commission_type') {
             config.ticket_commission_type = item.value as FeeType;
           }
+        });
+      } else {
+        // If no data found, insert default values
+        console.log('No fee data found, inserting default values...');
+        
+        try {
+          const defaultValues = [
+            { key: 'restaurant_monthly_fee', value: config.restaurant_monthly_fee.toString() },
+            { key: 'signup_commission_value', value: config.signup_commission_value.toString() },
+            { key: 'signup_commission_type', value: config.signup_commission_type },
+            { key: 'ticket_commission_value', value: config.ticket_commission_value.toString() },
+            { key: 'ticket_commission_type', value: config.ticket_commission_type }
+          ];
+          
+          for (const item of defaultValues) {
+            await supabase.from('admin_config').upsert(item);
+          }
+        } catch (insertError) {
+          console.error('Error inserting default fee values:', insertError);
+          // Continue with defaults even if insert fails
         }
       }
 
@@ -74,10 +94,10 @@ export const useAdminFees = () => {
     }
   };
 
-  const { data: fees, isLoading, error } = useQuery({
+  const { data: fees, isLoading, error, refetch } = useQuery({
     queryKey: ['adminFees'],
     queryFn: fetchFees,
-    retry: 1,
+    retry: 2,
     staleTime: 60000, // 1 minute
     gcTime: 300000, // 5 minutes
   });
@@ -158,6 +178,7 @@ export const useAdminFees = () => {
     isEditing,
     setIsEditing,
     handleSave,
-    isSaving: updateFee.isPending
+    isSaving: updateFee.isPending,
+    refetch
   };
 };

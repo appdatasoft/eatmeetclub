@@ -7,11 +7,13 @@ import FeeCard from "@/components/admin/fees/FeeCard";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import RetryAlert from "@/components/ui/RetryAlert";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminFees = () => {
   const queryClient = useQueryClient();
   const [isRetrying, setIsRetrying] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
   const { 
     fees, 
@@ -20,8 +22,47 @@ const AdminFees = () => {
     isEditing, 
     setIsEditing, 
     handleSave, 
-    isSaving 
+    isSaving,
+    refetch 
   } = useAdminFees();
+
+  // Auto-retry up to 3 times on initial error
+  useEffect(() => {
+    if (error && retryCount < 3) {
+      const timer = setTimeout(() => {
+        console.log(`Auto-retrying fee fetch (${retryCount + 1}/3)...`);
+        setRetryCount(prev => prev + 1);
+        refetch();
+      }, 1000 * (retryCount + 1)); // Exponential backoff
+      
+      return () => clearTimeout(timer);
+    }
+  }, [error, retryCount, refetch]);
+
+  // Check connection to Supabase on error
+  useEffect(() => {
+    if (error) {
+      const checkConnection = async () => {
+        try {
+          // Simple query to check connection
+          const { data, error: testError } = await supabase
+            .from('admin_config')
+            .select('count(*)', { count: 'exact' })
+            .limit(1);
+          
+          if (testError) {
+            console.error('Test connection failed:', testError);
+          } else {
+            console.log('Supabase connection is working:', data);
+          }
+        } catch (err) {
+          console.error('Error testing connection:', err);
+        }
+      };
+      
+      checkConnection();
+    }
+  }, [error]);
 
   const handleEdit = (key: string) => {
     setIsEditing(key);
@@ -41,7 +82,12 @@ const AdminFees = () => {
   const handleRetry = async () => {
     setIsRetrying(true);
     try {
+      // Clear the query cache for this specific query to force a fresh fetch
       await queryClient.invalidateQueries({ queryKey: ['adminFees'] });
+      await refetch();
+      setRetryCount(0); // Reset retry count after manual retry
+    } catch (error) {
+      console.error('Retry failed:', error);
     } finally {
       setIsRetrying(false);
     }
@@ -77,7 +123,7 @@ const AdminFees = () => {
             <CardContent className="pt-6">
               <RetryAlert
                 title="Error Loading Fee Configuration"
-                message="Unable to load the fee configuration. This could be due to a database connection issue or missing configuration."
+                message={`Unable to load the fee configuration: ${error instanceof Error ? error.message : 'Database connection issue'}`}
                 onRetry={handleRetry}
                 isRetrying={isRetrying}
                 severity="error"
