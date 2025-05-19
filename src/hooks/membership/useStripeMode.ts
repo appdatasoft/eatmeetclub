@@ -52,6 +52,40 @@ export const useStripeMode = () => {
     }
   }, []);
   
+  // Update function to change Stripe mode
+  const updateStripeMode = useCallback(async (newMode: "test" | "live") => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Update the mode in the database
+      const { error: updateError } = await supabase
+        .from('admin_config')
+        .update({ value: newMode })
+        .eq('key', 'stripe_mode');
+      
+      if (updateError) {
+        console.error("Error updating Stripe mode:", updateError);
+        setError(`Failed to update Stripe mode: ${updateError.message}`);
+        return false;
+      }
+      
+      // Update the local state
+      setMode(newMode);
+      
+      // Cache the new mode in localStorage
+      localStorage.setItem('stripe_mode', newMode);
+      
+      return true;
+    } catch (err) {
+      console.error("Error updating Stripe mode:", err);
+      setError(err instanceof Error ? err.message : "Unknown error");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  
   useEffect(() => {
     // Load the stripe mode when the hook is first used
     handleRetryStripeCheck();
@@ -64,6 +98,7 @@ export const useStripeMode = () => {
     isTestMode,
     isStripeTestMode,
     stripeCheckError,
-    handleRetryStripeCheck
+    handleRetryStripeCheck,
+    updateStripeMode
   };
 };

@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Calendar, 
@@ -171,6 +170,15 @@ const AdminSidebar = () => {
                 className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/users')}`}
               >
                 <span>Manage Users</span>
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/admin/stripe-settings" 
+                className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/stripe-settings')}`}
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                <span>Stripe Settings</span>
               </Link>
             </li>
           </ul>

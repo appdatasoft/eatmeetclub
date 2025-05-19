@@ -1,397 +1,353 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Define CORS headers for browser requests
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Content-Type": "application/json",
 };
 
-// Create a Supabase client
-const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-
-// Define the expected request body structure for social media connections
-interface SocialMediaConnectionRequest {
+interface SocialMediaRequest {
   platform: string;
-  action?: 'initiate' | 'callback' | 'disconnect';
+  action?: string;
   code?: string;
   redirectUri?: string;
 }
 
-// Instagram API credentials from environment variables
-const INSTAGRAM_CLIENT_ID = Deno.env.get('INSTAGRAM_CLIENT_ID') || '';
-const INSTAGRAM_CLIENT_SECRET = Deno.env.get('INSTAGRAM_CLIENT_SECRET') || '';
-
-Deno.serve(async (req) => {
+serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders, status: 204 });
   }
 
   try {
-    // Get the JWT from the Authorization header
-    const authHeader = req.headers.get('Authorization');
+    // Get the JWT token to verify authentication
+    const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Missing Authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Missing Authorization header" }),
+        { headers: corsHeaders, status: 401 }
       );
     }
 
-    // Extract the token (Bearer token)
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Create Supabase client with the user's token for proper RLS enforcement
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    });
-    
-    // Verify the JWT and get the user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token or user not found' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Extract request data
-    const requestData: SocialMediaConnectionRequest = await req.json();
-    const { platform, action, code, redirectUri } = requestData;
-
-    if (!platform) {
-      return new Response(
-        JSON.stringify({ error: 'Missing platform parameter' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Handle different social media platforms
-    if (platform.toLowerCase() === 'instagram') {
-      return await handleInstagramAuth(action, code, redirectUri, user.id, supabase, corsHeaders);
-    } else {
-      // For other platforms, use the simulated connection flow (fallback)
-      if (action === 'disconnect') {
-        return await handleDisconnect(platform, user.id, supabase, corsHeaders);
-      } else {
-        return await handleSimulatedConnection(platform, user.id, supabase, corsHeaders);
-      }
-    }
-
-  } catch (error) {
-    console.error('Error handling social media connection:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    // Initialize Supabase client
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") || "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
     );
-  }
-});
 
-async function handleInstagramAuth(
-  action?: string,
-  code?: string,
-  redirectUri?: string,
-  userId?: string,
-  supabase?: any,
-  corsHeaders?: Record<string, string>
-) {
-  if (!supabase || !userId || !corsHeaders) {
-    throw new Error('Missing required parameters');
-  }
-
-  // If this is a disconnect request
-  if (action === 'disconnect') {
-    return await handleDisconnect('Instagram', userId, supabase, corsHeaders);
-  }
-
-  // If this is the initial OAuth request
-  if (action === 'initiate') {
-    console.log('Initiating Instagram auth. Client ID:', INSTAGRAM_CLIENT_ID ? 'Provided' : 'Missing');
+    // Verify the JWT token and get the user's ID
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
-    // Validate Instagram API credentials
-    if (!INSTAGRAM_CLIENT_ID || !INSTAGRAM_CLIENT_SECRET) {
+    if (authError || !user) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Instagram API credentials are missing. Please configure INSTAGRAM_CLIENT_ID and INSTAGRAM_CLIENT_SECRET in your environment variables.' 
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { headers: corsHeaders, status: 401 }
       );
     }
-    
-    // Instagram OAuth authorization URL
-    const instagramAuthUrl = new URL('https://api.instagram.com/oauth/authorize');
-    
-    // Set required parameters
-    instagramAuthUrl.searchParams.append('client_id', INSTAGRAM_CLIENT_ID);
-    instagramAuthUrl.searchParams.append('redirect_uri', redirectUri || '');
-    instagramAuthUrl.searchParams.append('scope', 'user_profile,user_media');
-    instagramAuthUrl.searchParams.append('response_type', 'code');
-    
-    // Return the authorization URL to redirect the user
-    return new Response(
-      JSON.stringify({ authUrl: instagramAuthUrl.toString() }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-  
-  // Handle OAuth callback with code
-  else if (action === 'callback' && code && redirectUri) {
-    try {
-      console.log('Handling Instagram callback. Code received, exchanging for token...');
-      
-      // Validate Instagram API credentials
-      if (!INSTAGRAM_CLIENT_ID || !INSTAGRAM_CLIENT_SECRET) {
-        throw new Error('Instagram API credentials are missing. Please configure INSTAGRAM_CLIENT_ID and INSTAGRAM_CLIENT_SECRET in your environment variables.');
-      }
-      
-      // Exchange code for access token
-      const tokenResponse = await fetch('https://api.instagram.com/oauth/access_token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          client_id: INSTAGRAM_CLIENT_ID,
-          client_secret: INSTAGRAM_CLIENT_SECRET,
-          grant_type: 'authorization_code',
-          redirect_uri: redirectUri,
-          code,
-        }).toString(),
-      });
-      
-      if (!tokenResponse.ok) {
-        const errorData = await tokenResponse.json();
-        console.error('Instagram token exchange error:', errorData);
-        throw new Error(`Instagram token exchange failed: ${JSON.stringify(errorData)}`);
-      }
-      
-      const tokenData = await tokenResponse.json();
-      const accessToken = tokenData.access_token;
-      const instagramUserId = tokenData.user_id;
-      
-      console.log('Token received, fetching user profile...');
-      
-      // Get user profile info
-      const profileResponse = await fetch(
-        `https://graph.instagram.com/v18.0/${instagramUserId}?fields=id,username&access_token=${accessToken}`
+
+    // Get the request parameters
+    const requestData: SocialMediaRequest = await req.json();
+    const { platform, action = "connect", code, redirectUri } = requestData;
+
+    console.log(`Processing ${action} request for ${platform} by user ${user.id}`);
+
+    // Check if the platform is supported
+    const supportedPlatforms = ["Instagram", "Facebook", "Twitter", "X/Twitter", "TikTok", "YouTube", "Google Business", "Google Maps", "Yelp"];
+    if (!supportedPlatforms.includes(platform)) {
+      return new Response(
+        JSON.stringify({ error: "Unsupported platform" }),
+        { headers: corsHeaders, status: 400 }
       );
+    }
+
+    // Handle disconnect action
+    if (action === "disconnect") {
+      console.log(`Disconnecting ${platform} for user ${user.id}`);
       
-      if (!profileResponse.ok) {
-        const errorData = await profileResponse.json();
-        console.error('Instagram profile fetch error:', errorData);
-        throw new Error(`Instagram profile fetch failed: ${JSON.stringify(errorData)}`);
-      }
-      
-      const profileData = await profileResponse.json();
-      const username = profileData.username;
-      
-      console.log('Profile received, storing connection in database...');
-      
-      // Store connection in database
-      const { data: existingConnection } = await supabase
+      // First, find the connection to disconnect
+      const { data: connection, error: fetchError } = await supabase
         .from('social_media_connections')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('platform', 'Instagram')
-        .maybeSingle();
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('platform', platform)
+        .single();
       
-      let result;
-      if (existingConnection) {
-        result = await supabase
-          .from('social_media_connections')
-          .update({
-            username,
-            profile_url: `https://instagram.com/${username}`,
-            is_connected: true,
-            updated_at: new Date().toISOString(),
-            oauth_token: accessToken,
-            meta_data: {
-              instagram_user_id: instagramUserId
-            }
-          })
-          .eq('id', existingConnection.id)
-          .select();
-      } else {
-        result = await supabase
-          .from('social_media_connections')
-          .insert({
-            user_id: userId,
-            platform: 'Instagram',
-            username,
-            profile_url: `https://instagram.com/${username}`,
-            is_connected: true,
-            oauth_token: accessToken,
-            meta_data: {
-              instagram_user_id: instagramUserId
-            }
-          })
-          .select();
+      if (fetchError) {
+        return new Response(
+          JSON.stringify({ error: `Failed to find ${platform} connection: ${fetchError.message}` }),
+          { headers: corsHeaders, status: 404 }
+        );
       }
       
-      if (result.error) {
-        console.error('Database error:', result.error);
-        throw result.error;
+      if (!connection) {
+        return new Response(
+          JSON.stringify({ error: `No connected ${platform} account found` }),
+          { headers: corsHeaders, status: 404 }
+        );
       }
-      
-      console.log('Instagram connection successfully stored');
-      
+
+      // For OAuth connections, we may need to revoke access tokens
+      // This would be platform-specific and could be implemented here
+
+      // Delete the connection from the database
+      const { error: deleteError } = await supabase
+        .from('social_media_connections')
+        .delete()
+        .eq('id', connection.id);
+
+      if (deleteError) {
+        return new Response(
+          JSON.stringify({ error: `Failed to disconnect ${platform}: ${deleteError.message}` }),
+          { headers: corsHeaders, status: 500 }
+        );
+      }
+
       return new Response(
         JSON.stringify({ 
           success: true, 
-          data: result.data[0],
-          message: `Successfully connected Instagram account: @${username}`
+          message: `Successfully disconnected ${platform} account` 
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } catch (error) {
-      console.error('Instagram OAuth error:', error);
-      return new Response(
-        JSON.stringify({ error: error.message || 'Instagram authentication failed' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: corsHeaders, status: 200 }
       );
     }
-  }
-  
-  // If neither initiating nor handling callback, return error
-  return new Response(
-    JSON.stringify({ error: 'Invalid Instagram authentication action' }),
-    { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
-}
 
-async function handleSimulatedConnection(
-  platform: string,
-  userId: string,
-  supabase: any,
-  corsHeaders: Record<string, string>
-) {
-  // Generate platform-specific default values
-  const defaultUsername = 'connected-user';
-  const getDefaultProfileUrl = (platform: string) => {
-    switch (platform.toLowerCase()) {
-      case 'youtube':
-        return `https://www.youtube.com/channel/example`;
-      default:
-        return `https://example.com/${platform.toLowerCase()}/profile`;
-    }
-  };
+    // Handle Instagram specific OAuth flow
+    if (platform === "Instagram") {
+      // Handle different OAuth actions
+      if (action === "initiate") {
+        // Instagram App credentials
+        const clientId = Deno.env.get("INSTAGRAM_CLIENT_ID");
+        const redirectUrl = redirectUri || "http://localhost:5173";
 
-  // Check if a connection already exists for this platform and user
-  const { data: existingConnection, error: fetchError } = await supabase
-    .from('social_media_connections')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('platform', platform)
-    .maybeSingle();
+        if (!clientId) {
+          return new Response(
+            JSON.stringify({ error: "Instagram Client ID not configured" }),
+            { headers: corsHeaders, status: 500 }
+          );
+        }
 
-  if (fetchError) {
-    console.error('Error checking existing connection:', fetchError);
-    throw fetchError;
-  }
+        // Generate authorization URL
+        const authUrl = new URL("https://api.instagram.com/oauth/authorize");
+        authUrl.searchParams.append("client_id", clientId);
+        authUrl.searchParams.append("redirect_uri", redirectUrl);
+        authUrl.searchParams.append("scope", "user_profile,user_media");
+        authUrl.searchParams.append("response_type", "code");
 
-  let result;
-  if (existingConnection) {
-    // Update existing connection
-    result = await supabase
-      .from('social_media_connections')
-      .update({
-        username: defaultUsername,
-        profile_url: getDefaultProfileUrl(platform),
-        updated_at: new Date().toISOString(),
-        is_connected: true
-      })
-      .eq('id', existingConnection.id)
-      .select();
-  } else {
-    // Create new connection
-    result = await supabase
-      .from('social_media_connections')
-      .insert({
-        user_id: userId,
-        platform,
-        username: defaultUsername,
-        profile_url: getDefaultProfileUrl(platform),
-        is_connected: true
-      })
-      .select();
-  }
+        return new Response(
+          JSON.stringify({ authUrl: authUrl.toString() }),
+          { headers: corsHeaders, status: 200 }
+        );
+      } else if (action === "callback") {
+        // Handle the OAuth callback
+        if (!code) {
+          return new Response(
+            JSON.stringify({ error: "Missing authorization code" }),
+            { headers: corsHeaders, status: 400 }
+          );
+        }
 
-  if (result.error) {
-    console.error('Error updating/inserting social media connection:', result.error);
-    throw result.error;
-  }
+        const clientId = Deno.env.get("INSTAGRAM_CLIENT_ID");
+        const clientSecret = Deno.env.get("INSTAGRAM_CLIENT_SECRET");
+        const redirectUrl = redirectUri || "http://localhost:5173";
 
-  // Return the connection data
-  return new Response(
-    JSON.stringify({ success: true, data: result.data[0] }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
-}
+        if (!clientId || !clientSecret) {
+          return new Response(
+            JSON.stringify({ error: "Instagram Client ID or Secret not configured" }),
+            { headers: corsHeaders, status: 500 }
+          );
+        }
 
-async function handleDisconnect(
-  platform: string,
-  userId: string,
-  supabase: any,
-  corsHeaders: Record<string, string>
-) {
-  try {
-    console.log(`Processing disconnect request for ${platform}`);
-    
-    // Find the connection to disconnect
-    const { data: connection, error: fetchError } = await supabase
-      .from('social_media_connections')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('platform', platform)
-      .maybeSingle();
+        // Exchange code for access token
+        try {
+          const tokenResponse = await fetch("https://api.instagram.com/oauth/access_token", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: new URLSearchParams({
+              client_id: clientId,
+              client_secret: clientSecret,
+              grant_type: "authorization_code",
+              redirect_uri: redirectUrl,
+              code: code
+            })
+          });
+
+          const tokenData = await tokenResponse.json();
+          
+          if (!tokenResponse.ok || tokenData.error) {
+            console.error("Instagram token exchange error:", tokenData);
+            return new Response(
+              JSON.stringify({ 
+                error: tokenData.error_message || tokenData.error_description || "Failed to exchange code for token" 
+              }),
+              { headers: corsHeaders, status: 400 }
+            );
+          }
+
+          // Get user profile information 
+          const accessToken = tokenData.access_token;
+          const userId = tokenData.user_id;
+
+          // Get user profile data
+          const userResponse = await fetch(
+            `https://graph.instagram.com/v18.0/${userId}?fields=id,username&access_token=${accessToken}`
+          );
+
+          const userData = await userResponse.json();
+
+          if (!userResponse.ok || userData.error) {
+            console.error("Instagram user data error:", userData);
+            return new Response(
+              JSON.stringify({ 
+                error: userData.error?.message || "Failed to get user profile" 
+              }),
+              { headers: corsHeaders, status: 400 }
+            );
+          }
+
+          // Save the connection to the database
+          const { data: connection, error } = await supabase
+            .from('social_media_connections')
+            .upsert({
+              user_id: user.id,
+              platform: "Instagram",
+              username: userData.username,
+              profile_url: `https://instagram.com/${userData.username}`,
+              is_connected: true,
+              oauth_token: accessToken,
+              oauth_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days
+              meta_data: { 
+                instagram_user_id: userId,
+                connected_at: new Date().toISOString()
+              }
+            }, { onConflict: 'user_id, platform' })
+            .select()
+            .single();
+
+          if (error) {
+            console.error("Database error:", error);
+            return new Response(
+              JSON.stringify({ error: `Failed to save connection: ${error.message}` }),
+              { headers: corsHeaders, status: 500 }
+            );
+          }
+
+          return new Response(
+            JSON.stringify({ 
+              success: true,
+              connection, 
+              message: `Successfully connected Instagram account for ${userData.username}` 
+            }),
+            { headers: corsHeaders, status: 200 }
+          );
+        } catch (error) {
+          console.error("Instagram OAuth error:", error);
+          return new Response(
+            JSON.stringify({ error: error.message || "Failed to connect Instagram account" }),
+            { headers: corsHeaders, status: 500 }
+          );
+        }
+      }
+    } else if (platform === "TikTok") {
+      if (action === "initiate") {
+        // TikTok App credentials - if you had these as env variables
+        const clientId = Deno.env.get("TIKTOK_CLIENT_ID");
+        const redirectUrl = redirectUri || "http://localhost:5173";
+
+        if (!clientId) {
+          return new Response(
+            JSON.stringify({ error: "TikTok Client ID not configured" }),
+            { headers: corsHeaders, status: 500 }
+          );
+        }
+
+        // Generate TikTok authorization URL
+        const authUrl = new URL("https://open-api.tiktok.com/platform/oauth/connect/");
+        authUrl.searchParams.append("client_key", clientId);
+        authUrl.searchParams.append("redirect_uri", redirectUrl);
+        authUrl.searchParams.append("scope", "user.info.basic");
+        authUrl.searchParams.append("response_type", "code");
+        authUrl.searchParams.append("state", `tiktok_${Math.random().toString(36).substring(2, 15)}`);
+
+        return new Response(
+          JSON.stringify({ authUrl: authUrl.toString() }),
+          { headers: corsHeaders, status: 200 }
+        );
+      } else if (action === "callback") {
+        // Handle the TikTok OAuth callback logic here similar to Instagram
+        // This would exchange the code for an access token and fetch user data
+      }
       
-    if (fetchError) {
-      console.error('Error fetching connection to disconnect:', fetchError);
-      throw fetchError;
-    }
-    
-    if (!connection) {
+      // Simple mock connection for platforms without OAuth implementation
+      const { data: connection, error } = await supabase
+        .from('social_media_connections')
+        .upsert({
+          user_id: user.id,
+          platform: platform,
+          username: "user_" + Math.random().toString(36).substring(2, 8),
+          profile_url: `https://example.com/${platform}`,
+          is_connected: true,
+          meta_data: { connected_at: new Date().toISOString() }
+        }, { onConflict: 'user_id, platform' })
+        .select()
+        .single();
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: `Failed to save connection: ${error.message}` }),
+          { headers: corsHeaders, status: 500 }
+        );
+      }
+
       return new Response(
-        JSON.stringify({ error: `No ${platform} connection found for this user` }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: true, 
+          connection,
+          message: `Successfully connected ${platform} account` 
+        }),
+        { headers: corsHeaders, status: 200 }
       );
     }
-    
-    // For Instagram connections, we could potentially revoke the OAuth token
-    if (platform === 'Instagram' && connection.oauth_token) {
-      // Instagram doesn't have a straightforward token revocation API
-      // If needed in the future, we could implement token revocation here
-      console.log('Note: Instagram OAuth token is not being explicitly revoked');
-    }
-    
-    // Delete the connection from database
-    const { error: deleteError } = await supabase
+
+    // For other platforms - implement a mock connection
+    const { data: connection, error } = await supabase
       .from('social_media_connections')
-      .delete()
-      .eq('id', connection.id);
-      
-    if (deleteError) {
-      console.error('Error deleting social media connection:', deleteError);
-      throw deleteError;
+      .upsert({
+        user_id: user.id,
+        platform: platform,
+        username: "user_" + Math.random().toString(36).substring(2, 8),
+        profile_url: `https://example.com/${platform}`,
+        is_connected: true,
+        meta_data: { connected_at: new Date().toISOString() }
+      }, { onConflict: 'user_id, platform' })
+      .select()
+      .single();
+
+    if (error) {
+      return new Response(
+        JSON.stringify({ error: `Failed to save connection: ${error.message}` }),
+        { headers: corsHeaders, status: 500 }
+      );
     }
-    
+
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Successfully disconnected ${platform} account` 
+        connection,
+        message: `Successfully connected ${platform} account` 
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: corsHeaders, status: 200 }
     );
   } catch (error) {
-    console.error(`Error disconnecting ${platform} account:`, error);
+    console.error("Unexpected error:", error);
     return new Response(
-      JSON.stringify({ error: error.message || `Failed to disconnect ${platform} account` }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: error.message || "An unexpected error occurred" }),
+      { headers: corsHeaders, status: 500 }
     );
   }
-}
+});

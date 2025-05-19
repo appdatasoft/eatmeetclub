@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -7,6 +6,7 @@ import { PublicRoutes } from "@/routes/publicRoutes";
 import { AdminRoutes } from "@/routes/adminRoutes";
 import { DashboardRoutes } from "@/routes/dashboardRoutes";
 import NotFound from "@/pages/NotFound";
+import AdminStripeSettings from '@/pages/admin/AdminStripeSettings';
 
 function App() {
   return (
@@ -26,6 +26,9 @@ function App() {
 
               {/* Catch-all route */}
               <Route path="*" element={<NotFound />} />
+
+              {/* New route for Admin Stripe Settings */}
+              <Route path="admin/stripe-settings" element={<AdminStripeSettings />} />
             </>
           </Routes>
           <Toaster />
