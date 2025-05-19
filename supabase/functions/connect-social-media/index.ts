@@ -74,14 +74,25 @@ Deno.serve(async (req) => {
       console.error('Error checking existing connection:', fetchError);
     }
 
+    // Generate platform-specific default values
+    const defaultUsername = 'connected-user';
+    const getDefaultProfileUrl = (platform: string) => {
+      switch (platform.toLowerCase()) {
+        case 'youtube':
+          return `https://www.youtube.com/channel/example`;
+        default:
+          return `https://example.com/${platform.toLowerCase()}/profile`;
+      }
+    };
+
     let result;
     if (existingConnection) {
       // Update existing connection
       result = await supabase
         .from('social_media_connections')
         .update({
-          username: username || 'connected-user',
-          profile_url: profileUrl || `https://example.com/${platform.toLowerCase()}/profile`,
+          username: username || defaultUsername,
+          profile_url: profileUrl || getDefaultProfileUrl(platform),
           updated_at: new Date().toISOString(),
           is_connected: true
         })
@@ -94,8 +105,8 @@ Deno.serve(async (req) => {
         .insert({
           user_id: user.id,
           platform,
-          username: username || 'connected-user',
-          profile_url: profileUrl || `https://example.com/${platform.toLowerCase()}/profile`,
+          username: username || defaultUsername,
+          profile_url: profileUrl || getDefaultProfileUrl(platform),
           is_connected: true
         })
         .select();

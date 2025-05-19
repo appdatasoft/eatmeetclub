@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Facebook, Instagram, Twitter, Map, Globe } from "lucide-react";
+import { Facebook, Instagram, Twitter, Map, Globe, Youtube } from "lucide-react";
 import { useEditableContent } from '@/components/editor/EditableContentProvider';
 import EditableText from '@/components/editor/EditableText';
 import { useToast } from '@/hooks/use-toast';
@@ -113,6 +113,22 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
             <EditableText
               id={`${isAdmin ? 'admin' : 'user'}-twitter-description`}
               defaultContent="Connect your X account to share quick updates and engage with your audience."
+              className="text-sm text-gray-600"
+            />
+          </div>
+
+          {/* YouTube */}
+          <div className="border rounded-md p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <Youtube className="h-5 w-5 text-red-600" />
+                <h3 className="font-medium">YouTube</h3>
+              </div>
+              {renderConnectButton("YouTube")}
+            </div>
+            <EditableText
+              id={`${isAdmin ? 'admin' : 'user'}-youtube-description`}
+              defaultContent="Connect your YouTube channel to share videos and grow your audience."
               className="text-sm text-gray-600"
             />
           </div>
