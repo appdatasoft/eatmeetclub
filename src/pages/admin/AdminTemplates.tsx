@@ -2,14 +2,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Template } from "lucide-react";
+import { FileText } from "lucide-react";
 
 const AdminTemplates = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center">
-          <Template className="h-6 w-6 mr-2" />
+          <FileText className="h-6 w-6 mr-2" />
           <h1 className="text-2xl font-bold">Templates Management</h1>
         </div>
         
