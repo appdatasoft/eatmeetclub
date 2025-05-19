@@ -69,7 +69,7 @@ export const useTemplateOperations = () => {
     };
   };
   
-  // Fixed function to fetch users for email recipients dropdown
+  // Updated function to fetch users for email recipients dropdown
   const fetchUserOptions = async (): Promise<UserOption[]> => {
     try {
       // Get the current Supabase session
@@ -80,58 +80,34 @@ export const useTemplateOperations = () => {
         return [];
       }
       
-      // Use auth.users view to fetch user data instead of 'users' table
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('id, email:auth.users!id(email), raw_user_meta_data:auth.users!id(raw_user_meta_data)')
-        .limit(50);
+      console.log("Attempting to fetch user data for dropdown");
       
-      if (error) {
-        // If profiles doesn't exist, fall back to direct auth users query via RPC (function call)
-        console.log("Falling back to RPC method for user data");
-        const { data: users, error: rpcError } = await supabase
-          .rpc('get_users_for_admin')
-          .limit(50);
-        
-        if (rpcError) {
-          console.error("Error fetching users via RPC:", rpcError);
-          throw rpcError;
-        }
-        
-        if (!users) {
-          return [];
-        }
-        
-        return users.map((user: any) => {
-          const metadata = user.raw_user_meta_data || {};
-          return {
-            id: user.id,
-            firstName: metadata.first_name || '',
-            lastName: metadata.last_name || '',
-            email: user.email || '',
-            displayName: `${metadata.first_name || ''} ${metadata.last_name || ''} <${user.email || ''}>`
-          };
-        });
-      }
+      // Try the RPC function first
+      const { data: users, error: rpcError } = await supabase
+        .rpc('get_users_for_admin');
       
-      console.log("Fetched profiles from Supabase:", profiles);
-      
-      if (!profiles || profiles.length === 0) {
+      if (rpcError) {
+        console.error("Error fetching users via RPC:", rpcError);
+        // Return empty array when there's an error
         return [];
       }
       
-      // Format profiles data into UserOption format
-      return profiles.map((profile: any) => {
-        // Access the joined data correctly
-        const userData = profile.raw_user_meta_data || {};
-        const email = profile.email?.email || '';
-        
+      if (!users || users.length === 0) {
+        console.log("No users found");
+        return [];
+      }
+      
+      console.log("Successfully fetched users:", users.length);
+      
+      // Format users data into UserOption format
+      return users.map((user: any) => {
+        const metadata = user.raw_user_meta_data || {};
         return {
-          id: profile.id,
-          firstName: userData.first_name || '',
-          lastName: userData.last_name || '',
-          email: email,
-          displayName: `${userData.first_name || ''} ${userData.last_name || ''} <${email}>`
+          id: user.id,
+          firstName: metadata.first_name || '',
+          lastName: metadata.last_name || '',
+          email: user.email || '',
+          displayName: `${metadata.first_name || ''} ${metadata.last_name || ''} <${user.email || ''}>`
         };
       });
     } catch (error) {

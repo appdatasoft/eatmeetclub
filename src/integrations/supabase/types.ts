@@ -1149,6 +1149,14 @@ export type Database = {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      get_users_for_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          raw_user_meta_data: Json
+        }[]
+      }
       has_active_membership: {
         Args: { user_id: string }
         Returns: boolean
