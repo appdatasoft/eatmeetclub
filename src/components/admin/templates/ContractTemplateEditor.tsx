@@ -41,6 +41,10 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
   }, [templateData]);
 
   const handleSave = async () => {
+    if (!templateData?.id) {
+      console.error("No template data available");
+      return;
+    }
     await saveTemplate(template);
   };
 
@@ -154,7 +158,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
           
           <Button 
             onClick={handleSave} 
-            disabled={isSaving}
+            disabled={isSaving || !templateData}
           >
             <Save className="mr-2 h-4 w-4" /> Save Template
           </Button>

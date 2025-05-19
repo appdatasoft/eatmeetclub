@@ -62,6 +62,7 @@ export type Database = {
       }
       contract_templates: {
         Row: {
+          content: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -76,6 +77,7 @@ export type Database = {
           version: string
         }
         Insert: {
+          content?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -90,6 +92,7 @@ export type Database = {
           version?: string
         }
         Update: {
+          content?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null

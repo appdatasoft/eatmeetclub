@@ -1,23 +1,32 @@
 
 /**
- * Utilities for mapping between UI template types and API template types
- */
-
-export type UITemplateType = 'venue' | 'salesRep' | 'ticket';
-export type APITemplateType = 'restaurant' | 'restaurant_referral' | 'ticket_sales';
-
-/**
  * Maps UI template types to API template types
  */
-export const mapToAPITemplateType = (templateType: string): APITemplateType => {
-  switch(templateType) {
-    case "venue":
-      return "restaurant";
-    case "salesRep":
-      return "restaurant_referral";
-    case "ticket":
-      return "ticket_sales";
+export function mapToAPITemplateType(templateType: string): "restaurant" | "restaurant_referral" | "ticket_sales" {
+  switch (templateType) {
+    case 'venue':
+      return 'restaurant';
+    case 'salesRep':
+      return 'restaurant_referral';
+    case 'ticket':
+      return 'ticket_sales';
     default:
-      return "restaurant";
+      return 'restaurant';
   }
-};
+}
+
+/**
+ * Maps API template types to UI template types
+ */
+export function mapFromAPITemplateType(apiType: string): "venue" | "salesRep" | "ticket" {
+  switch (apiType) {
+    case 'restaurant':
+      return 'venue';
+    case 'restaurant_referral':
+      return 'salesRep';
+    case 'ticket_sales':
+      return 'ticket';
+    default:
+      return 'venue';
+  }
+}
