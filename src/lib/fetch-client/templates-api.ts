@@ -1,4 +1,3 @@
-
 /**
  * Templates API service
  */
@@ -93,7 +92,7 @@ export const templates = {
   
   update: <T = ContractTemplate>(id: string, template: Partial<ContractTemplate>, customOptions: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
     // Make sure we're sending a proper update payload
-    const dbTemplate: Partial<ContractTemplate> = { ...template };
+    const dbTemplate: Record<string, any> = { ...template };
     
     // Ensure variables is a valid JSON string or object for the database
     if (dbTemplate.variables) {
@@ -118,20 +117,8 @@ export const templates = {
       supabseFallbackFn: async () => {
         console.log("Using Supabase fallback to update template:", id);
         try {
-          // If variables is a string, parse it back to an object for Supabase
+          // If variables is a string, we'll keep it as is for Supabase
           const processedTemplate = { ...dbTemplate };
-          
-          // We need to make sure processedTemplate.variables is handled correctly for Supabase
-          if (processedTemplate.variables && typeof processedTemplate.variables === 'string') {
-            try {
-              // Try to parse string to object (Supabase prefers objects for jsonb fields)
-              const parsedVars = JSON.parse(processedTemplate.variables);
-              processedTemplate.variables = parsedVars;
-            } catch (e) {
-              console.warn("Could not parse variables as JSON, using as is");
-              // Keep as string if parsing fails
-            }
-          }
           
           const { data, error } = await supabase
             .from('contract_templates')

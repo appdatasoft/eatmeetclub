@@ -27,6 +27,9 @@ export interface FetchResponse<T = any> {
   headers?: Headers;
 }
 
+// Define a Json type to match what Supabase expects
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
 // Contract template types matching the Supabase schema
 export interface ContractTemplate {
   id: string;
@@ -34,7 +37,7 @@ export interface ContractTemplate {
   description?: string;
   content?: string;
   type: "restaurant" | "restaurant_referral" | "ticket_sales";
-  variables?: Record<string, unknown> | string;
+  variables?: Record<string, unknown> | string; // Allow both object and string
   version?: string;
   is_active?: boolean;
   updated_at?: string;
