@@ -1,52 +1,70 @@
 
 import AdminLayout from '@/components/layout/AdminLayout';
 import { useEffect, useState } from 'react';
-import { fetchWithCache } from '@/utils/fetchUtils';
+import { get, clearCache } from '@/lib/fetch-client';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { RefreshCw } from 'lucide-react';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+
+interface SiteConfig {
+  siteTitle: string;
+  maintenanceMode: boolean;
+  maxUsers: number;
+}
 
 const ConfigPage = () => {
-  const [config, setConfig] = useState(null);
+  const [config, setConfig] = useState<SiteConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    const loadConfig = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const data = await fetchWithCache('/api/admin/config.json', {
-          cacheTime: 60000, // 1 minute cache
-          acceptHeader: 'application/json'
-        });
-        
-        setConfig(data);
-      } catch (err: any) {
-        console.error('Error loading admin config:', err);
-        setError(err?.message || 'Failed to load configuration');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     loadConfig();
   }, []);
   
-  const handleRefresh = () => {
+  const loadConfig = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Use the new fetch client with caching
+      const { data, error } = await get<SiteConfig>('/api/admin/config.json', {
+        cacheTime: 30000, // 30 seconds cache
+        retries: 2,
+      });
+      
+      if (error) throw error;
+      if (!data) throw new Error('No configuration data received');
+      
+      setConfig(data);
+    } catch (err: any) {
+      console.error('Error loading admin config:', err);
+      setError(err?.message || 'Failed to load configuration');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleRefresh = async () => {
     // Clear cache and reload
-    fetchWithCache('/api/admin/config.json', {}, 'admin-config-clear');
-    window.location.reload();
+    setIsRefreshing(true);
+    clearCache('GET:/api/admin/config.json:{}');
+    
+    try {
+      await loadConfig();
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   return (
     <AdminLayout>
       <h1 className="text-2xl font-bold mb-6">Admin Configuration</h1>
       
-      {loading && (
+      {loading && !isRefreshing && (
         <div className="py-4 text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
-          <p className="text-gray-500">Loading configuration...</p>
+          <LoadingSpinner text="Loading configuration..." />
         </div>
       )}
       
@@ -59,8 +77,16 @@ const ConfigPage = () => {
               variant="outline" 
               size="sm" 
               onClick={handleRefresh}
+              disabled={isRefreshing}
             >
-              Try Again
+              {isRefreshing ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                'Try Again'
+              )}
             </Button>
           </div>
         </Alert>
@@ -97,8 +123,20 @@ const ConfigPage = () => {
           </div>
           
           <div className="flex justify-end">
-            <Button variant="outline" size="sm" onClick={handleRefresh}>
-              Refresh Configuration
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                'Refresh Configuration'
+              )}
             </Button>
           </div>
         </div>

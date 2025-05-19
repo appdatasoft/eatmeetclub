@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
-import { fetchWithRetry } from '@/utils/fetchUtils';
+import { get } from '@/lib/fetch-client';
 import { useAuth } from '@/hooks/useAuth';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
@@ -49,20 +49,15 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           return;
         }
         
-        // Use fetchWithRetry for more reliable admin check
-        const isUserAdmin = await fetchWithRetry(async () => {
-          // Check if user is admin
-          const { data, error } = await supabase.rpc('is_admin', { user_id: user.id });
-          console.log("Admin check result:", { data, error });
-          
-          if (error) throw error;
-          return !!data;
-        }, {
-          retries: 2, // Reduce retries to prevent long waiting
-          baseDelay: 800
-        });
+        // Check if user is admin with safer implementation
+        const { data, error } = await supabase.rpc('is_admin', { user_id: user.id });
         
-        if (!isUserAdmin) {
+        if (error) {
+          console.error("Admin check error:", error);
+          throw new Error(error.message);
+        }
+        
+        if (!data) {
           console.log("User is not an admin, redirecting to dashboard");
           toast({
             title: "Access denied",
@@ -102,7 +97,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         setIsLoading(false);
         setError("Verification timed out. Please refresh the page or try again later.");
       }
-    }, 5000); // Reduced from 8 to 5 seconds for faster feedback
+    }, 3000); // Reduced from 5 to 3 seconds for faster feedback
     
     checkAdminStatus();
     

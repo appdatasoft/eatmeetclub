@@ -5,7 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { get } from '@/lib/fetch-client';
 
 // Define a type for our stats
 type AdminStats = {
@@ -24,60 +25,79 @@ const AdminDashboard = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Use Promise.all to fetch all stats in parallel
-        const [userResult, eventsResult, paidEventsResult, restaurantsResult] = await Promise.all([
-          // Fetch user count
-          supabase
-            .from('user_roles')
-            .select('*', { count: 'exact', head: true }),
-            
-          // Fetch events count
-          supabase
-            .from('events')
-            .select('*', { count: 'exact', head: true }),
-            
-          // Fetch paid events count
-          supabase
-            .from('events')
-            .select('*', { count: 'exact', head: true })
-            .eq('payment_status', 'completed'),
-            
-          // Fetch restaurants count
-          supabase
-            .from('restaurants')
-            .select('*', { count: 'exact', head: true })
-        ]);
-        
-        // Check for errors
-        if (userResult.error) throw new Error(userResult.error.message);
-        if (eventsResult.error) throw new Error(eventsResult.error.message);
-        if (paidEventsResult.error) throw new Error(paidEventsResult.error.message);
-        if (restaurantsResult.error) throw new Error(restaurantsResult.error.message);
-        
-        // Update the stats
-        setStats({
-          users: userResult.count || 0,
-          events: eventsResult.count || 0,
-          restaurants: restaurantsResult.count || 0,
-          paidEvents: paidEventsResult.count || 0
-        });
-      } catch (error: any) {
-        console.error('Error fetching stats:', error);
-        setError(error.message || "Failed to load admin dashboard data");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  
+  // Use callback to avoid recreating the function on each render
+  const fetchStats = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
     
-    fetchStats();
+    try {
+      // Fetch prepopulated stats if available to improve initial load time
+      try {
+        const { data: fastStats } = await get<AdminStats>('/api/admin/stats.json', {
+          cacheTime: 60000, // 1 minute cache
+          staleTime: 30000, // Consider data stale after 30s
+          background: true,  // Refresh data in the background if stale
+        });
+        
+        if (fastStats) {
+          console.log("Using cached stats data");
+          setStats(fastStats);
+          setIsLoading(false);
+        }
+      } catch (e) {
+        // Silent fail - we'll continue with the direct database fetch below
+        console.log("No cached stats available, using live data");
+      }
+      
+      // Use Promise.all to fetch all stats in parallel
+      const [userResult, eventsResult, paidEventsResult, restaurantsResult] = await Promise.all([
+        // Fetch user count
+        supabase
+          .from('user_roles')
+          .select('*', { count: 'exact', head: true }),
+          
+        // Fetch events count
+        supabase
+          .from('events')
+          .select('*', { count: 'exact', head: true }),
+          
+        // Fetch paid events count
+        supabase
+          .from('events')
+          .select('*', { count: 'exact', head: true })
+          .eq('payment_status', 'completed'),
+          
+        // Fetch restaurants count
+        supabase
+          .from('restaurants')
+          .select('*', { count: 'exact', head: true })
+      ]);
+      
+      // Check for errors
+      if (userResult.error) throw new Error(userResult.error.message);
+      if (eventsResult.error) throw new Error(eventsResult.error.message);
+      if (paidEventsResult.error) throw new Error(paidEventsResult.error.message);
+      if (restaurantsResult.error) throw new Error(restaurantsResult.error.message);
+      
+      // Update the stats
+      setStats({
+        users: userResult.count || 0,
+        events: eventsResult.count || 0,
+        restaurants: restaurantsResult.count || 0,
+        paidEvents: paidEventsResult.count || 0
+      });
+    } catch (error: any) {
+      console.error('Error fetching stats:', error);
+      setError(error.message || "Failed to load admin dashboard data");
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+  
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   if (error) {
     return (
