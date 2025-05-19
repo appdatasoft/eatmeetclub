@@ -41,9 +41,14 @@ export const useMenuItems = (restaurantId?: string, retryTrigger = 0) => {
         setError(error);
         console.error("Supabase error:", error);
       } else {
+        // Create MenuItem objects with proper type field since it's not in the database
         const fetchedMenuItems: MenuItem[] = (data || []).map(item => ({
-          ...item,
-          type: item.type || 'Other', // Default type if not present
+          id: item.id,
+          name: item.name,
+          description: item.description || '',
+          price: item.price,
+          restaurant_id: item.restaurant_id,
+          type: 'Other', // Default type since it's not in the database
           ingredients: [],
           media: []
         }));
@@ -74,9 +79,14 @@ export const useMenuItems = (restaurantId?: string, retryTrigger = 0) => {
         setError(error);
         console.error("Supabase error:", error);
       } else {
+        // Create MenuItem objects with proper type field since it's not in the database
         const fetchedMenuItems: MenuItem[] = (data || []).map(item => ({
-          ...item,
-          type: item.type || 'Other', // Default type if not present
+          id: item.id,
+          name: item.name,
+          description: item.description || '',
+          price: item.price,
+          restaurant_id: item.restaurant_id,
+          type: 'Other', // Default type since it's not in the database
           ingredients: [],
           media: []
         }));
