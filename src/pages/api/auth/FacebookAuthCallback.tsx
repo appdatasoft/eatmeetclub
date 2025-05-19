@@ -3,11 +3,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSocialMedia } from '@/hooks/useSocialMedia';
 import { supabase } from '@/lib/supabaseClient';
 import { Spinner } from '@/components/ui/spinner';
+import { customFetch } from '@/integrations/supabase/utils/fetchUtils';
 
 const FacebookAuthCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -23,11 +24,15 @@ const FacebookAuthCallback: React.FC = () => {
       try {
         console.log('Processing Facebook/Instagram OAuth callback');
         
+        // Get all URL parameters
         const code = searchParams.get('code');
         const state = searchParams.get('state');
         const error = searchParams.get('error');
         const errorReason = searchParams.get('error_reason');
         const errorDescription = searchParams.get('error_description');
+        
+        // Current URL for debugging
+        const currentUrl = window.location.href;
         
         // Log all parameters for debugging
         console.log({
@@ -36,19 +41,23 @@ const FacebookAuthCallback: React.FC = () => {
           error,
           errorReason,
           errorDescription,
+          currentUrl,
           allSearchParams: Object.fromEntries([...searchParams.entries()])
         });
         
+        // Store debug info
         setDebugInfo({
           code: code ? `${code.substring(0, 10)}...` : 'null',
           state,
           error,
           errorReason,
           errorDescription,
-          url: window.location.href,
-          time: new Date().toISOString()
+          url: currentUrl,
+          time: new Date().toISOString(),
+          userAgent: navigator.userAgent
         });
         
+        // Check for error parameters
         if (error || errorReason || errorDescription) {
           console.error('OAuth error:', { error, errorReason, errorDescription });
           setStatus('error');
@@ -56,6 +65,7 @@ const FacebookAuthCallback: React.FC = () => {
           return;
         }
         
+        // Validate required parameters
         if (!code || !state) {
           setStatus('error');
           setMessage('Invalid callback: missing parameters');
@@ -70,13 +80,14 @@ const FacebookAuthCallback: React.FC = () => {
           setDebugInfo(prev => ({ ...prev, sessionError }));
         }
         
+        // If no session, redirect to login with return URL
         if (!session) {
           console.log('No active session found, redirecting to login');
           setStatus('error');
           setMessage('Authentication failed: No active user session');
           
           // Store the URL to redirect back after login
-          localStorage.setItem('redirectAfterLogin', `/api/auth/callback/facebook?${searchParams.toString()}`);
+          localStorage.setItem('redirectAfterLogin', window.location.href);
           
           setTimeout(() => {
             navigate('/login', { replace: true });
@@ -90,9 +101,13 @@ const FacebookAuthCallback: React.FC = () => {
         const platform = state.startsWith('instagram_') ? 'Instagram' : 'Facebook';
         console.log(`Processing ${platform} connection`);
         
-        // Call the edge function to process the OAuth callback
+        // Get Supabase URL and redirect URI
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
-        const redirectUri = 'https://eatmeetclub.com/api/auth/callback/facebook';
+        // Determine the callback URL based on current location
+        const hostname = window.location.hostname;
+        // Use the same host as the current page for the callback URI
+        const protocol = window.location.protocol;
+        const redirectUri = `${protocol}//${hostname}/api/auth/callback/facebook`;
         
         console.log(`Calling edge function with platform: ${platform}, redirectUri: ${redirectUri}, supabaseUrl: ${supabaseUrl}`);
         
@@ -102,8 +117,21 @@ const FacebookAuthCallback: React.FC = () => {
         const edgeFunctionUrl = `${supabaseUrl}/functions/v1/connect-social-media`;
         console.log(`Edge function URL: ${edgeFunctionUrl}`);
         
+        setDebugInfo(prev => ({ 
+          ...prev, 
+          platform,
+          requestParams: {
+            action: 'callback',
+            code,
+            redirectUri,
+            state
+          },
+          edgeFunctionUrl
+        }));
+        
         try {
-          const response = await fetch(edgeFunctionUrl, {
+          // Use the customFetch utility for improved error handling and retries
+          const response = await customFetch(edgeFunctionUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -122,7 +150,6 @@ const FacebookAuthCallback: React.FC = () => {
           setDebugInfo(prev => ({ 
             ...prev, 
             edgeFunctionStatus: response.status,
-            edgeFunctionUrl,
             requestTime: new Date().toISOString()
           }));
           
@@ -145,7 +172,7 @@ const FacebookAuthCallback: React.FC = () => {
           }
           
           if (!response.ok) {
-            throw new Error(result.error || `Failed to complete ${platform} authentication`);
+            throw new Error(result?.error || `Failed to complete ${platform} authentication`);
           }
           
           // Refresh the connections list to reflect the new connection
@@ -168,9 +195,13 @@ const FacebookAuthCallback: React.FC = () => {
           setTimeout(() => {
             navigate('/dashboard/social-media', { replace: true });
           }, 2000);
-        } catch (fetchError) {
+        } catch (fetchError: any) {
           console.error('Fetch error:', fetchError);
-          setDebugInfo(prev => ({ ...prev, fetchError: fetchError.message }));
+          setDebugInfo(prev => ({ 
+            ...prev, 
+            fetchError: fetchError.message,
+            fetchStack: fetchError.stack
+          }));
           throw fetchError;
         }
         
@@ -178,7 +209,11 @@ const FacebookAuthCallback: React.FC = () => {
         console.error('Error processing callback:', err);
         setStatus('error');
         setMessage(err.message || 'Failed to process authentication');
-        setDebugInfo(prev => ({ ...prev, finalError: err.message, stack: err.stack }));
+        setDebugInfo(prev => ({ 
+          ...prev, 
+          finalError: err.message, 
+          stack: err.stack 
+        }));
         
         toast({
           title: 'Connection Failed',
@@ -224,7 +259,18 @@ const FacebookAuthCallback: React.FC = () => {
         
         {status === 'error' && Object.keys(debugInfo).length > 0 && (
           <div className="mt-4 border border-gray-300 rounded p-4 overflow-auto max-h-60 text-xs">
-            <h3 className="font-bold mb-2">Debug Information</h3>
+            <h3 className="font-bold mb-2 flex items-center justify-between">
+              <span>Debug Information</span>
+              <a 
+                href="https://supabase.com/dashboard/project/wocfwpedauuhlrfugxuu/functions/connect-social-media/logs" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:underline flex items-center"
+              >
+                <span className="text-xs">View Logs</span>
+                <ExternalLink className="h-3 w-3 ml-1" />
+              </a>
+            </h3>
             <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
           </div>
         )}

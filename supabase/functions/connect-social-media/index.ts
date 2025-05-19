@@ -55,6 +55,7 @@ serve(async (req) => {
     const { platform, action = "connect", code, redirectUri, state } = requestData;
 
     console.log(`Processing ${action} request for ${platform} by user ${user.id}`);
+    console.log(`Received redirectUri: ${redirectUri}`);
 
     // Check if the platform is supported
     const supportedPlatforms = ["Instagram", "Facebook", "Twitter", "X/Twitter", "TikTok", "YouTube", "Google Business", "Google Maps", "Yelp"];
@@ -122,8 +123,8 @@ serve(async (req) => {
       if (action === "initiate") {
         // Facebook App credentials
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
-        // Use the site's own callback URL
-        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/meta/deauth";
+        // Use the provided redirectUri or default
+        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
 
         if (!clientId) {
           return new Response(
@@ -131,6 +132,8 @@ serve(async (req) => {
             { headers: corsHeaders, status: 500 }
           );
         }
+
+        console.log(`Initiating Facebook OAuth flow with redirect: ${redirectUrl}`);
 
         // Generate authorization URL - using only public_profile scope which is available without app review
         const authUrl = new URL("https://www.facebook.com/v19.0/dialog/oauth");
@@ -155,7 +158,7 @@ serve(async (req) => {
 
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         const clientSecret = Deno.env.get("FACEBOOK_APP_SECRET");
-        // Use the site's own callback URL
+        // Use the provided redirectUri or default
         const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
 
         if (!clientId || !clientSecret) {
@@ -164,6 +167,8 @@ serve(async (req) => {
             { headers: corsHeaders, status: 500 }
           );
         }
+
+        console.log(`Processing Facebook callback with code length: ${code.length} and redirect: ${redirectUrl}`);
 
         // Exchange code for access token
         try {
@@ -174,6 +179,8 @@ serve(async (req) => {
           tokenUrl.searchParams.append("redirect_uri", redirectUrl);
           tokenUrl.searchParams.append("code", code);
 
+          console.log(`Token request URL: ${tokenUrl.toString()}`);
+
           // Make the request using proper URL-encoded form
           const tokenResponse = await fetch(tokenUrl.toString(), {
             method: "GET",
@@ -182,7 +189,19 @@ serve(async (req) => {
             }
           });
 
-          const tokenData = await tokenResponse.json();
+          const responseText = await tokenResponse.text();
+          console.log(`Raw token response: ${responseText.substring(0, 100)}...`);
+          
+          let tokenData;
+          try {
+            tokenData = JSON.parse(responseText);
+          } catch (e) {
+            console.error("Error parsing token response:", e);
+            return new Response(
+              JSON.stringify({ error: "Failed to parse token response", raw: responseText }),
+              { headers: corsHeaders, status: 500 }
+            );
+          }
           
           if (!tokenResponse.ok || tokenData.error) {
             console.error("Facebook token exchange error:", tokenData);
@@ -268,7 +287,7 @@ serve(async (req) => {
       if (action === "initiate") {
         // Instagram App credentials (same as Facebook App since it uses Facebook's OAuth)
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
-        // Use the site's own callback URL
+        // Use the provided redirectUri or default
         const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
 
         if (!clientId) {

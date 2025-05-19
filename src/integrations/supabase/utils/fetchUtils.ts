@@ -32,7 +32,7 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
           try {
             const resp = await fetch(url, fetchOptions);
             console.log(`Response received from ${url}: status ${resp.status}`);
-            return handleResponse(resp);
+            return resp;
           } catch (error) {
             console.error(`Fetch error for ${url}:`, error);
             throw error;
