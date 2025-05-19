@@ -9,6 +9,7 @@ import { AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { fetchWithRetry } from '@/utils/fetchUtils';
 import { useAuth } from '@/hooks/useAuth';
+import LoadingSpinner from '../ui/LoadingSpinner';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -25,7 +26,12 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { user } = useAuth(); // Use the auth hook
   
   useEffect(() => {
+    // Track if component is mounted to prevent state updates after unmount
+    let isMounted = true;
+    
     const checkAdminStatus = async () => {
+      if (!isMounted) return;
+      
       setIsLoading(true);
       setError(null);
       
@@ -45,12 +51,13 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         
         // Use fetchWithRetry for more reliable admin check
         const isUserAdmin = await fetchWithRetry(async () => {
+          // Clone the response to ensure we can read it
           const { data, error } = await supabase.rpc('is_admin', { user_id: user.id });
           if (error) throw error;
           return !!data;
         }, {
-          retries: 3,
-          baseDelay: 1000
+          retries: 2, // Reduce retries to prevent long waiting
+          baseDelay: 800
         });
         
         if (!isUserAdmin) {
@@ -64,33 +71,43 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           return;
         }
         
-        setIsAdmin(true);
+        if (isMounted) {
+          setIsAdmin(true);
+        }
       } catch (error: any) {
         console.error('Error checking admin status:', error);
-        setError(error.message || "Failed to verify admin status");
-        toast({
-          title: "Error",
-          description: error.message || "Failed to verify admin status",
-          variant: "destructive"
-        });
+        if (isMounted) {
+          setError(error.message || "Failed to verify admin status");
+          toast({
+            title: "Error",
+            description: error.message || "Failed to verify admin status",
+            variant: "destructive"
+          });
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
     
     // Add a timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
-      if (isLoading) {
+      if (isMounted && isLoading) {
         console.log("Admin check timed out");
         setAuthCheckTimedOut(true);
         setIsLoading(false);
         setError("Verification timed out. Please refresh the page or try again later.");
       }
-    }, 8000); // 8 second timeout
+    }, 5000); // Reduced from 8 to 5 seconds for faster feedback
     
     checkAdminStatus();
     
-    return () => clearTimeout(timeoutId);
+    // Cleanup function to prevent memory leaks and state updates after unmount
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
   }, [navigate, toast, location.pathname, user]);
   
   const isActive = (path: string) => {
@@ -107,8 +124,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         <Navbar />
         <div className="bg-gray-50 min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-500">Verifying admin credentials...</p>
+            <LoadingSpinner size="medium" text="Verifying admin credentials..." />
           </div>
         </div>
         <Footer />

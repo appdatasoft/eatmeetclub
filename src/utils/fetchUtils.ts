@@ -1,136 +1,105 @@
 
-import { requestTracker } from './fetch/requestTracker';
+/**
+ * Utility functions for handling fetch requests with retry capability
+ */
 
-export interface FetchRetryOptions {
+type RetryOptions = {
   retries?: number;
   baseDelay?: number;
   maxDelay?: number;
-  headers?: Record<string, string>;
   shouldRetry?: (error: any) => boolean;
-}
+};
 
 /**
- * Fetches a resource with retry logic for better reliability
+ * Execute a fetch operation with automatic retrying
+ * 
+ * @param fetchFn Function that returns a Promise with the fetch operation
+ * @param options Configuration options for retry behavior
+ * @returns The result of the fetch operation
  */
 export const fetchWithRetry = async <T>(
   fetchFn: () => Promise<T>, 
-  options: FetchRetryOptions = {}
+  options: RetryOptions = {}
 ): Promise<T> => {
   const { 
     retries = 3, 
     baseDelay = 1000, 
     maxDelay = 10000,
-    headers = {},
-    shouldRetry
+    shouldRetry = () => true
   } = options;
   
-  // Use a closure to properly maintain the request context through retries
-  const attemptFetch = async (attemptsLeft: number, currentDelay: number): Promise<T> => {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      // Add explicit Accept and Content-Type headers to avoid 406 errors
-      const requestHeaders = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        ...headers
-      };
+      // Add console log to track retry attempts
+      if (attempt > 0) {
+        console.log(`Retry attempt ${attempt} of ${retries}`);
+      }
       
-      console.log(`Attempt ${retries - attemptsLeft + 1}/${retries} with headers:`, requestHeaders);
+      // Execute the fetch function
+      return await fetchFn();
       
-      // Execute the fetch function with headers context
-      const originalFetchFn = fetchFn;
-      const wrappedFetchFn = async () => {
-        // Apply headers context to the supabase client if needed
-        // This is important because the original fetchFn might be using supabase client
-        return await originalFetchFn();
-      };
+    } catch (error) {
+      lastError = error;
       
-      return await wrappedFetchFn();
-    } catch (error: any) {
-      console.error(`Fetch error (attempts left: ${attemptsLeft - 1}):`, error);
-      
-      // If we have no more retries, throw the error
-      if (attemptsLeft <= 1) {
+      // Check if we should retry this error
+      if (!shouldRetry(error)) {
+        console.error('Error not eligible for retry:', error);
         throw error;
       }
       
-      // If shouldRetry is defined and returns false, throw the error
-      if (shouldRetry && !shouldRetry(error)) {
-        throw error;
+      // Don't wait on the last attempt
+      if (attempt === retries) {
+        console.error(`All ${retries} retry attempts failed:`, error);
+        break;
       }
       
-      // Calculate the next delay with exponential backoff, capped at maxDelay
-      const nextDelay = Math.min(currentDelay * 1.5, maxDelay);
-      console.log(`Retrying in ${nextDelay}ms...`);
+      // Calculate exponential backoff with jitter
+      const delay = Math.min(
+        baseDelay * Math.pow(2, attempt) * (0.5 + Math.random() * 0.5),
+        maxDelay
+      );
       
-      // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, currentDelay));
+      console.log(`Waiting ${delay.toFixed(0)}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError;
+};
+
+/**
+ * Helper function to safely clone and parse a Response object
+ * Prevents "body stream already read" errors by cloning the response before reading
+ */
+export const safelyParseResponse = async <T>(response: Response): Promise<T> => {
+  // Clone the response to ensure we can read it multiple times if needed
+  const clonedResponse = response.clone();
+  
+  try {
+    // Try to parse as JSON first
+    return await clonedResponse.json() as T;
+  } catch (error) {
+    // If JSON parsing fails, try text
+    try {
+      const text = await response.text();
       
-      // Retry with one less attempt and increased delay
-      return attemptFetch(attemptsLeft - 1, nextDelay);
+      // If text is empty, return an empty object
+      if (!text) {
+        return {} as T;
+      }
+      
+      // Try to parse text as JSON
+      try {
+        return JSON.parse(text) as T;
+      } catch (jsonError) {
+        // If parsing fails, return the text itself
+        return text as unknown as T;
+      }
+    } catch (textError) {
+      console.error('Error parsing response:', textError);
+      throw new Error('Failed to parse response: body stream already read');
     }
-  };
-  
-  // Use the request tracker to prevent too many concurrent requests
-  return requestTracker.add(() => attemptFetch(retries, baseDelay));
-};
-
-/**
- * Simple in-memory fetch cache
- */
-const memoryCache = new Map<string, { data: any; expiry: number }>();
-
-/**
- * Fetches a resource with caching
- */
-export const fetchWithCache = async <T>(
-  cacheKey: string,
-  fetchFn: () => Promise<T>,
-  cacheDurationMs = 60000
-): Promise<T> => {
-  // Check cache first
-  if (memoryCache.has(cacheKey)) {
-    const cached = memoryCache.get(cacheKey);
-    if (cached && cached.expiry > Date.now()) {
-      console.log(`Using cached data for ${cacheKey}`);
-      return cached.data as T;
-    }
-    // Remove expired cache
-    memoryCache.delete(cacheKey);
   }
-  
-  // If not cached or expired, fetch fresh data
-  const data = await fetchWithRetry(fetchFn);
-  
-  // Cache the result
-  memoryCache.set(cacheKey, {
-    data,
-    expiry: Date.now() + cacheDurationMs
-  });
-  
-  return data;
-};
-
-/**
- * Clears all cache or a specific cached item
- */
-export const clearFetchCache = (key?: string): void => {
-  if (key) {
-    memoryCache.delete(key);
-  } else {
-    memoryCache.clear();
-  }
-};
-
-/**
- * Get a cached response without fetching
- */
-export const getCachedResponse = <T>(cacheKey: string): T | null => {
-  if (memoryCache.has(cacheKey)) {
-    const cached = memoryCache.get(cacheKey);
-    if (cached && cached.expiry > Date.now()) {
-      return cached.data as T;
-    }
-    memoryCache.delete(cacheKey);
-  }
-  return null;
 };

@@ -27,7 +27,27 @@ export const createSessionCache = <T>(
     useLocalStorage = false
   } = options;
   
-  const storage = useLocalStorage ? localStorage : sessionStorage;
+  // Use provided storage or fallback to memory-only if not available
+  let storage: Storage;
+  try {
+    storage = useLocalStorage ? localStorage : sessionStorage;
+    // Test if storage is accessible
+    storage.setItem('storage_test', 'test');
+    storage.removeItem('storage_test');
+  } catch (e) {
+    console.warn('Web Storage not available, using memory cache only');
+    // Create an in-memory fallback storage
+    const memoryStore = new Map<string, string>();
+    storage = {
+      getItem: (k: string) => memoryStore.get(k) || null,
+      setItem: (k: string, v: string) => memoryStore.set(k, v),
+      removeItem: (k: string) => memoryStore.delete(k),
+      clear: () => memoryStore.clear(),
+      key: () => null,
+      length: 0
+    };
+  }
+  
   const memoryCache = new Map<string, CacheEntry<T>>();
   const storageKey = `${storagePrefix}${key}`;
   
@@ -170,32 +190,32 @@ export const createSessionCache = <T>(
      */
     refresh: (): void => {
       try {
-        // Get current cached data from memory first
+        // Get current cached data
+        let cachedItem: CacheEntry<T> | null = null;
+        
+        // Check memory cache first
         const memoryCachedItem = memoryCache.get(key);
         if (memoryCachedItem) {
-          // Update expiry time
-          memoryCachedItem.expiry = Date.now() + ttl;
-          memoryCache.set(key, memoryCachedItem);
-
-          // Try to update in storage too
-          try {
-            storage.setItem(storageKey, JSON.stringify(memoryCachedItem));
-          } catch (storageError) {
-            console.warn('Failed to refresh item in sessionStorage:', storageError);
+          cachedItem = { ...memoryCachedItem };
+        } else {
+          // If not in memory, check storage
+          const storedItem = storage.getItem(storageKey);
+          if (storedItem) {
+            cachedItem = safeJSONParse(storedItem);
           }
-          return;
         }
         
-        // If not in memory, check storage
-        const storedItem = storage.getItem(storageKey);
-        if (storedItem) {
-          const cachedItem = safeJSONParse(storedItem);
-          if (cachedItem) {
-            cachedItem.expiry = Date.now() + ttl;
-            
-            // Update both memory and storage
-            memoryCache.set(key, cachedItem);
+        // If we found a cached item, update its expiry
+        if (cachedItem) {
+          cachedItem.expiry = Date.now() + ttl;
+          
+          // Update both memory and storage
+          memoryCache.set(key, cachedItem);
+          
+          try {
             storage.setItem(storageKey, JSON.stringify(cachedItem));
+          } catch (storageError) {
+            console.warn('Failed to refresh item in storage:', storageError);
           }
         }
       } catch (error) {
