@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -166,17 +167,19 @@ serve(async (req) => {
 
         // Exchange code for access token
         try {
-          const tokenResponse = await fetch("https://graph.facebook.com/v19.0/oauth/access_token", {
+          // Construct the exchange URL with proper parameters
+          const tokenUrl = new URL("https://graph.facebook.com/v19.0/oauth/access_token");
+          tokenUrl.searchParams.append("client_id", clientId);
+          tokenUrl.searchParams.append("client_secret", clientSecret);
+          tokenUrl.searchParams.append("redirect_uri", redirectUrl);
+          tokenUrl.searchParams.append("code", code);
+
+          // Make the request using proper URL-encoded form
+          const tokenResponse = await fetch(tokenUrl.toString(), {
             method: "GET",
             headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              client_id: clientId,
-              client_secret: clientSecret,
-              redirect_uri: redirectUrl,
-              code: code
-            })
+              "Accept": "application/json"
+            }
           });
 
           const tokenData = await tokenResponse.json();
@@ -185,7 +188,8 @@ serve(async (req) => {
             console.error("Facebook token exchange error:", tokenData);
             return new Response(
               JSON.stringify({ 
-                error: tokenData.error_message || tokenData.error_description || "Failed to exchange code for token" 
+                error: tokenData.error_message || tokenData.error_description || "Failed to exchange code for token",
+                details: tokenData
               }),
               { headers: corsHeaders, status: 400 }
             );
@@ -249,7 +253,10 @@ serve(async (req) => {
         } catch (error) {
           console.error("Facebook OAuth error:", error);
           return new Response(
-            JSON.stringify({ error: error.message || "Failed to connect Facebook account" }),
+            JSON.stringify({ 
+              error: error.message || "Failed to connect Facebook account",
+              stack: error.stack
+            }),
             { headers: corsHeaders, status: 500 }
           );
         }
@@ -274,7 +281,6 @@ serve(async (req) => {
         console.log(`Initiating Instagram OAuth flow with client ID: ${clientId.substring(0, 6)}... and redirect: ${redirectUrl}`);
 
         // Generate authorization URL using Facebook OAuth dialog with basic permissions only
-        // Removed Instagram-specific scopes that require app review
         const authUrl = new URL("https://www.facebook.com/v19.0/dialog/oauth");
         authUrl.searchParams.append("client_id", clientId);
         authUrl.searchParams.append("redirect_uri", redirectUrl);
@@ -325,26 +331,20 @@ serve(async (req) => {
         try {
           console.log("Attempting to exchange code for token via Facebook...");
           
-          const tokenRequestBody = new URLSearchParams({
-            client_id: clientId,
-            client_secret: clientSecret,
-            grant_type: "authorization_code",
-            redirect_uri: redirectUrl,
-            code: code
-          });
+          // Construct the token URL with proper query parameters
+          const tokenUrl = new URL("https://graph.facebook.com/v19.0/oauth/access_token");
+          tokenUrl.searchParams.append("client_id", clientId);
+          tokenUrl.searchParams.append("client_secret", clientSecret);
+          tokenUrl.searchParams.append("redirect_uri", redirectUrl);
+          tokenUrl.searchParams.append("code", code);
           
-          console.log("Token request params:", {
-            url: "https://graph.facebook.com/v19.0/oauth/access_token",
-            client_id_prefix: clientId.substring(0, 6) + "...",
-            redirect_uri: redirectUrl,
-          });
+          console.log("Token request URL:", tokenUrl.toString());
           
-          const tokenResponse = await fetch("https://graph.facebook.com/v19.0/oauth/access_token", {
-            method: "POST",
+          const tokenResponse = await fetch(tokenUrl.toString(), {
+            method: "GET",
             headers: {
-              "Content-Type": "application/x-www-form-urlencoded"
-            },
-            body: tokenRequestBody
+              "Accept": "application/json"
+            }
           });
 
           const responseText = await tokenResponse.text();

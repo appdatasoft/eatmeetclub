@@ -140,7 +140,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
         <Alert className="mb-4 border-amber-200 text-amber-800 bg-amber-50">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Instagram and Facebook advanced integrations require app approval from Meta. Until then, only basic profile information can be accessed.
+            Instagram and Facebook integrations have limited access in development mode. User data access is restricted to basic profile information.
           </AlertDescription>
         </Alert>
       )}
@@ -169,7 +169,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
             />
             {connections.find(conn => conn.platform === "Instagram")?.meta_data?.limited_access && (
               <div className="mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded-sm">
-                <span className="font-semibold">Limited Access:</span> Full Instagram integration requires app review by Meta. Currently operating with basic access.
+                <span className="font-semibold">Limited Access:</span> Basic profile information only. Full Instagram integration requires app review.
               </div>
             )}
           </div>
@@ -188,6 +188,11 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
               defaultContent="Connect your Facebook page to expand your presence and share events with your community."
               className="text-sm text-gray-600"
             />
+            {connections.find(conn => conn.platform === "Facebook")?.meta_data?.limited_access && (
+              <div className="mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded-sm">
+                <span className="font-semibold">Limited Access:</span> Basic profile information only. Full page access requires app review.
+              </div>
+            )}
           </div>
 
           {/* Twitter/X */}
