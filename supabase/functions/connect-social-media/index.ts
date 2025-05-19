@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -268,15 +269,27 @@ serve(async (req) => {
           );
         }
 
-        // Generate authorization URL
+        console.log(`Initiating Instagram OAuth flow with client ID: ${clientId.substring(0, 6)}... and redirect: ${redirectUrl}`);
+
+        // Generate authorization URL - adding more debugging info
         const authUrl = new URL("https://api.instagram.com/oauth/authorize");
         authUrl.searchParams.append("client_id", clientId);
         authUrl.searchParams.append("redirect_uri", redirectUrl);
         authUrl.searchParams.append("scope", "user_profile,user_media");
         authUrl.searchParams.append("response_type", "code");
+        
+        // Print the full URL for debugging
+        console.log("Generated Instagram auth URL:", authUrl.toString());
 
         return new Response(
-          JSON.stringify({ authUrl: authUrl.toString() }),
+          JSON.stringify({ 
+            authUrl: authUrl.toString(),
+            debug: {
+              clientId: clientId.substring(0, 6) + "...",
+              redirectUrl: redirectUrl,
+              scope: "user_profile,user_media"
+            }
+          }),
           { headers: corsHeaders, status: 200 }
         );
       } else if (action === "callback") {
@@ -299,29 +312,54 @@ serve(async (req) => {
           );
         }
 
+        console.log(`Processing Instagram callback with code: ${code.substring(0, 6)}... and redirect: ${redirectUrl}`);
+
         // Exchange code for access token
         try {
+          console.log("Attempting to exchange code for token...");
+          
+          const tokenRequestBody = new URLSearchParams({
+            client_id: clientId,
+            client_secret: clientSecret,
+            grant_type: "authorization_code",
+            redirect_uri: redirectUrl,
+            code: code
+          });
+          
+          console.log("Token request params:", {
+            url: "https://api.instagram.com/oauth/access_token",
+            client_id_prefix: clientId.substring(0, 6) + "...",
+            redirect_uri: redirectUrl,
+          });
+          
           const tokenResponse = await fetch("https://api.instagram.com/oauth/access_token", {
             method: "POST",
             headers: {
               "Content-Type": "application/x-www-form-urlencoded"
             },
-            body: new URLSearchParams({
-              client_id: clientId,
-              client_secret: clientSecret,
-              grant_type: "authorization_code",
-              redirect_uri: redirectUrl,
-              code: code
-            })
+            body: tokenRequestBody
           });
 
-          const tokenData = await tokenResponse.json();
+          const responseText = await tokenResponse.text();
+          console.log("Raw token response:", responseText);
+          
+          let tokenData;
+          try {
+            tokenData = JSON.parse(responseText);
+          } catch (e) {
+            console.error("Error parsing token response:", e);
+            return new Response(
+              JSON.stringify({ error: "Failed to parse token response", raw: responseText }),
+              { headers: corsHeaders, status: 500 }
+            );
+          }
           
           if (!tokenResponse.ok || tokenData.error) {
             console.error("Instagram token exchange error:", tokenData);
             return new Response(
               JSON.stringify({ 
-                error: tokenData.error_message || tokenData.error_description || "Failed to exchange code for token" 
+                error: tokenData.error_message || tokenData.error_description || "Failed to exchange code for token",
+                details: tokenData
               }),
               { headers: corsHeaders, status: 400 }
             );
@@ -330,23 +368,41 @@ serve(async (req) => {
           // Get user profile information 
           const accessToken = tokenData.access_token;
           const userId = tokenData.user_id;
+          
+          console.log(`Successfully obtained token for Instagram user ID: ${userId}`);
 
           // Get user profile data
+          console.log("Fetching user profile data...");
           const userResponse = await fetch(
             `https://graph.instagram.com/v18.0/${userId}?fields=id,username&access_token=${accessToken}`
           );
 
-          const userData = await userResponse.json();
+          const userResponseText = await userResponse.text();
+          console.log("Raw user data response:", userResponseText);
+          
+          let userData;
+          try {
+            userData = JSON.parse(userResponseText);
+          } catch (e) {
+            console.error("Error parsing user data response:", e);
+            return new Response(
+              JSON.stringify({ error: "Failed to parse user data response", raw: userResponseText }),
+              { headers: corsHeaders, status: 500 }
+            );
+          }
 
           if (!userResponse.ok || userData.error) {
             console.error("Instagram user data error:", userData);
             return new Response(
               JSON.stringify({ 
-                error: userData.error?.message || "Failed to get user profile" 
+                error: userData.error?.message || "Failed to get user profile",
+                details: userData
               }),
               { headers: corsHeaders, status: 400 }
             );
           }
+          
+          console.log("Successfully retrieved Instagram profile for username:", userData.username);
 
           // Save the connection to the database
           const { data: connection, error } = await supabase
@@ -386,7 +442,10 @@ serve(async (req) => {
         } catch (error) {
           console.error("Instagram OAuth error:", error);
           return new Response(
-            JSON.stringify({ error: error.message || "Failed to connect Instagram account" }),
+            JSON.stringify({ 
+              error: error.message || "Failed to connect Instagram account",
+              stack: error.stack || "No stack trace available"
+            }),
             { headers: corsHeaders, status: 500 }
           );
         }
@@ -484,7 +543,10 @@ serve(async (req) => {
   } catch (error) {
     console.error("Unexpected error:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "An unexpected error occurred" }),
+      JSON.stringify({ 
+        error: error.message || "An unexpected error occurred",
+        stack: error.stack || "No stack trace available"
+      }),
       { headers: corsHeaders, status: 500 }
     );
   }

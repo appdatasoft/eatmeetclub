@@ -130,6 +130,8 @@ export const useSocialMedia = () => {
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
           const redirectUri = `${window.location.origin}${window.location.pathname}`;
           
+          console.log(`Processing Instagram callback with code: ${code.substring(0, 6)}... and redirect: ${redirectUri}`);
+          
           // Complete OAuth flow by exchanging code for token
           const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
             method: 'POST',
@@ -147,7 +149,8 @@ export const useSocialMedia = () => {
           
           if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to complete Instagram authentication');
+            console.error("Instagram callback error:", errorData);
+            throw new Error(errorData.error || errorData.message || 'Failed to complete Instagram authentication');
           }
           
           const result = await response.json();
@@ -433,6 +436,8 @@ export const useSocialMedia = () => {
       // Get the redirect URI (current page)
       const redirectUri = `${window.location.origin}${window.location.pathname}`;
       
+      console.log("Initiating Instagram OAuth with redirect:", redirectUri);
+      
       // Use the Supabase URL from environment or fallback
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
       
@@ -452,10 +457,12 @@ export const useSocialMedia = () => {
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to initiate Instagram authentication');
+        console.error("Instagram initiation error:", errorData);
+        throw new Error(errorData.error || errorData.message || 'Failed to initiate Instagram authentication');
       }
       
       const result = await response.json();
+      console.log("Instagram OAuth initiation result:", result);
       
       if (!result.authUrl) {
         throw new Error('No authorization URL returned');
@@ -464,6 +471,8 @@ export const useSocialMedia = () => {
       // Add state parameter to URL
       const authUrl = new URL(result.authUrl);
       authUrl.searchParams.append('state', state);
+      
+      console.log("Redirecting to Instagram auth URL:", authUrl.toString());
       
       // Redirect to Instagram authorization page
       window.location.href = authUrl.toString();
