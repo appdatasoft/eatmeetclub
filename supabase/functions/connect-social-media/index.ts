@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -122,8 +121,8 @@ serve(async (req) => {
       if (action === "initiate") {
         // Facebook App credentials
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
-        // Always use the same consistent redirect URL
-        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
+        // Use the Supabase callback URL
+        const redirectUrl = redirectUri || "https://wocfwpedauuhlrfugxuu.supabase.co/auth/v1/callback";
 
         if (!clientId) {
           return new Response(
@@ -155,8 +154,8 @@ serve(async (req) => {
 
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         const clientSecret = Deno.env.get("FACEBOOK_APP_SECRET");
-        // Always use the same consistent redirect URL
-        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
+        // Use the Supabase callback URL
+        const redirectUrl = redirectUri || "https://wocfwpedauuhlrfugxuu.supabase.co/auth/v1/callback";
 
         if (!clientId || !clientSecret) {
           return new Response(
@@ -268,8 +267,8 @@ serve(async (req) => {
       if (action === "initiate") {
         // Instagram App credentials (same as Facebook App since it uses Facebook's OAuth)
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
-        // Always use the same consistent redirect URL
-        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
+        // Use the Supabase callback URL
+        const redirectUrl = redirectUri || "https://wocfwpedauuhlrfugxuu.supabase.co/auth/v1/callback";
 
         if (!clientId) {
           return new Response(
@@ -315,8 +314,8 @@ serve(async (req) => {
 
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         const clientSecret = Deno.env.get("FACEBOOK_APP_SECRET");
-        // Always use the same consistent redirect URL
-        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
+        // Use the Supabase callback URL
+        const redirectUrl = redirectUri || "https://wocfwpedauuhlrfugxuu.supabase.co/auth/v1/callback";
 
         if (!clientId || !clientSecret) {
           return new Response(
@@ -442,65 +441,6 @@ serve(async (req) => {
           );
         }
       }
-    } else if (platform === "TikTok") {
-      if (action === "initiate") {
-        // TikTok App credentials - if you had these as env variables
-        const clientId = Deno.env.get("TIKTOK_CLIENT_ID");
-        const redirectUrl = redirectUri || "http://localhost:5173";
-
-        if (!clientId) {
-          return new Response(
-            JSON.stringify({ error: "TikTok Client ID not configured" }),
-            { headers: corsHeaders, status: 500 }
-          );
-        }
-
-        // Generate TikTok authorization URL
-        const authUrl = new URL("https://open-api.tiktok.com/platform/oauth/connect/");
-        authUrl.searchParams.append("client_key", clientId);
-        authUrl.searchParams.append("redirect_uri", redirectUrl);
-        authUrl.searchParams.append("scope", "user.info.basic");
-        authUrl.searchParams.append("response_type", "code");
-        authUrl.searchParams.append("state", `tiktok_${Math.random().toString(36).substring(2, 15)}`);
-
-        return new Response(
-          JSON.stringify({ authUrl: authUrl.toString() }),
-          { headers: corsHeaders, status: 200 }
-        );
-      } else if (action === "callback") {
-        // Handle the TikTok OAuth callback logic here similar to Instagram
-        // This would exchange the code for an access token and fetch user data
-      }
-      
-      // Simple mock connection for platforms without OAuth implementation
-      const { data: connection, error } = await supabase
-        .from('social_media_connections')
-        .upsert({
-          user_id: user.id,
-          platform: platform,
-          username: "user_" + Math.random().toString(36).substring(2, 8),
-          profile_url: `https://example.com/${platform}`,
-          is_connected: true,
-          meta_data: { connected_at: new Date().toISOString() }
-        }, { onConflict: 'user_id, platform' })
-        .select()
-        .single();
-
-      if (error) {
-        return new Response(
-          JSON.stringify({ error: `Failed to save connection: ${error.message}` }),
-          { headers: corsHeaders, status: 500 }
-        );
-      }
-
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          connection,
-          message: `Successfully connected ${platform} account` 
-        }),
-        { headers: corsHeaders, status: 200 }
-      );
     }
 
     // For other platforms - implement a mock connection
