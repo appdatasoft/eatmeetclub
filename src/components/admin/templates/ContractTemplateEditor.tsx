@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useContractTemplates } from '@/hooks/admin/useContractTemplates';
 import { Button } from "@/components/ui/button";
@@ -122,7 +121,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
         templateContent: template.substring(0, 100) + "..."
       });
       
-      // Fix: Call sendTestEmail with just the template string as required by the function signature
+      // Pass all required parameters to the sendTestEmail function
       const result = await sendTestEmail(template);
       
       if (result) {

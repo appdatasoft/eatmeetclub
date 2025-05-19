@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -124,7 +123,7 @@ export const useContractTemplates = (templateType: string) => {
     }
   };
   
-  // Fixed implementation: Forward the content and internally use saved state values for recipients and subject
+  // Improved implementation: Uses the proper parameter order for sending test emails
   const sendTestEmail = async (content: string): Promise<boolean> => {
     if (!templateData) {
       toast({
@@ -156,13 +155,21 @@ export const useContractTemplates = (templateType: string) => {
     setIsSaving(true);
     
     try {
-      // Use the operation function with all necessary parameters
+      // Call the template operations function with correct parameters
       return await templateOperations.sendTestEmail(
         selectedRecipients,
         emailSubject,
         content,
         templateData.id
       );
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      toast({
+        title: "Error sending email",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive"
+      });
+      return false;
     } finally {
       setIsSaving(false);
     }
