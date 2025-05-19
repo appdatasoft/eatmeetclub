@@ -2,12 +2,13 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Facebook, Instagram, Twitter, Map, Globe, Youtube } from "lucide-react";
+import { Facebook, Instagram, Twitter, Map, Globe, Youtube, AlertCircle } from "lucide-react";
 import { useEditableContent } from '@/components/editor/EditableContentProvider';
 import EditableText from '@/components/editor/EditableText';
 import { useToast } from '@/hooks/use-toast';
 import { useSocialMedia, SocialMediaConnection } from '@/hooks/useSocialMedia';
 import ConnectionDetailsModal from './ConnectionDetailsModal';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface SocialMediaTabProps {
   isAdmin?: boolean;
@@ -19,6 +20,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
   const { 
     connections, 
     isLoading, 
+    oauthPending,
     fetchConnections, 
     connectSocialMedia,
     getConnectionStatus 
@@ -34,7 +36,9 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
   const handleConnectAccount = async (platform: string) => {
     try {
       const result = await connectSocialMedia(platform);
-      if (result) {
+      
+      // For Instagram, we don't show modal since it will redirect to OAuth
+      if (result && !result.pending) {
         const connection = connections.find(conn => conn.platform === platform) || result;
         setSelectedConnection(connection);
         setIsModalOpen(true);
@@ -68,7 +72,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
             handleConnectAccount(platform);
           }
         }}
-        disabled={isLoading}
+        disabled={isLoading || oauthPending}
       >
         {isConnected ? "Connected" : "Connect"}
       </Button>
@@ -77,6 +81,15 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
 
   return (
     <div className="space-y-6">
+      {oauthPending && (
+        <Alert className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Processing social media connection. Please wait...
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <Card>
         <CardHeader>
           <CardTitle>Social Media Accounts</CardTitle>
