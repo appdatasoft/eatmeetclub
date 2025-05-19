@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { createSessionCache } from '@/utils/fetch';
+import { MediaItem } from '../types';
 
 // Cache durations
 const MEDIA_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
@@ -9,9 +10,9 @@ const INGREDIENTS_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 /**
  * Fetch media for a menu item with improved caching
  */
-export const fetchMenuItemMedia = async (restaurantId: string, menuItemId: string) => {
+export const fetchMenuItemMedia = async (restaurantId: string, menuItemId: string): Promise<MediaItem[]> => {
   const cacheKey = `menu_media_${restaurantId}_${menuItemId}`;
-  const cache = createSessionCache(cacheKey, MEDIA_CACHE_DURATION);
+  const cache = createSessionCache<MediaItem[]>(cacheKey, MEDIA_CACHE_DURATION);
   
   // Check cache first
   const cachedMedia = cache.get();
@@ -26,7 +27,12 @@ export const fetchMenuItemMedia = async (restaurantId: string, menuItemId: strin
       .match({ restaurant_id: restaurantId, menu_item_id: menuItemId })
       .limit(5); // Limit to 5 media items per menu item
       
-    const result = mediaItems || [];
+    const result: MediaItem[] = mediaItems?.map(item => ({
+      id: item.id,
+      url: item.url,
+      type: item.media_type === 'image' ? 'image' : 'video'
+    })) || [];
+    
     cache.set(result);
     return result;
   } catch (error) {
@@ -38,9 +44,9 @@ export const fetchMenuItemMedia = async (restaurantId: string, menuItemId: strin
 /**
  * Fetch ingredients for a menu item with improved caching
  */
-export const fetchMenuItemIngredients = async (menuItemId: string) => {
+export const fetchMenuItemIngredients = async (menuItemId: string): Promise<string[]> => {
   const cacheKey = `menu_ingredients_${menuItemId}`;
-  const cache = createSessionCache(cacheKey, INGREDIENTS_CACHE_DURATION);
+  const cache = createSessionCache<string[]>(cacheKey, INGREDIENTS_CACHE_DURATION);
   
   // Check cache first
   const cachedIngredients = cache.get();
@@ -55,7 +61,7 @@ export const fetchMenuItemIngredients = async (menuItemId: string) => {
       .eq('menu_item_id', menuItemId)
       .limit(20); // Limit to 20 ingredients per menu item
       
-    const result = ingredients || [];
+    const result = ingredients ? ingredients.map(item => item.name) : [];
     cache.set(result);
     return result;
   } catch (error) {

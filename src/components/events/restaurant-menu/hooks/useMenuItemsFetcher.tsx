@@ -145,7 +145,7 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
       const batchPromises = batch.map(async (item) => {
         try {
           // Fetch media for this item - fetch in parallel
-          const [media, ingredients] = await Promise.all([
+          const [mediaItems, ingredientItems] = await Promise.all([
             fetchMenuItemMedia(restaurantId, item.id),
             fetchMenuItemIngredients(item.id)
           ]);
@@ -157,9 +157,9 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
             price: item.price,
             type: item.type || 'Other',
             restaurant_id: restaurantId,
-            ingredients,
-            media
-          };
+            ingredients: ingredientItems || [],
+            media: mediaItems || []
+          } as MenuItem;
         } catch (err) {
           console.error(`Error processing menu item ${item.id}:`, err);
           // Return a partial item rather than failing completely
@@ -172,7 +172,7 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
             restaurant_id: restaurantId,
             ingredients: [],
             media: []
-          };
+          } as MenuItem;
         }
       });
       
