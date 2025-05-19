@@ -8,7 +8,7 @@ import AdminContent from './admin/AdminContent';
 import AdminErrorState from './admin/AdminErrorState';
 import AdminLoadingState from './admin/AdminLoadingState';
 import { useAdminAuth } from './admin/useAdminAuth';
-import { RetryAlert } from '@/components/ui/RetryAlert';
+import RetryAlert from '@/components/ui/RetryAlert';
 
 interface AdminLayoutProps {
   children: ReactNode;
