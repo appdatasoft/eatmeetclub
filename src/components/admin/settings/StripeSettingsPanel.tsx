@@ -27,7 +27,8 @@ const StripeSettingsPanel: React.FC = () => {
       toast({
         title: "Stripe Mode Updated",
         description: `Stripe is now in ${newMode} mode`,
-        variant: newMode === "live" ? "default" : "secondary",
+        // Fix: Use only the valid variant types from the toast component
+        variant: newMode === "live" ? "default" : "destructive",
       });
     } else {
       toast({
