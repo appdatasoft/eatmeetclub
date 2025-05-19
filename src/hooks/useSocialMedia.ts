@@ -76,7 +76,9 @@ export const useSocialMedia = () => {
         throw new Error('No active session found');
       }
 
-      const supabaseUrl = supabase.supabaseUrl;
+      // Use the environment variable or a hardcoded fallback for the Supabase URL
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
+      
       const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
         method: 'POST',
         headers: {
