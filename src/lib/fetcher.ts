@@ -10,21 +10,17 @@ export async function fetcher<T>(url: string, options?: RequestInit): Promise<T>
     },
   });
 
-  if (!res.ok) {
-    let message = `Error ${res.status}`;
-    try {
-      const errorBody = await res.json();
-      message += `: ${errorBody?.message || JSON.stringify(errorBody)}`;
-    } catch {
-      const text = await res.text();
-      message += `: ${text}`;
-    }
-    throw new Error(message);
+  let data: T;
+  try {
+    data = await res.json(); // ✅ read body once
+  } catch (e) {
+    throw new Error(`Invalid JSON response: ${(e as Error).message}`);
   }
 
-  try {
-    return await res.json();
-  } catch (e) {
-    throw new Error('Invalid JSON response');
+  if (!res.ok) {
+    const message = (data as any)?.message || JSON.stringify(data);
+    throw new Error(`Error ${res.status}: ${message}`);
   }
+
+  return data;
 }
