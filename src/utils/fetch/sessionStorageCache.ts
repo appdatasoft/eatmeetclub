@@ -1,78 +1,107 @@
+
 /**
- * Creates a session-based cache for fetch operations using sessionStorage
- * This is useful for temporary caching of data that should persist only for the current browser session
+ * Session storage based cache implementation
  */
-export interface SessionCacheOptions {
-  ttlMs?: number;
-  staleWhileRevalidate?: boolean;
+
+interface CacheEntry<T> {
+  data: T;
+  expiry: number;
 }
 
-export const createSessionCache = <T>(cacheKey: string, ttlMs = 10 * 60 * 1000, options?: SessionCacheOptions) => {
-  const fullCacheKey = `session_cache_${cacheKey}`;
+export const createSessionCache = () => {
+  const cache = new Map<string, CacheEntry<any>>();
+  
+  const set = <T>(key: string, data: T, ttlMs: number = 60000): void => {
+    try {
+      const entry: CacheEntry<T> = {
+        data,
+        expiry: Date.now() + ttlMs
+      };
+      
+      // Store in memory map
+      cache.set(key, entry);
+      
+      // Also try to store in sessionStorage
+      try {
+        sessionStorage.setItem(key, JSON.stringify(entry));
+      } catch (e) {
+        console.warn('Failed to store in sessionStorage:', e);
+      }
+    } catch (error) {
+      console.error('Error setting cache:', error);
+    }
+  };
+  
+  const get = <T>(key: string): T | null => {
+    try {
+      // Try memory cache first
+      if (cache.has(key)) {
+        const entry = cache.get(key) as CacheEntry<T>;
+        if (entry.expiry > Date.now()) {
+          return entry.data;
+        } else {
+          // Expired
+          cache.delete(key);
+          try {
+            sessionStorage.removeItem(key);
+          } catch (e) {
+            // Ignore storage errors
+          }
+        }
+      }
+      
+      // Try sessionStorage as fallback
+      try {
+        const storedEntry = sessionStorage.getItem(key);
+        if (storedEntry) {
+          const entry = JSON.parse(storedEntry) as CacheEntry<T>;
+          if (entry.expiry > Date.now()) {
+            // Restore to memory cache
+            cache.set(key, entry);
+            return entry.data;
+          } else {
+            // Expired
+            sessionStorage.removeItem(key);
+          }
+        }
+      } catch (e) {
+        console.warn('Error reading from sessionStorage:', e);
+      }
+    } catch (error) {
+      console.error('Error getting from cache:', error);
+    }
+    
+    return null;
+  };
+  
+  const remove = (key: string): void => {
+    cache.delete(key);
+    try {
+      sessionStorage.removeItem(key);
+    } catch (e) {
+      // Ignore storage errors
+    }
+  };
+  
+  const clear = (): void => {
+    cache.clear();
+    try {
+      // Only clear keys that belong to our cache, not everything in sessionStorage
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('cache:')) {
+          sessionStorage.removeItem(key);
+        }
+      }
+    } catch (e) {
+      console.warn('Error clearing sessionStorage cache:', e);
+    }
+  };
   
   return {
-    get: (): T | null => {
-      try {
-        const cached = sessionStorage.getItem(fullCacheKey);
-        if (!cached) return null;
-        
-        const { data, timestamp } = JSON.parse(cached);
-        
-        // Check if cache has expired
-        if (Date.now() - timestamp > ttlMs) {
-          // If using stale-while-revalidate pattern, return stale data but mark as expired
-          if (options?.staleWhileRevalidate) {
-            console.log(`Returning stale data for ${cacheKey} while revalidating`);
-            return data;
-          }
-          
-          // Otherwise clear the expired cache
-          sessionStorage.removeItem(fullCacheKey);
-          return null;
-        }
-        
-        return data;
-      } catch (e) {
-        console.error('Cache retrieval error:', e);
-        return null;
-      }
-    },
-    
-    set: (data: T): void => {
-      try {
-        // Make sure we're not storing circular references
-        const safeData = JSON.parse(JSON.stringify(data));
-        
-        sessionStorage.setItem(
-          fullCacheKey,
-          JSON.stringify({
-            data: safeData,
-            timestamp: Date.now()
-          })
-        );
-      } catch (e) {
-        console.error('Cache storage error:', e);
-      }
-    },
-    
-    remove: (): void => {
-      try {
-        sessionStorage.removeItem(fullCacheKey);
-      } catch (e) {
-        console.error('Cache removal error:', e);
-      }
-    },
-    
-    isStale: (): boolean => {
-      try {
-        const cached = sessionStorage.getItem(fullCacheKey);
-        if (!cached) return true;
-        
-        const { timestamp } = JSON.parse(cached);
-        return Date.now() - timestamp > ttlMs;
-      } catch (e) {
-        return true;
-      }
-    }
+    set,
+    get,
+    remove,
+    clear,
   };
 };

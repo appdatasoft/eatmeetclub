@@ -14,33 +14,51 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchWithRetry } from "@/utils/fetchUtils";
 
 const VenuesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+  const { toast } = useToast();
+
   const { data: restaurants, isLoading, error } = useQuery({
     queryKey: ["restaurants"],
     queryFn: async () => {
       console.log("Fetching restaurants data...");
-      const { data, error } = await supabase
-        .from("restaurants")
-        .select("*");
       
-      if (error) {
-        console.error("Error fetching restaurants:", error);
-        useToast().toast({
-          title: "Error fetching venues",
-          description: error.message,
+      try {
+        // Use the fetchWithRetry utility for safe response handling
+        const { data, error } = await fetchWithRetry(async () => {
+          return await supabase
+            .from("restaurants")
+            .select("*");
+        });
+        
+        if (error) {
+          console.error("Error fetching restaurants:", error);
+          toast({
+            title: "Error fetching venues",
+            description: error.message,
+            variant: "destructive",
+          });
+          throw error;
+        }
+        
+        console.log("Restaurants data received:", data);
+        return data as Restaurant[];
+      } catch (err: any) {
+        console.error("Failed to fetch restaurants:", err);
+        toast({
+          title: "Error loading venues",
+          description: err.message || "An unexpected error occurred",
           variant: "destructive",
         });
-        throw error;
+        throw err;
       }
-      
-      console.log("Restaurants data received:", data);
-      return data as Restaurant[];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   const filteredRestaurants = restaurants?.filter(restaurant => 

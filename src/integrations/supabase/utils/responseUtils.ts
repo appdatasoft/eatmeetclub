@@ -11,8 +11,15 @@ export const handleResponse = async (response: Response): Promise<Response> => {
     throw new Error(`Rate limit hit (429)`);
   }
   
-  // Always clone the response before any processing to prevent "body stream already read" errors
-  return response.clone();
+  try {
+    // Always clone the response before any processing to prevent "body stream already read" errors
+    return response.clone();
+  } catch (error) {
+    console.error("Error cloning response:", error);
+    // If cloning fails for some reason, return the original response
+    // This is a fallback and should rarely happen
+    return response;
+  }
 };
 
 // Safely extract JSON from a response without causing "body stream already read" errors
@@ -36,5 +43,54 @@ export const extractResponseText = async (response: Response): Promise<string> =
   } catch (error) {
     console.error("Failed to extract response text:", error);
     throw error;
+  }
+};
+
+// Cache for responses to prevent multiple reads
+const responseCache = new Map<string, any>();
+
+// Helper to safely get JSON data with caching
+export const getResponseData = async <T>(
+  response: Response, 
+  cacheKey?: string
+): Promise<T> => {
+  // Use cache if available
+  if (cacheKey && responseCache.has(cacheKey)) {
+    return responseCache.get(cacheKey);
+  }
+  
+  try {
+    // Always clone the response before reading it
+    const clonedResponse = response.clone();
+    const data = await clonedResponse.json();
+    
+    // Cache the result if cacheKey is provided
+    if (cacheKey) {
+      responseCache.set(cacheKey, data);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Failed to get response data:", error);
+    throw error;
+  }
+};
+
+// Helper to clear cache for specific keys or prefixes
+export const clearResponseCache = (keyOrPrefix?: string) => {
+  if (!keyOrPrefix) {
+    responseCache.clear();
+    return;
+  }
+  
+  if (responseCache.has(keyOrPrefix)) {
+    responseCache.delete(keyOrPrefix);
+  } else {
+    // If it's a prefix, clear all keys that start with it
+    for (const key of responseCache.keys()) {
+      if (key.startsWith(keyOrPrefix)) {
+        responseCache.delete(key);
+      }
+    }
   }
 };
