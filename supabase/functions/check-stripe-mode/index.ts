@@ -23,11 +23,22 @@ serve(async (req) => {
     );
 
     // Try to get from admin_config table first (newer implementation)
-    const { data: adminConfigData, error: adminConfigError } = await supabase
-      .from('admin_config')
-      .select('value')
-      .eq('key', 'stripe_mode')
-      .maybeSingle();
+    let adminConfigData = null;
+    let adminConfigError = null;
+    
+    try {
+      const adminConfigResponse = await supabase
+        .from('admin_config')
+        .select('value')
+        .eq('key', 'stripe_mode')
+        .maybeSingle();
+      
+      adminConfigData = adminConfigResponse.data;
+      adminConfigError = adminConfigResponse.error;
+    } catch (fetchError) {
+      console.error("Failed to fetch from admin_config:", fetchError);
+      adminConfigError = { message: fetchError instanceof Error ? fetchError.message : "Unknown error" };
+    }
     
     if (!adminConfigError && adminConfigData?.value) {
       const mode = adminConfigData.value === 'live' ? 'live' : 'test';
@@ -47,19 +58,30 @@ serve(async (req) => {
     }
     
     // Fall back to older app_config table if needed
-    const { data, error } = await supabase
-      .from("app_config")
-      .select("value")
-      .eq("key", "stripe_mode")
-      .maybeSingle();
+    let appConfigData = null;
+    let appConfigError = null;
+    
+    try {
+      const appConfigResponse = await supabase
+        .from("app_config")
+        .select("value")
+        .eq("key", "stripe_mode")
+        .maybeSingle();
+      
+      appConfigData = appConfigResponse.data;
+      appConfigError = appConfigResponse.error;
+    } catch (fetchError) {
+      console.error("Failed to fetch from app_config:", fetchError);
+      appConfigError = { message: fetchError instanceof Error ? fetchError.message : "Unknown error" };
+    }
 
     // If there's a database error, log it and default to test mode
-    if (error) {
-      console.error("Database error:", error);
+    if (appConfigError) {
+      console.error("Database error:", appConfigError);
       
       return new Response(JSON.stringify({ 
         mode: "test",
-        error: error.message,
+        error: typeof appConfigError === 'object' ? appConfigError.message : String(appConfigError),
         fallback: true,
         timestamp: new Date().toISOString()
       }), {
@@ -68,7 +90,7 @@ serve(async (req) => {
       });
     }
 
-    const mode = data?.value === "live" ? "live" : "test";
+    const mode = appConfigData?.value === "live" ? "live" : "test";
     
     return new Response(JSON.stringify({ 
       mode,

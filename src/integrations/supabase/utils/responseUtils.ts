@@ -1,4 +1,3 @@
-
 /**
  * Helper functions for handling responses in a safe way
  * This is critical to prevent "body stream already read" errors
@@ -25,28 +24,42 @@ export const handleResponse = async (response: Response): Promise<Response> => {
     // Clone the response to avoid "body already read" errors
     const clonedResponse = response.clone();
     
+    // Handle empty responses first to avoid JSON parse errors
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      responseData = {};
+      responseBodyCache.set(cacheKey, {
+        type: 'json',
+        data: responseData
+      });
+      return createResponseFromCache(responseData, response.status, response.headers, contentType);
+    }
+    
     if (contentType && contentType.includes('application/json')) {
       try {
-        responseData = await clonedResponse.json();
+        // First check if there's any content to parse
+        const text = await clonedResponse.text();
+        if (!text || text.trim() === '') {
+          // Handle empty but JSON content-type responses
+          responseData = {};
+          console.warn("Empty JSON response received");
+        } else {
+          try {
+            responseData = JSON.parse(text);
+          } catch (parseError) {
+            console.error("Failed to parse JSON response:", parseError, "Raw text:", text);
+            // Return an empty object to prevent further parsing errors
+            responseData = { error: "Invalid JSON response", _rawText: text.substring(0, 100) };
+          }
+        }
+        
         responseBodyCache.set(cacheKey, {
           type: 'json',
           data: responseData
         });
       } catch (jsonError) {
-        console.error("Error parsing JSON response:", jsonError);
-        // If JSON parsing fails, try to get the text
-        const textResponse = await response.clone().text();
-        console.log("Raw response text:", textResponse);
-        
-        // If the text is empty or invalid JSON, return an empty object to prevent parsing errors
-        try {
-          responseData = textResponse ? JSON.parse(textResponse) : {};
-        } catch (parseError) {
-          console.error("Failed to parse response as JSON:", parseError);
-          // Return an empty object or array as fallback
-          responseData = textResponse ? { rawText: textResponse } : {};
-        }
-        
+        console.error("Error handling JSON response:", jsonError);
+        // If JSON processing fails completely, return an empty object
+        responseData = { error: "Failed to process response" };
         responseBodyCache.set(cacheKey, {
           type: 'json',
           data: responseData
@@ -55,10 +68,29 @@ export const handleResponse = async (response: Response): Promise<Response> => {
     } else {
       try {
         responseData = await clonedResponse.text();
-        responseBodyCache.set(cacheKey, {
-          type: 'text',
-          data: responseData
-        });
+        // Check if text looks like JSON despite content-type
+        if (responseData && 
+           (responseData.startsWith('{') || responseData.startsWith('[')) && 
+           (responseData.endsWith('}') || responseData.endsWith(']'))) {
+          try {
+            responseData = JSON.parse(responseData);
+            responseBodyCache.set(cacheKey, {
+              type: 'json',
+              data: responseData
+            });
+          } catch {
+            // Not valid JSON after all, keep as text
+            responseBodyCache.set(cacheKey, {
+              type: 'text',
+              data: responseData
+            });
+          }
+        } else {
+          responseBodyCache.set(cacheKey, {
+            type: 'text',
+            data: responseData || ""
+          });
+        }
       } catch (textError) {
         console.error("Error reading response text:", textError);
         responseData = "";
@@ -140,22 +172,28 @@ export const extractResponseData = async <T>(response: Response): Promise<T> => 
     
     if (contentType && contentType.includes('application/json')) {
       try {
-        return await response.json() as T;
-      } catch (jsonError) {
-        console.error("Failed to parse JSON response:", jsonError);
-        // Try to get text and parse it manually
+        // First check if there's any content to parse
         const text = await response.clone().text();
-        if (!text) {
+        if (!text || text.trim() === '') {
           return {} as T;
         }
+        
         try {
           return JSON.parse(text) as T;
-        } catch {
-          return text as unknown as T;
+        } catch (parseError) {
+          console.error("Failed to parse JSON response:", parseError);
+          return {} as T;
         }
+      } catch (jsonError) {
+        console.error("Failed to parse JSON response:", jsonError);
+        return {} as T;
       }
     } else {
       const text = await response.text();
+      if (!text || text.trim() === '') {
+        return {} as T;
+      }
+      
       try {
         return JSON.parse(text) as T;
       } catch {

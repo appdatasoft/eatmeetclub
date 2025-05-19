@@ -157,6 +157,43 @@ export const createSessionCache = <T>(
       } catch (error) {
         console.warn('Failed to clear cache from storage:', error);
       }
+    },
+
+    /**
+     * Refresh the expiry time of the cached item without changing the data
+     */
+    refresh: (): void => {
+      try {
+        // Get current cached data
+        const memoryCachedItem = memoryCache.get(key);
+        if (memoryCachedItem) {
+          // Update expiry time
+          memoryCachedItem.expiry = Date.now() + ttl;
+          memoryCache.set(key, memoryCachedItem);
+
+          // Try to update in storage too
+          try {
+            storage.setItem(storageKey, JSON.stringify(memoryCachedItem));
+          } catch (storageError) {
+            console.warn('Failed to refresh item in sessionStorage:', storageError);
+          }
+        } else {
+          // Check storage if not in memory
+          const storedItem = storage.getItem(storageKey);
+          if (storedItem) {
+            const cachedItem = safeJSONParse(storedItem);
+            if (cachedItem) {
+              cachedItem.expiry = Date.now() + ttl;
+              
+              // Update both memory and storage
+              memoryCache.set(key, cachedItem);
+              storage.setItem(storageKey, JSON.stringify(cachedItem));
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error refreshing cache:', error);
+      }
     }
   };
 };

@@ -15,7 +15,7 @@ export class RequestQueue {
   async add<T>(request: () => Promise<T>, cacheKey?: string): Promise<T> {
     // Check if response is in memory cache
     if (cacheKey && requestCache.has(cacheKey)) {
-      const cached = requestCache.get(cacheKey);
+      const cached = requestCache.get<{ data: T, expiry: number }>(cacheKey);
       if (cached && cached.expiry > Date.now()) {
         console.log(`Using in-memory cache for ${cacheKey}`);
         return cached.data;
@@ -24,7 +24,7 @@ export class RequestQueue {
       }
     }
     
-    return new Promise((resolve, reject) => {
+    return new Promise<T>((resolve, reject) => {
       this.queue.push(async () => {
         try {
           // Check if we're rate limited or paused
