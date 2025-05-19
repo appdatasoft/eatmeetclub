@@ -107,6 +107,21 @@ function App() {
               <AdminContracts />
             </ProtectedRoute>
           } />
+          <Route path="/admin/contracts/venue" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminContracts />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/contracts/signup-referral" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminContracts />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/contracts/ticket-fee" element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminContracts />
+            </ProtectedRoute>
+          } />
           <Route path="/admin/orders" element={
             <ProtectedRoute adminOnly={true}>
               <AdminOrders />
