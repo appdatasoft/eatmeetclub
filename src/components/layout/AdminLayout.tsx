@@ -27,7 +27,11 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       
       try {
         // Check if user is logged in
-        const { data: sessionData } = await supabase.auth.getSession();
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          throw sessionError;
+        }
         
         if (!sessionData.session) {
           console.log("No session found, redirecting to login");
@@ -43,16 +47,16 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         }
         
         // Check if user is an admin
-        const { data, error } = await supabase.rpc(
+        const { data: adminData, error: adminError } = await supabase.rpc(
           'is_admin',
           { user_id: sessionData.session.user.id }
         );
         
-        if (error) {
-          throw error;
+        if (adminError) {
+          throw adminError;
         }
         
-        if (!data) {
+        if (!adminData) {
           console.log("User is not an admin, redirecting to dashboard");
           toast({
             title: "Access denied",

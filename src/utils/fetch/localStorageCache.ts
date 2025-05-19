@@ -1,184 +1,87 @@
 
 /**
- * Local storage based persistent cache implementation
- * This is useful for offline support and reducing API calls
+ * Persistent cache implementation using localStorage
+ * This is useful for caching data that should persist between sessions
  */
 
-interface CacheEntry<T> {
+interface CacheItem<T> {
   data: T;
   expiry: number;
-  stale?: boolean;
-  version: number;
 }
 
-interface OfflineCache<T = any> {
-  set: (data: T, ttlMs?: number) => void;
-  get: () => T | null;
-  isStale: () => boolean;
-  remove: () => void;
-  clear: () => void;
-}
-
-// Current cache version to handle schema changes
-const CACHE_VERSION = 1;
-
-export const createOfflineCache = <T = any>(
-  cacheKey: string,
-  defaultTtl: number = 24 * 60 * 60 * 1000, // 24 hours by default
-  options?: { staleWhileRevalidate?: boolean, prefix?: string }
-): OfflineCache<T> => {
-  const prefix = options?.prefix || 'app_cache:';
-  const fullKey = `${prefix}${cacheKey}`;
-  
-  const set = (data: T, ttlMs: number = defaultTtl): void => {
-    try {
-      const entry: CacheEntry<T> = {
-        data,
-        expiry: Date.now() + ttlMs,
-        stale: false,
-        version: CACHE_VERSION
-      };
-      
-      // Store in localStorage
+/**
+ * Creates a cache object that stores data in localStorage with built-in expiry
+ * @param key The cache key
+ * @param ttl Time to live in milliseconds
+ */
+export const createOfflineCache = <T>(key: string, ttl: number = 24 * 60 * 60 * 1000) => {
+  return {
+    /**
+     * Get data from cache
+     */
+    get: (): T | null => {
       try {
-        localStorage.setItem(fullKey, JSON.stringify(entry));
-      } catch (e) {
-        console.warn('Failed to store in localStorage:', e);
+        const cached = localStorage.getItem(key);
+        if (!cached) return null;
         
-        // If storage quota is exceeded, clear old caches
-        if (e instanceof DOMException && 
-            (e.name === 'QuotaExceededError' || 
-             e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-          clearOldCaches(prefix);
-          
-          // Try again after clearing
-          try {
-            localStorage.setItem(fullKey, JSON.stringify(entry));
-          } catch (retryError) {
-            console.error('Still failed to store in localStorage after clearing old caches:', retryError);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error setting cache:', error);
-    }
-  };
-  
-  const get = (): T | null => {
-    try {
-      // Try localStorage
-      const storedEntry = localStorage.getItem(fullKey);
-      if (storedEntry) {
-        const entry = JSON.parse(storedEntry) as CacheEntry<T>;
+        const item: CacheItem<T> = JSON.parse(cached);
         
-        // Ignore entries from different cache versions
-        if (entry.version !== CACHE_VERSION) {
-          remove();
+        if (item.expiry < Date.now()) {
+          localStorage.removeItem(key);
           return null;
         }
         
-        if (entry.expiry > Date.now()) {
-          return entry.data;
-        } else if (options?.staleWhileRevalidate) {
-          // Mark as stale but return data anyway
-          entry.stale = true;
-          try {
-            localStorage.setItem(fullKey, JSON.stringify(entry));
-          } catch (e) {
-            // Ignore storage errors
-          }
-          return entry.data;
-        } else {
-          // Expired
-          remove();
-        }
+        return item.data;
+      } catch (error) {
+        console.error(`Error reading from offline cache: ${key}`, error);
+        return null;
       }
-    } catch (error) {
-      console.error('Error getting from cache:', error);
-      remove(); // Clean up potentially corrupted data
-    }
+    },
     
-    return null;
-  };
-  
-  const isStale = (): boolean => {
-    try {
-      const storedEntry = localStorage.getItem(fullKey);
-      if (storedEntry) {
-        const entry = JSON.parse(storedEntry) as CacheEntry<T>;
-        return !!entry.stale || entry.expiry <= Date.now();
+    /**
+     * Set data in cache
+     */
+    set: (data: T): void => {
+      try {
+        const item: CacheItem<T> = {
+          data,
+          expiry: Date.now() + ttl
+        };
+        
+        localStorage.setItem(key, JSON.stringify(item));
+      } catch (error) {
+        console.error(`Error writing to offline cache: ${key}`, error);
       }
-    } catch (e) {
-      console.warn('Error checking stale status:', e);
-    }
+    },
     
-    return true; // If we can't verify, assume it's stale
-  };
-  
-  const remove = (): void => {
-    try {
-      localStorage.removeItem(fullKey);
-    } catch (e) {
-      // Ignore storage errors
+    /**
+     * Remove data from cache
+     */
+    remove: (): void => {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.error(`Error removing from offline cache: ${key}`, error);
+      }
+    },
+    
+    /**
+     * Update TTL of existing cached data
+     */
+    refresh: (): boolean => {
+      try {
+        const cached = localStorage.getItem(key);
+        if (!cached) return false;
+        
+        const item: CacheItem<T> = JSON.parse(cached);
+        item.expiry = Date.now() + ttl;
+        
+        localStorage.setItem(key, JSON.stringify(item));
+        return true;
+      } catch (error) {
+        console.error(`Error refreshing offline cache: ${key}`, error);
+        return false;
+      }
     }
-  };
-  
-  const clear = (): void => {
-    try {
-      // Only clear keys with our prefix
-      clearOldCaches(prefix);
-    } catch (e) {
-      console.warn('Error clearing localStorage cache:', e);
-    }
-  };
-  
-  return {
-    set,
-    get,
-    isStale,
-    remove,
-    clear,
   };
 };
-
-// Helper function to clear old caches
-function clearOldCaches(prefix: string): void {
-  const keys = [];
-  
-  // First collect all keys to avoid modification during iteration
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith(prefix)) {
-      keys.push(key);
-    }
-  }
-  
-  // Sort keys by expiry date (if possible)
-  const keyData = keys.map(key => {
-    try {
-      const data = JSON.parse(localStorage.getItem(key) || '{}');
-      return {
-        key,
-        expiry: data.expiry || 0
-      };
-    } catch (e) {
-      return {
-        key,
-        expiry: 0
-      };
-    }
-  });
-  
-  // Sort by expiry (oldest first)
-  keyData.sort((a, b) => a.expiry - b.expiry);
-  
-  // Remove oldest 50% of caches
-  const toRemove = Math.ceil(keyData.length / 2);
-  keyData.slice(0, toRemove).forEach(item => {
-    try {
-      localStorage.removeItem(item.key);
-    } catch (e) {
-      // Ignore errors
-    }
-  });
-}

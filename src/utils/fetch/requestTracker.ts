@@ -1,133 +1,128 @@
-
 /**
- * Request tracking utility to monitor and throttle API requests
+ * Request tracker to prevent too many requests being sent at once
  */
 
-interface RequestStats {
-  totalRequests: number;
-  successfulRequests: number;
-  failedRequests: number;
-  lastRequestTime: number;
-  consecutiveFailures: number;
-  rateLimit: {
-    remaining: number;
-    resetAt: number;
-  };
-}
+type PendingRequest = {
+  resolve: () => void;
+  priority: number;
+  timestamp: number;
+};
 
 class RequestTracker {
-  private stats: RequestStats = {
-    totalRequests: 0,
-    successfulRequests: 0,
-    failedRequests: 0,
-    lastRequestTime: 0,
-    consecutiveFailures: 0,
-    rateLimit: {
-      remaining: 100,
-      resetAt: 0
-    }
-  };
-  
-  private throttleDelay = 500; // Minimum time between requests in ms
   private activeRequests = 0;
-  private maxConcurrentRequests = 3;
-  
-  // Check if we need to wait before sending a new request
-  async checkAndWait(): Promise<void> {
-    this.stats.totalRequests++;
-    
-    // Wait if we're at the maximum concurrent requests
-    while (this.activeRequests >= this.maxConcurrentRequests) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    // Apply throttling if needed
-    const now = Date.now();
-    const timeSinceLastRequest = now - this.stats.lastRequestTime;
-    
-    if (timeSinceLastRequest < this.throttleDelay) {
-      const waitTime = this.throttleDelay - timeSinceLastRequest;
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-    }
-    
-    // Check if we're rate limited
-    if (this.stats.rateLimit.remaining <= 0 && now < this.stats.rateLimit.resetAt) {
-      const waitTime = this.stats.rateLimit.resetAt - now + 1000;
-      console.warn(`Rate limit exceeded. Waiting ${waitTime}ms before next request`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-    }
-    
-    // Update state
-    this.stats.lastRequestTime = Date.now();
-    this.activeRequests++;
-  }
-  
-  // Mark a request as completed and release the slot
-  releaseRequest(): void {
-    this.activeRequests = Math.max(0, this.activeRequests - 1);
-  }
-  
-  // Mark a request as successful and update rate limit info
-  recordSuccess(remainingLimit?: number, resetAt?: number): void {
-    this.stats.successfulRequests++;
-    this.stats.consecutiveFailures = 0;
-    this.releaseRequest();
-    
-    // Update rate limit info if provided
-    if (remainingLimit !== undefined) {
-      this.stats.rateLimit.remaining = remainingLimit;
-    } else {
-      // Assume successful request reduces limit by 1
-      this.stats.rateLimit.remaining = Math.max(0, this.stats.rateLimit.remaining - 1);
-    }
-    
-    if (resetAt !== undefined) {
-      this.stats.rateLimit.resetAt = resetAt;
-    }
-  }
-  
-  // Mark a request as failed
-  recordFailure(isRateLimit = false): void {
-    this.stats.failedRequests++;
-    this.stats.consecutiveFailures++;
-    this.releaseRequest();
-    
-    // If it's a rate limit error, update rate limit info
-    if (isRateLimit) {
-      this.stats.rateLimit.remaining = 0;
-      this.stats.rateLimit.resetAt = Date.now() + 60000; // Assume 1-minute timeout
-      
-      // Increase throttling when we hit rate limits
-      this.throttleDelay = Math.min(this.throttleDelay * 2, 5000);
-    }
-    
-    // If we're seeing consecutive failures, increase throttling
-    if (this.stats.consecutiveFailures > 3) {
-      this.throttleDelay = Math.min(this.throttleDelay + 500, 5000);
-    }
-  }
-  
-  // Get current stats
-  getStats(): RequestStats {
-    return { ...this.stats };
-  }
-  
-  // Reset stats
-  reset(): void {
-    this.stats = {
-      totalRequests: 0,
-      successfulRequests: 0,
-      failedRequests: 0,
-      lastRequestTime: 0,
-      consecutiveFailures: 0,
-      rateLimit: {
-        remaining: 100,
-        resetAt: 0
+  private maxConcurrentRequests = 10; // Maximum concurrent requests
+  private pendingQueue: PendingRequest[] = [];
+  private processingQueue = false;
+
+  // Add a request to the queue and wait until it can be processed
+  async add<T>(requestFn: () => Promise<T>, cacheKey?: string): Promise<T> {
+    // If we haven't hit our limit, process immediately
+    if (this.activeRequests < this.maxConcurrentRequests) {
+      this.activeRequests++;
+      try {
+        return await requestFn();
+      } finally {
+        this.activeRequests--;
+        this.processQueue();
       }
-    };
-    this.throttleDelay = 500;
+    }
+
+    // Otherwise, queue the request
+    return new Promise<T>((resolve, reject) => {
+      const priority = cacheKey ? 0 : 1; // Lower priority for cached requests
+      
+      // Add to pending queue
+      const queued: PendingRequest = {
+        resolve: async () => {
+          this.activeRequests++;
+          try {
+            const result = await requestFn();
+            resolve(result);
+          } catch (error) {
+            reject(error);
+          } finally {
+            this.activeRequests--;
+            this.processQueue();
+          }
+        },
+        priority,
+        timestamp: Date.now()
+      };
+      
+      this.pendingQueue.push(queued);
+      
+      // Ensure the queue processing starts
+      if (!this.processingQueue) {
+        this.processQueue();
+      }
+    });
+  }
+  
+  // Check if we need to wait before sending another request
+  async checkAndWait(): Promise<void> {
+    if (this.activeRequests < this.maxConcurrentRequests) {
+      return;
+    }
+    
+    // Wait for a slot to open
+    return new Promise(resolve => {
+      const queued: PendingRequest = {
+        resolve,
+        priority: 2, // Higher priority for system checks
+        timestamp: Date.now()
+      };
+      
+      this.pendingQueue.push(queued);
+      
+      // Ensure the queue processing starts
+      if (!this.processingQueue) {
+        this.processQueue();
+      }
+    });
+  }
+  
+  // Release a request slot
+  releaseRequest(): void {
+    if (this.activeRequests > 0) {
+      this.activeRequests--;
+    }
+    this.processQueue();
+  }
+
+  // Process pending requests in the queue
+  private async processQueue(): Promise<void> {
+    // If we're already processing the queue or there are no slots available, return
+    if (this.processingQueue || this.activeRequests >= this.maxConcurrentRequests || this.pendingQueue.length === 0) {
+      return;
+    }
+    
+    this.processingQueue = true;
+    
+    try {
+      // Sort queue by priority (lower number = higher priority) and then by timestamp
+      this.pendingQueue.sort((a, b) => {
+        if (a.priority !== b.priority) {
+          return a.priority - b.priority;
+        }
+        return a.timestamp - b.timestamp;
+      });
+      
+      // Process as many requests as we can
+      while (this.pendingQueue.length > 0 && this.activeRequests < this.maxConcurrentRequests) {
+        const next = this.pendingQueue.shift();
+        if (next) {
+          next.resolve();
+        }
+      }
+    } finally {
+      this.processingQueue = false;
+      
+      // If there are still pending requests and slots available, process again
+      if (this.pendingQueue.length > 0 && this.activeRequests < this.maxConcurrentRequests) {
+        setTimeout(() => this.processQueue(), 0);
+      }
+    }
   }
 }
 
-// Export a singleton instance
 export const requestTracker = new RequestTracker();

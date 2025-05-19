@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { EventDetails } from "@/types/event";
 import { useEventDataFetch } from "./events/useEventDataFetch";
 import { useEventOwnership } from "./events/useEventOwnership";
-import { fetchWithRetry } from "@/utils/fetch";
+import { fetchWithRetry } from "@/utils/fetchUtils";
 
 export const useEventFetching = (eventId?: string) => {
   const { toast } = useToast();
@@ -33,15 +33,34 @@ export const useEventFetching = (eventId?: string) => {
       // Add a retry flag to prevent UI flashing during retries
       setIsRetrying(true);
       
-      // Fetch the event data with retry mechanism and exponential backoff
-      const eventData = await fetchEventWithDetails(eventId);
+      // Use the fetchWithRetry utility with our event fetching function
+      const eventData = await fetchWithRetry(
+        async () => {
+          const data = await fetchEventWithDetails(eventId);
+          if (!data) {
+            throw new Error("Event not found");
+          }
+          return data;
+        },
+        {
+          retries: 3,
+          baseDelay: 1000,
+          maxDelay: 5000,
+          shouldRetry: (error) => {
+            // Only retry network errors or 500 errors
+            return error.message !== "Event not found";
+          }
+        }
+      );
       
       if (eventData) {
         setEvent(eventData);
         
         // Check if current user is the owner
-        const isOwner = await checkOwnership(eventData.user_id);
-        setIsCurrentUserOwner(isOwner);
+        if (eventData.user_id) {
+          const isOwner = await checkOwnership(eventData.user_id);
+          setIsCurrentUserOwner(isOwner);
+        }
       }
     } catch (error: any) {
       console.error("Error in fetchEventDetails:", error);

@@ -2,7 +2,7 @@
 import { MediaItem } from '@/components/restaurants/menu/types/mediaTypes';
 import { fetchMediaForMenuItem, fetchIngredientsForMenuItem } from './media/fetchMediaUtils';
 import { deleteMediaItem } from './media/mediaManagement';
-import { fetchWithRetry } from '@/utils/fetch';
+import { fetchWithRetry } from '@/utils/fetchUtils';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 
@@ -15,20 +15,25 @@ export const useMenuItemMedia = () => {
     setIsRetrying(true);
     try {
       const result = await fetchWithRetry(
-        () => fetchMediaForMenuItem(restaurantId, menuItemId),
+        async () => {
+          const mediaItems = await fetchMediaForMenuItem(restaurantId, menuItemId);
+          return mediaItems || [];
+        },
         { 
-          retries: 5,  // Increased from 3 to 5
-          baseDelay: 1000, // Increased from 500 to 1000
-          maxDelay: 10000,
+          retries: 3,
+          baseDelay: 1000,
+          maxDelay: 5000,
           shouldRetry: (error) => {
-            // Always retry network errors
+            // Don't retry not found errors
+            if (error.message && error.message.includes("not found")) {
+              return false;
+            }
             return true;
           }
         }
       );
       
-      // Format the result to match expected return type
-      if (result && Array.isArray(result)) {
+      if (Array.isArray(result)) {
         return result;
       }
       return [];
@@ -49,16 +54,25 @@ export const useMenuItemMedia = () => {
     setIsRetrying(true);
     try {
       const result = await fetchWithRetry(
-        () => fetchIngredientsForMenuItem(menuItemId),
+        async () => {
+          const ingredients = await fetchIngredientsForMenuItem(menuItemId);
+          return ingredients || [];
+        },
         { 
-          retries: 5, 
+          retries: 3,
           baseDelay: 1000,
-          maxDelay: 10000
+          maxDelay: 5000,
+          shouldRetry: (error) => {
+            // Don't retry not found errors
+            if (error.message && error.message.includes("not found")) {
+              return false;
+            }
+            return true;
+          }
         }
       );
       
-      // Format the result to match expected return type
-      if (result && Array.isArray(result)) {
+      if (Array.isArray(result)) {
         return result;
       }
       return [];
@@ -82,7 +96,6 @@ export const useMenuItemMedia = () => {
         }
       );
       
-      // Format the result to match expected return type
       return !!result;
     } catch (error: any) {
       console.error(`Failed to delete media after multiple retries:`, error);
