@@ -205,7 +205,9 @@ export const templates = {
       const result = await response.json();
       
       if (!response.ok) {
-        throw new Error(result.message || "Failed to send email");
+        const error = new Error(result.message || "Failed to send email");
+        (error as any).status = response.status;
+        throw error;
       }
       
       return { data: result, error: null };

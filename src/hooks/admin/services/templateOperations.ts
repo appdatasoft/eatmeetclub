@@ -1,8 +1,7 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { templates } from '@/lib/fetch-client/templates-api';
-import { ContractTemplate } from '../types/contractTemplateTypes';
+import { ContractTemplate, UserOption } from '../types/contractTemplateTypes';
 import { useAdminFees, FeeConfig } from '@/hooks/admin/useAdminFees';
 import { mapToAPITemplateType } from '../utils/templateTypeUtils';
 import { supabase } from "@/integrations/supabase/client";
@@ -71,25 +70,16 @@ export const useTemplateOperations = () => {
   };
   
   // Fetch users for email recipients dropdown
-  const fetchUserOptions = async () => {
+  const fetchUserOptions = async (): Promise<UserOption[]> => {
     try {
-      const { data, error } = await supabase
-        .from('auth.users')
-        .select('id, email, raw_user_meta_data');
-      
-      if (error) {
-        console.error('Error fetching users:', error);
-        // Fallback to profiles table if direct access to auth.users fails
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, email, first_name, last_name');
-          
-        if (profilesError) {
-          throw new Error(`Failed to fetch users: ${profilesError.message}`);
-        }
+      // Try to fetch from profiles table first, as it's more reliable
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, first_name, last_name');
         
+      if (!profilesError && profiles && profiles.length > 0) {
         // Format profiles into UserOption format
-        return (profiles || []).map(profile => ({
+        return profiles.map(profile => ({
           id: profile.id,
           firstName: profile.first_name || '',
           lastName: profile.last_name || '',
@@ -98,9 +88,17 @@ export const useTemplateOperations = () => {
         }));
       }
       
-      // Format auth.users data into UserOption format
-      return (data || []).map(user => {
-        const meta = user.raw_user_meta_data || {};
+      // Fallback to direct user query if profiles table doesn't exist or is empty
+      const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
+      
+      if (usersError) {
+        console.error('Error fetching users:', usersError);
+        return [];
+      }
+      
+      // Format auth users data into UserOption format
+      return (users?.users || []).map(user => {
+        const meta = user.user_metadata || {};
         return {
           id: user.id,
           firstName: meta.first_name || '',
