@@ -3,9 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
 import { useMenuItemMedia } from '@/hooks/restaurants/menu/useMenuItemMedia';
 import { useMenuItemsProcessor } from './useMenuItemsProcessor';
-import { fetchWithRetry, createSessionCache } from '@/utils/fetch';
+import { fetchWithRetry } from '@/utils/fetch';
 import { useToast } from '@/hooks/use-toast';
-import { prefetchMenuItemsData } from './media/fetchMediaUtils';
+import { createSessionCache } from '@/utils/fetch/sessionStorageCache';
 
 export const useMenuItems = (restaurantId: string | undefined, retryTrigger: number = 0) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -33,7 +33,9 @@ export const useMenuItems = (restaurantId: string | undefined, retryTrigger: num
 
       // Use advanced session cache
       const cacheKey = `menu_items_${restaurantId}`;
-      const cache = createSessionCache<MenuItem[]>(cacheKey, 10 * 60 * 1000); // 10 minutes
+      const cache = createSessionCache<MenuItem[]>(cacheKey, 10 * 60 * 1000, {
+        staleWhileRevalidate: true
+      }); // 10 minutes
       
       if (retryTrigger === 0) {
         const cachedData = cache.get();
@@ -45,9 +47,11 @@ export const useMenuItems = (restaurantId: string | undefined, retryTrigger: num
           
           // Even though we're using cache, trigger a background refresh
           // to keep data fresh without blocking the UI
-          setTimeout(() => {
-            refreshMenuItemsInBackground(restaurantId, cache, cachedData);
-          }, 100);
+          if (cache.isStale()) {
+            setTimeout(() => {
+              refreshMenuItemsInBackground(restaurantId, cache, cachedData);
+            }, 100);
+          }
           
           return;
         }
@@ -76,14 +80,6 @@ export const useMenuItems = (restaurantId: string | undefined, retryTrigger: num
         
         // Cache the processed data
         cache.set(processed);
-        
-        // Prefetch additional data in the background for smoother experience
-        if (processed.length > 0) {
-          // Trigger prefetch in the background
-          setTimeout(() => {
-            prefetchMenuItemsData(restaurantId, processed.map(item => item.id));
-          }, 200);
-        }
       } else {
         console.log('No menu items found');
         setMenuItems([]);
@@ -157,7 +153,9 @@ export const useMenuItems = (restaurantId: string | undefined, retryTrigger: num
     // Clear the cache to force a fresh fetch
     if (restaurantId) {
       const cacheKey = `menu_items_${restaurantId}`;
-      const cache = createSessionCache<MenuItem[]>(cacheKey);
+      const cache = createSessionCache<MenuItem[]>(cacheKey, 0, {
+        staleWhileRevalidate: false
+      });
       cache.remove();
     }
     

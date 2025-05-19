@@ -1,5 +1,5 @@
 
-import { handleResponse } from '@/integrations/supabase/utils/responseUtils';
+import { handleResponse, createResponseFromCachedData } from '@/integrations/supabase/utils/responseUtils';
 import { requestQueue } from '@/integrations/supabase/utils/requestQueue';
 import { createSessionCache } from './fetch/sessionStorageCache';
 
@@ -10,10 +10,8 @@ export interface FetchRetryOptions {
   shouldRetry?: (error: any) => boolean;
   cacheKey?: string;
   cacheTTL?: number;
+  staleWhileRevalidate?: boolean;
 }
-
-// Create a request cache
-const requestCache = createSessionCache();
 
 /**
  * Utility for fetching data with retry logic and safe response handling
@@ -33,9 +31,24 @@ export const fetchWithRetry = async <T>(
 
   // Check cache first if cacheKey is provided
   if (cacheKey) {
-    const cachedResult = requestCache.get<{ data: T | null; error: any }>(cacheKey);
+    const cache = createSessionCache<{ data: T | null; error: any }>(
+      cacheKey,
+      cacheTTL,
+      { staleWhileRevalidate: options.staleWhileRevalidate }
+    );
+    const cachedResult = cache.get();
+    
     if (cachedResult) {
       console.log(`Cache hit for key: ${cacheKey}`);
+      
+      // If cache is stale, refresh in background
+      if (cache.isStale() && options.staleWhileRevalidate) {
+        console.log(`Stale cache for key: ${cacheKey}, refreshing in background`);
+        setTimeout(() => {
+          refreshDataInBackground(fetchFn, cacheKey, cacheTTL);
+        }, 10);
+      }
+      
       return cachedResult;
     }
   }
@@ -68,7 +81,10 @@ export const fetchWithRetry = async <T>(
       
       // Store in cache if successful and cacheKey is provided
       if (cacheKey && result.data) {
-        requestCache.set(cacheKey, result, cacheTTL);
+        const cache = createSessionCache<typeof result>(cacheKey, cacheTTL, {
+          staleWhileRevalidate: options.staleWhileRevalidate
+        });
+        cache.set(result);
       }
       
       return result;
@@ -93,6 +109,24 @@ export const fetchWithRetry = async <T>(
   return { data: null, error: lastError };
 };
 
+// Background refresh function to update cache without blocking UI
+async function refreshDataInBackground<T>(
+  fetchFn: () => Promise<{ data: T | null; error: any }>,
+  cacheKey: string,
+  cacheTTL: number
+): Promise<void> {
+  try {
+    const result = await fetchFn();
+    if (!result.error && result.data) {
+      const cache = createSessionCache<{ data: T | null; error: any }>(cacheKey, cacheTTL);
+      cache.set(result);
+      console.log(`Background refresh complete for: ${cacheKey}`);
+    }
+  } catch (error) {
+    console.error(`Background refresh failed for: ${cacheKey}`, error);
+  }
+}
+
 /**
  * Enhanced version of fetchWithRetry for HTTP requests with streaming protection
  */
@@ -107,25 +141,17 @@ export const fetchWithCache = async (
   
   // Check session storage cache first for GET requests
   if (options.method === 'GET' || !options.method) {
-    try {
-      const cached = sessionStorage.getItem(effectiveCacheKey);
-      if (cached) {
-        const { data, expiry } = JSON.parse(cached);
-        if (expiry > Date.now()) {
-          console.log(`Using cached response for: ${url}`);
-          // Create a new response from cached data
-          return new Response(new Blob([JSON.stringify(data)], {
-            type: 'application/json'
-          }), {
-            headers: { 'Content-Type': 'application/json' },
-            status: 200
-          });
-        } else {
-          sessionStorage.removeItem(effectiveCacheKey);
-        }
-      }
-    } catch (e) {
-      console.warn('Cache access error:', e);
+    const cache = createSessionCache<any>(
+      effectiveCacheKey,
+      cacheDuration,
+      { staleWhileRevalidate: true }
+    );
+    const cachedData = cache.get();
+    
+    if (cachedData) {
+      console.log(`Using cached response for: ${url}`);
+      // Create a new response from cached data
+      return createResponseFromCachedData(cachedData);
     }
   }
 
@@ -143,10 +169,12 @@ export const fetchWithCache = async (
       // Read the data and store it in cache
       const data = await dataResponse.json();
       
-      sessionStorage.setItem(effectiveCacheKey, JSON.stringify({
-        data,
-        expiry: Date.now() + cacheDuration
-      }));
+      const cache = createSessionCache<any>(
+        effectiveCacheKey,
+        cacheDuration,
+        { staleWhileRevalidate: true }
+      );
+      cache.set(data);
     } catch (e) {
       console.warn('Error caching response:', e);
     }

@@ -94,3 +94,18 @@ export const clearResponseCache = (keyOrPrefix?: string) => {
     }
   }
 };
+
+// Function to create a safe response from cached data
+export const createResponseFromCachedData = <T>(data: T): Response => {
+  return new Response(new Blob([JSON.stringify(data)], {
+    type: 'application/json'
+  }), {
+    headers: { 'Content-Type': 'application/json' },
+    status: 200
+  });
+};
+
+// Helper to check if a response has already been read
+export const isResponseBodyUsed = (response: Response): boolean => {
+  return response.bodyUsed;
+};

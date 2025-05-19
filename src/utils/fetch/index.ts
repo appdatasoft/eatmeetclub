@@ -4,7 +4,7 @@
  * This ensures backward compatibility with existing code
  */
 
-export { fetchWithRetry, type FetchRetryOptions } from './retryUtils';
-export { createOfflineCache } from './localStorageCache';
+export { fetchWithRetry, fetchWithCache, type FetchRetryOptions } from '@/utils/fetchUtils';
 export { createSessionCache } from './sessionStorageCache';
 export { requestTracker } from './requestTracker';
+export { createOfflineCache } from './localStorageCache';
