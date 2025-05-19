@@ -4,7 +4,7 @@ import { useEditableContent } from './EditableContentProvider';
 import { Image, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ImageEditorDialog from './image-editor/ImageEditorDialog';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 
 interface EditableImageProps {
   id: string;
@@ -51,6 +51,12 @@ const EditableImage: React.FC<EditableImageProps> = ({
   // Handle saving the uploaded image
   const handleSaveImage = async (url: string) => {
     try {
+      console.log("Saving image to Supabase:", { 
+        page_path: window.location.pathname,
+        element_id: id,
+        url
+      });
+      
       // Save to Supabase
       const { error } = await supabase
         .from('page_content')
@@ -63,13 +69,15 @@ const EditableImage: React.FC<EditableImageProps> = ({
           onConflict: 'page_path,element_id'
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error in upsert operation:", error);
+        throw error;
+      }
       
-      // Update the local content map (this will be handled by the EditableContentProvider re-fetch)
+      console.log("Image saved successfully");
+      
+      // Close the dialog
       setIsDialogOpen(false);
-      
-      // Force a refresh if needed
-      window.location.reload();
     } catch (error) {
       console.error('Error saving image:', error);
     }
