@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash, Image, ArrowLeft, ArrowRight } from 'lucide-react';
-import { MenuItem, MediaItem } from '@/types/menuItem'; // Updated import to use shared type
+import { MenuItem, MediaItem } from '@/types/menuItem';
 import MenuItemMedia from './MenuItemMedia';
 import MediaDialog from './media/MediaDialog';
 
@@ -49,7 +50,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onEdit, onDelete }) =
                   className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 cursor-pointer"
                   onClick={handleMediaClick}
                 >
-                  {item.media && item.media[activeIndex] && item.media[activeIndex].type === 'image' ? (
+                  {item.media && item.media[activeIndex] && item.media[activeIndex].media_type === 'image' ? (
                     <img 
                       src={item.media[activeIndex].url} 
                       alt="Menu item thumbnail" 

@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
+import { MenuItem } from '@/types/menuItem';
 import { useMenuItemDialog } from './useMenuItemDialog';
 import { useMenuItemDelete } from './useMenuItemDelete';
 import { useMenuItemSave } from './useMenuItemSave';

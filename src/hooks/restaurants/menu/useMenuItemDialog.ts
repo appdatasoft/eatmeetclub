@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
+import { MenuItem } from '@/types/menuItem';
 
 export const useMenuItemDialog = (menuItems: MenuItem[]) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -14,6 +14,7 @@ export const useMenuItemDialog = (menuItems: MenuItem[]) => {
       description: '',
       price: 0,
       type: 'Other',
+      restaurant_id: '',
       ingredients: [],
       media: []
     });

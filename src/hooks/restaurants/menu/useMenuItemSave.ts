@@ -1,6 +1,6 @@
 
 import { MenuItemFormValues } from '@/components/restaurants/menu/types/menuTypes';
-import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
+import { MenuItem } from '@/types/menuItem';
 import { createMenuItem, updateMenuItem } from './utils/menuItemCrud';
 
 /**

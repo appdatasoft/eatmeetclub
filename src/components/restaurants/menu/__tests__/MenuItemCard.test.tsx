@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@/lib/test-setup';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MenuItemCard from '../MenuItemCard';
-import { MenuItem } from '../MenuItemCard';
+import { MenuItem, MediaItem } from '@/types/menuItem';
 
 // Mock the MediaDialog component since it might use portals
 vi.mock('../media/MediaDialog', () => ({
@@ -26,10 +26,11 @@ describe('MenuItemCard Component', () => {
     description: 'Test description',
     price: 9.99,
     type: 'Main Course',
+    restaurant_id: 'rest-123',
     ingredients: ['Ingredient 1', 'Ingredient 2'],
     media: [
-      { id: '1', url: 'https://example.com/image1.jpg', type: 'image' },
-      { id: '2', url: 'https://example.com/image2.jpg', type: 'image' }
+      { id: '1', url: 'https://example.com/image1.jpg', media_type: 'image', menu_item_id: '123' },
+      { id: '2', url: 'https://example.com/image2.jpg', media_type: 'image', menu_item_id: '123' }
     ]
   };
   

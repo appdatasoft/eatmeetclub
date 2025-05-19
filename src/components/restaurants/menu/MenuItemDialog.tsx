@@ -2,7 +2,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import MenuItemForm from '@/components/restaurants/menu/MenuItemForm';
-import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
+import { MenuItem } from '@/types/menuItem';
 import { MenuItemFormValues } from './types/menuTypes';
 
 interface MenuItemDialogProps {

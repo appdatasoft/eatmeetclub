@@ -1,5 +1,5 @@
 
-import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
+import { MenuItem } from '@/types/menuItem';
 import { useCallback } from 'react';
 
 type MenuItemData = {
@@ -8,6 +8,7 @@ type MenuItemData = {
   description: string | null;
   price: number;
   restaurant_id: string;
+  type?: string;
 };
 
 export const useMenuItemsProcessor = (
@@ -35,7 +36,8 @@ export const useMenuItemsProcessor = (
         name: item.name,
         description: item.description || '',
         price: item.price,
-        type: 'Other', // Default type
+        restaurant_id: item.restaurant_id,
+        type: item.type || 'Other', // Default type
         ingredients,
         media
       };

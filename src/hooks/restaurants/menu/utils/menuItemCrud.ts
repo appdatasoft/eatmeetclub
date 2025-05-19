@@ -1,5 +1,6 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
+import { MenuItem } from '@/types/menuItem';
 import { MenuItemFormValues } from '@/components/restaurants/menu/types/menuTypes';
 
 /**
@@ -19,7 +20,8 @@ export const createMenuItem = async (
       name: formData.name,
       description: formData.description || '',
       price: formData.price,
-      restaurant_id: restaurantId
+      restaurant_id: restaurantId,
+      type: formData.type || 'Other' // Ensure type is always set
     };
     
     // Create new item
@@ -53,7 +55,8 @@ export const createMenuItem = async (
       name: formData.name,
       description: formData.description || '',
       price: formData.price,
-      type: formData.type,
+      restaurant_id: restaurantId,
+      type: formData.type || 'Other',
       ingredients: filteredIngredients,
       media: formData.media || []
     };
@@ -95,7 +98,8 @@ export const updateMenuItem = async (
       name: formData.name,
       description: formData.description || '',
       price: formData.price,
-      restaurant_id: restaurantId
+      restaurant_id: restaurantId,
+      type: formData.type || 'Other' // Ensure type is always set
     };
     
     // Update existing item
@@ -140,7 +144,7 @@ export const updateMenuItem = async (
               name: formData.name, 
               description: formData.description || '', 
               price: formData.price, 
-              type: formData.type,
+              type: formData.type || 'Other',
               ingredients: filteredIngredients,
               media: formData.media || [] 
             } 
