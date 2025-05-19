@@ -33,6 +33,24 @@ export const useSocialMedia = () => {
       const url = new URL(window.location.href);
       const code = url.searchParams.get('code');
       const state = url.searchParams.get('state');
+      const error = url.searchParams.get('error');
+      const errorReason = url.searchParams.get('error_reason');
+      const errorDescription = url.searchParams.get('error_description');
+      
+      // If there's an error in the OAuth callback
+      if (error || errorReason || errorDescription) {
+        setOauthPending(false);
+        console.error('OAuth error:', error, errorReason, errorDescription);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        toast({
+          title: 'Connection Failed',
+          description: errorDescription || errorReason || error || 'Failed to connect social media account',
+          variant: 'destructive',
+        });
+        
+        return;
+      }
       
       // If this is an Instagram OAuth callback
       if (code && state && state.startsWith('instagram_')) {
@@ -67,11 +85,12 @@ export const useSocialMedia = () => {
             })
           });
           
-          const result = await response.json();
-          
-          if (!response.ok || result.error) {
-            throw new Error(result.error || 'Failed to complete Instagram authentication');
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to complete Instagram authentication');
           }
+          
+          const result = await response.json();
           
           toast({
             title: 'Instagram Connected',
@@ -226,22 +245,34 @@ export const useSocialMedia = () => {
         throw new Error(`No connected ${platform} account found`);
       }
       
-      // For OAuth connections like Instagram, we may need to revoke access
-      if (platform === 'Instagram' && connection.oauth_token) {
-        // We could call an edge function to revoke the OAuth token if needed
-        // For now, we'll just delete the database entry
+      // Use the environment variable or a hardcoded fallback for the Supabase URL
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
+      
+      // Call the edge function to disconnect
+      const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ 
+          platform,
+          action: 'disconnect'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Disconnection failed');
       }
-      
-      // Delete the connection from the database
-      const { error: deleteError } = await supabase
-        .from('social_media_connections')
-        .delete()
-        .eq('id', connection.id);
-        
-      if (deleteError) throw deleteError;
-      
+
       // Update local state by removing the disconnected connection
-      setConnections(connections.filter(conn => conn.id !== connection.id));
+      setConnections(connections.filter(conn => conn.platform !== platform));
+      
+      toast({
+        title: 'Account Disconnected',
+        description: `Successfully disconnected your ${platform} account.`,
+      });
       
       return true;
     } catch (err: any) {
