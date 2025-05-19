@@ -99,7 +99,7 @@ export const useTemplateOperations = () => {
       console.log(`Creating template for type: ${templateType} (mapped to: ${backendType})`);
       
       // Ensure we have the fees in the template variables
-      const templateVars: Record<string, any> = template.variables ? { ...template.variables } : {};
+      const templateVars: Record<string, any> = template.variables ? { ...template.variables as Record<string, any> } : {};
       templateVars.fees = fees || {};
       
       const preparedTemplate = {
@@ -146,7 +146,7 @@ export const useTemplateOperations = () => {
       console.log(`Updating template ${id}:`, template);
       
       // Ensure we have the fees in the template variables
-      const templateVars: Record<string, any> = template.variables ? { ...template.variables } : {};
+      const templateVars: Record<string, any> = template.variables ? { ...template.variables as Record<string, any> } : {};
       templateVars.fees = fees || {};
       
       const preparedTemplate = {
