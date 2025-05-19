@@ -17,7 +17,7 @@ console.log("Initializing Supabase client with:", {
   keyLength: supabaseAnonKey?.length || 0
 });
 
-// Custom fetch function with retry logic, queue management and response handling
+// Custom fetch function with retry logic, queue management and improved caching
 const customFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
   // Queue the request with necessary handling
   return await requestQueue.add(async () => {

@@ -1,173 +1,97 @@
-/**
- * Request tracker to prevent too many requests being sent at once and properly handle response caching
- */
 
-import { createResponseFromCachedData } from '../../integrations/supabase/utils/responseUtils';
-
-// Simple in-memory cache to prevent duplicate requests
-const responseCache = new Map<string, { data: any; expiry: number }>();
-
-type PendingRequest = {
-  resolve: () => void;
-  priority: number;
-  timestamp: number;
-};
+// Request tracker for monitoring API calls
+interface RequestMetrics {
+  url: string;
+  startTime: number;
+  endTime?: number;
+  duration?: number;
+  status?: number;
+  success?: boolean;
+  error?: string;
+  cacheHit?: boolean;
+}
 
 class RequestTracker {
-  private activeRequests = 0;
-  private maxConcurrentRequests = 8; // Increased for smoother operation but still controlled
-  private pendingQueue: PendingRequest[] = [];
-  private processingQueue = false;
-  private requestDelayMs = 100; // Small delay between requests
-  private lastRequestTime = 0;
-  private rateLimitedUntil = 0;
+  private requests: Map<string, RequestMetrics> = new Map();
+  private totalRequests = 0;
+  private successfulRequests = 0;
+  private failedRequests = 0;
+  private cachedRequests = 0;
+  private avgResponseTime = 0;
 
-  // Add a request to the queue and wait until it can be processed
-  async add<T>(requestFn: () => Promise<T>, cacheKey?: string): Promise<T> {
-    // Check cache first if we have a cache key
-    if (cacheKey && responseCache.has(cacheKey)) {
-      const cached = responseCache.get(cacheKey);
-      if (cached && cached.expiry > Date.now()) {
-        console.log(`Using request cache for ${cacheKey}`);
-        return cached.data as T;
-      } else if (cached) {
-        responseCache.delete(cacheKey); // Remove expired cache entry
-      }
-    }
-
-    // If we haven't hit our limit, process immediately
-    if (this.activeRequests < this.maxConcurrentRequests) {
-      return this.executeRequest(requestFn, cacheKey);
-    }
-
-    // Otherwise, queue the request
-    return new Promise<T>((resolve, reject) => {
-      const priority = cacheKey ? 0 : 1; // Give priority to requests with cache keys
-      
-      // Add to pending queue
-      const queued: PendingRequest = {
-        resolve: async () => {
-          try {
-            const result = await this.executeRequest(requestFn, cacheKey);
-            resolve(result);
-          } catch (error) {
-            reject(error);
-          }
-        },
-        priority,
-        timestamp: Date.now()
-      };
-      
-      this.pendingQueue.push(queued);
-      
-      // Ensure the queue processing starts
-      if (!this.processingQueue) {
-        this.processQueue();
-      }
+  // Start tracking a request
+  startRequest(url: string): string {
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    this.requests.set(requestId, {
+      url,
+      startTime: performance.now()
     });
-  }
-  
-  // Check if we need to wait before sending another request
-  async checkAndWait(): Promise<void> {
-    const now = Date.now();
-    
-    // Check if we're rate limited
-    if (now < this.rateLimitedUntil) {
-      const waitTime = this.rateLimitedUntil - now;
-      console.log(`Rate limited. Waiting ${waitTime}ms before continuing.`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-      return;
-    }
-    
-    // Check if we need to throttle based on request delay
-    if (this.lastRequestTime > 0) {
-      const timeSinceLastRequest = now - this.lastRequestTime;
-      if (timeSinceLastRequest < this.requestDelayMs) {
-        const waitTime = this.requestDelayMs - timeSinceLastRequest;
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-      }
-    }
-    
-    this.lastRequestTime = Date.now();
-  }
-  
-  // Release a request slot
-  releaseRequest(): void {
-    if (this.activeRequests > 0) {
-      this.activeRequests--;
-    }
-    this.processQueue();
-  }
-  
-  // Set rate limiting
-  setRateLimit(durationMs: number): void {
-    this.rateLimitedUntil = Date.now() + durationMs;
-    console.warn(`Rate limit set for ${durationMs}ms until ${new Date(this.rateLimitedUntil).toISOString()}`);
+    this.totalRequests++;
+    return requestId;
   }
 
-  // Execute a request with tracking
-  private async executeRequest<T>(requestFn: () => Promise<T>, cacheKey?: string): Promise<T> {
-    this.activeRequests++;
-    
-    try {
-      // Check if we need to wait due to rate limiting or throttling
-      await this.checkAndWait();
-      
-      // Execute the request
-      const result = await requestFn();
-      
-      // Cache the result if cache key provided
-      if (cacheKey && result !== undefined) {
-        responseCache.set(cacheKey, {
-          data: result,
-          expiry: Date.now() + 60000 // 60 second cache by default
-        });
-      }
-      
-      return result;
-    } catch (error: any) {
-      // Check for rate limit errors
-      if (error?.status === 429 || (error?.message && error.message.includes('429'))) {
-        this.setRateLimit(30000); // 30 seconds rate limit backoff
-      }
-      throw error;
-    } finally {
-      this.releaseRequest();
+  // Complete tracking a request
+  completeRequest(requestId: string, options: {
+    status?: number;
+    error?: string;
+    cacheHit?: boolean;
+  }) {
+    const request = this.requests.get(requestId);
+    if (!request) return;
+
+    const endTime = performance.now();
+    const duration = endTime - request.startTime;
+    const success = !(options.error || (options.status && options.status >= 400));
+
+    // Update request data
+    request.endTime = endTime;
+    request.duration = duration;
+    request.status = options.status;
+    request.success = success;
+    request.error = options.error;
+    request.cacheHit = options.cacheHit;
+
+    // Update statistics
+    if (success) {
+      this.successfulRequests++;
+    } else {
+      this.failedRequests++;
     }
+
+    if (options.cacheHit) {
+      this.cachedRequests++;
+    }
+
+    // Update average response time
+    const totalCompletedRequests = this.successfulRequests + this.failedRequests;
+    this.avgResponseTime = (this.avgResponseTime * (totalCompletedRequests - 1) + duration) / totalCompletedRequests;
   }
 
-  // Process pending requests in the queue
-  private async processQueue() {
-    if (this.processingQueue || this.activeRequests >= this.maxConcurrentRequests || this.pendingQueue.length === 0) {
-      return;
-    }
-    
-    this.processingQueue = true;
-    
-    try {
-      // Sort queue by priority (lower number = higher priority) and then by timestamp
-      this.pendingQueue.sort((a, b) => {
-        if (a.priority !== b.priority) {
-          return a.priority - b.priority;
-        }
-        return a.timestamp - b.timestamp;
-      });
-      
-      // Process as many requests as we can
-      while (this.pendingQueue.length > 0 && this.activeRequests < this.maxConcurrentRequests) {
-        const next = this.pendingQueue.shift();
-        if (next) {
-          next.resolve();
-        }
-      }
-    } finally {
-      this.processingQueue = false;
-      
-      // If there are still pending requests and slots available, process again
-      if (this.pendingQueue.length > 0 && this.activeRequests < this.maxConcurrentRequests) {
-        setTimeout(() => this.processQueue(), 0);
-      }
-    }
+  // Get performance metrics
+  getMetrics() {
+    return {
+      totalRequests: this.totalRequests,
+      successfulRequests: this.successfulRequests,
+      failedRequests: this.failedRequests,
+      cachedRequests: this.cachedRequests,
+      averageResponseTime: this.avgResponseTime,
+      successRate: this.totalRequests > 0 
+        ? (this.successfulRequests / this.totalRequests) * 100 
+        : 0,
+      cacheHitRate: this.totalRequests > 0 
+        ? (this.cachedRequests / this.totalRequests) * 100 
+        : 0
+    };
+  }
+
+  // Reset statistics
+  reset() {
+    this.requests.clear();
+    this.totalRequests = 0;
+    this.successfulRequests = 0;
+    this.failedRequests = 0;
+    this.cachedRequests = 0;
+    this.avgResponseTime = 0;
   }
 }
 

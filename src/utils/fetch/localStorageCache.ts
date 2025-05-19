@@ -1,120 +1,91 @@
 
-/**
- * Persistent cache implementation using localStorage
- * This is useful for caching data that should persist between sessions
- */
-
-interface CacheItem<T> {
-  data: T;
-  expiry: number;
-  staleAt?: number; // Optional timestamp for when data becomes stale but still usable
-}
-
 interface CacheOptions {
   staleWhileRevalidate?: boolean;
-  staleTime?: number; // Time in ms before data is considered stale but still usable
+  maxAge?: number;
+}
+
+interface CachedData<T> {
+  data: T;
+  timestamp: number;
 }
 
 /**
- * Creates a cache object that stores data in localStorage with built-in expiry
- * @param key The cache key
+ * Creates a local storage cache with expiration for better offline support
+ * @param key Cache key
  * @param ttl Time to live in milliseconds
- * @param options Additional cache configuration options
+ * @param options Additional options
+ * @returns Cache API with get, set, delete methods
  */
-export const createOfflineCache = <T>(key: string, ttl: number = 24 * 60 * 60 * 1000, options?: CacheOptions) => {
-  const staleTime = options?.staleTime || Math.floor(ttl * 0.5); // Default stale time is half of TTL
+export function createOfflineCache<T>(
+  key: string, 
+  ttl: number = 86400000, // Default 24 hours
+  options: CacheOptions = {}
+) {
+  const storageKey = `offline_cache_${key}`;
   
-  return {
-    /**
-     * Get data from cache
-     */
-    get: (): T | null => {
-      try {
-        const cached = localStorage.getItem(key);
-        if (!cached) return null;
-        
-        const item: CacheItem<T> = JSON.parse(cached);
-        
-        if (item.expiry < Date.now()) {
-          localStorage.removeItem(key);
-          return null;
+  const get = (): T | null => {
+    try {
+      const item = localStorage.getItem(storageKey);
+      if (!item) return null;
+      
+      const cached = JSON.parse(item) as CachedData<T>;
+      const now = Date.now();
+      
+      if (now - cached.timestamp > ttl) {
+        // Cache is expired but in offline mode we might still want to use it
+        if (navigator.onLine === false) {
+          console.log('Using expired cache while offline');
+          return cached.data;
         }
-        
-        return item.data;
-      } catch (error) {
-        console.error(`Error reading from offline cache: ${key}`, error);
         return null;
       }
-    },
-    
-    /**
-     * Set data in cache
-     */
-    set: (data: T): void => {
-      try {
-        const now = Date.now();
-        const item: CacheItem<T> = {
-          data,
-          expiry: now + ttl,
-          staleAt: options?.staleWhileRevalidate ? now + staleTime : undefined
-        };
-        
-        localStorage.setItem(key, JSON.stringify(item));
-      } catch (error) {
-        console.error(`Error writing to offline cache: ${key}`, error);
-      }
-    },
-    
-    /**
-     * Remove data from cache
-     */
-    remove: (): void => {
-      try {
-        localStorage.removeItem(key);
-      } catch (error) {
-        console.error(`Error removing from offline cache: ${key}`, error);
-      }
-    },
-    
-    /**
-     * Update TTL of existing cached data
-     */
-    refresh: (): boolean => {
-      try {
-        const cached = localStorage.getItem(key);
-        if (!cached) return false;
-        
-        const item: CacheItem<T> = JSON.parse(cached);
-        item.expiry = Date.now() + ttl;
-        
-        if (options?.staleWhileRevalidate) {
-          item.staleAt = Date.now() + staleTime;
-        }
-        
-        localStorage.setItem(key, JSON.stringify(item));
-        return true;
-      } catch (error) {
-        console.error(`Error refreshing offline cache: ${key}`, error);
-        return false;
-      }
-    },
-    
-    /**
-     * Check if data is stale (but not expired)
-     */
-    isStale: (): boolean => {
-      try {
-        if (!options?.staleWhileRevalidate) return false;
-        
-        const cached = localStorage.getItem(key);
-        if (!cached) return false;
-        
-        const item: CacheItem<T> = JSON.parse(cached);
-        return !!item.staleAt && item.staleAt < Date.now() && item.expiry > Date.now();
-      } catch (error) {
-        console.error(`Error checking stale status: ${key}`, error);
-        return false;
-      }
+      
+      return cached.data;
+    } catch (error) {
+      console.warn(`Error retrieving ${key} from offline cache:`, error);
+      return null;
     }
   };
-};
+  
+  const set = (data: T): void => {
+    try {
+      const cache: CachedData<T> = {
+        data,
+        timestamp: Date.now()
+      };
+      
+      localStorage.setItem(storageKey, JSON.stringify(cache));
+    } catch (error) {
+      console.warn(`Error storing ${key} in offline cache:`, error);
+    }
+  };
+  
+  const del = (): void => {
+    try {
+      localStorage.removeItem(storageKey);
+    } catch (error) {
+      console.warn(`Error removing ${key} from offline cache:`, error);
+    }
+  };
+  
+  const isStale = (): boolean => {
+    try {
+      const item = localStorage.getItem(storageKey);
+      if (!item) return true;
+      
+      const cached = JSON.parse(item) as CachedData<T>;
+      const now = Date.now();
+      
+      // If staleWhileRevalidate is enabled, use a shorter threshold
+      const staleThreshold = options.staleWhileRevalidate
+        ? options.maxAge || (ttl / 2) // Use half the TTL by default
+        : ttl;
+        
+      return (now - cached.timestamp) > staleThreshold;
+    } catch (error) {
+      return true;
+    }
+  };
+  
+  return { get, set, del, isStale };
+}
