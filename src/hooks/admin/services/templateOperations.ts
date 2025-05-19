@@ -316,27 +316,17 @@ export const useTemplateOperations = () => {
     }
   };
   
-  // Fixed sendTestEmail function to properly handle errors and enable the button
+  // Improved function to send test emails
   const sendTestEmail = async (recipients: string[], subject: string, content: string, templateId?: string): Promise<boolean> => {
     if (!recipients.length) {
-      toast({
-        title: "Recipients required",
-        description: "Please select at least one recipient email address",
-        variant: "destructive"
-      });
+      console.error("No recipients provided");
       return false;
     }
     
     if (!subject) {
-      toast({
-        title: "Subject required",
-        description: "Please enter an email subject",
-        variant: "destructive"
-      });
+      console.error("No subject provided");
       return false;
     }
-    
-    setIsLoading(true);
     
     try {
       console.log(`Sending test email to ${recipients.join(', ')}`);
@@ -352,29 +342,13 @@ export const useTemplateOperations = () => {
       
       if (error) {
         console.error('Error sending test email:', error);
-        toast({
-          title: "Failed to send test email",
-          description: error.message,
-          variant: "destructive"
-        });
-        return false;
+        throw error;
       }
       
-      toast({
-        title: "Test email sent",
-        description: `The test email was sent to ${recipients.join(', ')}`
-      });
       return true;
     } catch (error: any) {
       console.error('Error in sendTestEmail:', error);
-      toast({
-        title: "Error sending test email",
-        description: error.message || "An error occurred while sending the test email.",
-        variant: "destructive"
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
+      throw error;
     }
   };
   

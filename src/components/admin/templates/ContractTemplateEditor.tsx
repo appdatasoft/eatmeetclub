@@ -121,7 +121,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
         templateContent: template.substring(0, 100) + "..."
       });
       
-      // Pass all required parameters to the sendTestEmail function
+      // Pass the template content to the sendTestEmail function
       const result = await sendTestEmail(template);
       
       if (result) {
@@ -340,7 +340,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
                   type="button" 
                   onClick={handleSendTestEmail} 
                   variant="outline"
-                  disabled={isSaving || selectedRecipients.length === 0 || !emailSubject}
+                  disabled={isSaving || !emailSubject || selectedRecipients.length === 0}
                 >
                   <Mail className="mr-2 h-4 w-4" /> Send Test Email
                 </Button>

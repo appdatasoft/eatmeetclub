@@ -155,6 +155,10 @@ export const useContractTemplates = (templateType: string) => {
     setIsSaving(true);
     
     try {
+      console.log("Sending test email to recipients:", selectedRecipients);
+      console.log("Email subject:", emailSubject);
+      console.log("Content preview:", content.substring(0, 100) + "...");
+      
       // Call the template operations function with correct parameters
       return await templateOperations.sendTestEmail(
         selectedRecipients,
