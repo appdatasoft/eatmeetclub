@@ -1,4 +1,3 @@
-
 /**
  * Enhanced Fetch Client with optimized performance
  */
@@ -238,7 +237,7 @@ export const del = <T = any>(url: string, options: FetchClientOptions = {}): Pro
 
 // New methods for template operations
 export const templates = {
-  async getAll<T = any>(type: string, options: FetchClientOptions = {}): Promise<FetchResponse<T>> {
+  getAll: (type: "restaurant" | "restaurant_referral" | "ticket_sales") => {
     return get<T>(`/api/templates/${type}`, {
       ...options,
       fallbackToSupabase: true,
@@ -254,7 +253,7 @@ export const templates = {
     });
   },
   
-  async getById<T = any>(id: string, options: FetchClientOptions = {}): Promise<FetchResponse<T>> {
+  get: (id: string) => {
     return get<T>(`/api/templates/${id}`, {
       ...options,
       fallbackToSupabase: true,
@@ -271,7 +270,7 @@ export const templates = {
     });
   },
   
-  async create<T = any>(template: any, options: FetchClientOptions = {}): Promise<FetchResponse<T>> {
+  create: (template: Partial<ContractTemplate>) => {
     return post<T>('/api/templates', template, {
       ...options,
       fallbackToSupabase: true,
@@ -288,7 +287,7 @@ export const templates = {
     });
   },
   
-  async update<T = any>(id: string, template: any, options: FetchClientOptions = {}): Promise<FetchResponse<T>> {
+  update: (id: string, template: Partial<ContractTemplate>) => {
     return put<T>(`/api/templates/${id}`, template, {
       ...options,
       fallbackToSupabase: true,
@@ -306,7 +305,7 @@ export const templates = {
     });
   },
   
-  async delete<T = any>(id: string, options: FetchClientOptions = {}): Promise<FetchResponse<T>> {
+  delete: (id: string) => {
     return del<T>(`/api/templates/${id}`, {
       ...options,
       fallbackToSupabase: true,

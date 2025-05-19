@@ -1,6 +1,7 @@
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { EditableContentProvider } from "@/components/editor/EditableContentProvider";
 import { PublicRoutes } from "@/routes/publicRoutes";
 import { AdminRoutes } from "@/routes/adminRoutes";
@@ -10,17 +11,19 @@ import NotFound from "@/pages/NotFound";
 function App() {
   return (
     <BrowserRouter>
-      <EditableContentProvider>
-        <Routes>
-          <PublicRoutes />
-          <AdminRoutes />
-          <DashboardRoutes />
-          
-          {/* Catch-all route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
-      </EditableContentProvider>
+      <AuthProvider>
+        <EditableContentProvider>
+          <Routes>
+            <PublicRoutes />
+            <AdminRoutes />
+            <DashboardRoutes />
+            
+            {/* Catch-all route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+        </EditableContentProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

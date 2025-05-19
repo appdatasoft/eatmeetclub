@@ -9,6 +9,7 @@ export interface ContractVariable {
   name: string;
   type: string;
   value?: string;
+  label?: string;
 }
 
 export interface ContractTemplate {
@@ -26,8 +27,24 @@ export interface ContractTemplate {
 
 export const useContractTemplates = (templateType: string) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [contractTemplates, setContractTemplates] = useState<ContractTemplate[]>([]);
+  const [templateData, setTemplateData] = useState<ContractTemplate | null>(null);
+  const [availableFields, setAvailableFields] = useState<ContractVariable[]>([
+    { id: "restaurant.name", name: "restaurant.name", label: "Restaurant Name", type: "text" },
+    { id: "restaurant.address", name: "restaurant.address", label: "Restaurant Address", type: "text" },
+    { id: "restaurant.city", name: "restaurant.city", label: "Restaurant City", type: "text" },
+    { id: "restaurant.state", name: "restaurant.state", label: "Restaurant State", type: "text" },
+    { id: "restaurant.zipcode", name: "restaurant.zipcode", label: "Restaurant Zip", type: "text" },
+    { id: "restaurant.phone", name: "restaurant.phone", label: "Restaurant Phone", type: "text" },
+    { id: "user.fullName", name: "user.fullName", label: "User Full Name", type: "text" },
+    { id: "user.email", name: "user.email", label: "User Email", type: "email" },
+    { id: "contract.date", name: "contract.date", label: "Contract Date", type: "date" },
+    { id: "contract.term", name: "contract.term", label: "Contract Term", type: "number" },
+    { id: "payment.amount", name: "payment.amount", label: "Payment Amount", type: "currency" },
+    { id: "payment.date", name: "payment.date", label: "Payment Date", type: "date" },
+  ]);
   const { toast } = useToast();
   const { isAdmin } = useAuth();
 
@@ -46,13 +63,35 @@ export const useContractTemplates = (templateType: string) => {
     setError(null);
 
     try {
-      const response = await templates.getAll(templateType);
+      // Change template type to match the expected values in the API
+      let apiTemplateType: "restaurant" | "restaurant_referral" | "ticket_sales";
+      
+      switch(templateType) {
+        case "venue":
+          apiTemplateType = "restaurant";
+          break;
+        case "salesRep":
+          apiTemplateType = "restaurant_referral";
+          break;
+        case "ticket":
+          apiTemplateType = "ticket_sales";
+          break;
+        default:
+          apiTemplateType = "restaurant";
+      }
+
+      const response = await templates.getAll(apiTemplateType);
       
       if (response.error) {
         throw new Error(response.error.message);
       }
 
       setContractTemplates(response.data || []);
+      
+      // Set the first template as the selected template if available
+      if (response.data && response.data.length > 0) {
+        setTemplateData(response.data[0]);
+      }
     } catch (err: any) {
       console.error("Error fetching templates:", err);
       setError(err.message || "Failed to load templates");
@@ -67,6 +106,59 @@ export const useContractTemplates = (templateType: string) => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const saveTemplate = async (content: string): Promise<boolean> => {
+    if (!templateData) {
+      toast({
+        title: "Error",
+        description: "No template selected",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    setIsSaving(true);
+    
+    try {
+      const response = await templates.update(templateData.id, { 
+        content,
+        type: templateData.type
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      // Update the template in state
+      setTemplateData({
+        ...templateData,
+        content
+      });
+      
+      setContractTemplates(prev => 
+        prev.map(t => t.id === templateData.id ? { ...t, content } : t)
+      );
+      
+      toast({
+        title: "Template Saved",
+        description: "The contract template was successfully updated"
+      });
+      
+      return true;
+    } catch (err: any) {
+      console.error("Error saving template:", err);
+      
+      toast({
+        title: "Error Saving Template",
+        description: err.message || "Failed to save contract template",
+        variant: "destructive"
+      });
+      
+      return false;
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -198,11 +290,15 @@ export const useContractTemplates = (templateType: string) => {
 
   return {
     isLoading,
+    isSaving,
     error,
     contractTemplates,
+    templateData,
+    availableFields,
     fetchTemplates,
     createTemplate,
     updateTemplate,
-    deleteTemplate
+    deleteTemplate,
+    saveTemplate
   };
 };
