@@ -45,19 +45,47 @@ export const useTemplateOperations = () => {
     }
   };
   
+  // Helper function to get current date information
+  const getCurrentDateInfo = () => {
+    const now = new Date();
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    // Format date as YYYY-MM-DD
+    const formattedDate = now.toISOString().split('T')[0];
+    
+    // Get current month name
+    const currentMonth = monthNames[now.getMonth()];
+    
+    // Get number of days in the current month
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-11
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    return {
+      current_date: formattedDate,
+      current_month: currentMonth,
+      days_in_month: daysInMonth
+    };
+  };
+  
   const saveTemplate = async (id: string, content: string, templateType: string): Promise<boolean> => {
     setIsLoading(true);
     
     try {
       console.log(`Saving template ${id} with content length: ${content.length}`);
       
-      // Ensure we have the fees in the template variables
+      // Ensure we have the fees and date information in the template variables
       const templateVars: Record<string, any> = {};
       templateVars.fees = fees || {};
       
+      // Add current date information
+      const dateInfo = getCurrentDateInfo();
+      Object.assign(templateVars, dateInfo);
+      
       const { data, error } = await templates.update(id, { 
         content,
-        // Inject fee information into variables field to make them available for the template
+        // Inject fee and date information into variables field to make them available for the template
         variables: templateVars
       });
       
@@ -98,9 +126,13 @@ export const useTemplateOperations = () => {
       
       console.log(`Creating template for type: ${templateType} (mapped to: ${backendType})`);
       
-      // Ensure we have the fees in the template variables
+      // Ensure we have the fees and date information in the template variables
       const templateVars: Record<string, any> = template.variables ? { ...template.variables as Record<string, any> } : {};
       templateVars.fees = fees || {};
+      
+      // Add current date information
+      const dateInfo = getCurrentDateInfo();
+      Object.assign(templateVars, dateInfo);
       
       const preparedTemplate = {
         ...template,
@@ -145,9 +177,13 @@ export const useTemplateOperations = () => {
     try {
       console.log(`Updating template ${id}:`, template);
       
-      // Ensure we have the fees in the template variables
+      // Ensure we have the fees and date information in the template variables
       const templateVars: Record<string, any> = template.variables ? { ...template.variables as Record<string, any> } : {};
       templateVars.fees = fees || {};
+      
+      // Add current date information
+      const dateInfo = getCurrentDateInfo();
+      Object.assign(templateVars, dateInfo);
       
       const preparedTemplate = {
         ...template,

@@ -35,11 +35,16 @@ export const DEFAULT_AVAILABLE_FIELDS: ContractVariable[] = [
   { name: 'sales_rep_name', label: 'Sales Rep Name', description: 'Name of the sales representative' },
   
   // Fee configuration fields with clearer labels
-  { name: 'restaurant_monthly_fee', label: 'The monthly fee charged to restaurants', description: 'Monthly fee charged to restaurants' },
-  { name: 'signup_commission_value', label: 'Commission for signing up venues', description: 'Commission value for signing up venues' },
+  { name: 'restaurant_monthly_fee', label: 'Monthly Fee', description: 'The monthly fee charged to restaurants' },
+  { name: 'signup_commission_value', label: 'Signup Commission', description: 'Commission value for signing up venues' },
   { name: 'signup_commission_type', label: 'Signup Commission Type', description: 'Commission type (flat or percentage) for signing up venues' },
-  { name: 'ticket_commission_value', label: 'Commission on ticket sales', description: 'Commission value on ticket sales' },
-  { name: 'ticket_commission_type', label: 'Ticket Commission Type', description: 'Commission type (flat or percentage) on ticket sales' }
+  { name: 'ticket_commission_value', label: 'Ticket Commission', description: 'Commission value on ticket sales' },
+  { name: 'ticket_commission_type', label: 'Ticket Commission Type', description: 'Commission type (flat or percentage) on ticket sales' },
+  
+  // New date-related fields
+  { name: 'current_date', label: 'Today\'s Date', description: 'The current date (today)' },
+  { name: 'current_month', label: 'Current Month', description: 'The current month name' },
+  { name: 'days_in_month', label: 'Days in Current Month', description: 'Number of days in the current month' }
 ];
 
 export interface ContractTemplateContext {
@@ -65,5 +70,8 @@ export interface ContractTemplateContext {
   };
   fees?: FeeConfig;
   signing_date?: string;
+  current_date?: string;
+  current_month?: string;
+  days_in_month?: number;
   [key: string]: any;
 }

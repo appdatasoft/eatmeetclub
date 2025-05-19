@@ -101,12 +101,37 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
     }
   };
 
+  // Get current date information for preview
+  const getCurrentDateInfo = () => {
+    const now = new Date();
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    // Format date as YYYY-MM-DD
+    const formattedDate = now.toISOString().split('T')[0];
+    
+    // Get current month name
+    const currentMonth = monthNames[now.getMonth()];
+    
+    // Get number of days in the current month
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-11
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    return {
+      current_date: formattedDate,
+      current_month: currentMonth,
+      days_in_month: daysInMonth
+    };
+  };
+
   // This renders the preview with placeholders highlighted and fee values substituted
   const renderPreview = () => {
     if (!template) return <p>No template content to preview.</p>;
 
-    // Replace fee variables with actual values if available
+    // Replace fee variables and date variables with actual values if available
     let previewContent = template;
+    const dateInfo = getCurrentDateInfo();
     
     if (fees) {
       previewContent = previewContent.replace(
@@ -130,6 +155,20 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
         fees.ticket_commission_type
       );
     }
+    
+    // Replace date variables
+    previewContent = previewContent.replace(
+      /\{\{current_date\}\}/g, 
+      dateInfo.current_date
+    );
+    previewContent = previewContent.replace(
+      /\{\{current_month\}\}/g, 
+      dateInfo.current_month
+    );
+    previewContent = previewContent.replace(
+      /\{\{days_in_month\}\}/g, 
+      dateInfo.days_in_month.toString()
+    );
     
     // Highlight template variables
     const highlightedContent = previewContent.replace(
@@ -194,20 +233,33 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
               </Button>
             </div>
             
-            {fees && (
-              <div className="bg-slate-50 p-3 rounded text-sm">
-                <h4 className="font-medium mb-1">Current Fee Values (Available in Templates)</h4>
-                <ul className="space-y-1">
-                  <li><span className="font-medium">Restaurant Monthly Fee:</span> ${fees.restaurant_monthly_fee}</li>
-                  <li>
-                    <span className="font-medium">Signup Commission:</span> {fees.signup_commission_value}{fees.signup_commission_type === 'percentage' ? '%' : ' (flat)'}
-                  </li>
-                  <li>
-                    <span className="font-medium">Ticket Sales Commission:</span> {fees.ticket_commission_value}{fees.ticket_commission_type === 'percentage' ? '%' : ' (flat)'}
-                  </li>
-                </ul>
+            <div className="bg-slate-50 p-3 rounded text-sm">
+              <h4 className="font-medium mb-1">Available Template Variables</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <h5 className="font-medium">Fee Values:</h5>
+                  {fees && (
+                    <ul className="space-y-1">
+                      <li><span className="font-medium">Monthly Fee:</span> ${fees.restaurant_monthly_fee}</li>
+                      <li>
+                        <span className="font-medium">Signup Commission:</span> {fees.signup_commission_value}{fees.signup_commission_type === 'percentage' ? '%' : ' (flat)'}
+                      </li>
+                      <li>
+                        <span className="font-medium">Ticket Sales Commission:</span> {fees.ticket_commission_value}{fees.ticket_commission_type === 'percentage' ? '%' : ' (flat)'}
+                      </li>
+                    </ul>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <h5 className="font-medium">Date Information:</h5>
+                  <ul className="space-y-1">
+                    <li><span className="font-medium">Today's Date:</span> {getCurrentDateInfo().current_date}</li>
+                    <li><span className="font-medium">Current Month:</span> {getCurrentDateInfo().current_month}</li>
+                    <li><span className="font-medium">Days in Month:</span> {getCurrentDateInfo().days_in_month}</li>
+                  </ul>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </CardContent>
         <CardFooter className="flex justify-between">
@@ -244,6 +296,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
           <li>Use <code>{'{{fieldName}}'}</code> syntax to insert dynamic content.</li>
           <li>Available fields can be inserted using the selector above.</li>
           <li>Fee values like <code>{'{{restaurant_monthly_fee}}'}</code> will be replaced with their current database values.</li>
+          <li>Date fields like <code>{'{{current_date}}'}</code>, <code>{'{{current_month}}'}</code>, and <code>{'{{days_in_month}}'}</code> are automatically populated.</li>
           <li>Preview your template to see how the variables will be highlighted.</li>
         </ul>
       </div>
