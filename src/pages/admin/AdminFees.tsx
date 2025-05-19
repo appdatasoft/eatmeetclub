@@ -1,11 +1,18 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { DollarSign } from "lucide-react";
+import { DollarSign, RefreshCw } from "lucide-react";
 import { useAdminFees } from "@/hooks/admin/useAdminFees";
 import FeeCard from "@/components/admin/fees/FeeCard";
+import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
+import RetryAlert from "@/components/ui/RetryAlert";
+import { useState } from "react";
 
 const AdminFees = () => {
+  const queryClient = useQueryClient();
+  const [isRetrying, setIsRetrying] = useState(false);
+  
   const { 
     fees, 
     isLoading, 
@@ -28,6 +35,15 @@ const AdminFees = () => {
     handleSave(key, value);
     if (type) {
       handleSave(`${key.replace('_value', '')}_type`, type);
+    }
+  };
+  
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['adminFees'] });
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -59,9 +75,13 @@ const AdminFees = () => {
           </div>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-red-500">
-                Error loading fee configuration. Please try again later.
-              </div>
+              <RetryAlert
+                title="Error Loading Fee Configuration"
+                message="Unable to load the fee configuration. This could be due to a database connection issue or missing configuration."
+                onRetry={handleRetry}
+                isRetrying={isRetrying}
+                severity="error"
+              />
             </CardContent>
           </Card>
         </div>
@@ -72,9 +92,20 @@ const AdminFees = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex items-center">
-          <DollarSign className="h-6 w-6 mr-2" />
-          <h1 className="text-2xl font-bold">Fee Management</h1>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <DollarSign className="h-6 w-6 mr-2" />
+            <h1 className="text-2xl font-bold">Fee Management</h1>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRetry}
+            disabled={isRetrying}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRetrying ? 'animate-spin' : ''}`} />
+            {isRetrying ? 'Refreshing...' : 'Refresh'}
+          </Button>
         </div>
         
         <Card className="mb-6">

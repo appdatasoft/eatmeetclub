@@ -9,13 +9,20 @@ export interface PaymentConfig {
 }
 
 const fetchPaymentConfig = async (): Promise<PaymentConfig> => {
+  console.log('Fetching payment config...');
+  
   try {
     const { data, error } = await supabase
       .from('admin_config')
       .select('*')
       .in('key', ['service_fee_percent', 'commission_fee_percent', 'stripe_mode']);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error fetching payment config:', error);
+      throw error;
+    }
+    
+    console.log('Payment config data received:', data);
     
     // Default values
     const config: PaymentConfig = {
@@ -25,7 +32,7 @@ const fetchPaymentConfig = async (): Promise<PaymentConfig> => {
     };
     
     // Update with data from database
-    if (data) {
+    if (data && data.length > 0) {
       data.forEach((item) => {
         if (item.key === 'service_fee_percent') {
           config.serviceFeePercent = parseFloat(item.value) || 5;
@@ -55,5 +62,6 @@ export function usePaymentConfig() {
     queryFn: fetchPaymentConfig,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
+    retry: 1,
   });
 }
