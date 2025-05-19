@@ -30,18 +30,21 @@ export interface FetchResponse<T = any> {
   headers?: Headers;
 }
 
-// Add interface for ContractTemplate
+// Add interface for ContractTemplate matching the Supabase schema
 export interface ContractTemplate {
   id: string;
   name: string;
-  description: string;
-  content: string;
-  type: string;
-  variables: any[];
+  description?: string;
+  content?: string;
+  type: "restaurant" | "restaurant_referral" | "ticket_sales";
+  variables?: any[];
   version?: string;
   is_active?: boolean;
   updated_at?: string;
   created_at?: string;
+  storage_path: string;
+  updated_by?: string;
+  created_by?: string;
 }
 
 const responseCache = new Map<string, { data: any, expires: number }>();
@@ -250,7 +253,7 @@ export const del = <T = any>(url: string, options: FetchClientOptions = {}): Pro
   return fetchClient<T>(url, { ...options, method: 'DELETE' });
 };
 
-// New methods for template operations
+// Templates API - updated to match Supabase schema
 export const templates = {
   getAll: <T = ContractTemplate[]>(type: "restaurant" | "restaurant_referral" | "ticket_sales", customOptions: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
     return get<T>(`/api/templates/${type}`, {
@@ -286,13 +289,20 @@ export const templates = {
   },
   
   create: <T = ContractTemplate>(template: Partial<ContractTemplate>, customOptions: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
-    return post<T>('/api/templates', template, {
+    // Ensure required fields are present for Supabase schema
+    const dbTemplate = {
+      ...template,
+      storage_path: template.storage_path || `templates/${template.type}/${Date.now()}`,
+      name: template.name || 'Untitled Template'
+    };
+
+    return post<T>('/api/templates', dbTemplate, {
       ...customOptions,
       fallbackToSupabase: true,
       supabseFallbackFn: async () => {
         const { data, error } = await supabase
           .from('contract_templates')
-          .insert(template)
+          .insert(dbTemplate)
           .select()
           .single();
           
@@ -303,13 +313,16 @@ export const templates = {
   },
   
   update: <T = ContractTemplate>(id: string, template: Partial<ContractTemplate>, customOptions: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
-    return put<T>(`/api/templates/${id}`, template, {
+    // Ensure the type is properly typed for Supabase
+    const dbTemplate: Partial<ContractTemplate> = { ...template };
+    
+    return put<T>(`/api/templates/${id}`, dbTemplate, {
       ...customOptions,
       fallbackToSupabase: true,
       supabseFallbackFn: async () => {
         const { data, error } = await supabase
           .from('contract_templates')
-          .update(template)
+          .update(dbTemplate)
           .eq('id', id)
           .select()
           .single();

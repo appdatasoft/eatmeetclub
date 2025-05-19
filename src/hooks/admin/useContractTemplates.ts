@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { templates } from '@/lib/fetch-client';
+import { templates, ContractTemplate } from '@/lib/fetch-client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -12,17 +12,21 @@ export interface ContractVariable {
   label?: string;
 }
 
+// Re-export the ContractTemplate interface with our extended fields
 export interface ContractTemplate {
   id: string;
   name: string;
   description: string;
   content: string;
-  type: string;
+  type: "restaurant" | "restaurant_referral" | "ticket_sales";
   variables: ContractVariable[];
   version?: string;
   is_active?: boolean;
   updated_at?: string;
   created_at?: string;
+  storage_path?: string;
+  created_by?: string;
+  updated_by?: string;
 }
 
 export const useContractTemplates = (templateType: string) => {
@@ -122,9 +126,12 @@ export const useContractTemplates = (templateType: string) => {
     setIsSaving(true);
     
     try {
+      // Ensure we use the correct type for the update
+      const apiTemplateType = templateData.type;
+      
       const response = await templates.update(templateData.id, { 
         content,
-        type: templateData.type
+        type: apiTemplateType
       });
       
       if (response.error) {
