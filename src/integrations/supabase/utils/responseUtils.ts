@@ -1,3 +1,4 @@
+
 /**
  * Helper functions for handling responses in a safe way
  * This is critical to prevent "body stream already read" errors
@@ -21,18 +22,44 @@ export const handleResponse = async (response: Response): Promise<Response> => {
     const contentType = response.headers.get('content-type');
     let responseData;
     
+    // Clone the response to avoid "body already read" errors
+    const clonedResponse = response.clone();
+    
     if (contentType && contentType.includes('application/json')) {
-      responseData = await response.json();
-      responseBodyCache.set(cacheKey, {
-        type: 'json',
-        data: responseData
-      });
+      try {
+        responseData = await clonedResponse.json();
+        responseBodyCache.set(cacheKey, {
+          type: 'json',
+          data: responseData
+        });
+      } catch (jsonError) {
+        console.error("Error parsing JSON response:", jsonError);
+        // If JSON parsing fails, try to get the text
+        const textResponse = await response.clone().text();
+        console.log("Raw response text:", textResponse);
+        
+        // If the text is empty, return an empty JSON object
+        responseData = textResponse ? JSON.parse(textResponse) : {};
+        responseBodyCache.set(cacheKey, {
+          type: 'json',
+          data: responseData
+        });
+      }
     } else {
-      responseData = await response.text();
-      responseBodyCache.set(cacheKey, {
-        type: 'text',
-        data: responseData
-      });
+      try {
+        responseData = await clonedResponse.text();
+        responseBodyCache.set(cacheKey, {
+          type: 'text',
+          data: responseData
+        });
+      } catch (textError) {
+        console.error("Error reading response text:", textError);
+        responseData = "";
+        responseBodyCache.set(cacheKey, {
+          type: 'text',
+          data: responseData
+        });
+      }
     }
     
     // Create a new response from the cached data
@@ -63,6 +90,9 @@ export const createResponseFromCache = (
       newHeaders.set(key, value);
     });
   }
+  
+  // Always ensure Accept and Content-Type are set properly
+  newHeaders.set('Accept', 'application/json');
   
   // Set content type if provided
   if (contentType) {

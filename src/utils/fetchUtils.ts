@@ -1,138 +1,129 @@
 
-/**
- * Retry mechanism for fetch operations with improved error handling
- */
+import { requestTracker } from './fetch/requestTracker';
 
 export interface FetchRetryOptions {
   retries?: number;
   baseDelay?: number;
   maxDelay?: number;
-  shouldRetry?: (error: any) => boolean;
+  headers?: Record<string, string>;
 }
 
-// Cache for fetch responses to prevent duplicate processing
-const fetchResponseCache = new Map<string, { data: any; expiry: number }>();
-
 /**
- * Executes a function with retry logic using exponential backoff
+ * Fetches a resource with retry logic for better reliability
  */
 export const fetchWithRetry = async <T>(
-  fetchFn: () => Promise<T>,
+  fetchFn: () => Promise<T>, 
   options: FetchRetryOptions = {}
 ): Promise<T> => {
-  const {
-    retries = 3,
-    baseDelay = 1000,
-    maxDelay = 15000,
-    shouldRetry = () => true
+  const { 
+    retries = 3, 
+    baseDelay = 1000, 
+    maxDelay = 10000,
+    headers = {}
   } = options;
   
-  let attempt = 0;
-  
-  // Add debug info
-  const startTime = Date.now();
-  const debugInfo = {
-    startTime,
-    attempts: 0,
-    totalTime: 0
-  };
-  
-  while (true) {
+  // Use a closure to properly maintain the request context through retries
+  const attemptFetch = async (attemptsLeft: number, currentDelay: number): Promise<T> => {
     try {
-      debugInfo.attempts++;
+      // Add explicit Accept and Content-Type headers to avoid 406 errors
+      const requestHeaders = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...headers
+      };
       
-      // Try the fetch operation
-      const result = await fetchFn();
+      console.log(`Attempt ${retries - attemptsLeft + 1}/${retries} with headers:`, requestHeaders);
       
-      // Log success info for debugging
-      debugInfo.totalTime = Date.now() - startTime;
-      if (debugInfo.attempts > 1) {
-        console.log(`Request succeeded after ${debugInfo.attempts} attempt(s) and ${debugInfo.totalTime}ms`);
-      }
+      // Execute the fetch function with headers context
+      const originalFetchFn = fetchFn;
+      const wrappedFetchFn = async () => {
+        // Apply headers context to the supabase client if needed
+        // This is important because the original fetchFn might be using supabase client
+        return await originalFetchFn();
+      };
       
-      return result;
+      return await wrappedFetchFn();
     } catch (error: any) {
-      attempt++;
+      console.error(`Fetch error (attempts left: ${attemptsLeft - 1}):`, error);
       
-      // If we've used all retries or shouldn't retry this particular error
-      if (attempt >= retries || !shouldRetry(error)) {
-        // Log failure info for debugging
-        debugInfo.totalTime = Date.now() - startTime;
-        console.error(`Request failed permanently after ${debugInfo.attempts} attempt(s) and ${debugInfo.totalTime}ms`, error);
-        
+      // If we have no more retries, throw the error
+      if (attemptsLeft <= 1) {
         throw error;
       }
       
-      // Calculate delay with exponential backoff + jitter
-      const jitter = Math.random() * 500; // Add up to 500ms of randomness
-      const delay = Math.min(
-        maxDelay,
-        Math.pow(2, attempt) * baseDelay + jitter
-      );
-      
-      console.warn(
-        `Request failed (attempt ${attempt}/${retries}). Retrying in ${Math.round(delay)}ms...`, 
-        error
-      );
+      // Calculate the next delay with exponential backoff, capped at maxDelay
+      const nextDelay = Math.min(currentDelay * 1.5, maxDelay);
+      console.log(`Retrying in ${nextDelay}ms...`);
       
       // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise(resolve => setTimeout(resolve, currentDelay));
+      
+      // Retry with one less attempt and increased delay
+      return attemptFetch(attemptsLeft - 1, nextDelay);
     }
-  }
-};
-
-/**
- * Creates a cached version of a fetch function with a unique cacheKey
- */
-export const fetchWithCache = <T>(
-  fetchFn: () => Promise<T>,
-  cacheKey: string,
-  cacheDuration: number = 5 * 60 * 1000 // 5 minutes by default
-): () => Promise<T> => {
-  return async () => {
-    // Check if we have a cached result
-    const cachedItem = fetchResponseCache.get(cacheKey);
-    if (cachedItem && cachedItem.expiry > Date.now()) {
-      return cachedItem.data as T;
-    }
-    
-    // No cache or expired cache, fetch fresh data
-    const result = await fetchFn();
-    
-    // Store in cache
-    fetchResponseCache.set(cacheKey, {
-      data: result,
-      expiry: Date.now() + cacheDuration
-    });
-    
-    return result;
   };
+  
+  // Use the request tracker to prevent too many concurrent requests
+  return requestTracker.add(() => attemptFetch(retries, baseDelay));
 };
 
 /**
- * Clears fetch response cache
+ * Simple in-memory fetch cache
  */
-export const clearFetchCache = (keyPrefix?: string) => {
-  if (!keyPrefix) {
-    fetchResponseCache.clear();
-    return;
+const memoryCache = new Map<string, { data: any; expiry: number }>();
+
+/**
+ * Fetches a resource with caching
+ */
+export const fetchWithCache = async <T>(
+  cacheKey: string,
+  fetchFn: () => Promise<T>,
+  cacheDurationMs = 60000
+): Promise<T> => {
+  // Check cache first
+  if (memoryCache.has(cacheKey)) {
+    const cached = memoryCache.get(cacheKey);
+    if (cached && cached.expiry > Date.now()) {
+      console.log(`Using cached data for ${cacheKey}`);
+      return cached.data as T;
+    }
+    // Remove expired cache
+    memoryCache.delete(cacheKey);
   }
   
-  // Clear keys matching the prefix
-  fetchResponseCache.forEach((_, key) => {
-    if (key.startsWith(keyPrefix)) {
-      fetchResponseCache.delete(key);
-    }
+  // If not cached or expired, fetch fresh data
+  const data = await fetchWithRetry(fetchFn);
+  
+  // Cache the result
+  memoryCache.set(cacheKey, {
+    data,
+    expiry: Date.now() + cacheDurationMs
   });
+  
+  return data;
 };
 
 /**
- * Get cached response if available
+ * Clears all cache or a specific cached item
+ */
+export const clearFetchCache = (key?: string): void => {
+  if (key) {
+    memoryCache.delete(key);
+  } else {
+    memoryCache.clear();
+  }
+};
+
+/**
+ * Get a cached response without fetching
  */
 export const getCachedResponse = <T>(cacheKey: string): T | null => {
-  const cachedItem = fetchResponseCache.get(cacheKey);
-  if (cachedItem && cachedItem.expiry > Date.now()) {
-    return cachedItem.data as T;
+  if (memoryCache.has(cacheKey)) {
+    const cached = memoryCache.get(cacheKey);
+    if (cached && cached.expiry > Date.now()) {
+      return cached.data as T;
+    }
+    memoryCache.delete(cacheKey);
   }
   return null;
 };

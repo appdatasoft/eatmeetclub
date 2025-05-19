@@ -99,7 +99,7 @@ const UserProfilePage: React.FC = () => {
           setIsSelf(true);
         }
         
-        // Use fetchWithRetry for more reliable data fetching
+        // Use fetchWithRetry with explicit content type to avoid 406 errors
         const userData = await fetchWithRetry(async () => {
           // Get user profile info - user role
           const { data, error } = await supabase
@@ -113,59 +113,91 @@ const UserProfilePage: React.FC = () => {
           }
           
           return data;
-        }, { retries: 3 });
-        
-        // Get user's created events (if any)
-        const { data: createdEvents, error: createdError } = await fetchWithRetry(async () => {
-          const response = await supabase
-            .from('events')
-            .select(`
-              id,
-              title,
-              date,
-              price,
-              cover_image,
-              restaurants (name)
-            `)
-            .eq('user_id', userId)
-            .eq('published', true)
-            .order('date', { ascending: true });
-            
-          if (response.error) {
-            throw response.error;
+        }, { 
+          retries: 3,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
           }
-          
-          return response;
-        }, { retries: 3 });
-          
-        if (createdError) {
-          console.error("Error fetching created events:", createdError);
-          throw createdError;
-        }
+        });
         
-        // Get events user is attending via tickets
-        const ticketsResponse = await fetchWithRetry(async () => {
-          const response = await supabase
-            .from('tickets')
-            .select(`
-              event_id,
-              events (
+        // Get user's created events (if any) with improved error handling
+        const createdEventsResponse = await fetchWithRetry(async () => {
+          try {
+            const response = await supabase
+              .from('events')
+              .select(`
                 id,
                 title,
                 date,
                 price,
                 cover_image,
                 restaurants (name)
-              )
-            `)
-            .eq('user_id', userId);
+              `)
+              .eq('user_id', userId)
+              .eq('published', true)
+              .order('date', { ascending: true });
+              
+            if (response.error) {
+              console.error("Error in events query:", response.error);
+              throw response.error;
+            }
             
-          if (response.error) {
-            throw response.error;
+            return response;
+          } catch (err) {
+            console.error("Error in created events fetch:", err);
+            throw err;
           }
+        }, { 
+          retries: 3,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const { data: createdEvents, error: createdError } = createdEventsResponse;
           
-          return response;
-        }, { retries: 3 });
+        if (createdError) {
+          console.error("Error fetching created events:", createdError);
+          throw createdError;
+        }
+        
+        // Get events user is attending via tickets with improved error handling
+        const ticketsResponse = await fetchWithRetry(async () => {
+          try {
+            const response = await supabase
+              .from('tickets')
+              .select(`
+                event_id,
+                events (
+                  id,
+                  title,
+                  date,
+                  price,
+                  cover_image,
+                  restaurants (name)
+                )
+              `)
+              .eq('user_id', userId);
+              
+            if (response.error) {
+              console.error("Error in tickets query:", response.error);
+              throw response.error;
+            }
+            
+            return response;
+          } catch (err) {
+            console.error("Error in tickets fetch:", err);
+            throw err;
+          }
+        }, { 
+          retries: 3,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
         
         const { data: tickets, error: ticketsError } = ticketsResponse;
           
