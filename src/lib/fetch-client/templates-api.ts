@@ -57,12 +57,13 @@ export const templates = {
       throw new Error('Template type is required');
     }
     
-    // Handle variables properly - ensure it's a JSON object in the database
+    // Handle variables properly - ensure it's a JSON string in the database
     const dbTemplate = {
       ...template,
       storage_path: template.storage_path || `templates/${template.type}/${Date.now()}`,
       name: template.name || 'Untitled Template',
       type: template.type, // Ensure type is present and correctly typed
+      // Handle variables differently for type compatibility
       variables: typeof template.variables === 'object' ? 
         JSON.stringify(template.variables || {}) : 
         template.variables || '{}'
@@ -70,7 +71,7 @@ export const templates = {
     
     console.log("Creating template with data:", dbTemplate);
 
-    return post<T>('/api/templates', dbTemplate, {
+    return post<T>('/api/templates', dbTemplate as any, {
       ...customOptions,
       fallbackToSupabase: true,
       supabseFallbackFn: async () => {
@@ -111,7 +112,7 @@ export const templates = {
     console.log("Updating template with ID:", id);
     console.log("Update payload:", dbTemplate);
     
-    return put<T>(`/api/templates/${id}`, dbTemplate, {
+    return put<T>(`/api/templates/${id}`, dbTemplate as any, {
       ...customOptions,
       fallbackToSupabase: true,
       supabseFallbackFn: async () => {
@@ -210,10 +211,13 @@ export const templates = {
       const result = await response.json();
       
       if (!response.ok) {
-        // Create an error object with status property
-        const errorObj = new Error(result.message || "Failed to send email") as Error & { status: number };
-        errorObj.status = response.status;
-        throw errorObj;
+        // Create a custom error object instead of adding to Error
+        const customError = new Error(result.message || "Failed to send email");
+        console.error("Email sending error:", customError.message, "Status:", response.status);
+        return { 
+          data: null, 
+          error: customError
+        };
       }
       
       return { data: result, error: null };
@@ -221,10 +225,7 @@ export const templates = {
       console.error("Error sending test email:", error);
       return { 
         data: null, 
-        error: { 
-          message: error.message || "An unknown error occurred", 
-          status: error.status || 500 
-        } 
+        error: error
       };
     }
   }
