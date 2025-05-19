@@ -12,7 +12,9 @@ export const RestaurantMenuPreview: React.FC<RestaurantMenuProps> = ({ restauran
   const { toast } = useToast();
 
   // For debugging - log the restaurantId
-  console.log("RestaurantMenuPreview - restaurantId:", restaurantId);
+  React.useEffect(() => {
+    console.log("RestaurantMenuPreview - restaurantId:", restaurantId);
+  }, [restaurantId]);
 
   // Show error toast if there's an error
   React.useEffect(() => {

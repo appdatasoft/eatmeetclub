@@ -19,7 +19,7 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [fetchAttempt, setFetchAttempt] = useState<number>(0);
-
+  
   // Use a memoized fetch function to prevent unnecessary refetches
   const fetchMenuItems = useCallback(async () => {
     if (!restaurantId) {
@@ -65,8 +65,9 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
           supabseFallbackFn: async () => {
             const { data, error } = await supabase
               .from('restaurant_menu_items')
-              .select('*')
-              .eq('restaurant_id', restaurantId);
+              .select('id, name, description, price')
+              .eq('restaurant_id', restaurantId)
+              .limit(50);
             
             if (error) throw error;
             return data || [];
@@ -108,8 +109,9 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
     try {
       const { data: menuData } = await supabase
         .from('restaurant_menu_items')
-        .select('*')
-        .eq('restaurant_id', restaurantId);
+        .select('id, name, description, price')
+        .eq('restaurant_id', restaurantId)
+        .limit(50);
       
       if (menuData && menuData.length > 0) {
         console.log(`Background refresh: Found ${menuData.length} menu items`);
@@ -135,25 +137,25 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
   
   // Process menu items in smaller batches to improve performance
   const processMenuItemsInBatches = async (menuData: any[], restaurantId: string): Promise<MenuItem[]> => {
-    const BATCH_SIZE = 3; // Process 3 items at a time
+    const BATCH_SIZE = 5; // Process 5 items at a time
     const results: MenuItem[] = [];
     
     for (let i = 0; i < menuData.length; i += BATCH_SIZE) {
       const batch = menuData.slice(i, i + BATCH_SIZE);
       const batchPromises = batch.map(async (item) => {
         try {
-          // Fetch media for this item
-          const media = await fetchMenuItemMedia(restaurantId, item.id);
-          
-          // Fetch ingredients for this item
-          const ingredients = await fetchMenuItemIngredients(item.id);
+          // Fetch media for this item - fetch in parallel
+          const [media, ingredients] = await Promise.all([
+            fetchMenuItemMedia(restaurantId, item.id),
+            fetchMenuItemIngredients(item.id)
+          ]);
           
           return {
             id: item.id,
             name: item.name,
             description: item.description || '',
             price: item.price,
-            type: 'Other',
+            type: item.type || 'Other',
             restaurant_id: restaurantId,
             ingredients,
             media
@@ -166,7 +168,7 @@ export const useMenuItemsFetcher = (restaurantId: string): MenuFetcherResult => 
             name: item.name,
             description: item.description || '',
             price: item.price,
-            type: 'Other',
+            type: item.type || 'Other',
             restaurant_id: restaurantId,
             ingredients: [],
             media: []

@@ -33,6 +33,9 @@ export interface FetchResponse<T = any> {
 // Cache for responses
 const responseCache = new Map<string, { data: any, expires: number }>();
 
+// In-flight requests tracker to prevent duplicate requests
+const inFlightRequests = new Map<string, Promise<FetchResponse<any>>>();
+
 // Generate a cache key from request details
 const getCacheKey = (url: string, options: FetchClientOptions = {}): string => {
   const { method = 'GET', body } = options;
@@ -87,11 +90,28 @@ export const fetchClient = async <T = any>(
   // Create cache key for this request
   const cacheKey = getCacheKey(url, options);
   
+  // Check if we already have a request in flight for this URL
+  // This prevents duplicate requests for the same resource
+  if (method === 'GET' && inFlightRequests.has(cacheKey)) {
+    return inFlightRequests.get(cacheKey) as Promise<FetchResponse<T>>;
+  }
+  
   // Use session storage for more persistent caching
   if (method === 'GET' && cacheTime > 0) {
     const sessionCache = createSessionCache<T>(cacheKey, cacheTime);
     const cachedData = sessionCache.get();
     if (cachedData) {
+      // If the request is in background mode and cache is stale,
+      // trigger a refresh in the background
+      if (options.background && sessionCache.isStale()) {
+        setTimeout(() => {
+          // Clone options but remove background flag to avoid infinite loop
+          const refreshOptions = { ...options, background: false };
+          fetchClient(url, refreshOptions).catch(() => {
+            // Silently ignore background refresh errors
+          });
+        }, 100);
+      }
       return { data: cachedData, error: null };
     }
   }
@@ -120,102 +140,116 @@ export const fetchClient = async <T = any>(
     fetchOptions.body = typeof body === 'string' ? body : JSON.stringify(body);
   }
 
-  // Fetch with retry logic
-  let attemptCount = 0;
-  let lastError: any = null;
+  // Create the fetch promise with retry logic
+  const fetchPromise = (async () => {
+    let attemptCount = 0;
+    let lastError: any = null;
 
-  while (attemptCount <= retries) {
-    try {
-      // Create timeout controller
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-      // Use user-provided signal if available, otherwise use our timeout controller
-      const finalSignal = signal || controller.signal;
-      
-      // Execute fetch with timeout
-      const response = await fetch(url, {
-        ...fetchOptions,
-        signal: finalSignal
-      });
-      
-      // Clear timeout
-      clearTimeout(timeoutId);
-
-      // Handle response
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      // Parse response
-      let data: T;
+    while (attemptCount <= retries) {
       try {
-        data = await response.json();
-      } catch (e) {
-        // If not JSON, try to get text
-        const text = await response.text();
-        data = text as unknown as T;
-      }
+        // Create timeout controller
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-      // Cache successful response
-      if (method === 'GET' && cacheTime > 0) {
-        const sessionCache = createSessionCache<T>(cacheKey, cacheTime);
-        sessionCache.set(data);
-      }
+        // Use user-provided signal if available, otherwise use our timeout controller
+        const finalSignal = signal || controller.signal;
+        
+        // Execute fetch with timeout
+        const response = await fetch(url, {
+          ...fetchOptions,
+          signal: finalSignal
+        });
+        
+        // Clear timeout
+        clearTimeout(timeoutId);
 
-      return {
-        data,
-        error: null,
-        status: response.status,
-        headers: response.headers
-      };
-    } catch (error: any) {
-      lastError = error;
-      attemptCount++;
-
-      // Check if it's a timeout or abort error
-      if (error.name === 'AbortError') {
-        console.error(`Request to ${url} timed out`);
-        break; // Don't retry timeouts
-      }
-      
-      // Exit retry loop if we've reached max retries
-      if (attemptCount > retries) {
-        // Try fallback to Supabase if configured
-        if (fallbackToSupabase && supabseFallbackFn) {
-          try {
-            console.log(`Falling back to Supabase for ${url}`);
-            const data = await supabseFallbackFn();
-            
-            // Cache successful fallback response
-            if (method === 'GET' && cacheTime > 0) {
-              const sessionCache = createSessionCache<T>(cacheKey, cacheTime);
-              sessionCache.set(data);
-            }
-            
-            return { data, error: null };
-          } catch (fallbackError: any) {
-            console.error(`Supabase fallback failed for ${url}:`, fallbackError);
-            return {
-              data: null,
-              error: new Error(`Fetch and fallback failed: ${fallbackError.message}`)
-            };
-          }
+        // Handle response
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
         }
-        break;
+
+        // Parse response
+        let data: T;
+        try {
+          data = await response.json();
+        } catch (e) {
+          // If not JSON, try to get text
+          const text = await response.text();
+          data = text as unknown as T;
+        }
+
+        // Cache successful response
+        if (method === 'GET' && cacheTime > 0) {
+          const sessionCache = createSessionCache<T>(cacheKey, cacheTime);
+          sessionCache.set(data);
+        }
+
+        return {
+          data,
+          error: null,
+          status: response.status,
+          headers: response.headers
+        };
+      } catch (error: any) {
+        lastError = error;
+        attemptCount++;
+
+        // Check if it's a timeout or abort error
+        if (error.name === 'AbortError') {
+          console.error(`Request to ${url} timed out`);
+          break; // Don't retry timeouts
+        }
+        
+        // Exit retry loop if we've reached max retries
+        if (attemptCount > retries) {
+          // Try fallback to Supabase if configured
+          if (fallbackToSupabase && supabseFallbackFn) {
+            try {
+              console.log(`Falling back to Supabase for ${url}`);
+              const data = await supabseFallbackFn();
+              
+              // Cache successful fallback response
+              if (method === 'GET' && cacheTime > 0) {
+                const sessionCache = createSessionCache<T>(cacheKey, cacheTime);
+                sessionCache.set(data);
+              }
+              
+              return { data, error: null };
+            } catch (fallbackError: any) {
+              console.error(`Supabase fallback failed for ${url}:`, fallbackError);
+              return {
+                data: null,
+                error: new Error(`Fetch and fallback failed: ${fallbackError.message}`)
+              };
+            }
+          }
+          break;
+        }
+
+        // Wait before retry with exponential backoff and jitter
+        const delay = retryDelay * Math.pow(1.5, attemptCount - 1) * (0.5 + Math.random() * 0.5);
+        console.log(`Retrying ${url} (${attemptCount}/${retries}) after ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-
-      // Wait before retry with exponential backoff and jitter
-      const delay = retryDelay * Math.pow(2, attemptCount - 1) * (0.5 + Math.random() * 0.5);
-      console.log(`Retrying ${url} (${attemptCount}/${retries}) after ${delay}ms`);
-      await new Promise(resolve => setTimeout(resolve, delay));
     }
-  }
 
-  return {
-    data: null,
-    error: lastError || new Error('Request failed'),
-  };
+    return {
+      data: null,
+      error: lastError || new Error('Request failed'),
+    };
+  })();
+  
+  // Store the in-flight request
+  if (method === 'GET') {
+    inFlightRequests.set(cacheKey, fetchPromise);
+    
+    // Clean up the in-flight request map after the request completes
+    fetchPromise.finally(() => {
+      inFlightRequests.delete(cacheKey);
+    });
+  }
+  
+  return fetchPromise;
 };
 
 // Helper methods for common HTTP verbs

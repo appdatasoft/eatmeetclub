@@ -1,18 +1,13 @@
 
-import React from "react";
-import { Utensils } from "lucide-react";
+import React from 'react';
+import { UtensilsCrossed } from 'lucide-react';
 
 const EmptyMenuState = () => {
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div 
-        className="bg-gray-100 p-4 rounded-full mb-4"
-        data-testid="empty-menu-icon"
-      >
-        <Utensils className="h-8 w-8 text-gray-400" />
-      </div>
-      <h3 className="text-lg font-medium mb-2">No menu items available</h3>
-      <p className="text-gray-500 max-w-md">
+    <div className="text-center p-8 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+      <UtensilsCrossed className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+      <h3 className="text-lg font-medium text-gray-900">No menu items found</h3>
+      <p className="text-sm text-gray-500 mt-1">
         This restaurant hasn't added any menu items yet.
       </p>
     </div>
