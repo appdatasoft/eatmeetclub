@@ -72,39 +72,23 @@ export const useTemplateOperations = () => {
   // Fetch users for email recipients dropdown
   const fetchUserOptions = async (): Promise<UserOption[]> => {
     try {
-      // Try to fetch from profiles table first, as it's more reliable
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email, first_name, last_name');
-        
-      if (!profilesError && profiles && profiles.length > 0) {
-        // Format profiles into UserOption format
-        return profiles.map(profile => ({
-          id: profile.id,
-          firstName: profile.first_name || '',
-          lastName: profile.last_name || '',
-          email: profile.email || '',
-          displayName: `${profile.first_name || ''} ${profile.last_name || ''} <${profile.email || ''}>`
-        }));
-      }
+      // Try to fetch users from auth API
+      const { data, error } = await supabase.auth.admin.listUsers();
       
-      // Fallback to direct user query if profiles table doesn't exist or is empty
-      const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
-      
-      if (usersError) {
-        console.error('Error fetching users:', usersError);
+      if (error) {
+        console.error('Error fetching users:', error);
         return [];
       }
       
       // Format auth users data into UserOption format
-      return (users?.users || []).map(user => {
-        const meta = user.user_metadata || {};
+      return (data?.users || []).map(user => {
+        const metadata = user.user_metadata || {};
         return {
           id: user.id,
-          firstName: meta.first_name || '',
-          lastName: meta.last_name || '',
+          firstName: metadata.first_name || '',
+          lastName: metadata.last_name || '',
           email: user.email || '',
-          displayName: `${meta.first_name || ''} ${meta.last_name || ''} <${user.email || ''}>`
+          displayName: `${metadata.first_name || ''} ${metadata.last_name || ''} <${user.email || ''}>`
         };
       });
     } catch (error) {

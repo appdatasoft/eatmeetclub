@@ -120,7 +120,7 @@ export const templates = {
           // If variables is a string, parse it back to an object for Supabase
           if (typeof dbTemplate.variables === 'string') {
             try {
-              dbTemplate.variables = JSON.parse(dbTemplate.variables) as Record<string, unknown>;
+              dbTemplate.variables = JSON.parse(dbTemplate.variables);
             } catch (e) {
               console.warn("Could not parse variables as JSON, using as is");
               // Keep as string if parsing fails
@@ -206,14 +206,20 @@ export const templates = {
       
       if (!response.ok) {
         const error = new Error(result.message || "Failed to send email");
-        (error as any).status = response.status;
+        Object.assign(error, { status: response.status });
         throw error;
       }
       
       return { data: result, error: null };
     } catch (error: any) {
       console.error("Error sending test email:", error);
-      return { data: null, error: { message: error.message, status: error.status || 500 } };
+      return { 
+        data: null, 
+        error: { 
+          message: error.message, 
+          status: error.status || 500 
+        } 
+      };
     }
   }
 };
