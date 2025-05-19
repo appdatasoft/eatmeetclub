@@ -52,6 +52,66 @@ export const useSocialMedia = () => {
         return;
       }
       
+      // If this is a Facebook OAuth callback
+      if (code && state && state.startsWith('facebook_')) {
+        setOauthPending(true);
+
+        try {
+          // Clean up URL to remove OAuth params
+          window.history.replaceState({}, document.title, window.location.pathname);
+          
+          // Get session to verify authentication
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            throw new Error('No active session found');
+          }
+          
+          // Supabase URL for the edge function
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
+          const redirectUri = `https://eatmeetclub.com/api/auth/callback/facebook`;
+          
+          // Complete OAuth flow by exchanging code for token
+          const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`
+            },
+            body: JSON.stringify({
+              platform: 'Facebook',
+              action: 'callback',
+              code,
+              redirectUri
+            })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to complete Facebook authentication');
+          }
+          
+          const result = await response.json();
+          
+          toast({
+            title: 'Facebook Connected',
+            description: result.message || 'Successfully connected your Facebook account',
+          });
+          
+          // Refresh connections list
+          await fetchConnections();
+        } catch (err: any) {
+          console.error('OAuth callback handling error:', err);
+          setError(err.message);
+          toast({
+            title: 'Connection Failed',
+            description: err.message || 'Failed to connect Facebook account',
+            variant: 'destructive',
+          });
+        } finally {
+          setOauthPending(false);
+        }
+      }
+      
       // If this is an Instagram OAuth callback
       if (code && state && state.startsWith('instagram_')) {
         setOauthPending(true);
@@ -164,6 +224,11 @@ export const useSocialMedia = () => {
     setError(null);
 
     try {
+      // Special handling for Facebook
+      if (platform === 'Facebook') {
+        return await connectFacebookOAuth();
+      }
+      
       // Special handling for Instagram
       if (platform === 'Instagram') {
         return await connectInstagramOAuth();
@@ -286,6 +351,68 @@ export const useSocialMedia = () => {
       return null;
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const connectFacebookOAuth = async () => {
+    try {
+      // Get the JWT token for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session found');
+      }
+
+      // Generate a state parameter to prevent CSRF
+      const state = `facebook_${Math.random().toString(36).substring(2, 15)}`;
+      
+      // Store state in sessionStorage for verification after redirect
+      sessionStorage.setItem('facebook_oauth_state', state);
+      
+      // Get the redirect URI
+      const redirectUri = `https://eatmeetclub.com/api/auth/callback/facebook`;
+      
+      // Use the Supabase URL from environment or fallback
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
+      
+      // Initiate OAuth flow by getting authorization URL
+      const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ 
+          platform: 'Facebook', 
+          action: 'initiate',
+          redirectUri,
+          state
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to initiate Facebook authentication');
+      }
+      
+      const result = await response.json();
+      
+      if (!result.authUrl) {
+        throw new Error('No authorization URL returned');
+      }
+      
+      // Redirect to Facebook authorization page
+      window.location.href = result.authUrl;
+      
+      return { pending: true };
+    } catch (err: any) {
+      console.error('Error initiating Facebook OAuth:', err);
+      setError(err.message);
+      toast({
+        title: 'Connection Failed',
+        description: err.message || 'Failed to connect Facebook account',
+        variant: 'destructive',
+      });
+      return null;
     }
   };
   
