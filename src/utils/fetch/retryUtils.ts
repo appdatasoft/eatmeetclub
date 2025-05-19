@@ -1,88 +1,65 @@
 
-/**
- * Utilities for implementing exponential backoff and retry logic
- */
+import { requestTracker } from './requestTracker';
 
-export interface FetchRetryOptions {
+interface RetryOptions {
   retries?: number;
   baseDelay?: number;
   maxDelay?: number;
-  shouldRetry?: (error: any) => boolean;
+  factor?: number;
 }
 
 /**
- * Executes a fetch operation with exponential backoff retries and throttling
+ * Implements an exponential backoff retry strategy for API calls
+ * @param fn The function to retry
+ * @param options Retry configuration options
+ * @returns The result of the function
  */
-import { requestTracker } from './requestTracker';
-
-export const fetchWithRetry = async <T>(
-  fetchFn: () => Promise<T>,
-  options: FetchRetryOptions = {}
-): Promise<T> => {
+export async function fetchWithRetry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {}
+): Promise<T> {
   const {
     retries = 3,
-    baseDelay = 1000,
-    maxDelay = 15000,
-    shouldRetry = () => true
+    baseDelay = 500,
+    maxDelay = 10000,
+    factor = 2,
   } = options;
+
+  let lastError: unknown;
   
-  let attempt = 0;
-  
-  // Add debug info
-  const startTime = Date.now();
-  const debugInfo = {
-    startTime,
-    attempts: 0,
-    totalTime: 0
-  };
-  
-  while (true) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      // Check if we need to wait due to rate limiting
+      // Wait until we're below the concurrent request limit
       await requestTracker.checkAndWait();
       
-      debugInfo.attempts++;
+      // Track this request
+      requestTracker.startRequest();
       
-      // Try the fetch operation
-      const result = await fetchFn();
+      // Make the request
+      const result = await fn();
       
       // Release the request slot
       requestTracker.releaseRequest();
       
-      // Log success info for debugging
-      debugInfo.totalTime = Date.now() - startTime;
-      console.log(`Request succeeded after ${debugInfo.attempts} attempt(s) and ${debugInfo.totalTime}ms`);
-      
       return result;
-    } catch (error: any) {
-      // Release the request slot even on error
+    } catch (err) {
+      lastError = err;
+      
+      // Release the request slot on error too
       requestTracker.releaseRequest();
       
-      attempt++;
-      
-      // If we've used all retries or shouldn't retry this particular error
-      if (attempt >= retries || !shouldRetry(error)) {
-        // Log failure info for debugging
-        debugInfo.totalTime = Date.now() - startTime;
-        console.error(`Request failed permanently after ${debugInfo.attempts} attempt(s) and ${debugInfo.totalTime}ms`, error);
+      if (attempt < retries) {
+        // Calculate delay with exponential backoff
+        const delay = Math.min(baseDelay * Math.pow(factor, attempt), maxDelay);
         
-        throw error;
+        // Add some jitter to prevent thundering herd issues
+        const jitter = Math.random() * 0.3 * delay;
+        
+        // Wait before next retry
+        await new Promise(resolve => setTimeout(resolve, delay + jitter));
       }
-      
-      // Calculate delay with exponential backoff + jitter
-      const jitter = Math.random() * 500; // Add up to 500ms of randomness
-      const delay = Math.min(
-        maxDelay,
-        Math.pow(2, attempt) * baseDelay + jitter
-      );
-      
-      console.warn(
-        `Request failed (attempt ${attempt}/${retries}). Retrying in ${Math.round(delay)}ms...`, 
-        error
-      );
-      
-      // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
-};
+
+  throw lastError;
+}

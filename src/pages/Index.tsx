@@ -1,37 +1,32 @@
 
-
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+import MainLayout from "@/components/layout/MainLayout";
 import Hero from "@/components/home/Hero";
 import HowItWorks from "@/components/home/HowItWorks";
 import FeaturedEvents from "@/components/home/FeaturedEvents";
 import Testimonials from "@/components/home/Testimonials";
 import CallToAction from "@/components/home/CallToAction";
 import { useEditableContent } from "@/components/editor/EditableContentProvider";
-import EditModeToggle from "@/components/editor/EditModeToggle";
+import DashboardLoadingState from "@/components/layout/dashboard/DashboardLoadingState";
 
 const Index = () => {
-  const { isLoading, canEdit } = useEditableContent();
+  const { isLoading } = useEditableContent();
   
   return (
-    <div className="flex flex-col min-h-screen w-full">
-      <Navbar />
-      {canEdit && <EditModeToggle />}
-      <main className="flex-grow w-full">
-        {isLoading ? (
-          <div className="py-12 md:py-24 flex items-center justify-center bg-gray-200">
-            <p>Loading content...</p>
-          </div>
-        ) : (
-          <Hero />
-        )}
-        <HowItWorks />
-        <FeaturedEvents />
-        <Testimonials />
-        <CallToAction />
-      </main>
-      <Footer />
-    </div>
+    <MainLayout>
+      <div className="flex flex-col w-full">
+        <main className="flex-grow w-full">
+          {isLoading ? (
+            <DashboardLoadingState message="Loading homepage content..." />
+          ) : (
+            <Hero />
+          )}
+          <HowItWorks />
+          <FeaturedEvents />
+          <Testimonials />
+          <CallToAction />
+        </main>
+      </div>
+    </MainLayout>
   );
 };
 
