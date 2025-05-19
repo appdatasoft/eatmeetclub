@@ -1,179 +1,228 @@
 
-import { templates } from '@/lib/fetch-client';
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { templates } from '@/lib/fetch-client/templates-api';
 import { ContractTemplate } from '../types/contractTemplateTypes';
-import { mapToAPITemplateType } from '../utils/templateTypeUtils';
+import { useAdminFees, FeeConfig } from '@/hooks/admin/useAdminFees';
+import { mapTemplateType } from '../utils/templateTypeUtils';
 
-/**
- * Services for performing operations on contract templates
- */
 export const useTemplateOperations = () => {
   const { toast } = useToast();
-
-  const fetchTemplates = async (templateType: string) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { fees } = useAdminFees();
+  
+  const fetchTemplates = async (templateType: string): Promise<ContractTemplate[]> => {
+    setIsLoading(true);
+    
     try {
-      const apiTemplateType = mapToAPITemplateType(templateType);
+      // Map frontend template type to backend template type
+      const backendType = mapTemplateType(templateType);
       
-      console.log("Fetching templates for type:", apiTemplateType);
-      const response = await templates.getAll(apiTemplateType);
+      console.log(`Fetching templates for type: ${templateType} (mapped to: ${backendType})`);
       
-      if (response.error) {
-        throw new Error(response.error.message);
+      const { data, error } = await templates.getAll(backendType);
+      
+      if (error) {
+        console.error('Error fetching templates:', error);
+        throw new Error(`Failed to fetch templates: ${error.message}`);
       }
-
-      console.log("Fetched templates:", response.data);
-      // Convert the response data to our local ContractTemplate type
-      return (response.data || []) as ContractTemplate[];
-    } catch (err: any) {
-      console.error("Error fetching templates:", err);
-      throw new Error(err.message || "Failed to load templates");
+      
+      if (!data || !Array.isArray(data)) {
+        console.warn(`No templates found for type ${backendType}`);
+        // Return empty array instead of throwing
+        return [];
+      }
+      
+      console.log(`Fetched ${data.length} templates:`, data);
+      
+      return data;
+    } catch (error) {
+      console.error('Error in fetchTemplates:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  const saveTemplate = async (templateId: string, content: string, templateType: string): Promise<boolean> => {
+  
+  const saveTemplate = async (id: string, content: string, templateType: string): Promise<boolean> => {
+    setIsLoading(true);
+    
     try {
-      const apiTemplateType = mapToAPITemplateType(templateType);
+      console.log(`Saving template ${id} with content length: ${content.length}`);
       
-      console.log("Saving template with ID:", templateId);
-      console.log("Template content:", content);
-      console.log("Template type:", apiTemplateType);
-      
-      // Create a properly formatted update payload
-      const updatePayload = { 
+      const { data, error } = await templates.update(id, { 
         content,
-        type: apiTemplateType
-      };
+        // Inject fee information into variables field to make them available for the template
+        variables: { 
+          fees: fees || {} 
+        }
+      });
       
-      console.log("Update payload:", updatePayload);
-      
-      const response = await templates.update(templateId, updatePayload);
-      
-      if (response.error) {
-        console.error("API error response:", response.error);
-        throw new Error(response.error.message);
+      if (error) {
+        console.error('Error saving template:', error);
+        toast({
+          title: "Failed to save template",
+          description: error.message,
+          variant: "destructive"
+        });
+        return false;
       }
       
-      console.log("Template save response:", response);
-      
+      console.log('Template saved successfully:', data);
       toast({
-        title: "Template Saved",
-        description: "The contract template was successfully updated"
+        title: "Template saved",
+        description: "The template has been updated successfully."
       });
-      
       return true;
-    } catch (err: any) {
-      console.error("Error saving template:", err);
-      
+    } catch (error: any) {
+      console.error('Error in saveTemplate:', error);
       toast({
-        title: "Error Saving Template",
-        description: err.message || "Failed to save contract template",
+        title: "Error saving template",
+        description: error.message || "An error occurred while saving the template.",
         variant: "destructive"
       });
-      
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
-
+  
   const createTemplate = async (template: Partial<ContractTemplate>, templateType: string): Promise<boolean> => {
+    setIsLoading(true);
+    
     try {
-      const apiTemplateType = mapToAPITemplateType(templateType);
-
-      // Ensure storage_path is set to match required field
-      const newTemplate = {
+      const backendType = mapTemplateType(templateType);
+      
+      console.log(`Creating template for type: ${templateType} (mapped to: ${backendType})`);
+      
+      // Ensure we have the fees in the template variables
+      if (!template.variables) {
+        template.variables = {};
+      }
+      
+      template.variables.fees = fees || {};
+      
+      const { data, error } = await templates.create({
         ...template,
-        type: apiTemplateType,
-        storage_path: template.storage_path || `templates/${apiTemplateType}/${Date.now()}`,
-        variables: template.variables || []
-      };
-
-      const response = await templates.create(newTemplate);
+        type: backendType
+      });
       
-      if (response.error) {
-        throw new Error(response.error.message);
+      if (error) {
+        console.error('Error creating template:', error);
+        toast({
+          title: "Failed to create template",
+          description: error.message,
+          variant: "destructive"
+        });
+        return false;
       }
       
+      console.log('Template created successfully:', data);
       toast({
-        title: "Template Created",
-        description: "The contract template was successfully created"
+        title: "Template created",
+        description: "The template has been created successfully."
       });
-      
       return true;
-    } catch (err: any) {
-      console.error("Error creating template:", err);
-      
+    } catch (error: any) {
+      console.error('Error in createTemplate:', error);
       toast({
-        title: "Error Creating Template",
-        description: err.message || "Failed to create contract template",
+        title: "Error creating template",
+        description: error.message || "An error occurred while creating the template.",
         variant: "destructive"
       });
-      
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
-
+  
   const updateTemplate = async (id: string, template: Partial<ContractTemplate>): Promise<boolean> => {
+    setIsLoading(true);
+    
     try {
-      console.log("Updating template with ID:", id);
-      console.log("Update data:", template);
+      console.log(`Updating template ${id}:`, template);
       
-      const response = await templates.update(id, template);
-      
-      if (response.error) {
-        console.error("API error response:", response.error);
-        throw new Error(response.error.message);
+      // Ensure we have the fees in the template variables
+      if (!template.variables) {
+        template.variables = {};
       }
       
+      template.variables.fees = fees || {};
+      
+      const { data, error } = await templates.update(id, template);
+      
+      if (error) {
+        console.error('Error updating template:', error);
+        toast({
+          title: "Failed to update template",
+          description: error.message,
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      console.log('Template updated successfully:', data);
       toast({
-        title: "Template Updated",
-        description: "The contract template was successfully updated"
+        title: "Template updated",
+        description: "The template has been updated successfully."
       });
-      
       return true;
-    } catch (err: any) {
-      console.error("Error updating template:", err);
-      
+    } catch (error: any) {
+      console.error('Error in updateTemplate:', error);
       toast({
-        title: "Error Updating Template",
-        description: err.message || "Failed to update contract template",
+        title: "Error updating template",
+        description: error.message || "An error occurred while updating the template.",
         variant: "destructive"
       });
-      
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
-
+  
   const deleteTemplate = async (id: string): Promise<boolean> => {
+    setIsLoading(true);
+    
     try {
-      const response = await templates.delete(id);
+      console.log(`Deleting template ${id}`);
       
-      if (response.error) {
-        throw new Error(response.error.message);
+      const { error } = await templates.delete(id);
+      
+      if (error) {
+        console.error('Error deleting template:', error);
+        toast({
+          title: "Failed to delete template",
+          description: error.message,
+          variant: "destructive"
+        });
+        return false;
       }
       
+      console.log('Template deleted successfully');
       toast({
-        title: "Template Deleted",
-        description: "The contract template was successfully deleted"
+        title: "Template deleted",
+        description: "The template has been deleted successfully."
       });
-      
       return true;
-    } catch (err: any) {
-      console.error("Error deleting template:", err);
-      
+    } catch (error: any) {
+      console.error('Error in deleteTemplate:', error);
       toast({
-        title: "Error Deleting Template",
-        description: err.message || "Failed to delete contract template",
+        title: "Error deleting template",
+        description: error.message || "An error occurred while deleting the template.",
         variant: "destructive"
       });
-      
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
-
+  
   return {
     fetchTemplates,
     saveTemplate,
     createTemplate,
     updateTemplate,
-    deleteTemplate
+    deleteTemplate,
+    isLoading
   };
 };

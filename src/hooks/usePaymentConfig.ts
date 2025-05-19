@@ -30,10 +30,10 @@ const fetchPaymentConfig = async (): Promise<PaymentConfig> => {
     
     console.log('Payment config data received:', data);
     
-    // Default values
+    // Initialize with defaults
     const config: PaymentConfig = {
-      serviceFeePercent: 5,
-      commissionFeePercent: 10,
+      serviceFeePercent: 0,
+      commissionFeePercent: 0,
       stripeMode: 'test',
     };
     
@@ -41,15 +41,15 @@ const fetchPaymentConfig = async (): Promise<PaymentConfig> => {
     if (data && data.length > 0) {
       data.forEach((item) => {
         if (item.key === 'service_fee_percent') {
-          config.serviceFeePercent = parseFloat(item.value) || 5;
+          config.serviceFeePercent = parseFloat(item.value) || 0;
         } else if (item.key === 'commission_fee_percent') {
-          config.commissionFeePercent = parseFloat(item.value) || 10;
+          config.commissionFeePercent = parseFloat(item.value) || 0;
         } else if (item.key === 'ticket_commission_value' && !data.some(d => d.key === 'service_fee_percent')) {
           // Use ticket_commission_value as fallback for serviceFeePercent
-          config.serviceFeePercent = parseFloat(item.value) || 5;
+          config.serviceFeePercent = parseFloat(item.value) || 0;
         } else if (item.key === 'signup_commission_value' && !data.some(d => d.key === 'commission_fee_percent')) {
           // Use signup_commission_value as fallback for commissionFeePercent
-          config.commissionFeePercent = parseFloat(item.value) || 10;
+          config.commissionFeePercent = parseFloat(item.value) || 0;
         } else if (item.key === 'stripe_mode') {
           config.stripeMode = item.value === 'live' ? 'live' : 'test';
         }
@@ -63,8 +63,8 @@ const fetchPaymentConfig = async (): Promise<PaymentConfig> => {
     console.error('Error fetching payment config:', error);
     // Return defaults if there's an error
     return {
-      serviceFeePercent: 5,
-      commissionFeePercent: 10,
+      serviceFeePercent: 0,
+      commissionFeePercent: 0,
       stripeMode: 'test',
     };
   }

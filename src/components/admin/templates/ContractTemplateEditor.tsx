@@ -16,6 +16,7 @@ import { Save, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from '@/hooks/use-toast';
+import { useAdminFees } from '@/hooks/admin/useAdminFees';
 
 interface ContractTemplateEditorProps {
   templateType: 'venue' | 'salesRep' | 'ticket';
@@ -26,6 +27,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
   const [selectedField, setSelectedField] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState<boolean>(false);
   const { toast } = useToast();
+  const { fees } = useAdminFees();
   
   const { 
     templateData, 
@@ -99,12 +101,38 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
     }
   };
 
-  // This renders the preview with placeholders highlighted
+  // This renders the preview with placeholders highlighted and fee values substituted
   const renderPreview = () => {
     if (!template) return <p>No template content to preview.</p>;
 
+    // Replace fee variables with actual values if available
+    let previewContent = template;
+    
+    if (fees) {
+      previewContent = previewContent.replace(
+        /\{\{restaurant_monthly_fee\}\}/g, 
+        fees.restaurant_monthly_fee.toString()
+      );
+      previewContent = previewContent.replace(
+        /\{\{signup_commission_value\}\}/g, 
+        fees.signup_commission_value.toString()
+      );
+      previewContent = previewContent.replace(
+        /\{\{signup_commission_type\}\}/g, 
+        fees.signup_commission_type
+      );
+      previewContent = previewContent.replace(
+        /\{\{ticket_commission_value\}\}/g, 
+        fees.ticket_commission_value.toString()
+      );
+      previewContent = previewContent.replace(
+        /\{\{ticket_commission_type\}\}/g, 
+        fees.ticket_commission_type
+      );
+    }
+    
     // Highlight template variables
-    const highlightedContent = template.replace(
+    const highlightedContent = previewContent.replace(
       /\{\{([^}]+)\}\}/g,
       '<span class="bg-yellow-100 text-yellow-800 px-1 rounded">{{$1}}</span>'
     );
@@ -165,6 +193,21 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
                 Insert Field
               </Button>
             </div>
+            
+            {fees && (
+              <div className="bg-slate-50 p-3 rounded text-sm">
+                <h4 className="font-medium mb-1">Current Fee Values (Available in Templates)</h4>
+                <ul className="space-y-1">
+                  <li><span className="font-medium">Restaurant Monthly Fee:</span> ${fees.restaurant_monthly_fee}</li>
+                  <li>
+                    <span className="font-medium">Signup Commission:</span> {fees.signup_commission_value}{fees.signup_commission_type === 'percentage' ? '%' : ' (flat)'}
+                  </li>
+                  <li>
+                    <span className="font-medium">Ticket Sales Commission:</span> {fees.ticket_commission_value}{fees.ticket_commission_type === 'percentage' ? '%' : ' (flat)'}
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
         </CardContent>
         <CardFooter className="flex justify-between">
@@ -200,6 +243,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
         <ul className="text-sm text-gray-600 list-disc pl-5 space-y-1">
           <li>Use <code>{'{{fieldName}}'}</code> syntax to insert dynamic content.</li>
           <li>Available fields can be inserted using the selector above.</li>
+          <li>Fee values like <code>{'{{restaurant_monthly_fee}}'}</code> will be replaced with their current database values.</li>
           <li>Preview your template to see how the variables will be highlighted.</li>
         </ul>
       </div>

@@ -1,4 +1,3 @@
-
 /**
  * Templates API service
  */
@@ -90,6 +89,20 @@ export const templates = {
     // Make sure we're sending a proper update payload
     const dbTemplate: Partial<ContractTemplate> = { ...template };
     
+    // Ensure variables is a valid JSON object if present
+    if (dbTemplate.variables) {
+      try {
+        // Convert to string if it's not already a string
+        if (typeof dbTemplate.variables !== 'string') {
+          dbTemplate.variables = JSON.stringify(dbTemplate.variables);
+        }
+      } catch (err) {
+        console.error('Error processing template variables:', err);
+        // Fallback to empty object if serialization fails
+        dbTemplate.variables = '{}';
+      }
+    }
+    
     console.log("Updating template with ID:", id);
     console.log("Update payload:", dbTemplate);
     
@@ -99,6 +112,16 @@ export const templates = {
       supabseFallbackFn: async () => {
         console.log("Using Supabase fallback to update template:", id);
         try {
+          // If variables is a string, parse it back to an object for Supabase
+          if (typeof dbTemplate.variables === 'string') {
+            try {
+              dbTemplate.variables = JSON.parse(dbTemplate.variables);
+            } catch (e) {
+              console.warn("Could not parse variables as JSON, using as is");
+              // Keep as string if parsing fails
+            }
+          }
+          
           const { data, error } = await supabase
             .from('contract_templates')
             .update(dbTemplate)

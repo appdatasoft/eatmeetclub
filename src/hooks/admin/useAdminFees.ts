@@ -41,15 +41,9 @@ export const useAdminFees = () => {
 
       console.log('Fee data received:', feeData);
 
-      // Default values
-      const config: FeeConfig = {
-        restaurant_monthly_fee: 400, // Updated default value to match screenshot
-        signup_commission_value: 10, // Updated default value to match screenshot
-        signup_commission_type: 'percentage',
-        ticket_commission_value: 5, // Updated default value to match screenshot
-        ticket_commission_type: 'percentage'
-      };
-
+      // Start with empty config
+      const config: Partial<FeeConfig> = {};
+      
       // Update with data from database
       if (feeData && feeData.length > 0) {
         feeData.forEach(item => {
@@ -65,29 +59,56 @@ export const useAdminFees = () => {
             config.ticket_commission_type = item.value as FeeType;
           }
         });
-      } else {
-        // If no data found, insert default values
-        console.log('No fee data found, inserting default values...');
+      }
+      
+      // Check if we have all the required values, insert any missing ones
+      const missingKeys: { key: string, value: string }[] = [];
+      
+      if (config.restaurant_monthly_fee === undefined) {
+        const defaultValue = 0;
+        config.restaurant_monthly_fee = defaultValue;
+        missingKeys.push({ key: 'restaurant_monthly_fee', value: defaultValue.toString() });
+      }
+      
+      if (config.signup_commission_value === undefined) {
+        const defaultValue = 0;
+        config.signup_commission_value = defaultValue;
+        missingKeys.push({ key: 'signup_commission_value', value: defaultValue.toString() });
+      }
+      
+      if (config.signup_commission_type === undefined) {
+        const defaultValue = 'percentage' as FeeType;
+        config.signup_commission_type = defaultValue;
+        missingKeys.push({ key: 'signup_commission_type', value: defaultValue });
+      }
+      
+      if (config.ticket_commission_value === undefined) {
+        const defaultValue = 0;
+        config.ticket_commission_value = defaultValue;
+        missingKeys.push({ key: 'ticket_commission_value', value: defaultValue.toString() });
+      }
+      
+      if (config.ticket_commission_type === undefined) {
+        const defaultValue = 'percentage' as FeeType;
+        config.ticket_commission_type = defaultValue;
+        missingKeys.push({ key: 'ticket_commission_type', value: defaultValue });
+      }
+      
+      // Insert any missing default values
+      if (missingKeys.length > 0) {
+        console.log('Inserting missing fee values:', missingKeys);
         
         try {
-          const defaultValues = [
-            { key: 'restaurant_monthly_fee', value: config.restaurant_monthly_fee.toString() },
-            { key: 'signup_commission_value', value: config.signup_commission_value.toString() },
-            { key: 'signup_commission_type', value: config.signup_commission_type },
-            { key: 'ticket_commission_value', value: config.ticket_commission_value.toString() },
-            { key: 'ticket_commission_type', value: config.ticket_commission_type }
-          ];
-          
-          for (const item of defaultValues) {
-            await supabase.from('admin_config').upsert(item);
+          for (const item of missingKeys) {
+            await supabase.from('admin_config').insert({ key: item.key, value: item.value });
           }
         } catch (insertError) {
-          console.error('Error inserting default fee values:', insertError);
+          console.error('Error inserting missing fee values:', insertError);
           // Continue with defaults even if insert fails
         }
       }
 
-      return config;
+      return config as FeeConfig;
     } catch (error) {
       console.error('Error in fetchFees:', error);
       throw error;
