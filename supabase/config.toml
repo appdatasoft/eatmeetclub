@@ -82,3 +82,6 @@ verify_jwt = false
 verify_jwt = false
 [functions.get-stripe-publishable-key]
 verify_jwt = false
+[functions.meta-deauth]
+verify_jwt = false
+
