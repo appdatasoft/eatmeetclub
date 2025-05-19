@@ -1,5 +1,6 @@
 
 import EditableText from "@/components/editor/EditableText";
+import EditableImage from "@/components/editor/EditableImage";
 import { useEditableContent } from "@/components/editor/EditableContentProvider";
 
 const HowItWorks = () => {
@@ -25,8 +26,20 @@ const HowItWorks = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-5xl mx-auto">
           <div className="flex flex-col items-center text-center">
-            <div className="bg-brand-100 rounded-full w-16 h-16 flex items-center justify-center mb-4">
-              <span className="text-brand-500 text-2xl font-bold">1</span>
+            <div className="mb-4 relative">
+              <EditableImage
+                id="step-1-image"
+                size="lg"
+                shape="circle"
+                className="bg-brand-100"
+                alt="Step 1"
+                defaultImage=""
+              />
+              {!editModeEnabled && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <span className="text-brand-500 text-2xl font-bold">1</span>
+                </div>
+              )}
             </div>
             <EditableText
               id="step-1-title"
@@ -43,8 +56,20 @@ const HowItWorks = () => {
           </div>
           
           <div className="flex flex-col items-center text-center">
-            <div className="bg-brand-100 rounded-full w-16 h-16 flex items-center justify-center mb-4">
-              <span className="text-brand-500 text-2xl font-bold">2</span>
+            <div className="mb-4 relative">
+              <EditableImage
+                id="step-2-image"
+                size="lg"
+                shape="circle"
+                className="bg-brand-100"
+                alt="Step 2"
+                defaultImage=""
+              />
+              {!editModeEnabled && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <span className="text-brand-500 text-2xl font-bold">2</span>
+                </div>
+              )}
             </div>
             <EditableText
               id="step-2-title"
@@ -61,8 +86,20 @@ const HowItWorks = () => {
           </div>
           
           <div className="flex flex-col items-center text-center">
-            <div className="bg-brand-100 rounded-full w-16 h-16 flex items-center justify-center mb-4">
-              <span className="text-brand-500 text-2xl font-bold">3</span>
+            <div className="mb-4 relative">
+              <EditableImage
+                id="step-3-image"
+                size="lg"
+                shape="circle"
+                className="bg-brand-100"
+                alt="Step 3"
+                defaultImage=""
+              />
+              {!editModeEnabled && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <span className="text-brand-500 text-2xl font-bold">3</span>
+                </div>
+              )}
             </div>
             <EditableText
               id="step-3-title"

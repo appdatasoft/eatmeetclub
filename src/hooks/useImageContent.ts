@@ -44,7 +44,7 @@ export const useImageContent = (pagePath: string, defaultImages: Record<string, 
     };
     
     fetchImages();
-  }, [pagePath]);
+  }, [pagePath, defaultImages]);
   
   return { images, isLoading, setImages };
 };

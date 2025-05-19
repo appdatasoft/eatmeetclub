@@ -56,9 +56,10 @@ const ImageEditorDialog = ({
         setIsUploading(true);
         await onSave(previewImage);
         toast({
-          title: "Background updated",
+          title: "Image updated",
           description: "Your changes have been saved successfully",
         });
+        handleOpenChange(false);
       } catch (error: any) {
         console.error('Error saving image:', error);
         toast({
