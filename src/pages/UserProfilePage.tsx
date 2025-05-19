@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +9,7 @@ import { UserRound } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import RetryAlert from "@/components/ui/RetryAlert";
 import MainLayout from "@/components/layout/MainLayout";
-import { fetchWithRetry } from "@/utils/fetch";
+import { fetchWithRetry } from "@/utils/fetchUtils";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createSessionCache } from "@/utils/fetch/sessionStorageCache";
@@ -99,7 +98,7 @@ const UserProfilePage: React.FC = () => {
           setIsSelf(true);
         }
         
-        // Use fetchWithRetry with explicit content type to avoid 406 errors
+        // Use fetchWithRetry to get user role
         const userData = await fetchWithRetry(async () => {
           // Get user profile info - user role
           const { data, error } = await supabase
@@ -113,12 +112,6 @@ const UserProfilePage: React.FC = () => {
           }
           
           return data;
-        }, { 
-          retries: 3,
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
         });
         
         // Get user's created events (if any) with improved error handling
@@ -147,12 +140,6 @@ const UserProfilePage: React.FC = () => {
           } catch (err) {
             console.error("Error in created events fetch:", err);
             throw err;
-          }
-        }, { 
-          retries: 3,
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
           }
         });
         
@@ -190,12 +177,6 @@ const UserProfilePage: React.FC = () => {
           } catch (err) {
             console.error("Error in tickets fetch:", err);
             throw err;
-          }
-        }, { 
-          retries: 3,
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
           }
         });
         

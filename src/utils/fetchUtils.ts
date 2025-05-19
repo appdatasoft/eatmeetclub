@@ -3,11 +3,12 @@
  * Utility functions for handling fetch requests with retry capability
  */
 
-type RetryOptions = {
+export type FetchRetryOptions = {
   retries?: number;
   baseDelay?: number;
   maxDelay?: number;
   shouldRetry?: (error: any) => boolean;
+  headers?: Record<string, string>; // Add headers support
 };
 
 /**
@@ -19,7 +20,7 @@ type RetryOptions = {
  */
 export const fetchWithRetry = async <T>(
   fetchFn: () => Promise<T>, 
-  options: RetryOptions = {}
+  options: FetchRetryOptions = {}
 ): Promise<T> => {
   const { 
     retries = 3, 
@@ -102,4 +103,73 @@ export const safelyParseResponse = async <T>(response: Response): Promise<T> => 
       throw new Error('Failed to parse response: body stream already read');
     }
   }
+};
+
+// Cache utility functions
+const responseCache = new Map<string, { data: any, expires: number }>();
+
+/**
+ * Fetch with cache functionality
+ */
+export const fetchWithCache = async <T>(
+  url: string,
+  options: RequestInit & { cacheTime?: number } = {},
+  cacheKey?: string
+): Promise<T> => {
+  const key = cacheKey || url;
+  const { cacheTime = 60000, ...fetchOptions } = options;
+  
+  // Check cache
+  if (responseCache.has(key)) {
+    const cached = responseCache.get(key);
+    if (cached && cached.expires > Date.now()) {
+      return cached.data as T;
+    }
+    // Clear expired cache
+    responseCache.delete(key);
+  }
+  
+  // Make the fetch call
+  const response = await fetch(url, fetchOptions);
+  
+  if (!response.ok) {
+    throw new Error(`HTTP error! Status: ${response.status}`);
+  }
+  
+  // Clone response and parse
+  const data = await safelyParseResponse<T>(response);
+  
+  // Store in cache
+  responseCache.set(key, {
+    data,
+    expires: Date.now() + cacheTime
+  });
+  
+  return data;
+};
+
+/**
+ * Clear cache for a specific key or all cache if no key provided
+ */
+export const clearFetchCache = (key?: string): void => {
+  if (key) {
+    responseCache.delete(key);
+  } else {
+    responseCache.clear();
+  }
+};
+
+/**
+ * Get cached response data if available
+ */
+export const getCachedResponse = <T>(key: string): T | null => {
+  if (responseCache.has(key)) {
+    const cached = responseCache.get(key);
+    if (cached && cached.expires > Date.now()) {
+      return cached.data as T;
+    }
+    // Clear expired cache
+    responseCache.delete(key);
+  }
+  return null;
 };

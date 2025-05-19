@@ -52,3 +52,26 @@ export const safeJsonParse = async <T>(response: Response): Promise<T> => {
     }
   }
 };
+
+/**
+ * Extract data from a response object safely
+ */
+export const extractResponseData = async <T>(response: Response): Promise<T> => {
+  try {
+    const parsedData = await safeJsonParse<{data: T}>(response);
+    return parsedData.data;
+  } catch (error) {
+    console.error('Error extracting response data:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create a response object from cached data
+ */
+export const createResponseFromCachedData = (data: any): Response => {
+  return new Response(JSON.stringify(data), {
+    headers: { 'Content-Type': 'application/json' },
+    status: 200
+  });
+};

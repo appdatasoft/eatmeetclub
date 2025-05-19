@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { MediaItem } from '../types';
-import { extractResponseData } from '@/integrations/supabase/utils/responseUtils';
 import { createSessionCache } from '@/utils/fetch/sessionStorageCache';
 
 // Fetch media for a menu item with improved caching and response handling
