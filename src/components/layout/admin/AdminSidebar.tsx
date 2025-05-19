@@ -1,6 +1,15 @@
 
 import { Link, useLocation } from 'react-router-dom';
-import { Calendar, FileText, Mail, MessageSquare, Globe } from 'lucide-react';
+import { 
+  Calendar, 
+  FileText, 
+  Mail, 
+  MessageSquare, 
+  Globe, 
+  ShoppingCart,
+  CreditCard,
+  DollarSign
+} from 'lucide-react';
 
 const AdminSidebar = () => {
   const location = useLocation();
@@ -32,6 +41,15 @@ const AdminSidebar = () => {
               >
                 <FileText className="h-4 w-4 mr-2" />
                 <span>Contracts</span>
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/admin/orders" 
+                className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/orders')}`}
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                <span>Orders</span>
               </Link>
             </li>
             <li>
@@ -68,6 +86,24 @@ const AdminSidebar = () => {
               >
                 <Globe className="h-4 w-4 mr-2" />
                 <span>Venus</span>
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/admin/payment" 
+                className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/payment')}`}
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                <span>Payment</span>
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/admin/fees" 
+                className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/fees')}`}
+              >
+                <DollarSign className="h-4 w-4 mr-2" />
+                <span>Fees</span>
               </Link>
             </li>
             <li>
