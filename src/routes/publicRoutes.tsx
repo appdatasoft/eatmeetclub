@@ -17,6 +17,8 @@ import VenuesPage from "@/pages/VenuesPage";
 import RestaurantDetailsPage from "@/pages/RestaurantDetailsPage";
 import UserProfilePage from "@/pages/UserProfilePage";
 import About from "@/pages/About";
+import Privacy from "@/pages/Privacy";
+import Terms from "@/pages/Terms";
 import AuthRedirect from "@/components/auth/AuthRedirect";
 
 const PublicRoutes = () => {
@@ -40,6 +42,8 @@ const PublicRoutes = () => {
       <Route path="/restaurant/:id" element={<RestaurantDetailsPage />} />
       <Route path="/profile" element={<UserProfilePage />} />
       <Route path="/profile/:id" element={<UserProfilePage />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
     </Routes>
   );
 };
