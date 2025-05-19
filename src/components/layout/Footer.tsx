@@ -98,6 +98,9 @@ const Footer = () => {
               <li>
                 <Link to="/terms" className="text-sm hover:text-brand-500">Terms of Service</Link>
               </li>
+              <li>
+                <Link to="/data-deletion" className="text-sm hover:text-brand-500">Data Deletion Instructions</Link>
+              </li>
             </ul>
           </div>
         </div>

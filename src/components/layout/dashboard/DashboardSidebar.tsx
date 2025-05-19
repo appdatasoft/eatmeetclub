@@ -1,7 +1,7 @@
 
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { PlusCircle, CreditCard, Instagram } from 'lucide-react';
+import { PlusCircle, CreditCard, Instagram, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const DashboardSidebar = () => {
@@ -94,6 +94,17 @@ const DashboardSidebar = () => {
                   <PlusCircle className="h-4 w-4" />
                 </Button>
               </div>
+            </li>
+            <li>
+              <Link 
+                to="/dashboard/my-account" 
+                className={`block px-3 py-2 rounded-md ${isActive('/dashboard/my-account')}`}
+              >
+                <div className="flex items-center">
+                  <User className="h-4 w-4 mr-2" />
+                  <span>My Account</span>
+                </div>
+              </Link>
             </li>
             <li>
               <Link 

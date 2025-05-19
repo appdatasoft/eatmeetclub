@@ -19,6 +19,7 @@ import UserProfilePage from "@/pages/UserProfilePage";
 import About from "@/pages/About";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
+import DataDeletion from "@/pages/DataDeletion";
 import AuthRedirect from "@/components/auth/AuthRedirect";
 
 const PublicRoutes = () => {
@@ -44,6 +45,7 @@ const PublicRoutes = () => {
       <Route path="/profile/:id" element={<UserProfilePage />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
+      <Route path="/data-deletion" element={<DataDeletion />} />
     </Routes>
   );
 };
