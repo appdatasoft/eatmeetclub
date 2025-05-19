@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { templates } from '@/lib/fetch-client/templates-api';
@@ -82,39 +83,40 @@ export const useTemplateOperations = () => {
       
       console.log("Attempting to fetch user data for dropdown");
       
-      // Try the RPC function first
-      const { data: users, error: rpcError } = await supabase
+      // Use direct RPC call with proper error handling
+      const { data, error } = await supabase
         .rpc('get_users_for_admin');
       
-      if (rpcError) {
-        console.error("Error fetching users via RPC:", rpcError);
-        // Return empty array when there's an error
+      if (error) {
+        console.error("Error fetching users via RPC:", error);
         return [];
       }
       
-      if (!users || users.length === 0) {
+      if (!data || !Array.isArray(data) || data.length === 0) {
         console.log("No users found");
         return [];
       }
       
-      console.log("Successfully fetched users:", users.length);
+      console.log("Successfully fetched users:", data.length);
       
       // Format users data into UserOption format
-      return users.map((user: any) => {
+      return data.map((user: any) => {
         const metadata = user.raw_user_meta_data || {};
+        const firstName = metadata.first_name || '';
+        const lastName = metadata.last_name || '';
+        
         return {
           id: user.id,
-          firstName: metadata.first_name || '',
-          lastName: metadata.last_name || '',
+          firstName,
+          lastName,
           email: user.email || '',
-          displayName: `${metadata.first_name || ''} ${metadata.last_name || ''} <${user.email || ''}>`
+          displayName: `${firstName} ${lastName}`.trim() 
+            ? `${firstName} ${lastName} <${user.email || ''}>`
+            : user.email || ''
         };
       });
     } catch (error) {
       console.error('Error in fetchUserOptions:', error);
-      
-      // Return empty array when there's an error
-      console.log("Returning empty user list due to error");
       return [];
     }
   };
@@ -325,24 +327,47 @@ export const useTemplateOperations = () => {
       console.log("Email subject:", subject);
       console.log("Email content preview:", content.substring(0, 100) + "...");
       
-      const { data, error } = await templates.sendTestEmail({
-        recipients,
-        subject,
-        content,
-        templateId
-      });
+      // Fix the email sending by using direct Supabase HTTP request
+      const { data: sessionData } = await supabase.auth.getSession();
       
-      if (error) {
-        console.error('Error sending test email:', error);
-        toast({
-          title: "Failed to send test email",
-          description: error.message,
-          variant: "destructive"
-        });
-        return false;
+      if (!sessionData.session) {
+        throw new Error("Not authenticated");
       }
       
-      console.log("Email sent successfully:", data);
+      const session = sessionData.session;
+      const apiUrl = `${window.location.origin}/api/send-email`; 
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          to: recipients,
+          subject,
+          html: content,
+          templateId
+        })
+      });
+      
+      if (!response.ok) {
+        let errorMessage = "Failed to send email";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || `HTTP error ${response.status}`;
+        } catch (e) {
+          // If JSON parsing fails, use status text
+          errorMessage = `HTTP error ${response.status}: ${response.statusText}`;
+        }
+        
+        console.error("Email sending error:", errorMessage);
+        throw new Error(errorMessage);
+      }
+      
+      const result = await response.json();
+      console.log("Email sent successfully:", result);
+      
       toast({
         title: "Test email sent",
         description: `Email successfully sent to ${recipients.join(', ')}`

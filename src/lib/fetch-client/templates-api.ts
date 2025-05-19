@@ -1,3 +1,4 @@
+
 /**
  * Templates API service
  */
@@ -162,7 +163,7 @@ export const templates = {
     });
   },
   
-  // Updated method for sending test emails
+  // Updated method for sending test emails - simplify to use API endpoint
   sendTestEmail: async <T = any>(emailData: {
     recipients: string[];
     subject: string;
@@ -178,32 +179,31 @@ export const templates = {
         throw new Error("Not authenticated");
       }
       
-      const session = sessionData.session;
-      
-      // Call the send-custom-email edge function
-      const response = await fetch(`${window.location.origin}/functions/send-custom-email`, {
+      // Use a direct fetch to the API endpoint
+      const apiUrl = `/api/send-test-email`;
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+          'Authorization': `Bearer ${sessionData.session.access_token}`
         },
-        body: JSON.stringify({
-          to: emailData.recipients,
-          subject: emailData.subject,
-          html: emailData.content,
-          emailType: 'template-test',
-          preventDuplicate: false,
-          forceSend: true
-        })
+        body: JSON.stringify(emailData)
       });
       
       if (!response.ok) {
-        const result = await response.json().catch(() => ({ message: "Unknown error" }));
-        const errorMsg = result.message || `Failed to send email (${response.status})`;
-        console.error("Email sending error:", errorMsg, "Status:", response.status);
+        let errorMessage = `Failed to send email (${response.status})`;
+        try {
+          const result = await response.json();
+          errorMessage = result.message || errorMessage;
+        } catch (e) {
+          // If JSON parsing fails, use status text
+          errorMessage = `Failed to send email: ${response.statusText}`;
+        }
+        
+        console.error("Email sending error:", errorMessage);
         return { 
           data: null, 
-          error: new Error(errorMsg)
+          error: new Error(errorMessage)
         };
       }
       
