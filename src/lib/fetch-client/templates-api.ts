@@ -63,9 +63,9 @@ export const templates = {
       storage_path: template.storage_path || `templates/${template.type}/${Date.now()}`,
       name: template.name || 'Untitled Template',
       type: template.type, // Ensure type is present and correctly typed
-      variables: typeof template.variables === 'string' ? 
-        template.variables : 
-        JSON.stringify(template.variables || {})
+      variables: typeof template.variables === 'object' ? 
+        JSON.stringify(template.variables || {}) : 
+        template.variables || '{}'
     };
     
     console.log("Creating template with data:", dbTemplate);
@@ -94,7 +94,7 @@ export const templates = {
     // Make sure we're sending a proper update payload
     const dbTemplate: Partial<ContractTemplate> = { ...template };
     
-    // Ensure variables is a valid JSON object for the database
+    // Ensure variables is a valid JSON string or object for the database
     if (dbTemplate.variables) {
       try {
         // Convert to string if it's not already a string

@@ -16,6 +16,5 @@ export const mapToAPITemplateType = (frontendType: string): "restaurant" | "rest
   }
 };
 
-// Adding an alias for backward compatibility
+// Export the function as mapTemplateType
 export const mapTemplateType = mapToAPITemplateType;
-

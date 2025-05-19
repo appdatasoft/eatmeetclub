@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { templates } from '@/lib/fetch-client/templates-api';
 import { ContractTemplate } from '../types/contractTemplateTypes';
 import { useAdminFees, FeeConfig } from '@/hooks/admin/useAdminFees';
-import { mapTemplateType } from '../utils/templateTypeUtils';
+import { mapToAPITemplateType } from '../utils/templateTypeUtils';
 
 export const useTemplateOperations = () => {
   const { toast } = useToast();
@@ -16,7 +16,7 @@ export const useTemplateOperations = () => {
     
     try {
       // Map frontend template type to backend template type
-      const backendType = mapTemplateType(templateType);
+      const backendType = mapToAPITemplateType(templateType);
       
       console.log(`Fetching templates for type: ${templateType} (mapped to: ${backendType})`);
       
@@ -94,7 +94,7 @@ export const useTemplateOperations = () => {
     setIsLoading(true);
     
     try {
-      const backendType = mapTemplateType(templateType);
+      const backendType = mapToAPITemplateType(templateType);
       
       console.log(`Creating template for type: ${templateType} (mapped to: ${backendType})`);
       

@@ -1,4 +1,3 @@
-
 import { FeeConfig } from '@/hooks/admin/useAdminFees';
 
 export interface ContractTemplate {
@@ -34,7 +33,7 @@ export const DEFAULT_AVAILABLE_FIELDS: ContractVariable[] = [
   { name: 'ticket_price', label: 'Ticket Price', description: 'Price of the event ticket' },
   { name: 'sales_rep_name', label: 'Sales Rep Name', description: 'Name of the sales representative' },
   
-  // Fee configuration fields - updated labels as requested
+  // Fee configuration fields with clearer labels
   { name: 'restaurant_monthly_fee', label: 'The monthly fee charged to restaurants', description: 'Monthly fee charged to restaurants' },
   { name: 'signup_commission_value', label: 'Commission for signing up venues', description: 'Commission value for signing up venues' },
   { name: 'signup_commission_type', label: 'Signup Commission Type', description: 'Commission type (flat or percentage) for signing up venues' },
