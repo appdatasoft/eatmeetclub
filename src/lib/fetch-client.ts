@@ -1,3 +1,4 @@
+
 /**
  * Enhanced Fetch Client with optimized performance
  */
@@ -27,6 +28,20 @@ export interface FetchResponse<T = any> {
   error: Error | null;
   status?: number;
   headers?: Headers;
+}
+
+// Add interface for ContractTemplate
+export interface ContractTemplate {
+  id: string;
+  name: string;
+  description: string;
+  content: string;
+  type: string;
+  variables: any[];
+  version?: string;
+  is_active?: boolean;
+  updated_at?: string;
+  created_at?: string;
 }
 
 const responseCache = new Map<string, { data: any, expires: number }>();
@@ -237,9 +252,9 @@ export const del = <T = any>(url: string, options: FetchClientOptions = {}): Pro
 
 // New methods for template operations
 export const templates = {
-  getAll: (type: "restaurant" | "restaurant_referral" | "ticket_sales") => {
+  getAll: <T = ContractTemplate[]>(type: "restaurant" | "restaurant_referral" | "ticket_sales", customOptions: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
     return get<T>(`/api/templates/${type}`, {
-      ...options,
+      ...customOptions,
       fallbackToSupabase: true,
       supabseFallbackFn: async () => {
         const { data, error } = await supabase
@@ -253,9 +268,9 @@ export const templates = {
     });
   },
   
-  get: (id: string) => {
+  get: <T = ContractTemplate>(id: string, customOptions: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
     return get<T>(`/api/templates/${id}`, {
-      ...options,
+      ...customOptions,
       fallbackToSupabase: true,
       supabseFallbackFn: async () => {
         const { data, error } = await supabase
@@ -270,9 +285,9 @@ export const templates = {
     });
   },
   
-  create: (template: Partial<ContractTemplate>) => {
+  create: <T = ContractTemplate>(template: Partial<ContractTemplate>, customOptions: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
     return post<T>('/api/templates', template, {
-      ...options,
+      ...customOptions,
       fallbackToSupabase: true,
       supabseFallbackFn: async () => {
         const { data, error } = await supabase
@@ -287,9 +302,9 @@ export const templates = {
     });
   },
   
-  update: (id: string, template: Partial<ContractTemplate>) => {
+  update: <T = ContractTemplate>(id: string, template: Partial<ContractTemplate>, customOptions: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
     return put<T>(`/api/templates/${id}`, template, {
-      ...options,
+      ...customOptions,
       fallbackToSupabase: true,
       supabseFallbackFn: async () => {
         const { data, error } = await supabase
@@ -305,9 +320,9 @@ export const templates = {
     });
   },
   
-  delete: (id: string) => {
+  delete: <T = any>(id: string, customOptions: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
     return del<T>(`/api/templates/${id}`, {
-      ...options,
+      ...customOptions,
       fallbackToSupabase: true,
       supabseFallbackFn: async () => {
         const { error } = await supabase
