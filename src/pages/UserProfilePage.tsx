@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,10 +9,10 @@ import { UserRound } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import RetryAlert from "@/components/ui/RetryAlert";
 import MainLayout from "@/components/layout/MainLayout";
-import { fetchWithRetry } from "@/utils/fetchUtils";
+import { fetchWithRetry } from "@/utils/fetch";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useUserTickets } from "@/hooks/useUserTickets";
+import { createSessionCache } from "@/utils/fetch/sessionStorageCache";
 
 interface UserProfile {
   id: string;
@@ -44,6 +43,7 @@ const UserProfilePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSelf, setIsSelf] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [fetchCount, setFetchCount] = useState(0);
 
   // Wait for auth to resolve before proceeding
   useEffect(() => {
@@ -69,39 +69,73 @@ const UserProfilePage: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
+      // Create a session cache
+      const cacheKey = `user_profile_${userId}_${fetchCount}`;
+      const cache = createSessionCache<{
+        profile: UserProfile;
+        eventsCreated: UserEvent[];
+        eventsAttending: UserEvent[];
+        isSelf: boolean;
+      }>(cacheKey, 5 * 60 * 1000, { staleWhileRevalidate: true });
+      
+      // Try to get cached data
+      const cachedData = cache.get();
+      if (cachedData) {
+        console.log("Using cached profile data");
+        setProfile(cachedData.profile);
+        setEventsCreated(cachedData.eventsCreated);
+        setEventsAttending(cachedData.eventsAttending);
+        setIsSelf(cachedData.isSelf);
+        setIsLoading(false);
+        return;
+      }
+      
       try {
         // Check if viewing own profile
-        if (currentUser && ((!id && currentUser) || id === currentUser.id)) {
+        const isSelfProfile = currentUser && ((!id && currentUser) || id === currentUser.id);
+        if (isSelfProfile) {
           console.log("User is viewing their own profile");
           setIsSelf(true);
         }
         
-        // Get user profile info - user role
-        const { data: userData, error: userError } = await supabase
-          .from('user_roles')
-          .select('role, user_id')
-          .eq('user_id', userId)
-          .single();
+        // Use fetchWithRetry for more reliable data fetching
+        const userData = await fetchWithRetry(async () => {
+          // Get user profile info - user role
+          const { data, error } = await supabase
+            .from('user_roles')
+            .select('role, user_id')
+            .eq('user_id', userId)
+            .single();
+            
+          if (error && error.code !== 'PGRST116') { // Not found error
+            throw error;
+          }
           
-        if (userError && userError.code !== 'PGRST116') { // Not found error
-          console.error("Error fetching user role:", userError);
-          throw userError;
-        }
+          return data;
+        }, { retries: 3 });
         
         // Get user's created events (if any)
-        const { data: createdEvents, error: createdError } = await supabase
-          .from('events')
-          .select(`
-            id,
-            title,
-            date,
-            price,
-            cover_image,
-            restaurants (name)
-          `)
-          .eq('user_id', userId)
-          .eq('published', true)
-          .order('date', { ascending: true });
+        const { data: createdEvents, error: createdError } = await fetchWithRetry(async () => {
+          const response = await supabase
+            .from('events')
+            .select(`
+              id,
+              title,
+              date,
+              price,
+              cover_image,
+              restaurants (name)
+            `)
+            .eq('user_id', userId)
+            .eq('published', true)
+            .order('date', { ascending: true });
+            
+          if (response.error) {
+            throw response.error;
+          }
+          
+          return response;
+        }, { retries: 3 });
           
         if (createdError) {
           console.error("Error fetching created events:", createdError);
@@ -109,20 +143,30 @@ const UserProfilePage: React.FC = () => {
         }
         
         // Get events user is attending via tickets
-        const { data: tickets, error: ticketsError } = await supabase
-          .from('tickets')
-          .select(`
-            event_id,
-            events (
-              id,
-              title,
-              date,
-              price,
-              cover_image,
-              restaurants (name)
-            )
-          `)
-          .eq('user_id', userId);
+        const ticketsResponse = await fetchWithRetry(async () => {
+          const response = await supabase
+            .from('tickets')
+            .select(`
+              event_id,
+              events (
+                id,
+                title,
+                date,
+                price,
+                cover_image,
+                restaurants (name)
+              )
+            `)
+            .eq('user_id', userId);
+            
+          if (response.error) {
+            throw response.error;
+          }
+          
+          return response;
+        }, { retries: 3 });
+        
+        const { data: tickets, error: ticketsError } = ticketsResponse;
           
         if (ticketsError) {
           console.error("Error fetching tickets:", ticketsError);
@@ -132,23 +176,25 @@ const UserProfilePage: React.FC = () => {
         console.log("Fetched data:", { userData, createdEvents, tickets });
         
         // Format profile data
-        setProfile({
+        const profileData = {
           id: userId,
           role: userData?.role || 'user',
           created_at: new Date().toISOString() // Placeholder as we don't have actual creation date
-        });
+        };
+        
+        setProfile(profileData);
         
         // Format created events
-        setEventsCreated(
-          createdEvents?.map(event => ({
-            id: event.id,
-            title: event.title,
-            date: event.date,
-            price: event.price,
-            cover_image: event.cover_image,
-            restaurant_name: event.restaurants?.name || 'Unknown Restaurant'
-          })) || []
-        );
+        const formattedCreatedEvents = createdEvents?.map(event => ({
+          id: event.id,
+          title: event.title,
+          date: event.date,
+          price: event.price,
+          cover_image: event.cover_image,
+          restaurant_name: event.restaurants?.name || 'Unknown Restaurant'
+        })) || [];
+        
+        setEventsCreated(formattedCreatedEvents);
         
         // Format attended events
         const attendingEvents = tickets?.map(ticket => {
@@ -172,12 +218,20 @@ const UserProfilePage: React.FC = () => {
         
         setEventsAttending(uniqueEvents);
         
+        // Cache the fetched data
+        cache.set({
+          profile: profileData,
+          eventsCreated: formattedCreatedEvents,
+          eventsAttending: uniqueEvents,
+          isSelf: isSelfProfile
+        });
+        
       } catch (err: any) {
         console.error("Error fetching profile:", err);
-        setError(err.message);
+        setError(err.message || "Failed to load profile data");
         toast({
           title: "Error loading profile",
-          description: err.message,
+          description: err.message || "Failed to load profile data",
           variant: "destructive"
         });
       } finally {
@@ -186,28 +240,25 @@ const UserProfilePage: React.FC = () => {
     };
 
     fetchUserData();
-  }, [id, toast, currentUser, navigate, authLoading]);
+  }, [id, toast, currentUser, navigate, authLoading, fetchCount]);
 
   const handleRetry = async () => {
     setIsRetrying(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay for UX
-      // Clear any cached data
-      if (id) {
-        sessionStorage.removeItem(`user_profile_${id}`);
-      } else if (currentUser) {
-        sessionStorage.removeItem(`user_profile_${currentUser.id}`);
-      }
-      // Force re-fetch by updating state
+      
+      // Force re-fetch by incrementing the fetch counter
+      setFetchCount(prev => prev + 1);
+      
+      // Clear errors and set loading state
       setError(null);
       setIsLoading(true);
-      // The useEffect will run again and fetch fresh data
     } finally {
       setIsRetrying(false);
     }
   };
 
-  // Show loading state while auth is loading
+  // Render loading state
   if (authLoading) {
     return (
       <MainLayout>
@@ -219,6 +270,7 @@ const UserProfilePage: React.FC = () => {
   }
 
   if (isLoading) {
+    // ... keep existing code (loading skeleton)
     return (
       <MainLayout>
         <div className="bg-accent py-12">

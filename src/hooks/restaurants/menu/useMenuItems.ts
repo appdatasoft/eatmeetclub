@@ -1,11 +1,11 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MenuItem } from '@/components/restaurants/menu/MenuItemCard';
 import { useMenuItemMedia } from '@/hooks/restaurants/menu/useMenuItemMedia';
 import { useMenuItemsProcessor } from './useMenuItemsProcessor';
-import { fetchWithRetry } from '@/utils/fetchUtils';
+import { fetchWithRetry, createSessionCache } from '@/utils/fetch';
 import { useToast } from '@/hooks/use-toast';
-import { createSessionCache } from '@/utils/fetch/sessionStorageCache';
 
 export const useMenuItems = (restaurantId: string | undefined, retryTrigger: number = 0) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -52,6 +52,7 @@ export const useMenuItems = (restaurantId: string | undefined, retryTrigger: num
           // Even though we're using cache, trigger a background refresh
           // to keep data fresh without blocking the UI
           if (cache.isStale()) {
+            console.log('Cached data is stale, refreshing in background');
             setTimeout(() => {
               refreshMenuItemsInBackground(restaurantId, cache, cachedData);
             }, 100);
@@ -63,14 +64,21 @@ export const useMenuItems = (restaurantId: string | undefined, retryTrigger: num
 
       // Fetch menu items with enhanced retry logic
       const { data: menuData, error: menuError } = await fetchWithRetry(async () => {
-        return await supabase
+        const response = await supabase
           .from('restaurant_menu_items')
           .select('*')
           .eq('restaurant_id', restaurantId);
+          
+        // Handle potential errors manually to avoid passing error objects that might lose properties
+        if (response.error) {
+          throw new Error(response.error.message || "Failed to fetch menu items");
+        }
+        
+        return response;
       }, {
-        retries: 5,
-        baseDelay: 2000,
-        maxDelay: 20000
+        retries: 3,
+        baseDelay: 1500,
+        maxDelay: 10000
       });
 
       if (menuError) throw menuError;

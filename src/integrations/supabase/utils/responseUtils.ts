@@ -4,6 +4,9 @@
  * This is critical to prevent "body stream already read" errors
  */
 
+// Cache for storing processed response data
+const responseBodyCache = new Map<string, any>();
+
 // Safely handle response objects to prevent "body stream already read" errors
 export const handleResponse = async (response: Response): Promise<Response> => {
   // If we get a 429 status code, throw an error to trigger retry logic
@@ -11,23 +14,76 @@ export const handleResponse = async (response: Response): Promise<Response> => {
     throw new Error(`Rate limit hit (429)`);
   }
   
+  // Generate a unique cache key for this response
+  const cacheKey = `${response.url}-${Date.now()}`;
+  
   try {
-    // Always clone the response before any processing to prevent "body stream already read" errors
-    return response.clone();
+    // Store the response text or json in memory
+    const contentType = response.headers.get('content-type');
+    let responseData;
+    
+    if (contentType && contentType.includes('application/json')) {
+      responseData = await response.json();
+      responseBodyCache.set(cacheKey, {
+        type: 'json',
+        data: responseData
+      });
+    } else {
+      responseData = await response.text();
+      responseBodyCache.set(cacheKey, {
+        type: 'text',
+        data: responseData
+      });
+    }
+    
+    // Create a new response from the cached data
+    return createResponseFromCache(responseData, response.status, response.headers, contentType);
   } catch (error) {
-    console.error("Error cloning response:", error);
-    // If cloning fails for some reason, return the original response
-    // This is a fallback and should rarely happen
-    return response;
+    console.error("Error processing response:", error);
+    // If cloning fails, return a mock response to prevent further errors
+    return new Response(JSON.stringify({ error: "Failed to process response" }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
+};
+
+// Helper to create a new response from cached data
+export const createResponseFromCache = (
+  data: any,
+  status: number = 200,
+  headers?: Headers,
+  contentType?: string | null
+): Response => {
+  const responseInit: ResponseInit = {
+    status,
+    headers: new Headers(headers)
+  };
+  
+  if (contentType) {
+    responseInit.headers?.set('Content-Type', contentType);
+  } else if (typeof data === 'object') {
+    responseInit.headers?.set('Content-Type', 'application/json');
+  }
+  
+  const body = typeof data === 'object' ? JSON.stringify(data) : String(data);
+  return new Response(body, responseInit);
 };
 
 // Safely extract JSON from a response without causing "body stream already read" errors
 export const extractResponseData = async <T>(response: Response): Promise<T> => {
   try {
-    // Always clone the response before reading it
-    const clonedResponse = response.clone();
-    return await clonedResponse.json();
+    const contentType = response.headers.get('Content-Type');
+    if (contentType && contentType.includes('application/json')) {
+      return await response.json() as T;
+    } else {
+      const text = await response.text();
+      try {
+        return JSON.parse(text) as T;
+      } catch {
+        return text as unknown as T;
+      }
+    }
   } catch (error) {
     console.error("Failed to extract response data:", error);
     throw error;
@@ -37,9 +93,7 @@ export const extractResponseData = async <T>(response: Response): Promise<T> => 
 // Helper to safely read text from a response
 export const extractResponseText = async (response: Response): Promise<string> => {
   try {
-    // Always clone the response before reading it
-    const clonedResponse = response.clone();
-    return await clonedResponse.text();
+    return await response.text();
   } catch (error) {
     console.error("Failed to extract response text:", error);
     throw error;
@@ -60,9 +114,19 @@ export const getResponseData = async <T>(
   }
   
   try {
-    // Always clone the response before reading it
-    const clonedResponse = response.clone();
-    const data = await clonedResponse.json();
+    const contentType = response.headers.get('Content-Type');
+    let data: T;
+    
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json() as T;
+    } else {
+      const text = await response.text();
+      try {
+        data = JSON.parse(text) as T;
+      } catch {
+        data = text as unknown as T;
+      }
+    }
     
     // Cache the result if cacheKey is provided
     if (cacheKey) {
@@ -96,12 +160,12 @@ export const clearResponseCache = (keyOrPrefix?: string) => {
 };
 
 // Function to create a safe response from cached data
-export const createResponseFromCachedData = <T>(data: T): Response => {
+export const createResponseFromCachedData = <T>(data: T, status = 200): Response => {
   return new Response(new Blob([JSON.stringify(data)], {
     type: 'application/json'
   }), {
     headers: { 'Content-Type': 'application/json' },
-    status: 200
+    status
   });
 };
 

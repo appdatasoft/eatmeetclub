@@ -1,4 +1,3 @@
-
 import { ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
@@ -18,10 +17,22 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { toast } = useToast();
   const { user, isAdmin, isLoading } = useAuth();
   const [redirectAttempted, setRedirectAttempted] = useState(false);
+  const [authCheckTimeout, setAuthCheckTimeout] = useState(false);
+  
+  // Set a timeout to prevent infinite loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isLoading) {
+        setAuthCheckTimeout(true);
+      }
+    }, 5000); // 5 seconds timeout
+    
+    return () => clearTimeout(timer);
+  }, [isLoading]);
   
   useEffect(() => {
     // Only redirect if not loading and no user, and we haven't tried redirecting yet
-    if (!isLoading && !user && !redirectAttempted) {
+    if ((!isLoading || authCheckTimeout) && !user && !redirectAttempted) {
       console.log("Not authenticated, redirecting to login");
       setRedirectAttempted(true);
       
@@ -36,7 +47,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       
       navigate('/login', { state: { from: location.pathname } });
     }
-  }, [user, navigate, isLoading, location.pathname, redirectAttempted, toast]);
+  }, [user, navigate, isLoading, location.pathname, redirectAttempted, toast, authCheckTimeout]);
   
   const isActive = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + '/') 
@@ -44,19 +55,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       : 'text-gray-600 hover:bg-gray-50';
   };
 
-  // Prevent infinite loading if auth takes too long
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (isLoading) {
-        console.log("Auth check taking too long, forcing refresh");
-        window.location.reload();
-      }
-    }, 10000); // 10 seconds timeout
-    
-    return () => clearTimeout(timeoutId);
-  }, [isLoading]);
-
-  if (isLoading) {
+  if (isLoading && !authCheckTimeout) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
@@ -66,7 +65,12 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   }
 
   if (!user) {
-    return null; // Return null to avoid rendering the layout before redirect happens
+    // Return minimal loading state while redirect happens
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <p className="text-gray-500">Redirecting to login...</p>
+      </div>
+    );
   }
 
   return (

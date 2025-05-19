@@ -5,8 +5,10 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, Settings } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
+import { fetchWithRetry } from '@/utils/fetchUtils';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -19,6 +21,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [authCheckTimedOut, setAuthCheckTimedOut] = useState(false);
+  const { user } = useAuth(); // Use the auth hook
   
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -26,14 +30,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       setError(null);
       
       try {
-        // Check if user is logged in
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          throw sessionError;
-        }
-        
-        if (!sessionData.session) {
+        if (!user) {
           console.log("No session found, redirecting to login");
           toast({
             title: "Authentication required",
@@ -46,17 +43,17 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           return;
         }
         
-        // Check if user is an admin
-        const { data: adminData, error: adminError } = await supabase.rpc(
-          'is_admin',
-          { user_id: sessionData.session.user.id }
-        );
+        // Use fetchWithRetry for more reliable admin check
+        const isUserAdmin = await fetchWithRetry(async () => {
+          const { data, error } = await supabase.rpc('is_admin', { user_id: user.id });
+          if (error) throw error;
+          return !!data;
+        }, {
+          retries: 3,
+          baseDelay: 1000
+        });
         
-        if (adminError) {
-          throw adminError;
-        }
-        
-        if (!adminData) {
+        if (!isUserAdmin) {
           console.log("User is not an admin, redirecting to dashboard");
           toast({
             title: "Access denied",
@@ -84,22 +81,27 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     // Add a timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
       if (isLoading) {
-        console.log("Admin check timed out, showing error state");
+        console.log("Admin check timed out");
+        setAuthCheckTimedOut(true);
         setIsLoading(false);
         setError("Verification timed out. Please refresh the page or try again later.");
       }
-    }, 10000); // 10 second timeout
+    }, 8000); // 8 second timeout
     
     checkAdminStatus();
     
     return () => clearTimeout(timeoutId);
-  }, [navigate, toast, location.pathname]);
+  }, [navigate, toast, location.pathname, user]);
   
   const isActive = (path: string) => {
     return location.pathname === path ? 'bg-brand-50 text-brand-600 font-medium' : 'text-gray-600 hover:bg-gray-50';
   };
 
-  if (isLoading) {
+  const handleRetry = () => {
+    window.location.reload();
+  };
+
+  if (isLoading && !authCheckTimedOut) {
     return (
       <>
         <Navbar />
@@ -129,7 +131,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
               <Button onClick={() => navigate('/dashboard')}>
                 Go to Dashboard
               </Button>
-              <Button variant="outline" onClick={() => window.location.reload()}>
+              <Button variant="outline" onClick={handleRetry}>
                 Retry
               </Button>
             </div>
@@ -141,7 +143,16 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   }
 
   if (!isAdmin) {
-    return null;
+    // Return minimal loading component while redirecting
+    return (
+      <>
+        <Navbar />
+        <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+          <p className="text-gray-500">Redirecting...</p>
+        </div>
+        <Footer />
+      </>
+    );
   }
 
   return (

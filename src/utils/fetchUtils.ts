@@ -1,6 +1,6 @@
 
 /**
- * Retry mechanism for fetch operations
+ * Retry mechanism for fetch operations with improved error handling
  */
 
 export interface FetchRetryOptions {
@@ -9,6 +9,9 @@ export interface FetchRetryOptions {
   maxDelay?: number;
   shouldRetry?: (error: any) => boolean;
 }
+
+// Cache for fetch responses to prevent duplicate processing
+const fetchResponseCache = new Map<string, { data: any; expiry: number }>();
 
 /**
  * Executes a function with retry logic using exponential backoff
@@ -43,7 +46,9 @@ export const fetchWithRetry = async <T>(
       
       // Log success info for debugging
       debugInfo.totalTime = Date.now() - startTime;
-      console.log(`Request succeeded after ${debugInfo.attempts} attempt(s) and ${debugInfo.totalTime}ms`);
+      if (debugInfo.attempts > 1) {
+        console.log(`Request succeeded after ${debugInfo.attempts} attempt(s) and ${debugInfo.totalTime}ms`);
+      }
       
       return result;
     } catch (error: any) {
@@ -77,7 +82,7 @@ export const fetchWithRetry = async <T>(
 };
 
 /**
- * Creates a cached version of a fetch function
+ * Creates a cached version of a fetch function with a unique cacheKey
  */
 export const fetchWithCache = <T>(
   fetchFn: () => Promise<T>,
@@ -86,27 +91,48 @@ export const fetchWithCache = <T>(
 ): () => Promise<T> => {
   return async () => {
     // Check if we have a cached result
-    const cachedItem = sessionStorage.getItem(cacheKey);
-    if (cachedItem) {
-      const { data, expiry } = JSON.parse(cachedItem);
-      if (expiry > Date.now()) {
-        console.log(`Using cached data for ${cacheKey}`);
-        return data as T;
-      }
-      // Cache expired, remove it
-      sessionStorage.removeItem(cacheKey);
+    const cachedItem = fetchResponseCache.get(cacheKey);
+    if (cachedItem && cachedItem.expiry > Date.now()) {
+      return cachedItem.data as T;
     }
     
     // No cache or expired cache, fetch fresh data
     const result = await fetchFn();
     
     // Store in cache
-    const cacheData = {
+    fetchResponseCache.set(cacheKey, {
       data: result,
       expiry: Date.now() + cacheDuration
-    };
-    sessionStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    });
     
     return result;
   };
+};
+
+/**
+ * Clears fetch response cache
+ */
+export const clearFetchCache = (keyPrefix?: string) => {
+  if (!keyPrefix) {
+    fetchResponseCache.clear();
+    return;
+  }
+  
+  // Clear keys matching the prefix
+  fetchResponseCache.forEach((_, key) => {
+    if (key.startsWith(keyPrefix)) {
+      fetchResponseCache.delete(key);
+    }
+  });
+};
+
+/**
+ * Get cached response if available
+ */
+export const getCachedResponse = <T>(cacheKey: string): T | null => {
+  const cachedItem = fetchResponseCache.get(cacheKey);
+  if (cachedItem && cachedItem.expiry > Date.now()) {
+    return cachedItem.data as T;
+  }
+  return null;
 };

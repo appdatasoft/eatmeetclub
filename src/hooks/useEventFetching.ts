@@ -5,7 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { EventDetails } from "@/types/event";
 import { useEventDataFetch } from "./events/useEventDataFetch";
 import { useEventOwnership } from "./events/useEventOwnership";
-import { fetchWithRetry } from "@/utils/fetchUtils";
+import { fetchWithRetry } from "@/utils/fetch";
+import { createSessionCache } from "@/utils/fetch/sessionStorageCache";
 
 export const useEventFetching = (eventId?: string) => {
   const { toast } = useToast();
@@ -13,6 +14,7 @@ export const useEventFetching = (eventId?: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [fetchAttempt, setFetchAttempt] = useState(0);
 
   // Use specialized hooks to fetch data and check ownership
   const { fetchEventWithDetails } = useEventDataFetch();
@@ -29,9 +31,36 @@ export const useEventFetching = (eventId?: string) => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Add a retry flag to prevent UI flashing during retries
       setIsRetrying(true);
+      
+      // Create a session cache for this event
+      const cacheKey = `event_details_${eventId}_${fetchAttempt}`;
+      const cache = createSessionCache<EventDetails>(cacheKey, 5 * 60 * 1000, {
+        staleWhileRevalidate: true
+      });
+      
+      // Check for cached data first
+      const cachedEvent = cache.get();
+      if (cachedEvent) {
+        console.log("Using cached event data");
+        setEvent(cachedEvent);
+        
+        // Check if current user is the owner
+        if (cachedEvent.user_id) {
+          const isOwner = await checkOwnership(cachedEvent.user_id);
+          setIsCurrentUserOwner(isOwner);
+        }
+        
+        setLoading(false);
+        setIsRetrying(false);
+        
+        // Background refresh if stale
+        if (cache.isStale()) {
+          setTimeout(() => refreshEventInBackground(eventId, cache, cachedEvent), 100);
+        }
+        
+        return;
+      }
       
       // Use the fetchWithRetry utility with our event fetching function
       const eventData = await fetchWithRetry(
@@ -55,6 +84,8 @@ export const useEventFetching = (eventId?: string) => {
       
       if (eventData) {
         setEvent(eventData);
+        // Cache the result
+        cache.set(eventData);
         
         // Check if current user is the owner
         if (eventData.user_id) {
@@ -74,11 +105,46 @@ export const useEventFetching = (eventId?: string) => {
       setLoading(false);
       setIsRetrying(false);
     }
-  }, [eventId, fetchEventWithDetails, checkOwnership, toast, setIsCurrentUserOwner]);
+  }, [eventId, fetchEventWithDetails, checkOwnership, toast, setIsCurrentUserOwner, fetchAttempt]);
+
+  // Background refresh function for stale data
+  const refreshEventInBackground = async (
+    eventId: string,
+    cache: ReturnType<typeof createSessionCache>,
+    currentEvent: EventDetails
+  ) => {
+    try {
+      console.log("Refreshing event details in background");
+      const data = await fetchEventWithDetails(eventId);
+      
+      if (data) {
+        // Only update if there are actual differences
+        const hasChanged = JSON.stringify(data) !== JSON.stringify(currentEvent);
+        
+        if (hasChanged) {
+          console.log("Background refresh found updated data");
+          setEvent(data);
+          cache.set(data);
+        } else {
+          console.log("Background refresh found no changes");
+          // Update the cache expiry anyway
+          cache.refresh();
+        }
+      }
+    } catch (error) {
+      console.error("Background refresh failed:", error);
+      // Don't show UI errors for background refreshes
+    }
+  };
 
   useEffect(() => {
     fetchEventDetails();
   }, [fetchEventDetails]);
+
+  // Manual refresh function
+  const refreshEventDetails = useCallback(() => {
+    setFetchAttempt(prev => prev + 1);
+  }, []);
 
   return {
     event,
@@ -87,7 +153,7 @@ export const useEventFetching = (eventId?: string) => {
     isRetrying,
     isCurrentUserOwner,
     fetchEventDetails,
-    refreshEventDetails: fetchEventDetails
+    refreshEventDetails
   };
 };
 
