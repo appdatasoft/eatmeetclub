@@ -13,7 +13,7 @@ export interface MenuItem {
 export interface MediaItem {
   id: string;
   url: string;
-  media_type: string;
+  media_type: string; // Required field
   menu_item_id: string;
-  type?: string; // Keep for compatibility
+  // Remove type? field as it causes conflict with media_type
 }

@@ -1,5 +1,5 @@
 
-import { MediaItem } from "@/components/restaurants/menu";
+import { MediaItem } from "@/components/restaurants/menu/types/mediaTypes";
 
 export interface MediaOperationResult {
   success: boolean;

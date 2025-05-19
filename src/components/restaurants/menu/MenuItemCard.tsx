@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Edit, Trash, Image, ArrowLeft, ArrowRight } from 'lucide-react';
 import { MenuItem, MediaItem } from '@/types/menuItem';
 import MenuItemMedia from './MenuItemMedia';
 import MediaDialog from './media/MediaDialog';
+import { MediaItem as UIMediaItem } from './types/mediaTypes';
 
 interface MenuItemCardProps {
   item: MenuItem;
@@ -14,7 +14,7 @@ interface MenuItemCardProps {
 }
 
 const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onEdit, onDelete }) => {  
-  const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<UIMediaItem | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   
   // Log the item to debug
@@ -25,12 +25,15 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onEdit, onDelete }) =
   const handleMediaClick = () => {
     if (hasMedia && item.media) {
       const media = item.media[activeIndex];
-      // Convert to format expected by MediaDialog if needed
-      const dialogMedia = {
-        ...media,
+      // Convert to format expected by MediaDialog
+      const dialogMedia: UIMediaItem = {
+        id: media.id,
+        url: media.url,
         type: media.media_type === 'image' ? 'image' : 'video',
+        media_type: media.media_type,
+        menu_item_id: media.menu_item_id
       };
-      setSelectedMedia(dialogMedia as any);
+      setSelectedMedia(dialogMedia);
     }
   };
 

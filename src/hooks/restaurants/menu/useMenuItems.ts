@@ -43,7 +43,7 @@ export const useMenuItems = (restaurantId?: string, retryTrigger = 0) => {
       } else {
         const fetchedMenuItems: MenuItem[] = (data || []).map(item => ({
           ...item,
-          type: item.type || 'Other', // Ensure type is always defined
+          type: item.type || 'Other', // Default type if not present
           ingredients: [],
           media: []
         }));
@@ -76,7 +76,7 @@ export const useMenuItems = (restaurantId?: string, retryTrigger = 0) => {
       } else {
         const fetchedMenuItems: MenuItem[] = (data || []).map(item => ({
           ...item,
-          type: item.type || 'Other', // Ensure type is always defined
+          type: item.type || 'Other', // Default type if not present
           ingredients: [],
           media: []
         }));

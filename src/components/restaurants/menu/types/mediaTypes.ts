@@ -1,7 +1,7 @@
 
 export interface MediaItem {
   id: string;
-  type: 'image' | 'video' | string;
+  type: 'image' | 'video' | string; // Required field
   url: string;
   media_type?: string;
   menu_item_id?: string;

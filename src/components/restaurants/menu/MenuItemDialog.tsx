@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import MenuItemForm from '@/components/restaurants/menu/MenuItemForm';
 import { MenuItem } from '@/types/menuItem';
 import { MenuItemFormValues } from './types/menuTypes';
+import { MediaItem as UIMediaItem } from './types/mediaTypes';
 
 interface MenuItemDialogProps {
   isOpen: boolean;
@@ -38,7 +39,14 @@ const MenuItemDialog: React.FC<MenuItemDialogProps> = ({
     price: currentItem.price,
     type: currentItem.type || 'Other',
     ingredients: currentItem.ingredients || [''],
-    media: currentItem.media || []
+    // Convert MediaItem from backend format to UI format
+    media: currentItem.media ? currentItem.media.map(m => ({
+      id: m.id,
+      url: m.url,
+      type: m.media_type === 'image' ? 'image' : 'video',
+      media_type: m.media_type,
+      menu_item_id: m.menu_item_id
+    } as UIMediaItem)) : []
   } : undefined;
 
   return (
