@@ -34,7 +34,7 @@ export interface ContractTemplate {
   description?: string;
   content?: string;
   type: "restaurant" | "restaurant_referral" | "ticket_sales";
-  variables?: any[];
+  variables?: Record<string, unknown> | string;
   version?: string;
   is_active?: boolean;
   updated_at?: string;
