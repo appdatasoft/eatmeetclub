@@ -117,7 +117,7 @@ export const useTemplateOperations = () => {
       
       const { data, error } = await templates.update(id, { 
         content,
-        // Pass the variables as an object, not an array
+        // Make sure variables is an object, not an array
         variables: templateVars
       });
       
@@ -160,7 +160,7 @@ export const useTemplateOperations = () => {
       
       // Create a record for variables with fee information
       const templateVars: Record<string, any> = template.variables ? 
-        (typeof template.variables === 'string' ? JSON.parse(template.variables) : { ...template.variables }) : {};
+        (typeof template.variables === 'string' ? JSON.parse(template.variables) : { ...template.variables as Record<string, any> }) : {};
       
       // Add fees if available
       if (fees) {
@@ -216,7 +216,7 @@ export const useTemplateOperations = () => {
       
       // Create a record for variables with fee information
       const templateVars: Record<string, any> = template.variables ? 
-        (typeof template.variables === 'string' ? JSON.parse(template.variables) : { ...template.variables }) : {};
+        (typeof template.variables === 'string' ? JSON.parse(template.variables) : { ...template.variables as Record<string, any> }) : {};
       
       // Add fees if available
       if (fees) {

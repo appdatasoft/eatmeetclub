@@ -118,9 +118,13 @@ export const templates = {
         console.log("Using Supabase fallback to update template:", id);
         try {
           // If variables is a string, parse it back to an object for Supabase
-          if (typeof dbTemplate.variables === 'string') {
+          const processedTemplate = { ...dbTemplate };
+          
+          // We need to make sure processedTemplate.variables is an object for Supabase
+          if (typeof processedTemplate.variables === 'string') {
             try {
-              dbTemplate.variables = JSON.parse(dbTemplate.variables);
+              // Parse the string to an object
+              processedTemplate.variables = JSON.parse(processedTemplate.variables);
             } catch (e) {
               console.warn("Could not parse variables as JSON, using as is");
               // Keep as string if parsing fails
@@ -129,7 +133,7 @@ export const templates = {
           
           const { data, error } = await supabase
             .from('contract_templates')
-            .update(dbTemplate)
+            .update(processedTemplate)
             .eq('id', id)
             .select()
             .single();
@@ -206,8 +210,10 @@ export const templates = {
       
       if (!response.ok) {
         const error = new Error(result.message || "Failed to send email");
-        Object.assign(error, { status: response.status });
-        throw error;
+        // Use type assertion to add status to the error object
+        const errorWithStatus = error as Error & { status: number };
+        errorWithStatus.status = response.status;
+        throw errorWithStatus;
       }
       
       return { data: result, error: null };
@@ -216,7 +222,7 @@ export const templates = {
       return { 
         data: null, 
         error: { 
-          message: error.message, 
+          message: error.message || "An unknown error occurred", 
           status: error.status || 500 
         } 
       };

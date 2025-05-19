@@ -1,4 +1,3 @@
-
 import { FeeConfig } from '@/hooks/admin/useAdminFees';
 
 export interface ContractTemplate {
@@ -15,12 +14,6 @@ export interface ContractTemplate {
   updated_at: string;
   created_by: string | null;
   updated_by: string | null;
-}
-
-export interface ContractVariable {
-  name: string;
-  label: string;
-  description?: string;
 }
 
 export const DEFAULT_AVAILABLE_FIELDS: ContractVariable[] = [
@@ -46,6 +39,12 @@ export const DEFAULT_AVAILABLE_FIELDS: ContractVariable[] = [
   { name: 'current_month', label: 'Current Month', description: 'The current month name' },
   { name: 'days_in_month', label: 'Days in Current Month', description: 'Number of days in the current month' }
 ];
+
+export interface ContractVariable {
+  name: string;
+  label: string;
+  description?: string;
+}
 
 export interface ContractTemplateContext {
   restaurant?: {
