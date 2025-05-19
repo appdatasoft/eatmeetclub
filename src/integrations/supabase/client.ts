@@ -1,5 +1,5 @@
 
 import { supabase } from './supabaseClient';
-import { checkSupabaseConnection } from './utils/connectionUtils';
+import { checkSupabaseConnection, resetConnectionCache } from './utils/connectionUtils';
 
-export { supabase, checkSupabaseConnection };
+export { supabase, checkSupabaseConnection, resetConnectionCache };

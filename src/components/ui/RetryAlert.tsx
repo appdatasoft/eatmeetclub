@@ -1,74 +1,48 @@
 
 import React from 'react';
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCcw } from 'lucide-react';
+import { Button } from './button';
 
 interface RetryAlertProps {
-  title?: string;
   message: string;
   onRetry: () => void;
-  isRetrying: boolean;
-  severity?: 'info' | 'warning' | 'error';
-  showSpinner?: boolean;
+  isRetrying?: boolean;
 }
 
-const RetryAlert: React.FC<RetryAlertProps> = ({
-  title,
-  message,
-  onRetry,
-  isRetrying,
-  severity = 'warning',
-  showSpinner = true
-}) => {
-  // Map severity to color variants
-  const variantMap = {
-    info: {
-      variant: "default",
-      icon: <AlertCircle className="h-4 w-4" />,
-      bgColor: "bg-blue-50 border-blue-200"
-    },
-    warning: {
-      variant: "default",
-      icon: <AlertCircle className="h-4 w-4" />,
-      bgColor: "bg-yellow-50 border-yellow-200"
-    },
-    error: {
-      variant: "destructive",
-      icon: <AlertCircle className="h-4 w-4" />,
-      bgColor: ""
-    }
-  };
-
-  const { icon, bgColor } = variantMap[severity];
-
+const RetryAlert = ({ message, onRetry, isRetrying = false }: RetryAlertProps) => {
   return (
-    <Alert variant="default" className={`${bgColor} mb-4`}>
-      {icon}
-      {title && <h4 className="font-medium">{title}</h4>}
-      <AlertDescription className="flex items-center justify-between">
-        <span>{message}</span>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={onRetry}
-          disabled={isRetrying}
-          className="ml-4 whitespace-nowrap"
-        >
-          {isRetrying && showSpinner ? (
-            <>
-              <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
-              Retrying...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Retry
-            </>
-          )}
-        </Button>
-      </AlertDescription>
-    </Alert>
+    <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-4">
+      <div className="flex items-start">
+        <AlertCircle className="h-5 w-5 text-amber-500 mr-3 mt-0.5" />
+        <div className="flex-1">
+          <h3 className="text-sm font-medium text-amber-800">Connection Error</h3>
+          <div className="mt-1 text-sm text-amber-700">
+            <p>{message}</p>
+          </div>
+          <div className="mt-3">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={onRetry}
+              disabled={isRetrying}
+              className="bg-white hover:bg-amber-50 text-amber-700 border-amber-300"
+            >
+              {isRetrying ? (
+                <>
+                  <RefreshCcw className="mr-2 h-3 w-3 animate-spin" />
+                  <span>Retrying...</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCcw className="mr-2 h-3 w-3" />
+                  <span>Retry Connection</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

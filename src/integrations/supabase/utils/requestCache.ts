@@ -1,22 +1,26 @@
 
-// Simple in-memory cache for requests
-class RequestCache {
-  private cache = new Map<string, any>();
+/**
+ * Simple in-memory request cache
+ * This helps prevent "body stream already read" errors by storing cached responses
+ */
 
-  has(key: string): boolean {
-    return this.cache.has(key);
+class RequestCache {
+  private cache: Map<string, any> = new Map();
+
+  set<T>(key: string, value: T): void {
+    this.cache.set(key, value);
   }
 
   get<T>(key: string): T | undefined {
     return this.cache.get(key);
   }
 
-  set(key: string, value: any): void {
-    this.cache.set(key, value);
+  has(key: string): boolean {
+    return this.cache.has(key);
   }
 
-  delete(key: string): void {
-    this.cache.delete(key);
+  delete(key: string): boolean {
+    return this.cache.delete(key);
   }
 
   clear(): void {

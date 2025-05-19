@@ -1,5 +1,5 @@
 
-import { ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 
 interface AdminContentProps {
   children: ReactNode;
