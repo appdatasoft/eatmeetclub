@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { MenuItem } from '@/types/menuItem';
+import { MenuItem, MediaItem } from '@/types/menuItem';
 import { MenuItemFormValues } from '@/components/restaurants/menu/types/menuTypes';
 
 /**
@@ -58,7 +58,12 @@ export const createMenuItem = async (
       restaurant_id: restaurantId,
       type: formData.type || 'Other',
       ingredients: filteredIngredients,
-      media: formData.media || []
+      media: formData.media ? formData.media.map(m => ({
+        id: m.id,
+        url: m.url,
+        media_type: m.type || 'image',
+        menu_item_id: savedItemId
+      })) : []
     };
     
     setMenuItems([...menuItems, newMenuItem]);
@@ -135,22 +140,27 @@ export const updateMenuItem = async (
       if (ingredientsError) throw ingredientsError;
     }
     
-    // Update the UI
-    setMenuItems(
-      menuItems.map(item => 
-        item.id === itemId 
-          ? { 
-              ...item, 
-              name: formData.name, 
-              description: formData.description || '', 
-              price: formData.price, 
-              type: formData.type || 'Other',
-              ingredients: filteredIngredients,
-              media: formData.media || [] 
-            } 
-          : item
-      )
+    // Update the UI - ensure media is properly converted
+    const updatedMenuItems = menuItems.map(item => 
+      item.id === itemId 
+        ? { 
+            ...item, 
+            name: formData.name, 
+            description: formData.description || '', 
+            price: formData.price, 
+            type: formData.type || 'Other',
+            ingredients: filteredIngredients,
+            media: formData.media ? formData.media.map(m => ({
+              id: m.id,
+              url: m.url,
+              media_type: m.type || 'image',
+              menu_item_id: itemId
+            })) : []
+          } 
+        : item
     );
+    
+    setMenuItems(updatedMenuItems);
     
     toast({
       title: "Item Updated",

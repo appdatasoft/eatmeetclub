@@ -7,7 +7,7 @@ export interface MenuItem {
   restaurant_id: string;
   ingredients?: string[];
   media?: MediaItem[];
-  type: string; // Required field
+  type: string; // This is already required
 }
 
 export interface MediaItem {
@@ -15,5 +15,5 @@ export interface MediaItem {
   url: string;
   media_type: string;
   menu_item_id: string;
-  type?: string; // Added for compatibility with existing code
+  type?: string; // Keep for compatibility
 }

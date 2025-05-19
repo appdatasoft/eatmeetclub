@@ -3,6 +3,8 @@ export interface MediaItem {
   id: string;
   type: 'image' | 'video' | string;
   url: string;
+  media_type?: string;
+  menu_item_id?: string;
   menuItemId?: string;
 }
 

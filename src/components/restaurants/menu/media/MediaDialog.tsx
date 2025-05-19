@@ -2,12 +2,10 @@
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription } from '@/components/ui/dialog';
-import { MediaItem } from '../types/mediaTypes';
-import MediaImage from './MediaImage';
-import MediaVideo from './MediaVideo';
+import { MediaItem as UIMediaItem } from '../types/mediaTypes';
 
 interface MediaDialogProps {
-  mediaItem: MediaItem | null;
+  mediaItem: UIMediaItem | null;
   onClose: () => void;
 }
 
@@ -42,17 +40,17 @@ const MediaDialog: React.FC<MediaDialogProps> = ({ mediaItem, onClose }) => {
         </DialogDescription>
         <div className="relative">
           {mediaItem.type === 'image' && mediaItem.url && (
-            <MediaImage 
-              url={mediaItem.url} 
+            <img 
+              src={mediaItem.url} 
               alt="Menu item full view" 
               className="w-full max-h-[80vh] object-contain"
             />
           )}
           {mediaItem.type === 'video' && mediaItem.url && (
-            <MediaVideo 
-              url={mediaItem.url}
-              showControls={true}
-              autoPlay={true}
+            <video 
+              src={mediaItem.url}
+              controls
+              autoPlay
               className="w-full max-h-[80vh] object-contain"
             />
           )}

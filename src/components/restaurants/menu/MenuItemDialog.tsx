@@ -30,6 +30,17 @@ const MenuItemDialog: React.FC<MenuItemDialogProps> = ({
     }
   };
 
+  // Convert MenuItem to MenuItemFormValues
+  const formValues = currentItem ? {
+    id: currentItem.id,
+    name: currentItem.name,
+    description: currentItem.description || '',
+    price: currentItem.price,
+    type: currentItem.type || 'Other',
+    ingredients: currentItem.ingredients || [''],
+    media: currentItem.media || []
+  } : undefined;
+
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto bg-white border-gray-200 shadow-lg">
@@ -42,7 +53,7 @@ const MenuItemDialog: React.FC<MenuItemDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <MenuItemForm
-          initialValues={currentItem || undefined}
+          initialValues={formValues}
           onSubmit={onSave}
           isLoading={isSaving}
           onCancel={onClose}

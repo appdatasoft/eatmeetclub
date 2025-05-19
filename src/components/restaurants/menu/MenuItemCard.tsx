@@ -24,7 +24,13 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onEdit, onDelete }) =
   
   const handleMediaClick = () => {
     if (hasMedia && item.media) {
-      setSelectedMedia(item.media[activeIndex]);
+      const media = item.media[activeIndex];
+      // Convert to format expected by MediaDialog if needed
+      const dialogMedia = {
+        ...media,
+        type: media.media_type === 'image' ? 'image' : 'video',
+      };
+      setSelectedMedia(dialogMedia as any);
     }
   };
 
