@@ -1,11 +1,10 @@
-
 import { ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, Calendar, FileText, Mail, MessageSquare, Venus } from 'lucide-react';
+import { AlertCircle, Calendar, FileText, Mail, MessageSquare, Planet } from 'lucide-react';
 import { Button } from '../ui/button';
 import { get } from '@/lib/fetch-client';
 import { useAuth } from '@/hooks/useAuth';
@@ -223,7 +222,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                         to="/admin/venus" 
                         className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/venus')}`}
                       >
-                        <Venus className="h-4 w-4 mr-2" />
+                        <Planet className="h-4 w-4 mr-2" />
                         <span>Venus</span>
                       </Link>
                     </li>
