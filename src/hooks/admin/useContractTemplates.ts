@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useTemplateOperations } from './services/templateOperations';
@@ -26,7 +26,6 @@ export const useContractTemplates = (templateType: string) => {
 
   useEffect(() => {
     fetchTemplates();
-    fetchUsers();
   }, [templateType]);
 
   const fetchTemplates = async () => {
@@ -63,7 +62,7 @@ export const useContractTemplates = (templateType: string) => {
     }
   };
   
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     if (!isAdmin) return;
     
     setIsLoadingUsers(true);
@@ -72,10 +71,15 @@ export const useContractTemplates = (templateType: string) => {
       setUserOptions(users);
     } catch (err: any) {
       console.error("Failed to fetch users:", err);
+      toast({
+        title: "Error loading users",
+        description: err.message || "Failed to load user list",
+        variant: "destructive"
+      });
     } finally {
       setIsLoadingUsers(false);
     }
-  };
+  }, [isAdmin, templateOperations, toast]);
 
   const saveTemplate = async (content: string): Promise<boolean> => {
     if (!templateData) {

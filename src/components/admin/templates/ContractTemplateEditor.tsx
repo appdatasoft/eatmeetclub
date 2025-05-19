@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useContractTemplates } from '@/hooks/admin/useContractTemplates';
 import { Button } from "@/components/ui/button";
@@ -46,7 +45,8 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
     emailSubject,
     setEmailSubject,
     selectedRecipients,
-    setSelectedRecipients
+    setSelectedRecipients,
+    fetchUsers
   } = useContractTemplates(templateType);
 
   useEffect(() => {
@@ -54,6 +54,11 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
       setTemplate(templateData.content || '');
     }
   }, [templateData]);
+
+  useEffect(() => {
+    // Fetch users when component mounts
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleSave = async () => {
     try {
@@ -110,7 +115,20 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
         return;
       }
       
-      await sendTestEmail(template);
+      console.log("Sending test email with:", {
+        recipients: selectedRecipients,
+        subject: emailSubject,
+        templateContent: template.substring(0, 100) + "..."
+      });
+      
+      const result = await sendTestEmail(template);
+      
+      if (result) {
+        toast({
+          title: "Success",
+          description: "Test email sent successfully"
+        });
+      }
     } catch (error) {
       console.error("Error in handleSendTestEmail:", error);
       toast({

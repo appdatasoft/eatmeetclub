@@ -162,7 +162,7 @@ export const templates = {
     });
   },
   
-  // New method for sending test emails
+  // Updated method for sending test emails
   sendTestEmail: async <T = any>(emailData: {
     recipients: string[];
     subject: string;
@@ -172,18 +172,20 @@ export const templates = {
     console.log("Sending test email:", emailData);
     
     try {
-      const { data: session } = await supabase.auth.getSession();
+      const { data: sessionData } = await supabase.auth.getSession();
       
-      if (!session.session) {
+      if (!sessionData.session) {
         throw new Error("Not authenticated");
       }
+      
+      const session = sessionData.session;
       
       // Call the send-custom-email edge function
       const response = await fetch(`${window.location.origin}/functions/send-custom-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.session.access_token}`
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           to: emailData.recipients,
