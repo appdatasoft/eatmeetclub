@@ -60,9 +60,7 @@ const Terms = () => {
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">9. Contact Us</h2>
           <p>If you have any questions about these Terms, please contact us at:</p>
-          <p>Email: terms@eatmeetclub.com</p>
-          <p>Or you can write to us at:</p>
-          <p>EatMeetClub<br />123 Dining Street<br />Foodville, FC 12345<br />United States</p>
+          <p>Email: info@eatmeetclub.com</p>
         </div>
       </div>
     </MainLayout>
