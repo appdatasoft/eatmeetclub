@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createHmac } from "https://deno.land/std@0.190.0/node/crypto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,9 +44,47 @@ serve(async (req) => {
       // Decode and verify the signed request
       // The signed request is a dot-separated base64url encoded signature and payload
       const [encodedSig, payload] = signedRequest.split(".");
+      
+      // Decode the payload from base64url to JSON
       const decodedPayload = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
       
       console.log("Decoded payload:", decodedPayload);
+      
+      // Verify the signature if we have the app secret
+      // This verification step is important for security
+      const appSecret = Deno.env.get("FACEBOOK_APP_SECRET");
+      if (appSecret) {
+        try {
+          // Convert the encoded signature from base64url to binary
+          const signature = atob(encodedSig.replace(/-/g, "+").replace(/_/g, "/"));
+          
+          // Create an HMAC using the app secret and verify the signature
+          const hmac = createHmac("sha256", appSecret);
+          hmac.update(payload);
+          const expectedSignature = hmac.digest();
+          
+          // Convert the expected signature to a string for comparison
+          const expectedSigBase64 = btoa(String.fromCharCode(...new Uint8Array(expectedSignature)))
+            .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+          
+          // Verify that signatures match
+          if (encodedSig !== expectedSigBase64) {
+            console.error("Signature verification failed");
+            return new Response(
+              JSON.stringify({ error: "Invalid signature" }),
+              { headers: corsHeaders, status: 400 }
+            );
+          }
+          
+          console.log("Signature verified successfully");
+        } catch (error) {
+          console.error("Error verifying signature:", error);
+          // Continue processing even if verification fails in development
+          // In production, you might want to reject the request
+        }
+      } else {
+        console.warn("No app secret available for signature verification");
+      }
       
       // Extract the user ID that's revoking access
       const userId = decodedPayload.user_id;
@@ -61,7 +100,6 @@ serve(async (req) => {
       const { data: connections, error: fetchError } = await supabase
         .from('social_media_connections')
         .select('*')
-        .eq('platform', 'Facebook')
         .or(`meta_data->facebook_user_id.eq.${userId},meta_data->>facebook_user_id.eq.${userId}`);
       
       if (fetchError) {

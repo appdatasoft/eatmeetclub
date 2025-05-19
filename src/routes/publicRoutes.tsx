@@ -21,6 +21,7 @@ import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
 import DataDeletion from "@/pages/DataDeletion";
 import AuthRedirect from "@/components/auth/AuthRedirect";
+import MetaDeauth from "@/pages/api/meta/MetaDeauth";
 
 const PublicRoutes = () => {
   return (
@@ -46,6 +47,7 @@ const PublicRoutes = () => {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/data-deletion" element={<DataDeletion />} />
+      <Route path="/api/meta/deauth" element={<MetaDeauth />} />
     </Routes>
   );
 };
