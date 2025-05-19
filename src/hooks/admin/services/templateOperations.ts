@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { templates } from '@/lib/fetch-client/templates-api';
@@ -70,33 +69,33 @@ export const useTemplateOperations = () => {
     };
   };
   
-  // Improved function to fetch users for email recipients dropdown
+  // Fixed function to fetch users for email recipients dropdown
   const fetchUserOptions = async (): Promise<UserOption[]> => {
     try {
       // Get the current Supabase session
-      const { data: authData } = await supabase.auth.getSession();
+      const { data: sessionData } = await supabase.auth.getSession();
       
-      if (!authData.session) {
+      if (!sessionData.session) {
         console.warn('No authenticated session available');
         return [];
       }
       
-      // Fetch users data using admin API call
-      const response = await fetch(`${window.location.origin}/functions/get-users`, {
-        headers: {
-          'Authorization': `Bearer ${authData.session.access_token}`
-        }
-      });
+      // Use Supabase directly instead of calling the edge function
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('id, email, raw_user_meta_data')
+        .limit(50);
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch users: ${response.statusText}`);
+      if (error) {
+        console.error("Error fetching users directly from Supabase:", error);
+        throw error;
       }
       
-      const users = await response.json();
+      console.log("Fetched users from Supabase:", users);
       
       // Format users data into UserOption format
       return users.map((user: any) => {
-        const metadata = user.user_metadata || {};
+        const metadata = user.raw_user_meta_data || {};
         return {
           id: user.id,
           firstName: metadata.first_name || '',
@@ -317,7 +316,7 @@ export const useTemplateOperations = () => {
     }
   };
   
-  // Improved function to send test emails
+  // Enhanced function to send test emails
   const sendTestEmail = async (recipients: string[], subject: string, content: string, templateId?: string): Promise<boolean> => {
     if (!recipients.length) {
       console.error("No recipients provided");

@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Save, Eye, Mail, User } from 'lucide-react';
+import { Save, Eye, Mail, User, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from '@/hooks/use-toast';
@@ -158,6 +158,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
     }
   };
   
+  // Enhanced function to handle both user selection and manual email entry
   const handleSelectUser = (userId: string) => {
     const user = userOptions.find(u => u.id === userId);
     if (user) {
@@ -170,6 +171,34 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
       
       // Clear the input
       setRecipientInput('');
+    }
+  };
+
+  // Function to add manually typed email
+  const handleAddManualEmail = () => {
+    const email = recipientInput.trim();
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && emailRegex.test(email)) {
+      if (!selectedRecipients.includes(email)) {
+        setSelectedRecipients([...selectedRecipients, email]);
+      }
+      setRecipientInput('');
+    } else if (email) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handle key press in the recipient input
+  const handleRecipientKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddManualEmail();
     }
   };
 
@@ -313,18 +342,28 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
                       </button>
                     </div>
                   ))}
-                  <div className="relative flex-1 min-w-[200px]">
+                  <div className="relative flex-1 min-w-[200px] flex">
                     <Input
                       id="email-recipients"
                       value={recipientInput}
                       onChange={(e) => setRecipientInput(e.target.value)}
                       placeholder="Type or select users"
-                      className="border-0 focus-visible:ring-0"
+                      className="border-0 focus-visible:ring-0 flex-grow"
                       onFocus={() => setShowEmailOptions(true)}
                       onBlur={() => setTimeout(() => setShowEmailOptions(false), 200)}
+                      onKeyDown={handleRecipientKeyPress}
                     />
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={handleAddManualEmail}
+                      className="h-8 w-8"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
                     {showEmailOptions && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      <div className="absolute z-10 w-full mt-8 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
                         {isLoadingUsers ? (
                           <div className="p-2 text-gray-500">Loading users...</div>
                         ) : userOptions.length > 0 ? (
@@ -349,7 +388,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Multiple recipients can be selected from the dropdown
+                  Type an email and press Enter or click + to add it, or select users from the dropdown
                 </p>
               </div>
               
