@@ -30,7 +30,7 @@ const FacebookAuthCallback: React.FC = () => {
         
         // Log all parameters for debugging
         console.log({
-          code: code?.substring(0, 10) + '...',
+          code: code ? `${code.substring(0, 10)}...` : 'null',
           state,
           error,
           errorReason,
