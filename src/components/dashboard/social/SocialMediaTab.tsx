@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Facebook, Instagram, Twitter } from "lucide-react";
+import { Facebook, Instagram, Twitter, Map, Globe } from "lucide-react";
 import { useEditableContent } from '@/components/editor/EditableContentProvider';
 import EditableText from '@/components/editor/EditableText';
 import { useToast } from '@/hooks/use-toast';
@@ -94,6 +94,50 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
             <EditableText
               id={`${isAdmin ? 'admin' : 'user'}-facebook-description`}
               defaultContent="Connect your Facebook page to expand your presence and share events with your community."
+              className="text-sm text-gray-600"
+            />
+          </div>
+
+          {/* Google Business Page - New */}
+          <div className="border rounded-md p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <Globe className="h-5 w-5 text-green-600" />
+                <h3 className="font-medium">Google Business</h3>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => handleConnectAccount("Google Business")}
+              >
+                Connect
+              </Button>
+            </div>
+            <EditableText
+              id={`${isAdmin ? 'admin' : 'user'}-google-business-description`}
+              defaultContent="Connect your Google Business Profile to improve local visibility and manage your business information."
+              className="text-sm text-gray-600"
+            />
+          </div>
+
+          {/* Google Maps - New */}
+          <div className="border rounded-md p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <Map className="h-5 w-5 text-red-600" />
+                <h3 className="font-medium">Google Maps</h3>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => handleConnectAccount("Google Maps")}
+              >
+                Connect
+              </Button>
+            </div>
+            <EditableText
+              id={`${isAdmin ? 'admin' : 'user'}-google-maps-description`}
+              defaultContent="Connect your Google Maps listing to help customers find your location and get directions easily."
               className="text-sm text-gray-600"
             />
           </div>
