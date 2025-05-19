@@ -313,7 +313,7 @@ export const useSocialMedia = () => {
       sessionStorage.setItem('facebook_oauth_state', state);
       
       // Get the redirect URI - always use the same consistent redirect URL
-      const redirectUri = `https://www.eatmeetclub.com/api/auth/callback/facebook`;
+      const redirectUri = `https://eatmeetclub.com/api/auth/callback/facebook`;
       
       // Use the Supabase URL from environment or fallback
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
@@ -375,7 +375,7 @@ export const useSocialMedia = () => {
       sessionStorage.setItem('instagram_oauth_state', state);
       
       // Use the Facebook redirect URI since Instagram uses Facebook's OAuth
-      const redirectUri = `https://www.eatmeetclub.com/api/auth/callback/facebook`;
+      const redirectUri = `https://eatmeetclub.com/api/auth/callback/facebook`;
       
       console.log("Initiating Instagram OAuth with redirect:", redirectUri);
       

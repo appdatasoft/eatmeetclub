@@ -122,7 +122,7 @@ serve(async (req) => {
         // Facebook App credentials
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         // Always use the same consistent redirect URL
-        const redirectUrl = redirectUri || "https://www.eatmeetclub.com/api/auth/callback/facebook";
+        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
 
         if (!clientId) {
           return new Response(
@@ -155,7 +155,7 @@ serve(async (req) => {
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         const clientSecret = Deno.env.get("FACEBOOK_APP_SECRET");
         // Always use the same consistent redirect URL
-        const redirectUrl = redirectUri || "https://www.eatmeetclub.com/api/auth/callback/facebook";
+        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
 
         if (!clientId || !clientSecret) {
           return new Response(
@@ -262,7 +262,7 @@ serve(async (req) => {
         // Instagram App credentials (same as Facebook App since it uses Facebook's OAuth)
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         // Always use the same consistent redirect URL
-        const redirectUrl = redirectUri || "https://www.eatmeetclub.com/api/auth/callback/facebook";
+        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
 
         if (!clientId) {
           return new Response(
@@ -309,7 +309,7 @@ serve(async (req) => {
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         const clientSecret = Deno.env.get("FACEBOOK_APP_SECRET");
         // Always use the same consistent redirect URL
-        const redirectUrl = redirectUri || "https://www.eatmeetclub.com/api/auth/callback/facebook";
+        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
 
         if (!clientId || !clientSecret) {
           return new Response(
