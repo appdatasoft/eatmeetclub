@@ -11,7 +11,7 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
     try {
       // Create a controller for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // Increased to 30s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // Increased to 60s timeout for OAuth operations
       
       const fetchOptions = {
         ...options,
@@ -25,6 +25,20 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
       };
       
       console.log(`Fetching ${url} with method ${options.method || 'GET'}`);
+      
+      // For OAuth callback requests, log more details but protect sensitive data
+      if (url.includes('connect-social-media') && options.body) {
+        try {
+          const body = JSON.parse(options.body.toString());
+          console.log(`Request body for ${url}: `, {
+            ...body,
+            code: body.code ? `${body.code.substring(0, 10)}... (length: ${body.code.length})` : undefined,
+            redirectUri: body.redirectUri
+          });
+        } catch (e) {
+          console.log('Could not parse request body for logging');
+        }
+      }
       
       // Use the request queue to control concurrency and apply rate limiting
       const response = await requestQueue.add(
@@ -61,13 +75,42 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
         return response;
       }
       
-      if (retries === 0) {
-        throw new Error(`Request failed with status: ${response.status}`);
+      // For error responses, try to get more details from the response body
+      try {
+        const errorText = await response.text();
+        let errorInfo = errorText;
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorInfo = JSON.stringify(errorJson);
+        } catch {
+          // If it's not JSON, use the raw text
+        }
+        
+        console.error(`Request failed with status: ${response.status}, details:`, errorInfo);
+        
+        // Clone the response since we've consumed the body
+        const clonedResponse = new Response(errorText, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers
+        });
+        
+        if (retries === 0) {
+          return clonedResponse;
+        }
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return fetchWithRetry(retries - 1, delay * 2);
+      } catch (error) {
+        console.error('Error reading response body:', error);
+        if (retries === 0) return response;
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return fetchWithRetry(retries - 1, delay * 2);
       }
-      
-      // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, delay));
-      return fetchWithRetry(retries - 1, delay * 2);
     } catch (error: any) {
       if (error.name === 'AbortError') {
         console.warn('Request timed out, retrying...');

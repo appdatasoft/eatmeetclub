@@ -101,13 +101,27 @@ const FacebookAuthCallback: React.FC = () => {
         const platform = state.startsWith('instagram_') ? 'Instagram' : 'Facebook';
         console.log(`Processing ${platform} connection`);
         
-        // Get Supabase URL and redirect URI
+        // Get Supabase URL and determine the appropriate redirect URI
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
-        // Determine the callback URL based on current location
+        
+        // Properly determine the redirect URI based on the current domain
+        // This is critical for OAuth to work correctly with Facebook
+        let redirectUri;
         const hostname = window.location.hostname;
-        // Use the same host as the current page for the callback URI
-        const protocol = window.location.protocol;
-        const redirectUri = `${protocol}//${hostname}/api/auth/callback/facebook`;
+        
+        if (hostname === 'localhost' || hostname.includes('192.168.') || hostname.includes('127.0.0.1')) {
+          // For local development
+          redirectUri = `${window.location.protocol}//${hostname}:${window.location.port}/api/auth/callback/facebook`;
+          console.log(`Using local redirect URI: ${redirectUri}`);
+        } else if (hostname.includes('eatmeetclub.com')) {
+          // For production domain - use the configured URL from Facebook developers console
+          redirectUri = `https://eatmeetclub.com/api/auth/callback/facebook`;
+          console.log(`Using production redirect URI: ${redirectUri}`);
+        } else {
+          // For preview deployments or unknown environments
+          redirectUri = `${window.location.origin}/api/auth/callback/facebook`;
+          console.log(`Using dynamic redirect URI: ${redirectUri}`);
+        }
         
         console.log(`Calling edge function with platform: ${platform}, redirectUri: ${redirectUri}, supabaseUrl: ${supabaseUrl}`);
         
@@ -120,6 +134,7 @@ const FacebookAuthCallback: React.FC = () => {
         setDebugInfo(prev => ({ 
           ...prev, 
           platform,
+          redirectUri,
           requestParams: {
             action: 'callback',
             code,
@@ -131,6 +146,7 @@ const FacebookAuthCallback: React.FC = () => {
         
         try {
           // Use the customFetch utility for improved error handling and retries
+          console.log(`Sending request to edge function with code (length: ${code?.length})`);
           const response = await customFetch(edgeFunctionUrl, {
             method: 'POST',
             headers: {
@@ -154,7 +170,7 @@ const FacebookAuthCallback: React.FC = () => {
           }));
           
           const responseText = await response.text();
-          console.log('Raw edge function response:', responseText);
+          console.log(`Raw edge function response (first 50 chars): ${responseText.substring(0, 50)}...`);
           
           let result;
           try {
