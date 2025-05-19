@@ -4,7 +4,7 @@ import { FeeConfig } from '@/hooks/admin/useAdminFees';
 export interface ContractTemplate {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   type: string;
   content: string;
   variables: Record<string, unknown>;
@@ -33,11 +33,12 @@ export const DEFAULT_AVAILABLE_FIELDS: ContractVariable[] = [
   { name: 'event_date', label: 'Event Date', description: 'Date of the event' },
   { name: 'ticket_price', label: 'Ticket Price', description: 'Price of the event ticket' },
   { name: 'sales_rep_name', label: 'Sales Rep Name', description: 'Name of the sales representative' },
-  // Fee configuration fields
-  { name: 'restaurant_monthly_fee', label: 'Restaurant Monthly Fee', description: 'Monthly fee charged to restaurants' },
-  { name: 'signup_commission_value', label: 'Signup Commission Value', description: 'Commission value for signing up venues' },
+  
+  // Fee configuration fields - updated labels as requested
+  { name: 'restaurant_monthly_fee', label: 'The monthly fee charged to restaurants', description: 'Monthly fee charged to restaurants' },
+  { name: 'signup_commission_value', label: 'Commission for signing up venues', description: 'Commission value for signing up venues' },
   { name: 'signup_commission_type', label: 'Signup Commission Type', description: 'Commission type (flat or percentage) for signing up venues' },
-  { name: 'ticket_commission_value', label: 'Ticket Commission Value', description: 'Commission value on ticket sales' },
+  { name: 'ticket_commission_value', label: 'Commission on ticket sales', description: 'Commission value on ticket sales' },
   { name: 'ticket_commission_type', label: 'Ticket Commission Type', description: 'Commission type (flat or percentage) on ticket sales' }
 ];
 

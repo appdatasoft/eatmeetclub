@@ -35,7 +35,8 @@ export const useTemplateOperations = () => {
       
       console.log(`Fetched ${data.length} templates:`, data);
       
-      return data;
+      // Explicitly cast data to meet expected return type
+      return data as unknown as ContractTemplate[];
     } catch (error) {
       console.error('Error in fetchTemplates:', error);
       throw error;
@@ -50,12 +51,14 @@ export const useTemplateOperations = () => {
     try {
       console.log(`Saving template ${id} with content length: ${content.length}`);
       
+      // Ensure we have the fees in the template variables
+      const templateVars: Record<string, any> = {};
+      templateVars.fees = fees || {};
+      
       const { data, error } = await templates.update(id, { 
         content,
         // Inject fee information into variables field to make them available for the template
-        variables: { 
-          fees: fees || {} 
-        }
+        variables: templateVars
       });
       
       if (error) {
@@ -96,16 +99,16 @@ export const useTemplateOperations = () => {
       console.log(`Creating template for type: ${templateType} (mapped to: ${backendType})`);
       
       // Ensure we have the fees in the template variables
-      if (!template.variables) {
-        template.variables = {};
-      }
+      const templateVars: Record<string, any> = template.variables ? { ...template.variables } : {};
+      templateVars.fees = fees || {};
       
-      template.variables.fees = fees || {};
-      
-      const { data, error } = await templates.create({
+      const preparedTemplate = {
         ...template,
+        variables: templateVars,
         type: backendType
-      });
+      };
+      
+      const { data, error } = await templates.create(preparedTemplate as any);
       
       if (error) {
         console.error('Error creating template:', error);
@@ -143,13 +146,15 @@ export const useTemplateOperations = () => {
       console.log(`Updating template ${id}:`, template);
       
       // Ensure we have the fees in the template variables
-      if (!template.variables) {
-        template.variables = {};
-      }
+      const templateVars: Record<string, any> = template.variables ? { ...template.variables } : {};
+      templateVars.fees = fees || {};
       
-      template.variables.fees = fees || {};
+      const preparedTemplate = {
+        ...template,
+        variables: templateVars
+      };
       
-      const { data, error } = await templates.update(id, template);
+      const { data, error } = await templates.update(id, preparedTemplate as any);
       
       if (error) {
         console.error('Error updating template:', error);

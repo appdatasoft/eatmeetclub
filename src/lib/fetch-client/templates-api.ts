@@ -1,3 +1,4 @@
+
 /**
  * Templates API service
  */
@@ -56,11 +57,15 @@ export const templates = {
       throw new Error('Template type is required');
     }
     
+    // Handle variables properly - ensure it's a JSON object in the database
     const dbTemplate = {
       ...template,
       storage_path: template.storage_path || `templates/${template.type}/${Date.now()}`,
       name: template.name || 'Untitled Template',
-      type: template.type // Ensure type is present and correctly typed
+      type: template.type, // Ensure type is present and correctly typed
+      variables: typeof template.variables === 'string' ? 
+        template.variables : 
+        JSON.stringify(template.variables || {})
     };
     
     console.log("Creating template with data:", dbTemplate);
@@ -89,7 +94,7 @@ export const templates = {
     // Make sure we're sending a proper update payload
     const dbTemplate: Partial<ContractTemplate> = { ...template };
     
-    // Ensure variables is a valid JSON object if present
+    // Ensure variables is a valid JSON object for the database
     if (dbTemplate.variables) {
       try {
         // Convert to string if it's not already a string
