@@ -1,11 +1,11 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useTemplateOperations } from './services/templateOperations';
 import { ContractTemplate, ContractVariable, DEFAULT_AVAILABLE_FIELDS } from './types/contractTemplateTypes';
 
-export { ContractTemplate, ContractVariable } from './types/contractTemplateTypes';
+// Use export type for re-exporting types
+export type { ContractTemplate, ContractVariable } from './types/contractTemplateTypes';
 
 export const useContractTemplates = (templateType: string) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
