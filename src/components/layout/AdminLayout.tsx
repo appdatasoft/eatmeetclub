@@ -51,8 +51,10 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         
         // Use fetchWithRetry for more reliable admin check
         const isUserAdmin = await fetchWithRetry(async () => {
-          // Clone the response to ensure we can read it
+          // Check if user is admin
           const { data, error } = await supabase.rpc('is_admin', { user_id: user.id });
+          console.log("Admin check result:", { data, error });
+          
           if (error) throw error;
           return !!data;
         }, {
@@ -72,6 +74,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         }
         
         if (isMounted) {
+          console.log("Admin check passed, allowing access");
           setIsAdmin(true);
         }
       } catch (error: any) {

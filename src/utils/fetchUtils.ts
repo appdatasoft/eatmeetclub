@@ -8,7 +8,7 @@ export type FetchRetryOptions = {
   baseDelay?: number;
   maxDelay?: number;
   shouldRetry?: (error: any) => boolean;
-  headers?: Record<string, string>; // Add headers support
+  headers?: Record<string, string>;
 };
 
 /**
@@ -117,10 +117,15 @@ export const fetchWithCache = async <T>(
     cacheTime?: number,
     acceptHeader?: string 
   } = {},
-  cacheKey?: string
+  clearCacheKey?: string
 ): Promise<T> => {
-  const key = cacheKey || url;
+  const key = url;
   const { cacheTime = 60000, acceptHeader, ...fetchOptions } = options;
+  
+  // Clear cache if requested
+  if (clearCacheKey && responseCache.has(clearCacheKey)) {
+    responseCache.delete(clearCacheKey);
+  }
   
   // Check cache
   if (responseCache.has(key)) {
@@ -143,28 +148,49 @@ export const fetchWithCache = async <T>(
     headers.set('Accept', 'application/json');
   }
   
-  // Make the fetch call with updated headers
-  const response = await fetch(url, {
-    ...fetchOptions,
-    headers
-  });
+  // Log the request to help with debugging
+  console.log(`Fetching: ${url} with Accept: ${headers.get('Accept')}`);
   
-  if (!response.ok) {
-    const errorMsg = `HTTP error! Status: ${response.status}`;
-    console.error(errorMsg, { url, status: response.status, statusText: response.statusText });
-    throw new Error(errorMsg);
+  try {
+    // Make the fetch call with updated headers
+    const response = await fetch(url, {
+      ...fetchOptions,
+      headers,
+      // Add cache control headers
+      cache: 'no-cache',
+      credentials: 'same-origin'
+    });
+    
+    if (!response.ok) {
+      const errorMsg = `HTTP error! Status: ${response.status}`;
+      console.error(errorMsg, { url, status: response.status, statusText: response.statusText });
+      
+      // Try to get more error details
+      let errorDetails = '';
+      try {
+        const errorText = await response.text();
+        errorDetails = errorText || response.statusText;
+      } catch (e) {
+        // Ignore error reading error details
+      }
+      
+      throw new Error(`${errorMsg}: ${errorDetails}`);
+    }
+    
+    // Clone response and parse
+    const data = await safelyParseResponse<T>(response);
+    
+    // Store in cache
+    responseCache.set(key, {
+      data,
+      expires: Date.now() + cacheTime
+    });
+    
+    return data;
+  } catch (error) {
+    console.error('Fetch error:', error);
+    throw error;
   }
-  
-  // Clone response and parse
-  const data = await safelyParseResponse<T>(response);
-  
-  // Store in cache
-  responseCache.set(key, {
-    data,
-    expires: Date.now() + cacheTime
-  });
-  
-  return data;
 };
 
 /**

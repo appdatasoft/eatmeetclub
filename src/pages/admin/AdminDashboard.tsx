@@ -1,14 +1,22 @@
 
-import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useState, useEffect } from 'react';
+
+// Define a type for our stats
+type AdminStats = {
+  users: number;
+  events: number;
+  restaurants: number;
+  paidEvents: number;
+}
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<AdminStats>({
     users: 0,
     events: 0,
     restaurants: 0,
