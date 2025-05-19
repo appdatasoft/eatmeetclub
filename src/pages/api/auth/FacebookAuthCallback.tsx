@@ -74,8 +74,10 @@ const FacebookAuthCallback: React.FC = () => {
         console.log(`Processing ${platform} connection`);
         
         // Call the edge function to process the OAuth callback
-        const supabaseUrl = 'https://wocfwpedauuhlrfugxuu.supabase.co';
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
         const redirectUri = 'https://eatmeetclub.com/api/auth/callback/facebook';
+        
+        console.log(`Calling edge function with platform: ${platform}, redirectUri: ${redirectUri}`);
         
         const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
           method: 'POST',
@@ -92,8 +94,17 @@ const FacebookAuthCallback: React.FC = () => {
           })
         });
         
+        console.log(`Edge function response status: ${response.status}`);
+        
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (e) {
+            errorData = { error: errorText };
+          }
           console.error('Error processing callback:', errorData);
           throw new Error(errorData.error || `Failed to complete ${platform} authentication`);
         }
@@ -132,6 +143,11 @@ const FacebookAuthCallback: React.FC = () => {
           description: err.message || 'Failed to connect social media account',
           variant: 'destructive',
         });
+        
+        // Redirect to dashboard after error
+        setTimeout(() => {
+          navigate('/dashboard/social-media', { replace: true });
+        }, 3000);
       }
     };
     
