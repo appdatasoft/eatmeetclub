@@ -81,4 +81,3 @@ truncate_all_on_start = false
 
 [functions]
 connect-social-media = { verify_jwt = true }
-

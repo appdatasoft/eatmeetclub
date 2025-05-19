@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -39,7 +39,7 @@ export const useSocialMedia = () => {
 
       if (error) throw error;
 
-      setConnections(data || []);
+      setConnections(data as SocialMediaConnection[] || []);
       return data;
     } catch (err: any) {
       console.error('Error fetching social media connections:', err);
@@ -76,7 +76,8 @@ export const useSocialMedia = () => {
         throw new Error('No active session found');
       }
 
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/connect-social-media`, {
+      const supabaseUrl = supabase.supabaseUrl;
+      const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

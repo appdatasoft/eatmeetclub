@@ -1,12 +1,13 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Facebook, Instagram, Twitter, Map, Globe, Link } from "lucide-react";
+import { Facebook, Instagram, Twitter, Map, Globe } from "lucide-react";
 import { useEditableContent } from '@/components/editor/EditableContentProvider';
 import EditableText from '@/components/editor/EditableText';
 import { useToast } from '@/hooks/use-toast';
-import { useSocialMedia } from '@/hooks/useSocialMedia';
+import { useSocialMedia, SocialMediaConnection } from '@/hooks/useSocialMedia';
+import ConnectionDetailsModal from './ConnectionDetailsModal';
 
 interface SocialMediaTabProps {
   isAdmin?: boolean;
@@ -23,13 +24,21 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
     getConnectionStatus 
   } = useSocialMedia();
   
+  const [selectedConnection, setSelectedConnection] = useState<SocialMediaConnection | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  
   useEffect(() => {
     fetchConnections();
   }, []);
 
   const handleConnectAccount = async (platform: string) => {
     try {
-      await connectSocialMedia(platform);
+      const result = await connectSocialMedia(platform);
+      if (result) {
+        const connection = connections.find(conn => conn.platform === platform) || result;
+        setSelectedConnection(connection);
+        setIsModalOpen(true);
+      }
     } catch (error) {
       toast({
         title: `${platform} Integration Error`,
@@ -46,7 +55,19 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
       <Button 
         variant={isConnected ? "default" : "outline"} 
         size="sm"
-        onClick={() => handleConnectAccount(platform)}
+        onClick={() => {
+          if (isConnected) {
+            // Show details for already connected account
+            const connection = connections.find(conn => conn.platform === platform);
+            if (connection) {
+              setSelectedConnection(connection);
+              setIsModalOpen(true);
+            }
+          } else {
+            // Connect new account
+            handleConnectAccount(platform);
+          }
+        }}
         disabled={isLoading}
       >
         {isConnected ? "Connected" : "Connect"}
@@ -177,6 +198,13 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Connection Details Modal */}
+      <ConnectionDetailsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        connection={selectedConnection}
+      />
 
       {editModeEnabled && (
         <div className="bg-blue-50 p-4 rounded-md border border-blue-200 text-sm text-blue-800">

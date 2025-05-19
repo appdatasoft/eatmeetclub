@@ -1058,6 +1058,39 @@ export type Database = {
         }
         Relationships: []
       }
+      social_media_connections: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_connected: boolean
+          platform: string
+          profile_url: string | null
+          updated_at: string | null
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_connected?: boolean
+          platform: string
+          profile_url?: string | null
+          updated_at?: string | null
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_connected?: boolean
+          platform?: string
+          profile_url?: string | null
+          updated_at?: string | null
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       tickets: {
         Row: {
           event_id: string
