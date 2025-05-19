@@ -21,8 +21,9 @@ export const createTicketPayment = async (
       throw new Error("User not authenticated");
     }
 
-    console.log("Invoking create-ticket-payment function with:", {
-      eventId, quantity, userId
+    console.log("Creating ticket payment with params:", {
+      eventId, quantity, userId,
+      timestamp: new Date().toISOString()
     });
 
     // Call the Supabase Edge Function to create a payment
@@ -57,6 +58,8 @@ export const createTicketPayment = async (
       };
     }
 
+    console.log("Payment session created successfully with URL:", response.data.url);
+    
     return {
       url: response.data.url,
       sessionId: response.data.sessionId

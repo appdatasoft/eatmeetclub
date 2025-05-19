@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -75,7 +74,8 @@ export const useEventPaymentHandler = (
         restaurantAddress: event.restaurant?.address || '',
         restaurantCity: event.restaurant?.city || '',
         date: event.date,
-        time: event.time
+        time: event.time,
+        timestamp: Date.now() // Add timestamp for tracking
       }));
       
       console.log("Creating payment with:", {
@@ -85,10 +85,6 @@ export const useEventPaymentHandler = (
       });
       
       const paymentResult = await createTicketPayment(event.id, ticketCount, user.id);
-      
-      if (!paymentResult) {
-        throw new Error("Failed to create payment session");
-      }
       
       if (paymentResult.error) {
         throw new Error(paymentResult.error);
@@ -108,6 +104,7 @@ export const useEventPaymentHandler = (
         description: error.message || "Failed to process ticket purchase. Please try again.",
         variant: "destructive"
       });
+    } finally {
       setIsPaymentProcessing(false);
     }
   };
