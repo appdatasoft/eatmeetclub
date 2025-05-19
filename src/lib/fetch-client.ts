@@ -1,3 +1,4 @@
+
 /**
  * Enhanced Fetch Client with optimized performance
  */
@@ -233,4 +234,91 @@ export const patch = <T = any>(url: string, data: any, options: FetchClientOptio
 
 export const del = <T = any>(url: string, options: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
   return fetchClient<T>(url, { ...options, method: 'DELETE' });
+};
+
+// New methods for template operations
+export const templates = {
+  async getAll<T = any>(type: string, options: FetchClientOptions = {}): Promise<FetchResponse<T>> {
+    return get<T>(`/api/templates/${type}`, {
+      ...options,
+      fallbackToSupabase: true,
+      supabseFallbackFn: async () => {
+        const { data, error } = await supabase
+          .from('contract_templates')
+          .select('*')
+          .eq('type', type);
+        
+        if (error) throw error;
+        return data;
+      }
+    });
+  },
+  
+  async getById<T = any>(id: string, options: FetchClientOptions = {}): Promise<FetchResponse<T>> {
+    return get<T>(`/api/templates/${id}`, {
+      ...options,
+      fallbackToSupabase: true,
+      supabseFallbackFn: async () => {
+        const { data, error } = await supabase
+          .from('contract_templates')
+          .select('*')
+          .eq('id', id)
+          .single();
+          
+        if (error) throw error;
+        return data;
+      }
+    });
+  },
+  
+  async create<T = any>(template: any, options: FetchClientOptions = {}): Promise<FetchResponse<T>> {
+    return post<T>('/api/templates', template, {
+      ...options,
+      fallbackToSupabase: true,
+      supabseFallbackFn: async () => {
+        const { data, error } = await supabase
+          .from('contract_templates')
+          .insert(template)
+          .select()
+          .single();
+          
+        if (error) throw error;
+        return data;
+      }
+    });
+  },
+  
+  async update<T = any>(id: string, template: any, options: FetchClientOptions = {}): Promise<FetchResponse<T>> {
+    return put<T>(`/api/templates/${id}`, template, {
+      ...options,
+      fallbackToSupabase: true,
+      supabseFallbackFn: async () => {
+        const { data, error } = await supabase
+          .from('contract_templates')
+          .update(template)
+          .eq('id', id)
+          .select()
+          .single();
+          
+        if (error) throw error;
+        return data;
+      }
+    });
+  },
+  
+  async delete<T = any>(id: string, options: FetchClientOptions = {}): Promise<FetchResponse<T>> {
+    return del<T>(`/api/templates/${id}`, {
+      ...options,
+      fallbackToSupabase: true,
+      supabseFallbackFn: async () => {
+        const { error } = await supabase
+          .from('contract_templates')
+          .delete()
+          .eq('id', id);
+          
+        if (error) throw error;
+        return { success: true };
+      }
+    });
+  }
 };

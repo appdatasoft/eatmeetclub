@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText } from "lucide-react";
+import ContractTemplatesManager from "@/components/admin/templates/ContractTemplatesManager";
 
 const AdminTemplates = () => {
   return (
@@ -21,7 +22,7 @@ const AdminTemplates = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="email" className="w-full">
+            <Tabs defaultValue="contracts" className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="email">Email Templates</TabsTrigger>
                 <TabsTrigger value="sms">SMS Templates</TabsTrigger>
@@ -47,12 +48,7 @@ const AdminTemplates = () => {
               </TabsContent>
               
               <TabsContent value="contracts" className="space-y-4">
-                <p className="text-gray-600">
-                  Contract templates for restaurant partnerships and user agreements.
-                </p>
-                <div className="bg-gray-50 p-4 rounded">
-                  <p className="text-sm text-gray-500">Contract template editor will be implemented here.</p>
-                </div>
+                <ContractTemplatesManager />
               </TabsContent>
             </Tabs>
           </CardContent>
