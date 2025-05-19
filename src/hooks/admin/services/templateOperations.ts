@@ -80,50 +80,66 @@ export const useTemplateOperations = () => {
         return [];
       }
       
-      // Use Supabase directly instead of calling the edge function
-      const { data: users, error } = await supabase
-        .from('users')
-        .select('id, email, raw_user_meta_data')
+      // Use auth.users view to fetch user data instead of 'users' table
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, email:auth.users!id(email), raw_user_meta_data:auth.users!id(raw_user_meta_data)')
         .limit(50);
       
       if (error) {
-        console.error("Error fetching users directly from Supabase:", error);
-        throw error;
+        // If profiles doesn't exist, fall back to direct auth users query via RPC (function call)
+        console.log("Falling back to RPC method for user data");
+        const { data: users, error: rpcError } = await supabase
+          .rpc('get_users_for_admin')
+          .limit(50);
+        
+        if (rpcError) {
+          console.error("Error fetching users via RPC:", rpcError);
+          throw rpcError;
+        }
+        
+        if (!users) {
+          return [];
+        }
+        
+        return users.map((user: any) => {
+          const metadata = user.raw_user_meta_data || {};
+          return {
+            id: user.id,
+            firstName: metadata.first_name || '',
+            lastName: metadata.last_name || '',
+            email: user.email || '',
+            displayName: `${metadata.first_name || ''} ${metadata.last_name || ''} <${user.email || ''}>`
+          };
+        });
       }
       
-      console.log("Fetched users from Supabase:", users);
+      console.log("Fetched profiles from Supabase:", profiles);
       
-      // Format users data into UserOption format
-      return users.map((user: any) => {
-        const metadata = user.raw_user_meta_data || {};
+      if (!profiles || profiles.length === 0) {
+        return [];
+      }
+      
+      // Format profiles data into UserOption format
+      return profiles.map((profile: any) => {
+        // Access the joined data correctly
+        const userData = profile.raw_user_meta_data || {};
+        const email = profile.email?.email || '';
+        
         return {
-          id: user.id,
-          firstName: metadata.first_name || '',
-          lastName: metadata.last_name || '',
-          email: user.email || '',
-          displayName: `${metadata.first_name || ''} ${metadata.last_name || ''} <${user.email || ''}>`
+          id: profile.id,
+          firstName: userData.first_name || '',
+          lastName: userData.last_name || '',
+          email: email,
+          displayName: `${userData.first_name || ''} ${userData.last_name || ''} <${email}>`
         };
       });
     } catch (error) {
       console.error('Error in fetchUserOptions:', error);
       
-      // Fallback to fetch some test users when development environment
-      return [
-        {
-          id: '1',
-          firstName: 'Test',
-          lastName: 'User',
-          email: 'test@example.com',
-          displayName: 'Test User <test@example.com>'
-        },
-        {
-          id: '2',
-          firstName: 'Demo',
-          lastName: 'Account',
-          email: 'demo@example.com',
-          displayName: 'Demo Account <demo@example.com>'
-        }
-      ];
+      // Return empty array when there's an error
+      console.log("Returning empty user list due to error");
+      return [];
     }
   };
   
@@ -316,7 +332,7 @@ export const useTemplateOperations = () => {
     }
   };
   
-  // Enhanced function to send test emails
+  // Enhanced function to send test emails with both selected users and manually entered emails
   const sendTestEmail = async (recipients: string[], subject: string, content: string, templateId?: string): Promise<boolean> => {
     if (!recipients.length) {
       console.error("No recipients provided");
