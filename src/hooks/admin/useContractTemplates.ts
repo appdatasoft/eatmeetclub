@@ -16,7 +16,7 @@ export interface ContractVariable {
 export interface ContractTemplate {
   id: string;
   name: string;
-  description: string;
+  description?: string; // Make this optional to match the fetch-client definition
   content: string;
   type: "restaurant" | "restaurant_referral" | "ticket_sales";
   variables: ContractVariable[];
@@ -24,7 +24,7 @@ export interface ContractTemplate {
   is_active?: boolean;
   updated_at?: string;
   created_at?: string;
-  storage_path?: string;
+  storage_path: string; // Make this required to match the fetch-client definition
   created_by?: string;
   updated_by?: string;
 }
@@ -90,11 +90,13 @@ export const useContractTemplates = (templateType: string) => {
         throw new Error(response.error.message);
       }
 
-      setContractTemplates(response.data || []);
+      // Convert the response data to our local ContractTemplate type
+      const typedTemplates = (response.data || []) as ContractTemplate[];
+      setContractTemplates(typedTemplates);
       
       // Set the first template as the selected template if available
-      if (response.data && response.data.length > 0) {
-        setTemplateData(response.data[0]);
+      if (typedTemplates.length > 0) {
+        setTemplateData(typedTemplates[0]);
       }
     } catch (err: any) {
       console.error("Error fetching templates:", err);
@@ -198,9 +200,11 @@ export const useContractTemplates = (templateType: string) => {
           apiTemplateType = "restaurant";
       }
 
+      // Ensure storage_path is set to match required field
       const newTemplate = {
         ...template,
         type: apiTemplateType,
+        storage_path: template.storage_path || `templates/${apiTemplateType}/${Date.now()}`,
         variables: template.variables || []
       };
 
@@ -210,7 +214,7 @@ export const useContractTemplates = (templateType: string) => {
         throw new Error(response.error.message);
       }
 
-      // Add the new template to the state
+      // Add the new template to the state with type assertion
       setContractTemplates(prev => [...prev, response.data as ContractTemplate]);
       
       toast({
@@ -249,9 +253,9 @@ export const useContractTemplates = (templateType: string) => {
         throw new Error(response.error.message);
       }
 
-      // Update the template in the state
+      // Update the template in the state with type assertion
       setContractTemplates(prev => 
-        prev.map(t => t.id === id ? { ...t, ...response.data } as ContractTemplate : t)
+        prev.map(t => t.id === id ? { ...t, ...response.data as ContractTemplate } : t)
       );
       
       toast({
