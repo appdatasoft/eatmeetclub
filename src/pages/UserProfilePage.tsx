@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,8 +93,7 @@ const UserProfilePage: React.FC = () => {
       
       try {
         // Check if viewing own profile
-        // Use !! to ensure this is a boolean rather than User object
-        const isSelfProfile = !!currentUser && ((!id && currentUser) || id === currentUser.id);
+        const isSelfProfile = !!currentUser && ((!id && !!currentUser) || id === currentUser.id);
         if (isSelfProfile) {
           console.log("User is viewing their own profile");
           setIsSelf(true);
