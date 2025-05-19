@@ -10,7 +10,6 @@ const corsHeaders = {
 // Create a Supabase client
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Define the expected request body structure for social media connections
 interface SocialMediaConnectionRequest {
@@ -38,8 +37,17 @@ Deno.serve(async (req) => {
     // Extract the token (Bearer token)
     const token = authHeader.replace('Bearer ', '');
     
+    // Create Supabase client with the user's token for proper RLS enforcement
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    });
+    
     // Verify the JWT and get the user
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       return new Response(
         JSON.stringify({ error: 'Invalid token or user not found' }),
@@ -58,22 +66,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Simulate platform-specific authentication
-    // In a real implementation, this would redirect to the platform OAuth flow
-    // or handle API key authentication
-    
-    // Check if a connection already exists for this platform and user
-    const { data: existingConnection, error: fetchError } = await supabase
-      .from('social_media_connections')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('platform', platform)
-      .maybeSingle();
-
-    if (fetchError) {
-      console.error('Error checking existing connection:', fetchError);
-    }
-
     // Generate platform-specific default values
     const defaultUsername = 'connected-user';
     const getDefaultProfileUrl = (platform: string) => {
@@ -84,6 +76,19 @@ Deno.serve(async (req) => {
           return `https://example.com/${platform.toLowerCase()}/profile`;
       }
     };
+
+    // Check if a connection already exists for this platform and user
+    const { data: existingConnection, error: fetchError } = await supabase
+      .from('social_media_connections')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('platform', platform)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error('Error checking existing connection:', fetchError);
+      throw fetchError;
+    }
 
     let result;
     if (existingConnection) {
@@ -113,6 +118,7 @@ Deno.serve(async (req) => {
     }
 
     if (result.error) {
+      console.error('Error updating/inserting social media connection:', result.error);
       throw result.error;
     }
 
