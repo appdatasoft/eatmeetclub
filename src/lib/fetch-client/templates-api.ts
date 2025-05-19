@@ -120,11 +120,12 @@ export const templates = {
           // If variables is a string, parse it back to an object for Supabase
           const processedTemplate = { ...dbTemplate };
           
-          // We need to make sure processedTemplate.variables is an object for Supabase
-          if (typeof processedTemplate.variables === 'string') {
+          // We need to make sure processedTemplate.variables is handled correctly for Supabase
+          if (processedTemplate.variables && typeof processedTemplate.variables === 'string') {
             try {
-              // Parse the string to an object
-              processedTemplate.variables = JSON.parse(processedTemplate.variables);
+              // Try to parse string to object (Supabase prefers objects for jsonb fields)
+              const parsedVars = JSON.parse(processedTemplate.variables);
+              processedTemplate.variables = parsedVars;
             } catch (e) {
               console.warn("Could not parse variables as JSON, using as is");
               // Keep as string if parsing fails
@@ -209,11 +210,10 @@ export const templates = {
       const result = await response.json();
       
       if (!response.ok) {
-        const error = new Error(result.message || "Failed to send email");
-        // Use type assertion to add status to the error object
-        const errorWithStatus = error as Error & { status: number };
-        errorWithStatus.status = response.status;
-        throw errorWithStatus;
+        // Create an error object with status property
+        const errorObj = new Error(result.message || "Failed to send email") as Error & { status: number };
+        errorObj.status = response.status;
+        throw errorObj;
       }
       
       return { data: result, error: null };

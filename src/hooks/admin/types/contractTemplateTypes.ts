@@ -1,3 +1,4 @@
+
 import { FeeConfig } from '@/hooks/admin/useAdminFees';
 
 export interface ContractTemplate {

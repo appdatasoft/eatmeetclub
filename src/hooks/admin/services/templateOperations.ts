@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { templates } from '@/lib/fetch-client/templates-api';
@@ -117,7 +118,6 @@ export const useTemplateOperations = () => {
       
       const { data, error } = await templates.update(id, { 
         content,
-        // Make sure variables is an object, not an array
         variables: templateVars
       });
       
@@ -159,8 +159,20 @@ export const useTemplateOperations = () => {
       console.log(`Creating template for type: ${templateType} (mapped to: ${backendType})`);
       
       // Create a record for variables with fee information
-      const templateVars: Record<string, any> = template.variables ? 
-        (typeof template.variables === 'string' ? JSON.parse(template.variables) : { ...template.variables as Record<string, any> }) : {};
+      let templateVars: Record<string, any> = {};
+      
+      if (template.variables) {
+        if (typeof template.variables === 'string') {
+          try {
+            templateVars = JSON.parse(template.variables);
+          } catch (e) {
+            console.warn("Could not parse template variables");
+            templateVars = {};
+          }
+        } else {
+          templateVars = template.variables as Record<string, any>;
+        }
+      }
       
       // Add fees if available
       if (fees) {
@@ -215,8 +227,20 @@ export const useTemplateOperations = () => {
       console.log(`Updating template ${id}:`, template);
       
       // Create a record for variables with fee information
-      const templateVars: Record<string, any> = template.variables ? 
-        (typeof template.variables === 'string' ? JSON.parse(template.variables) : { ...template.variables as Record<string, any> }) : {};
+      let templateVars: Record<string, any> = {};
+      
+      if (template.variables) {
+        if (typeof template.variables === 'string') {
+          try {
+            templateVars = JSON.parse(template.variables);
+          } catch (e) {
+            console.warn("Could not parse template variables");
+            templateVars = {};
+          }
+        } else {
+          templateVars = template.variables as Record<string, any>;
+        }
+      }
       
       // Add fees if available
       if (fees) {
