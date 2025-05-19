@@ -71,8 +71,8 @@ export const useSocialMedia = () => {
           
           // Supabase URL for the edge function
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
-          // Use the Supabase callback URL
-          const redirectUri = `https://wocfwpedauuhlrfugxuu.supabase.co/auth/v1/callback`;
+          // Use the site's own callback URL
+          const redirectUri = `https://eatmeetclub.com/api/auth/callback/facebook`;
           
           // Complete OAuth flow by exchanging code for token
           const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
@@ -320,8 +320,8 @@ export const useSocialMedia = () => {
       // Store state in sessionStorage for verification after redirect
       sessionStorage.setItem('facebook_oauth_state', state);
       
-      // Use the Supabase callback URL
-      const redirectUri = `https://wocfwpedauuhlrfugxuu.supabase.co/auth/v1/callback`;
+      // Use the site's own callback URL
+      const redirectUri = `https://eatmeetclub.com/api/auth/callback/facebook`;
       
       // Use the Supabase URL from environment or fallback
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
@@ -382,8 +382,8 @@ export const useSocialMedia = () => {
       // Store state in sessionStorage for verification after redirect
       sessionStorage.setItem('instagram_oauth_state', state);
       
-      // Use the Supabase callback URL
-      const redirectUri = `https://wocfwpedauuhlrfugxuu.supabase.co/auth/v1/callback`;
+      // Use the site's own callback URL
+      const redirectUri = `https://eatmeetclub.com/api/auth/callback/facebook`;
       
       console.log("Initiating Instagram OAuth with redirect:", redirectUri);
       

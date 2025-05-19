@@ -44,7 +44,7 @@ file_size_limit = "50MiB"
 # in emails.
 site_url = "https://example.com"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://example.com", "https://wocfwpedauuhlrfugxuu.supabase.co/auth/v1/callback"]
+additional_redirect_urls = ["https://example.com", "https://wocfwpedauuhlrfugxuu.supabase.co/auth/v1/callback", "https://eatmeetclub.com/api/auth/callback/facebook"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 seconds (one
 # week).
 jwt_expiry = 3600
@@ -84,4 +84,3 @@ verify_jwt = false
 verify_jwt = false
 [functions.meta-deauth]
 verify_jwt = false
-

@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -121,8 +122,8 @@ serve(async (req) => {
       if (action === "initiate") {
         // Facebook App credentials
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
-        // Use the Supabase callback URL
-        const redirectUrl = redirectUri || "https://wocfwpedauuhlrfugxuu.supabase.co/auth/v1/callback";
+        // Use the site's own callback URL
+        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/meta/deauth";
 
         if (!clientId) {
           return new Response(
@@ -154,8 +155,8 @@ serve(async (req) => {
 
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         const clientSecret = Deno.env.get("FACEBOOK_APP_SECRET");
-        // Use the Supabase callback URL
-        const redirectUrl = redirectUri || "https://wocfwpedauuhlrfugxuu.supabase.co/auth/v1/callback";
+        // Use the site's own callback URL
+        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
 
         if (!clientId || !clientSecret) {
           return new Response(
@@ -267,8 +268,8 @@ serve(async (req) => {
       if (action === "initiate") {
         // Instagram App credentials (same as Facebook App since it uses Facebook's OAuth)
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
-        // Use the Supabase callback URL
-        const redirectUrl = redirectUri || "https://wocfwpedauuhlrfugxuu.supabase.co/auth/v1/callback";
+        // Use the site's own callback URL
+        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
 
         if (!clientId) {
           return new Response(
@@ -314,8 +315,8 @@ serve(async (req) => {
 
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         const clientSecret = Deno.env.get("FACEBOOK_APP_SECRET");
-        // Use the Supabase callback URL
-        const redirectUrl = redirectUri || "https://wocfwpedauuhlrfugxuu.supabase.co/auth/v1/callback";
+        // Use the site's own callback URL
+        const redirectUrl = redirectUri || "https://eatmeetclub.com/api/auth/callback/facebook";
 
         if (!clientId || !clientSecret) {
           return new Response(
