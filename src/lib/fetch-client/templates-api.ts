@@ -120,7 +120,7 @@ export const templates = {
           // If variables is a string, parse it back to an object for Supabase
           if (typeof dbTemplate.variables === 'string') {
             try {
-              dbTemplate.variables = JSON.parse(dbTemplate.variables);
+              dbTemplate.variables = JSON.parse(dbTemplate.variables) as Record<string, unknown>;
             } catch (e) {
               console.warn("Could not parse variables as JSON, using as is");
               // Keep as string if parsing fails

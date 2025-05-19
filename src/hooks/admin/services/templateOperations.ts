@@ -75,9 +75,13 @@ export const useTemplateOperations = () => {
     try {
       console.log(`Saving template ${id} with content length: ${content.length}`);
       
-      // Ensure we have the fees and date information in the template variables
+      // Create a record for variables with fee information
       const templateVars: Record<string, any> = {};
-      templateVars.fees = fees || {};
+      
+      // Add fees if available
+      if (fees) {
+        templateVars.fees = fees;
+      }
       
       // Add current date information
       const dateInfo = getCurrentDateInfo();
@@ -85,7 +89,7 @@ export const useTemplateOperations = () => {
       
       const { data, error } = await templates.update(id, { 
         content,
-        // Inject fee and date information into variables field to make them available for the template
+        // Pass the variables as an object, not an array
         variables: templateVars
       });
       
@@ -126,9 +130,14 @@ export const useTemplateOperations = () => {
       
       console.log(`Creating template for type: ${templateType} (mapped to: ${backendType})`);
       
-      // Ensure we have the fees and date information in the template variables
-      const templateVars: Record<string, any> = template.variables ? { ...template.variables as Record<string, any> } : {};
-      templateVars.fees = fees || {};
+      // Create a record for variables with fee information
+      const templateVars: Record<string, any> = template.variables ? 
+        (typeof template.variables === 'string' ? JSON.parse(template.variables) : { ...template.variables }) : {};
+      
+      // Add fees if available
+      if (fees) {
+        templateVars.fees = fees;
+      }
       
       // Add current date information
       const dateInfo = getCurrentDateInfo();
@@ -177,9 +186,14 @@ export const useTemplateOperations = () => {
     try {
       console.log(`Updating template ${id}:`, template);
       
-      // Ensure we have the fees and date information in the template variables
-      const templateVars: Record<string, any> = template.variables ? { ...template.variables as Record<string, any> } : {};
-      templateVars.fees = fees || {};
+      // Create a record for variables with fee information
+      const templateVars: Record<string, any> = template.variables ? 
+        (typeof template.variables === 'string' ? JSON.parse(template.variables) : { ...template.variables }) : {};
+      
+      // Add fees if available
+      if (fees) {
+        templateVars.fees = fees;
+      }
       
       // Add current date information
       const dateInfo = getCurrentDateInfo();
