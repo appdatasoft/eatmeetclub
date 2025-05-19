@@ -41,7 +41,12 @@ export const useMenuItems = (restaurantId?: string, retryTrigger = 0) => {
         setError(error);
         console.error("Supabase error:", error);
       } else {
-        const fetchedMenuItems: MenuItem[] = data || [];
+        const fetchedMenuItems: MenuItem[] = (data || []).map(item => ({
+          ...item,
+          type: item.type || 'Other', // Ensure type is always defined
+          ingredients: [],
+          media: []
+        }));
         setMenuItems(fetchedMenuItems);
         menuItemsCache.set(fetchedMenuItems);
       }
@@ -69,7 +74,12 @@ export const useMenuItems = (restaurantId?: string, retryTrigger = 0) => {
         setError(error);
         console.error("Supabase error:", error);
       } else {
-        const fetchedMenuItems: MenuItem[] = data || [];
+        const fetchedMenuItems: MenuItem[] = (data || []).map(item => ({
+          ...item,
+          type: item.type || 'Other', // Ensure type is always defined
+          ingredients: [],
+          media: []
+        }));
         setMenuItems(fetchedMenuItems);
         if (shouldRefresh) {
           menuItemsCache.del();

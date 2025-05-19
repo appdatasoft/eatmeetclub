@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { MenuItem } from './MenuItemCard';
+import { MenuItem } from '@/types/menuItem'; // Updated import
 import MenuItemCard from './MenuItemCard';
 import { useToast } from '@/hooks/use-toast';
 import RetryAlert from '@/components/ui/RetryAlert';

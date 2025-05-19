@@ -1,21 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash, Image, ArrowLeft, ArrowRight } from 'lucide-react';
-import { MediaItem } from './types/mediaTypes';
+import { MenuItem, MediaItem } from '@/types/menuItem'; // Updated import to use shared type
 import MenuItemMedia from './MenuItemMedia';
 import MediaDialog from './media/MediaDialog';
-
-export interface MenuItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  type: string;
-  ingredients: string[];
-  media?: MediaItem[];
-}
 
 interface MenuItemCardProps {
   item: MenuItem;

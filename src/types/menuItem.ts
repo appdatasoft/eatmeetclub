@@ -7,7 +7,7 @@ export interface MenuItem {
   restaurant_id: string;
   ingredients?: string[];
   media?: MediaItem[];
-  type?: string;
+  type: string; // Changed from optional to required to match MenuItemCard
 }
 
 export interface MediaItem {
