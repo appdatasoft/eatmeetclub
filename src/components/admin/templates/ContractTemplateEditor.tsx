@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useContractTemplates } from '@/hooks/admin/useContractTemplates';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
@@ -12,11 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Save, Eye } from 'lucide-react';
+import { Save, Eye, Mail, User } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from '@/hooks/use-toast';
 import { useAdminFees } from '@/hooks/admin/useAdminFees';
+import { UserOption } from '@/hooks/admin/types/contractTemplateTypes';
 
 interface ContractTemplateEditorProps {
   templateType: 'venue' | 'salesRep' | 'ticket';
@@ -26,16 +28,25 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
   const [template, setTemplate] = useState<string>('');
   const [selectedField, setSelectedField] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState<boolean>(false);
+  const [recipientInput, setRecipientInput] = useState<string>('');
+  const [showEmailOptions, setShowEmailOptions] = useState<boolean>(false);
   const { toast } = useToast();
   const { fees } = useAdminFees();
   
   const { 
     templateData, 
     availableFields,
+    userOptions,
     isLoading, 
     isSaving,
+    isLoadingUsers,
     error,
-    saveTemplate
+    saveTemplate,
+    sendTestEmail,
+    emailSubject,
+    setEmailSubject,
+    selectedRecipients,
+    setSelectedRecipients
   } = useContractTemplates(templateType);
 
   useEffect(() => {
@@ -84,6 +95,44 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
     if (selectedField) {
       setTemplate(prev => `${prev} {{${selectedField}}} `);
       setSelectedField('');
+    }
+  };
+  
+  const handleSendTestEmail = async () => {
+    try {
+      if (!templateData?.id) {
+        console.error("No template data available");
+        toast({
+          title: "Error",
+          description: "No template selected to send",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      await sendTestEmail(template);
+    } catch (error) {
+      console.error("Error in handleSendTestEmail:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to send test email",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleSelectUser = (userId: string) => {
+    const user = userOptions.find(u => u.id === userId);
+    if (user) {
+      const recipient = user.email;
+      
+      // Check if email is already selected
+      if (!selectedRecipients.includes(recipient)) {
+        setSelectedRecipients([...selectedRecipients, recipient]);
+      }
+      
+      // Clear the input
+      setRecipientInput('');
     }
   };
 
@@ -193,6 +242,93 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
         <CardContent className="pt-6">
           <h3 className="text-lg font-medium mb-4">{getTemplateTitle()}</h3>
           
+          {/* Email Test Options */}
+          <div className="mb-6 border border-gray-200 p-4 rounded-md bg-gray-50">
+            <h4 className="font-medium mb-3 flex items-center">
+              <Mail className="mr-2 h-4 w-4" /> Send Test Email
+            </h4>
+            
+            <div className="space-y-4">
+              {/* Email Subject */}
+              <div>
+                <Label htmlFor="email-subject">Email Subject</Label>
+                <Input
+                  id="email-subject"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Enter email subject"
+                  className="mt-1"
+                />
+              </div>
+              
+              {/* Recipients */}
+              <div>
+                <Label htmlFor="email-recipients">Recipients</Label>
+                <div className="flex flex-wrap items-center gap-2 p-2 border rounded-md bg-white mt-1">
+                  {selectedRecipients.map(email => (
+                    <div key={email} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md flex items-center">
+                      <span className="mr-1">{email}</span>
+                      <button 
+                        onClick={() => setSelectedRecipients(selectedRecipients.filter(e => e !== email))}
+                        className="text-blue-800 hover:text-red-600"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Input
+                      id="email-recipients"
+                      value={recipientInput}
+                      onChange={(e) => setRecipientInput(e.target.value)}
+                      placeholder="Type or select users"
+                      className="border-0 focus-visible:ring-0"
+                      onFocus={() => setShowEmailOptions(true)}
+                      onBlur={() => setTimeout(() => setShowEmailOptions(false), 200)}
+                    />
+                    {showEmailOptions && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        {isLoadingUsers ? (
+                          <div className="p-2 text-gray-500">Loading users...</div>
+                        ) : userOptions.length > 0 ? (
+                          userOptions.map(user => (
+                            <div
+                              key={user.id}
+                              className="p-2 hover:bg-gray-100 cursor-pointer flex items-center"
+                              onClick={() => handleSelectUser(user.id)}
+                            >
+                              <User className="h-4 w-4 mr-2 text-gray-500" />
+                              <div>
+                                <div>{user.firstName} {user.lastName}</div>
+                                <div className="text-xs text-gray-500">{user.email}</div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-2 text-gray-500">No users found</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Multiple recipients can be selected from the dropdown
+                </p>
+              </div>
+              
+              <div>
+                <Button 
+                  type="button" 
+                  onClick={handleSendTestEmail} 
+                  variant="outline"
+                  disabled={isSaving || selectedRecipients.length === 0 || !emailSubject}
+                >
+                  <Mail className="mr-2 h-4 w-4" /> Send Test Email
+                </Button>
+              </div>
+            </div>
+          </div>
+          
           <div className="space-y-4">
             <div className="flex flex-col space-y-1.5">
               <Label htmlFor="template-content">Template Content</Label>
@@ -298,6 +434,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({ templat
           <li>Fee values like <code>{'{{restaurant_monthly_fee}}'}</code> will be replaced with their current database values.</li>
           <li>Date fields like <code>{'{{current_date}}'}</code>, <code>{'{{current_month}}'}</code>, and <code>{'{{days_in_month}}'}</code> are automatically populated.</li>
           <li>Preview your template to see how the variables will be highlighted.</li>
+          <li>You can send test emails to verify how your template will look when delivered.</li>
         </ul>
       </div>
     </div>

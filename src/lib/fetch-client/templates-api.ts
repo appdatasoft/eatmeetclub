@@ -167,5 +167,51 @@ export const templates = {
         return { success: true };
       }
     });
+  },
+  
+  // New method for sending test emails
+  sendTestEmail: async <T = any>(emailData: {
+    recipients: string[];
+    subject: string;
+    content: string;
+    templateId?: string;
+  }, customOptions: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
+    console.log("Sending test email:", emailData);
+    
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        throw new Error("Not authenticated");
+      }
+      
+      // Call the send-custom-email edge function
+      const response = await fetch(`${window.location.origin}/functions/send-custom-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.session.access_token}`
+        },
+        body: JSON.stringify({
+          to: emailData.recipients,
+          subject: emailData.subject,
+          html: emailData.content,
+          emailType: 'template-test',
+          preventDuplicate: false,
+          forceSend: true
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to send email");
+      }
+      
+      return { data: result, error: null };
+    } catch (error: any) {
+      console.error("Error sending test email:", error);
+      return { data: null, error: { message: error.message, status: error.status || 500 } };
+    }
   }
 };

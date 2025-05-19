@@ -75,3 +75,20 @@ export interface ContractTemplateContext {
   days_in_month?: number;
   [key: string]: any;
 }
+
+// New interface for user data for email dropdown
+export interface UserOption {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  displayName: string; // Combines first name, last name and email
+}
+
+// New interface for email data
+export interface EmailTemplateData {
+  subject: string;
+  recipients: string[];
+  templateId?: string;
+  content?: string;
+}

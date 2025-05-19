@@ -5,6 +5,7 @@ import { templates } from '@/lib/fetch-client/templates-api';
 import { ContractTemplate } from '../types/contractTemplateTypes';
 import { useAdminFees, FeeConfig } from '@/hooks/admin/useAdminFees';
 import { mapToAPITemplateType } from '../utils/templateTypeUtils';
+import { supabase } from "@/integrations/supabase/client";
 
 export const useTemplateOperations = () => {
   const { toast } = useToast();
@@ -67,6 +68,51 @@ export const useTemplateOperations = () => {
       current_month: currentMonth,
       days_in_month: daysInMonth
     };
+  };
+  
+  // Fetch users for email recipients dropdown
+  const fetchUserOptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('auth.users')
+        .select('id, email, raw_user_meta_data');
+      
+      if (error) {
+        console.error('Error fetching users:', error);
+        // Fallback to profiles table if direct access to auth.users fails
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, email, first_name, last_name');
+          
+        if (profilesError) {
+          throw new Error(`Failed to fetch users: ${profilesError.message}`);
+        }
+        
+        // Format profiles into UserOption format
+        return (profiles || []).map(profile => ({
+          id: profile.id,
+          firstName: profile.first_name || '',
+          lastName: profile.last_name || '',
+          email: profile.email || '',
+          displayName: `${profile.first_name || ''} ${profile.last_name || ''} <${profile.email || ''}>`
+        }));
+      }
+      
+      // Format auth.users data into UserOption format
+      return (data || []).map(user => {
+        const meta = user.raw_user_meta_data || {};
+        return {
+          id: user.id,
+          firstName: meta.first_name || '',
+          lastName: meta.last_name || '',
+          email: user.email || '',
+          displayName: `${meta.first_name || ''} ${meta.last_name || ''} <${user.email || ''}>`
+        };
+      });
+    } catch (error) {
+      console.error('Error in fetchUserOptions:', error);
+      return [];
+    }
   };
   
   const saveTemplate = async (id: string, content: string, templateType: string): Promise<boolean> => {
@@ -235,6 +281,66 @@ export const useTemplateOperations = () => {
     }
   };
   
+  // New method for sending test emails
+  const sendTestEmail = async (recipients: string[], subject: string, content: string, templateId?: string): Promise<boolean> => {
+    setIsLoading(true);
+    
+    try {
+      if (!recipients.length) {
+        toast({
+          title: "Recipients required",
+          description: "Please select at least one recipient email address",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      if (!subject) {
+        toast({
+          title: "Subject required",
+          description: "Please enter an email subject",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      console.log(`Sending test email to ${recipients.join(', ')}`);
+      
+      const { error } = await templates.sendTestEmail({
+        recipients,
+        subject,
+        content,
+        templateId
+      });
+      
+      if (error) {
+        console.error('Error sending test email:', error);
+        toast({
+          title: "Failed to send test email",
+          description: error.message,
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      toast({
+        title: "Test email sent",
+        description: `The test email was sent to ${recipients.join(', ')}`
+      });
+      return true;
+    } catch (error: any) {
+      console.error('Error in sendTestEmail:', error);
+      toast({
+        title: "Error sending test email",
+        description: error.message || "An error occurred while sending the test email.",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   const deleteTemplate = async (id: string): Promise<boolean> => {
     setIsLoading(true);
     
@@ -274,10 +380,12 @@ export const useTemplateOperations = () => {
   
   return {
     fetchTemplates,
+    fetchUserOptions,
     saveTemplate,
     createTemplate,
     updateTemplate,
     deleteTemplate,
+    sendTestEmail,
     isLoading
   };
 };

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useTemplateOperations } from './services/templateOperations';
-import { ContractTemplate, ContractVariable, DEFAULT_AVAILABLE_FIELDS } from './types/contractTemplateTypes';
+import { ContractTemplate, ContractVariable, DEFAULT_AVAILABLE_FIELDS, UserOption } from './types/contractTemplateTypes';
 
 // Use export type for re-exporting types
 export type { ContractTemplate, ContractVariable } from './types/contractTemplateTypes';
@@ -15,6 +15,10 @@ export const useContractTemplates = (templateType: string) => {
   const [contractTemplates, setContractTemplates] = useState<ContractTemplate[]>([]);
   const [templateData, setTemplateData] = useState<ContractTemplate | null>(null);
   const [availableFields, setAvailableFields] = useState<ContractVariable[]>(DEFAULT_AVAILABLE_FIELDS);
+  const [userOptions, setUserOptions] = useState<UserOption[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false);
+  const [emailSubject, setEmailSubject] = useState<string>('');
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   
   const { isAdmin } = useAuth();
   const { toast } = useToast();
@@ -22,6 +26,7 @@ export const useContractTemplates = (templateType: string) => {
 
   useEffect(() => {
     fetchTemplates();
+    fetchUsers();
   }, [templateType]);
 
   const fetchTemplates = async () => {
@@ -55,6 +60,20 @@ export const useContractTemplates = (templateType: string) => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const fetchUsers = async () => {
+    if (!isAdmin) return;
+    
+    setIsLoadingUsers(true);
+    try {
+      const users = await templateOperations.fetchUserOptions();
+      setUserOptions(users);
+    } catch (err: any) {
+      console.error("Failed to fetch users:", err);
+    } finally {
+      setIsLoadingUsers(false);
     }
   };
 
@@ -96,6 +115,48 @@ export const useContractTemplates = (templateType: string) => {
       }
       
       return result;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  const sendTestEmail = async (content: string): Promise<boolean> => {
+    if (!templateData) {
+      toast({
+        title: "Error",
+        description: "No template selected",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    if (selectedRecipients.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one recipient",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    if (!emailSubject) {
+      toast({
+        title: "Error",
+        description: "Please enter an email subject",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    setIsSaving(true);
+    
+    try {
+      return await templateOperations.sendTestEmail(
+        selectedRecipients,
+        emailSubject,
+        content,
+        templateData.id
+      );
     } finally {
       setIsSaving(false);
     }
@@ -171,14 +232,22 @@ export const useContractTemplates = (templateType: string) => {
   return {
     isLoading,
     isSaving,
+    isLoadingUsers,
     error,
     contractTemplates,
     templateData,
     availableFields,
+    userOptions,
+    emailSubject,
+    setEmailSubject,
+    selectedRecipients,
+    setSelectedRecipients,
     fetchTemplates,
+    fetchUsers,
     createTemplate,
     updateTemplate,
     deleteTemplate,
-    saveTemplate
+    saveTemplate,
+    sendTestEmail
   };
 };
