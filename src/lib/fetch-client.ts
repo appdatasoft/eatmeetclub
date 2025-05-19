@@ -1,4 +1,3 @@
-
 /**
  * Enhanced Fetch Client with optimized performance
  */
@@ -290,10 +289,15 @@ export const templates = {
   
   create: <T = ContractTemplate>(template: Partial<ContractTemplate>, customOptions: FetchClientOptions = {}): Promise<FetchResponse<T>> => {
     // Ensure required fields are present for Supabase schema
+    if (!template.type) {
+      throw new Error('Template type is required');
+    }
+    
     const dbTemplate = {
       ...template,
       storage_path: template.storage_path || `templates/${template.type}/${Date.now()}`,
-      name: template.name || 'Untitled Template'
+      name: template.name || 'Untitled Template',
+      type: template.type // Ensure type is present and correctly typed
     };
 
     return post<T>('/api/templates', dbTemplate, {

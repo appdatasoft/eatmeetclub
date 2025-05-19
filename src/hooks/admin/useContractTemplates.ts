@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { templates, ContractTemplate } from '@/lib/fetch-client';
+import { templates } from '@/lib/fetch-client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -12,7 +12,7 @@ export interface ContractVariable {
   label?: string;
 }
 
-// Re-export the ContractTemplate interface with our extended fields
+// Define the ContractTemplate interface directly here instead of importing
 export interface ContractTemplate {
   id: string;
   name: string;
@@ -180,10 +180,27 @@ export const useContractTemplates = (templateType: string) => {
     }
 
     try {
-      // Ensure the type is set
+      // Ensure the type is set correctly for the API
+      // Convert templateType string to the expected API type
+      let apiTemplateType: "restaurant" | "restaurant_referral" | "ticket_sales";
+      
+      switch(templateType) {
+        case "venue":
+          apiTemplateType = "restaurant";
+          break;
+        case "salesRep":
+          apiTemplateType = "restaurant_referral";
+          break;
+        case "ticket":
+          apiTemplateType = "ticket_sales";
+          break;
+        default:
+          apiTemplateType = "restaurant";
+      }
+
       const newTemplate = {
         ...template,
-        type: templateType,
+        type: apiTemplateType,
         variables: template.variables || []
       };
 
