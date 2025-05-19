@@ -1,4 +1,3 @@
-
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,7 +35,6 @@ const AdminDashboard = () => {
       try {
         const { data: fastStats } = await get<AdminStats>('/api/admin/stats.json', {
           cacheTime: 60000, // 1 minute cache
-          staleTime: 30000, // Consider data stale after 30s
           background: true,  // Refresh data in the background if stale
         });
         

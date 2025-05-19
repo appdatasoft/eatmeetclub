@@ -19,6 +19,8 @@ export interface FetchClientOptions {
   timeout?: number; // Request timeout in ms
   fallbackToSupabase?: boolean; // Whether to try Supabase as fallback
   supabseFallbackFn?: () => Promise<any>; // Function to call Supabase as fallback
+  background?: boolean; // Whether to refresh data in the background
+  signal?: AbortSignal; // AbortSignal to cancel the request
 }
 
 export interface FetchResponse<T = any> {
@@ -46,7 +48,7 @@ export const prefetch = (url: string, options: FetchClientOptions = {}): void =>
   fetchClient(url, { 
     ...options, 
     signal: controller.signal,
-    priority: 'low' as any // TypeScript doesn't recognize this fetch option yet
+    // Remove the priority option as it's not supported in our interface
   }).catch(() => {
     // Silently ignore prefetch errors
   });
@@ -64,7 +66,7 @@ export const clearCache = (key?: string): void => {
 // Main fetch client function with optimized retry logic and caching
 export const fetchClient = async <T = any>(
   url: string,
-  options: FetchClientOptions & { signal?: AbortSignal } = {}
+  options: FetchClientOptions = {}
 ): Promise<FetchResponse<T>> => {
   const {
     method = 'GET',
