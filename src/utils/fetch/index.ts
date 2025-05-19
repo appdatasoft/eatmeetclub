@@ -9,10 +9,10 @@ export {
   fetchWithCache, 
   clearFetchCache,
   getCachedResponse,
+  safelyParseResponse,
   type FetchRetryOptions 
 } from '@/utils/fetchUtils';
 
 export { createSessionCache } from './sessionStorageCache';
 export { createOfflineCache } from './localStorageCache';
 export { requestTracker } from './requestTracker';
-

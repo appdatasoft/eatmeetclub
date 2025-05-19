@@ -113,11 +113,14 @@ const responseCache = new Map<string, { data: any, expires: number }>();
  */
 export const fetchWithCache = async <T>(
   url: string,
-  options: RequestInit & { cacheTime?: number } = {},
+  options: RequestInit & { 
+    cacheTime?: number,
+    acceptHeader?: string 
+  } = {},
   cacheKey?: string
 ): Promise<T> => {
   const key = cacheKey || url;
-  const { cacheTime = 60000, ...fetchOptions } = options;
+  const { cacheTime = 60000, acceptHeader, ...fetchOptions } = options;
   
   // Check cache
   if (responseCache.has(key)) {
@@ -129,11 +132,27 @@ export const fetchWithCache = async <T>(
     responseCache.delete(key);
   }
   
-  // Make the fetch call
-  const response = await fetch(url, fetchOptions);
+  // Set default headers if not provided
+  const headers = new Headers(fetchOptions.headers || {});
+  
+  // Add Accept header if provided
+  if (acceptHeader && !headers.has('Accept')) {
+    headers.set('Accept', acceptHeader);
+  } else if (!headers.has('Accept')) {
+    // Default to accepting JSON
+    headers.set('Accept', 'application/json');
+  }
+  
+  // Make the fetch call with updated headers
+  const response = await fetch(url, {
+    ...fetchOptions,
+    headers
+  });
   
   if (!response.ok) {
-    throw new Error(`HTTP error! Status: ${response.status}`);
+    const errorMsg = `HTTP error! Status: ${response.status}`;
+    console.error(errorMsg, { url, status: response.status, statusText: response.statusText });
+    throw new Error(errorMsg);
   }
   
   // Clone response and parse

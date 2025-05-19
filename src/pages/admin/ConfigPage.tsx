@@ -50,6 +50,14 @@ const ConfigPage = () => {
       setFetchError(null);
       
       try {
+        // Set proper headers for requests
+        const requestOptions = {
+          headers: { 
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        };
+        
         // First get configs from admin_config (new implementation)
         const { data: adminConfigData, error: adminConfigError } = await supabase
           .from('admin_config')

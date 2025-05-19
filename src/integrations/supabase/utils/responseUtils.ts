@@ -75,3 +75,35 @@ export const createResponseFromCachedData = (data: any): Response => {
     status: 200
   });
 };
+
+/**
+ * Checks if the response is acceptable for the requested content type
+ * Returns true if acceptable, false otherwise
+ */
+export const isAcceptableResponse = (response: Response, acceptHeader?: string): boolean => {
+  // If no specific accept header is required, assume it's acceptable
+  if (!acceptHeader) return true;
+  
+  const contentType = response.headers.get('Content-Type') || '';
+  
+  // If the accept header is a wildcard, any content type is acceptable
+  if (acceptHeader === '*/*') return true;
+  
+  // Check if the response content type matches any of the accepted types
+  const acceptedTypes = acceptHeader.split(',').map(type => type.trim());
+  
+  for (const type of acceptedTypes) {
+    // Handle wildcards like 'application/*'
+    if (type.endsWith('/*')) {
+      const prefix = type.slice(0, -1); // Remove the asterisk
+      if (contentType.startsWith(prefix)) {
+        return true;
+      }
+    } else if (contentType.includes(type)) {
+      return true;
+    }
+  }
+  
+  console.warn(`Content type mismatch: Received ${contentType}, but expected ${acceptHeader}`);
+  return false;
+};
