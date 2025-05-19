@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -258,28 +257,31 @@ serve(async (req) => {
     // Handle Instagram specific OAuth flow
     if (platform === "Instagram") {
       if (action === "initiate") {
-        // Instagram App credentials
-        const clientId = Deno.env.get("INSTAGRAM_CLIENT_ID");
+        // Instagram App credentials (same as Facebook App since it uses Facebook's OAuth)
+        const clientId = Deno.env.get("FACEBOOK_APP_ID");
         const redirectUrl = redirectUri || "http://localhost:5173";
 
         if (!clientId) {
           return new Response(
-            JSON.stringify({ error: "Instagram Client ID not configured" }),
+            JSON.stringify({ error: "Facebook App ID not configured" }),
             { headers: corsHeaders, status: 500 }
           );
         }
 
         console.log(`Initiating Instagram OAuth flow with client ID: ${clientId.substring(0, 6)}... and redirect: ${redirectUrl}`);
 
-        // Generate authorization URL - adding more debugging info
-        const authUrl = new URL("https://api.instagram.com/oauth/authorize");
+        // Generate authorization URL using Facebook OAuth dialog for Instagram permissions
+        const authUrl = new URL("https://www.facebook.com/v18.0/dialog/oauth");
         authUrl.searchParams.append("client_id", clientId);
         authUrl.searchParams.append("redirect_uri", redirectUrl);
-        authUrl.searchParams.append("scope", "user_profile,user_media");
+        authUrl.searchParams.append("scope", "instagram_basic,pages_show_list,public_profile");
         authUrl.searchParams.append("response_type", "code");
+        if (state) {
+          authUrl.searchParams.append("state", state);
+        }
         
         // Print the full URL for debugging
-        console.log("Generated Instagram auth URL:", authUrl.toString());
+        console.log("Generated Instagram auth URL (via Facebook):", authUrl.toString());
 
         return new Response(
           JSON.stringify({ 
@@ -287,7 +289,7 @@ serve(async (req) => {
             debug: {
               clientId: clientId.substring(0, 6) + "...",
               redirectUrl: redirectUrl,
-              scope: "user_profile,user_media"
+              scope: "instagram_basic,pages_show_list,public_profile"
             }
           }),
           { headers: corsHeaders, status: 200 }
@@ -301,22 +303,22 @@ serve(async (req) => {
           );
         }
 
-        const clientId = Deno.env.get("INSTAGRAM_CLIENT_ID");
-        const clientSecret = Deno.env.get("INSTAGRAM_CLIENT_SECRET");
+        const clientId = Deno.env.get("FACEBOOK_APP_ID");
+        const clientSecret = Deno.env.get("FACEBOOK_APP_SECRET");
         const redirectUrl = redirectUri || "http://localhost:5173";
 
         if (!clientId || !clientSecret) {
           return new Response(
-            JSON.stringify({ error: "Instagram Client ID or Secret not configured" }),
+            JSON.stringify({ error: "Facebook App ID or Secret not configured" }),
             { headers: corsHeaders, status: 500 }
           );
         }
 
         console.log(`Processing Instagram callback with code: ${code.substring(0, 6)}... and redirect: ${redirectUrl}`);
 
-        // Exchange code for access token
+        // Exchange code for access token using Facebook's token endpoint
         try {
-          console.log("Attempting to exchange code for token...");
+          console.log("Attempting to exchange code for token via Facebook...");
           
           const tokenRequestBody = new URLSearchParams({
             client_id: clientId,
@@ -327,12 +329,12 @@ serve(async (req) => {
           });
           
           console.log("Token request params:", {
-            url: "https://api.instagram.com/oauth/access_token",
+            url: "https://graph.facebook.com/v18.0/oauth/access_token",
             client_id_prefix: clientId.substring(0, 6) + "...",
             redirect_uri: redirectUrl,
           });
           
-          const tokenResponse = await fetch("https://api.instagram.com/oauth/access_token", {
+          const tokenResponse = await fetch("https://graph.facebook.com/v18.0/oauth/access_token", {
             method: "POST",
             headers: {
               "Content-Type": "application/x-www-form-urlencoded"
@@ -355,7 +357,7 @@ serve(async (req) => {
           }
           
           if (!tokenResponse.ok || tokenData.error) {
-            console.error("Instagram token exchange error:", tokenData);
+            console.error("Facebook/Instagram token exchange error:", tokenData);
             return new Response(
               JSON.stringify({ 
                 error: tokenData.error_message || tokenData.error_description || "Failed to exchange code for token",
@@ -367,42 +369,74 @@ serve(async (req) => {
 
           // Get user profile information 
           const accessToken = tokenData.access_token;
-          const userId = tokenData.user_id;
           
-          console.log(`Successfully obtained token for Instagram user ID: ${userId}`);
+          console.log("Successfully obtained access token, getting Instagram account details");
 
-          // Get user profile data
-          console.log("Fetching user profile data...");
-          const userResponse = await fetch(
-            `https://graph.instagram.com/v18.0/${userId}?fields=id,username&access_token=${accessToken}`
+          // First, get Facebook user's pages (needed for Instagram Graph API)
+          const pagesResponse = await fetch(
+            `https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`
           );
-
-          const userResponseText = await userResponse.text();
-          console.log("Raw user data response:", userResponseText);
           
-          let userData;
-          try {
-            userData = JSON.parse(userResponseText);
-          } catch (e) {
-            console.error("Error parsing user data response:", e);
-            return new Response(
-              JSON.stringify({ error: "Failed to parse user data response", raw: userResponseText }),
-              { headers: corsHeaders, status: 500 }
-            );
-          }
-
-          if (!userResponse.ok || userData.error) {
-            console.error("Instagram user data error:", userData);
+          const pagesData = await pagesResponse.json();
+          
+          if (pagesData.error) {
+            console.error("Error fetching Facebook pages:", pagesData.error);
             return new Response(
               JSON.stringify({ 
-                error: userData.error?.message || "Failed to get user profile",
-                details: userData
+                error: "Failed to fetch Facebook pages associated with account",
+                details: pagesData.error
               }),
               { headers: corsHeaders, status: 400 }
             );
           }
           
-          console.log("Successfully retrieved Instagram profile for username:", userData.username);
+          if (!pagesData.data || pagesData.data.length === 0) {
+            console.error("No Facebook pages found for user");
+            return new Response(
+              JSON.stringify({ 
+                error: "No Facebook pages found associated with this account. Instagram Business/Creator requires a connected Facebook page.",
+                details: "User needs to create a Facebook page first"
+              }),
+              { headers: corsHeaders, status: 400 }
+            );
+          }
+          
+          // Get Instagram business account for the page
+          let instagramAccountId = null;
+          let instagramUsername = null;
+          
+          // Try to find Instagram business account connected to any of the pages
+          for (const page of pagesData.data) {
+            console.log(`Checking page ${page.name} for Instagram account`);
+            const pageAccessToken = page.access_token;
+            
+            try {
+              const instagramAccountResponse = await fetch(
+                `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account{id,username,profile_picture_url}&access_token=${pageAccessToken}`
+              );
+              
+              const instagramAccountData = await instagramAccountResponse.json();
+              
+              if (instagramAccountData.instagram_business_account) {
+                instagramAccountId = instagramAccountData.instagram_business_account.id;
+                instagramUsername = instagramAccountData.instagram_business_account.username;
+                console.log(`Found Instagram business account: ${instagramUsername}`);
+                break;
+              }
+            } catch (err) {
+              console.error(`Error checking Instagram account for page ${page.name}:`, err);
+            }
+          }
+          
+          if (!instagramAccountId) {
+            return new Response(
+              JSON.stringify({ 
+                error: "No Instagram business account found connected to your Facebook pages", 
+                details: "Make sure you have connected your Instagram business account to one of your Facebook pages"
+              }),
+              { headers: corsHeaders, status: 400 }
+            );
+          }
 
           // Save the connection to the database
           const { data: connection, error } = await supabase
@@ -410,13 +444,13 @@ serve(async (req) => {
             .upsert({
               user_id: user.id,
               platform: "Instagram",
-              username: userData.username,
-              profile_url: `https://instagram.com/${userData.username}`,
+              username: instagramUsername,
+              profile_url: `https://instagram.com/${instagramUsername}`,
               is_connected: true,
               oauth_token: accessToken,
               oauth_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days
               meta_data: { 
-                instagram_user_id: userId,
+                instagram_account_id: instagramAccountId,
                 connected_at: new Date().toISOString()
               }
             }, { onConflict: 'user_id, platform' })
@@ -435,7 +469,7 @@ serve(async (req) => {
             JSON.stringify({ 
               success: true,
               connection, 
-              message: `Successfully connected Instagram account for ${userData.username}` 
+              message: `Successfully connected Instagram account for ${instagramUsername}` 
             }),
             { headers: corsHeaders, status: 200 }
           );

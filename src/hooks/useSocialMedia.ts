@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,9 +51,12 @@ export const useSocialMedia = () => {
         return;
       }
       
-      // If this is a Facebook OAuth callback
-      if (code && state && state.startsWith('facebook_')) {
+      // If this is a Facebook OAuth callback (for both Facebook and Instagram)
+      if (code && state && (state.startsWith('facebook_') || state.startsWith('instagram_'))) {
         setOauthPending(true);
+        
+        const platform = state.startsWith('facebook_') ? 'Facebook' : 'Instagram';
+        console.log(`Processing ${platform} OAuth callback with code: ${code.substring(0, 6)}...`);
 
         try {
           // Clean up URL to remove OAuth params
@@ -68,7 +70,9 @@ export const useSocialMedia = () => {
           
           // Supabase URL for the edge function
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
-          const redirectUri = `https://eatmeetclub.com/api/auth/callback/facebook`;
+          const redirectUri = platform === 'Facebook' 
+            ? `https://eatmeetclub.com/api/auth/callback/facebook` 
+            : `${window.location.origin}${window.location.pathname}`;
           
           // Complete OAuth flow by exchanging code for token
           const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
@@ -78,7 +82,7 @@ export const useSocialMedia = () => {
               'Authorization': `Bearer ${session.access_token}`
             },
             body: JSON.stringify({
-              platform: 'Facebook',
+              platform,
               action: 'callback',
               code,
               redirectUri
@@ -87,14 +91,14 @@ export const useSocialMedia = () => {
           
           if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to complete Facebook authentication');
+            throw new Error(errorData.error || `Failed to complete ${platform} authentication`);
           }
           
           const result = await response.json();
           
           toast({
-            title: 'Facebook Connected',
-            description: result.message || 'Successfully connected your Facebook account',
+            title: `${platform} Connected`,
+            description: result.message || `Successfully connected your ${platform} account`,
           });
           
           // Refresh connections list
@@ -104,70 +108,7 @@ export const useSocialMedia = () => {
           setError(err.message);
           toast({
             title: 'Connection Failed',
-            description: err.message || 'Failed to connect Facebook account',
-            variant: 'destructive',
-          });
-        } finally {
-          setOauthPending(false);
-        }
-      }
-      
-      // If this is an Instagram OAuth callback
-      if (code && state && state.startsWith('instagram_')) {
-        setOauthPending(true);
-
-        try {
-          // Clean up URL to remove OAuth params
-          window.history.replaceState({}, document.title, window.location.pathname);
-          
-          // Get session to verify authentication
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) {
-            throw new Error('No active session found');
-          }
-          
-          // Supabase URL for the edge function
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
-          const redirectUri = `${window.location.origin}${window.location.pathname}`;
-          
-          console.log(`Processing Instagram callback with code: ${code.substring(0, 6)}... and redirect: ${redirectUri}`);
-          
-          // Complete OAuth flow by exchanging code for token
-          const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({
-              platform: 'Instagram',
-              action: 'callback',
-              code,
-              redirectUri
-            })
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error("Instagram callback error:", errorData);
-            throw new Error(errorData.error || errorData.message || 'Failed to complete Instagram authentication');
-          }
-          
-          const result = await response.json();
-          
-          toast({
-            title: 'Instagram Connected',
-            description: result.message || 'Successfully connected your Instagram account',
-          });
-          
-          // Refresh connections list
-          await fetchConnections();
-        } catch (err: any) {
-          console.error('OAuth callback handling error:', err);
-          setError(err.message);
-          toast({
-            title: 'Connection Failed',
-            description: err.message || 'Failed to connect Instagram account',
+            description: err.message || 'Failed to connect social media account',
             variant: 'destructive',
           });
         } finally {
@@ -441,7 +382,7 @@ export const useSocialMedia = () => {
       // Use the Supabase URL from environment or fallback
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
       
-      // Initiate OAuth flow by getting authorization URL
+      // Initiate OAuth flow by getting authorization URL (now via Facebook)
       const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
         method: 'POST',
         headers: {
@@ -451,7 +392,8 @@ export const useSocialMedia = () => {
         body: JSON.stringify({ 
           platform: 'Instagram', 
           action: 'initiate',
-          redirectUri
+          redirectUri,
+          state
         })
       });
       
@@ -468,14 +410,10 @@ export const useSocialMedia = () => {
         throw new Error('No authorization URL returned');
       }
       
-      // Add state parameter to URL
-      const authUrl = new URL(result.authUrl);
-      authUrl.searchParams.append('state', state);
+      console.log("Redirecting to Instagram auth URL:", result.authUrl);
       
-      console.log("Redirecting to Instagram auth URL:", authUrl.toString());
-      
-      // Redirect to Instagram authorization page
-      window.location.href = authUrl.toString();
+      // Redirect to Instagram authorization page via Facebook
+      window.location.href = result.authUrl;
       
       return { pending: true };
     } catch (err: any) {

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,41 +34,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
     fetchConnections();
   }, []);
 
-  // Check for Facebook OAuth callback in URL
-  useEffect(() => {
-    const checkForFacebookCallback = async () => {
-      const url = new URL(window.location.href);
-      const code = url.searchParams.get('code');
-      const state = url.searchParams.get('state');
-      
-      if (code && state && state.startsWith('facebook_')) {
-        // Clean up URL to remove OAuth params
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Process Facebook callback
-        toast({
-          title: 'Processing Facebook Connection',
-          description: 'Please wait while we connect your Facebook account...',
-        });
-        
-        try {
-          await connectSocialMedia('Facebook');
-          toast({
-            title: 'Facebook Connected',
-            description: 'Successfully connected your Facebook account',
-          });
-        } catch (error: any) {
-          toast({
-            title: 'Connection Failed',
-            description: error.message || 'Failed to connect Facebook account',
-            variant: 'destructive',
-          });
-        }
-      }
-    };
-    
-    checkForFacebookCallback();
-  }, []);
+  // All OAuth callback handling is now in useSocialMedia hook
 
   const handleConnectAccount = async (platform: string) => {
     try {
