@@ -1,121 +1,104 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { EditableContent, useInlineEdit } from '@/hooks/useInlineEdit';
-import { useToast } from '@/hooks/use-toast';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useInlineEdit, EditableContent } from '@/hooks/useInlineEdit';
+import { toast } from 'sonner';
 
-interface EditableContentContextType {
+interface EditableContextType {
   contentMap: Record<string, EditableContent>;
-  isEditing: string | null;
-  setIsEditing: (id: string | null) => void;
-  handleEdit: (id: string) => void;
-  handleSave: (content: EditableContent) => Promise<boolean>;
-  handleCancel: () => void;
-  isLoading: boolean;
   canEdit: boolean;
   editModeEnabled: boolean;
-  toggleEditMode: () => void;
+  setEditModeEnabled: (value: boolean) => void;
+  saveContent: (id: string, content: string, contentType?: string) => Promise<boolean>;
+  isLoading: boolean;
+  fetchPageContent: () => Promise<void>; // Added function to fetch page content
 }
 
-const EditableContentContext = createContext<EditableContentContextType | undefined>(undefined);
+const EditableContext = createContext<EditableContextType>({
+  contentMap: {},
+  canEdit: false,
+  editModeEnabled: false,
+  setEditModeEnabled: () => {},
+  saveContent: async () => false,
+  isLoading: false,
+  fetchPageContent: async () => {}, // Default implementation
+});
 
-export const useEditableContent = () => {
-  const context = useContext(EditableContentContext);
-  if (!context) {
-    throw new Error('useEditableContent must be used within an EditableContentProvider');
-  }
-  return context;
-};
+export const useEditableContent = () => useContext(EditableContext);
 
 export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const location = useLocation();
-  const { fetchContent, saveContent, isEditing, setIsEditing, isLoading, canEdit } = useInlineEdit();
+  const { saveContent: saveInlineContent, fetchContent, isLoading, canEdit } = useInlineEdit();
   const [contentMap, setContentMap] = useState<Record<string, EditableContent>>({});
-  const [currentPath, setCurrentPath] = useState<string>(location.pathname);
-  const [editModeEnabled, setEditModeEnabled] = useState<boolean>(false);
-  const { toast } = useToast();
-
-  // Fetch content when the route changes
-  useEffect(() => {
-    if (location.pathname !== currentPath) {
-      setCurrentPath(location.pathname);
-      loadContent();
+  const [editModeEnabled, setEditModeEnabled] = useState(false);
+  
+  const fetchPageContent = async () => {
+    try {
+      console.log('Fetching page content for path:', window.location.pathname);
+      const content = await fetchContent(window.location.pathname);
+      console.log('Fetched content:', content);
+      setContentMap(content);
+    } catch (error) {
+      console.error('Error fetching content:', error);
     }
-  }, [location.pathname]);
-
-  // Initial content load
+  };
+  
   useEffect(() => {
-    loadContent();
+    fetchPageContent();
   }, []);
-
-  const loadContent = async () => {
-    const content = await fetchContent(location.pathname);
-    setContentMap(content);
-  };
-
-  const handleEdit = (id: string) => {
-    if (!editModeEnabled) {
-      toast({
-        title: "Edit mode is disabled",
-        description: "Please enable edit mode first",
-        variant: "default",
-      });
-      return;
+  
+  useEffect(() => {
+    if (canEdit) {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setEditModeEnabled(false);
+        }
+      };
+      
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
     }
-    setIsEditing(id);
-  };
-
-  const handleSave = async (content: EditableContent) => {
-    const success = await saveContent(content);
-    if (success) {
-      // Update the local content map
-      setContentMap(prev => ({
-        ...prev,
-        [content.element_id]: content
-      }));
-      return true;
-    }
-    return false;
-  };
-
-  const handleCancel = () => {
-    setIsEditing(null);
-  };
-
-  const toggleEditMode = () => {
-    if (isEditing && editModeEnabled) {
-      // If turning off edit mode while editing, cancel the edit
-      setIsEditing(null);
-    }
-
-    const newMode = !editModeEnabled;
-    setEditModeEnabled(newMode);
-    
-    toast({
-      title: newMode ? "Edit mode enabled" : "Edit mode disabled",
-      description: newMode 
-        ? "You can now edit content by clicking on editable elements" 
-        : "Content is now in view mode",
-      variant: "default",
+  }, [canEdit]);
+  
+  const saveContent = async (id: string, content: string, contentType: string = 'text') => {
+    const success = await saveInlineContent({
+      page_path: window.location.pathname,
+      element_id: id,
+      content,
+      content_type: contentType,
     });
+    
+    if (success) {
+      // Update local state
+      setContentMap((prev) => ({
+        ...prev,
+        [id]: {
+          ...prev[id],
+          content,
+          content_type: contentType,
+          page_path: window.location.pathname,
+          element_id: id,
+        },
+      }));
+      toast.success('Content saved successfully');
+    } else {
+      toast.error('Failed to save content');
+    }
+    
+    return success;
   };
-
-  const value = {
+  
+  const contextValue = {
     contentMap,
-    isEditing,
-    setIsEditing,
-    handleEdit,
-    handleSave,
-    handleCancel,
-    isLoading,
     canEdit,
     editModeEnabled,
-    toggleEditMode
+    setEditModeEnabled,
+    saveContent,
+    isLoading,
+    fetchPageContent, // Expose the function to components
   };
-
+  
   return (
-    <EditableContentContext.Provider value={value}>
+    <EditableContext.Provider value={contextValue}>
       {children}
-    </EditableContentContext.Provider>
+    </EditableContext.Provider>
   );
 };

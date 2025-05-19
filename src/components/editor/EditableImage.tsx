@@ -1,10 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEditableContent } from './EditableContentProvider';
 import { Image, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ImageEditorDialog from './image-editor/ImageEditorDialog';
 import { supabase } from '@/lib/supabaseClient';
+import { useToast } from '@/hooks/use-toast';
+import { useImageContent } from '@/hooks/useImageContent';
 
 interface EditableImageProps {
   id: string;
@@ -23,11 +25,22 @@ const EditableImage: React.FC<EditableImageProps> = ({
   size = 'md',
   shape = 'circle',
 }) => {
-  const { contentMap, canEdit, editModeEnabled } = useEditableContent();
+  const { contentMap, canEdit, editModeEnabled, fetchPageContent } = useEditableContent();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [localImageUrl, setLocalImageUrl] = useState<string | null>(null);
+  const { toast } = useToast();
   
   // Get image from contentMap if it exists, otherwise use default
-  const imageUrl = contentMap[id]?.content || defaultImage;
+  const contentImageUrl = contentMap[id]?.content || defaultImage;
+  // Use local state if it exists, otherwise use contentMap
+  const imageUrl = localImageUrl || contentImageUrl;
+  
+  // Update local state when contentMap changes
+  useEffect(() => {
+    if (contentMap[id]?.content) {
+      setLocalImageUrl(contentMap[id].content);
+    }
+  }, [contentMap, id]);
   
   // Size classes - only apply if not using custom className for sizing
   const sizeClasses = {
@@ -76,10 +89,29 @@ const EditableImage: React.FC<EditableImageProps> = ({
       
       console.log("Image saved successfully");
       
+      // Update local state immediately
+      setLocalImageUrl(url);
+      
+      // Show success toast
+      toast({
+        title: "Image updated",
+        description: "Your changes have been saved successfully",
+      });
+      
+      // Fetch the updated content
+      fetchPageContent();
+      
       // Close the dialog
       setIsDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving image:', error);
+      
+      // Show error toast
+      toast({
+        title: "Error saving image",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
     }
   };
   
