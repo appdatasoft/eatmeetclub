@@ -107,6 +107,7 @@ export const getConnectionDiagnostics = () => {
       details: lastError.details,
     } : null,
     supabaseUrl,
-    anon_key_length: anonKeyLength,
+    // Fix the type error here - change 'configured'/'missing' to a number
+    anon_key_length: typeof anonKeyLength === 'string' ? 0 : anonKeyLength,
   };
 };
