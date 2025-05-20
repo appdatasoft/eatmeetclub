@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { AlertCircle } from "lucide-react";
+import { getUserFriendlyEventError } from "@/hooks/eventDetails/errorHandler";
 
 interface EventNotFoundProps {
   error?: string | null;
@@ -10,28 +11,7 @@ interface EventNotFoundProps {
 
 const EventNotFound: React.FC<EventNotFoundProps> = ({ error }) => {
   const navigate = useNavigate();
-
-  // Get a user-friendly error message
-  const getUserFriendlyError = (error?: string | null) => {
-    if (!error) return null;
-    
-    if (error.includes("not found") || error.includes("Invalid event ID")) {
-      return "The event you're looking for may have been removed or doesn't exist.";
-    }
-    
-    if (error.includes("connect")) {
-      return "We're having trouble connecting to our servers. Please check your internet connection and try again.";
-    }
-    
-    if (error.includes("timeout")) {
-      return "The request timed out. Please try again later.";
-    }
-    
-    // Return a generic message for other errors
-    return "There was a problem loading this event.";
-  };
-
-  const friendlyError = getUserFriendlyError(error);
+  const friendlyError = getUserFriendlyEventError(error);
 
   return (
     <div className="container-custom py-12 text-center">
@@ -42,10 +22,10 @@ const EventNotFound: React.FC<EventNotFoundProps> = ({ error }) => {
         <h1 className="text-3xl font-bold mb-4">Event Not Found</h1>
         
         <p className="text-gray-600 mb-6">
-          {friendlyError || "The event you're looking for may have been removed or doesn't exist."}
+          {friendlyError}
         </p>
         
-        {error && error !== "Event not found" && error !== "null" && !friendlyError && (
+        {error && error !== "Event not found" && error !== "null" && !friendlyError.includes(error) && (
           <div className="bg-red-50 border border-red-200 rounded p-3 mb-6 text-sm text-red-800">
             <strong>Error details:</strong> {error}
           </div>

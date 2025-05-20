@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { EventDetails } from "../types/eventTypes";
 import { toast } from "@/hooks/use-toast";
+import { formatEventErrorMessage } from "./errorHandler";
 
 /**
  * Fetch detailed event data including restaurant information
@@ -20,8 +21,8 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       throw new Error("Invalid event ID format");
     }
     
-    // First get event data with restaurant details - using single() here
-    // prevents multiple results that could confuse response parsing
+    // First get event data with restaurant details - using maybeSingle() here
+    // to handle the case when an event is not found
     const { data: eventData, error: eventError } = await supabase
       .from("events")
       .select(`
@@ -50,14 +51,15 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
         )
       `)
       .eq("id", idToUse)
-      .maybeSingle(); // Using maybeSingle() instead of single() to handle not found without error
+      .maybeSingle();
 
     if (eventError) {
       console.error("Error fetching event:", eventError);
-      throw new Error(eventError.message || "Failed to load event details");
+      throw new Error(formatEventErrorMessage(eventError));
     }
 
     if (!eventData) {
+      console.log(`Event not found for ID: ${idToUse}`);
       throw new Error("Event not found");
     }
     
@@ -66,12 +68,12 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
     // Transform the data to match the EventDetails interface
     const eventDetails: EventDetails = {
       id: eventData.id,
-      title: eventData.title,
+      title: eventData.title || "",
       description: eventData.description || "",
-      date: eventData.date,
-      time: eventData.time,
-      price: eventData.price,
-      capacity: eventData.capacity,
+      date: eventData.date || "",
+      time: eventData.time || "",
+      price: eventData.price || 0,
+      capacity: eventData.capacity || 0,
       restaurant: eventData.restaurant ? {
         id: eventData.restaurant.id,
         name: eventData.restaurant.name || "Unknown Restaurant",
@@ -97,8 +99,8 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       },
       tickets_sold: eventData.tickets_sold || 0,
       user_id: eventData.user_id,
-      cover_image: eventData.cover_image,
-      published: eventData.published,
+      cover_image: eventData.cover_image || "",
+      published: eventData.published || false,
     };
 
     // Log the transformed data to verify restaurant description is included

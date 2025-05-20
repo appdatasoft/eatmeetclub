@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { EventDetails, EventDetailsResponse } from "./types/eventTypes";
 import { toast } from "@/hooks/use-toast";
 import { fetchEventDetails, checkEventOwnership } from "./eventDetails/eventDetailsFetcher";
+import { getUserFriendlyEventError } from "./eventDetails/errorHandler";
 
 export const useEventFetch = (eventId: string | undefined): EventDetailsResponse => {
   const [event, setEvent] = useState<EventDetails | null>(null);
@@ -22,6 +23,15 @@ export const useEventFetch = (eventId: string | undefined): EventDetailsResponse
       setIsLoading(true);
       setError(null);
       
+      // Add a reasonable timeout to prevent infinite loading state
+      const timeoutId = setTimeout(() => {
+        console.log("Safety timeout triggered - forcing loading state to end");
+        setIsLoading(false);
+        if (!event && !error) {
+          setError("Request timed out. Please try again.");
+        }
+      }, 10000); // 10 seconds timeout
+      
       // Fetch the event details
       const eventDetails = await fetchEventDetails(eventId);
       setEvent(eventDetails);
@@ -29,6 +39,9 @@ export const useEventFetch = (eventId: string | undefined): EventDetailsResponse
       // Check if current user is the owner
       const isOwner = await checkEventOwnership(eventId);
       setIsCurrentUserOwner(isOwner);
+      
+      // Clear timeout as request completed successfully
+      clearTimeout(timeoutId);
     } catch (err: any) {
       console.error("Error in useEventFetch:", err);
       setError(err.message || "An unexpected error occurred");
@@ -38,14 +51,14 @@ export const useEventFetch = (eventId: string | undefined): EventDetailsResponse
       if (err.message !== "Invalid event ID format" && err.message !== "Event not found") {
         toast({
           title: "Error loading event",
-          description: err.message || "Failed to load event details",
+          description: getUserFriendlyEventError(err),
           variant: "destructive"
         });
       }
     } finally {
       setIsLoading(false);
     }
-  }, [eventId]);
+  }, [eventId, event, error]);
 
   useEffect(() => {
     refreshEventDetails();

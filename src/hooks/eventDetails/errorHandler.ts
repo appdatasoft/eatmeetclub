@@ -67,6 +67,14 @@ export const getUserFriendlyEventError = (error: unknown): string => {
     return 'You don\'t have permission to view this event.';
   }
   
+  if (errorMessage.includes('timeout')) {
+    return 'The request timed out. Please try again later.';
+  }
+  
+  if (errorMessage.includes('Invalid URL')) {
+    return 'There was a problem with the URL. Please check the event ID and try again.';
+  }
+  
   // Return the original error message if we don't have a friendly version
   return errorMessage;
 };

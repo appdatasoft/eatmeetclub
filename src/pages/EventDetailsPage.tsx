@@ -29,13 +29,18 @@ const EventDetailsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [retryAttempt, setRetryAttempt] = useState<number>(0);
 
   const getEventIdFromParams = () => {
+    // Extract event ID from the URL parameters - prioritize the "id" param
     if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
       return id;
     }
+    
+    // Look for UUID pattern in either the id or slug
     const uuidMatch = id?.match(/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i) ||
-                      slug?.match(/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i);
+                     slug?.match(/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i);
+    
     return uuidMatch?.[1] || id || slug || '';
   };
 
@@ -53,7 +58,7 @@ const EventDetailsPage = () => {
     };
     
     checkConnection();
-  }, []);
+  }, [retryAttempt]);
   
   const { event, isLoading, error, isCurrentUserOwner, refreshEventDetails } = useEventFetch(eventId);
   const { referralCode } = useReferralTracking(eventId);
@@ -66,37 +71,6 @@ const EventDetailsPage = () => {
       console.log(`Viewing event ${eventId} with referral code: ${referralCode}`);
     }
   }, [eventId, referralCode]);
-
-  useEffect(() => {
-    const safeError = typeof error === "string" ? error : String(error);
-    if (safeError && !safeError.includes("not found") && !safeError.includes("Invalid")) {
-      toast({
-        title: "Error loading event",
-        description: safeError,
-        variant: "destructive"
-      });
-    }
-  }, [error]);
-
-  // Format the error message for display
-  const safeError = typeof error === "string" ? error : String(error);
-
-  if (safeError.includes("body stream already read")) {
-    return (
-      <>
-        <Navbar />
-        <div className="container-custom py-12 text-center text-red-500">
-          <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Unexpected error occurred</h2> 
-          <p>Please refresh the page to try again.</p>
-          <Button onClick={() => window.location.reload()} className="mt-4">
-            <RefreshCw className="h-4 w-4 mr-2" /> Refresh Page
-          </Button>
-        </div>
-        <Footer />
-      </>
-    );
-  }
 
   const { canEditEvent } = useEventAccess(event as EventDetails);
 
@@ -128,7 +102,7 @@ const EventDetailsPage = () => {
         .then(isConnected => {
           if (isConnected) {
             setConnectionError(null);
-            refreshEventDetails();
+            setRetryAttempt(prev => prev + 1);
           } else {
             toast({
               title: "Connection Error",
@@ -145,7 +119,7 @@ const EventDetailsPage = () => {
 
   const handleManageMenu = () => {
     if (event?.restaurant?.id) {
-      navigate(`/dashboard/restaurant-menu/${event.restaurant.id}?eventId=${event.id}&eventName=${encodeURIComponent(event.title)}`);
+      navigate(`/dashboard/restaurant-menu/${event.restaurant.id}?eventId=${event.id}&eventName=${encodeURIComponent(event.title || '')}`);
     } else {
       toast({
         title: "Error",
@@ -198,13 +172,16 @@ const EventDetailsPage = () => {
     );
   }
 
+  // Safely handle the error message
+  const safeError = typeof error === "string" ? error : error ? String(error) : null;
+
   if (!event || safeError) {
     return (
       <>
         <Navbar />
         <div className="container-custom py-8">
           <EventNotFound error={safeError} />
-          {safeError && !safeError.includes("not found") && (
+          {safeError && (
             <div className="mt-4 flex justify-center">
               <Button
                 variant="outline"
@@ -255,6 +232,7 @@ const EventDetailsPage = () => {
     );
   }
 
+  // If we get here, we have a valid event to display
   return (
     <>
       <Navbar />
