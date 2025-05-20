@@ -20,11 +20,22 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
       throw new Error("Invalid event ID format");
     }
     
-    // First get event data with restaurant details
+    // First get event data with restaurant details - using single() here
+    // prevents multiple results that could confuse response parsing
     const { data: eventData, error: eventError } = await supabase
       .from("events")
       .select(`
-        *,
+        id, 
+        title,
+        description,
+        date,
+        time,
+        price,
+        capacity,
+        cover_image,
+        published,
+        tickets_sold,
+        user_id,
         restaurant:restaurants(
           id,
           name,
@@ -39,7 +50,7 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
         )
       `)
       .eq("id", idToUse)
-      .single();
+      .maybeSingle(); // Using maybeSingle() instead of single() to handle not found without error
 
     if (eventError) {
       console.error("Error fetching event:", eventError);
@@ -131,7 +142,7 @@ export const checkEventOwnership = async (eventId: string): Promise<boolean> => 
       .from("events")
       .select("user_id")
       .eq("id", idToUse)
-      .single();
+      .maybeSingle(); // Use maybeSingle() to handle not found case without error
       
     return data?.user_id === currentUserId;
   } catch (err) {

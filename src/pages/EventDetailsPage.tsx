@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useEventFetch } from "@/hooks/useEventFetch";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,6 +29,7 @@ const EventDetailsPage = () => {
   const { user } = useAuth();
 
   const getEventIdFromParams = () => {
+    console.log("Extracted event ID:", id, "from id:", id, "and slug:", slug);
     if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
       return id;
     }

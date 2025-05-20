@@ -33,19 +33,20 @@ export const safeJsonParse = async <T>(response: Response): Promise<T> => {
   }
   
   try {
+    // First try to parse as JSON
     return await responseToUse.json() as T;
   } catch (error) {
-    console.warn('Error parsing JSON response:', error);
+    console.warn('Error parsing JSON response, attempting to read as text:', error);
     
-    // Attempt to read as text as fallback
+    // Create a new clone for text reading
+    let textResponse;
     try {
-      let textResponse;
-      try {
-        textResponse = response.clone();
-      } catch (cloneError) {
-        textResponse = response;
-      }
-      
+      textResponse = response.clone();
+    } catch (cloneError) {
+      textResponse = response;
+    }
+    
+    try {
       const textContent = await textResponse.text();
       
       if (!textContent || textContent.trim() === '') {

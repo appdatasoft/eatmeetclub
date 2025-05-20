@@ -1,74 +1,56 @@
 
-import { requestCache } from './requestCache';
-
-// Request queue implementation with improved throttling and response handling
+/**
+ * A queue to manage concurrent requests and prevent rate limiting
+ */
 export class RequestQueue {
   private queue: Array<() => Promise<any>> = [];
   private processing = false;
   private concurrentRequests = 0;
-  private maxConcurrentRequests = 1; // Reduced to 1 for stricter throttling
-  private requestDelay = 1500; // Increased to 1500ms to prevent rapid requests
-  private lastRequestTime = 0;
-  private rateLimitedUntil = 0;
-  private pauseUntil = 0;
+  private maxConcurrentRequests = 3;
+  private requestDelay = 300; // ms
+  private cacheMap = new Map<string, { response: Response, timestamp: number }>();
+  private cacheTTL = 60 * 1000; // 1 minute
 
   async add<T>(request: () => Promise<T>, cacheKey?: string): Promise<T> {
-    // Check if response is in memory cache
-    if (cacheKey && requestCache.has(cacheKey)) {
-      const cached = requestCache.get<{ data: T, expiry: number }>(cacheKey);
-      if (cached && cached.expiry > Date.now()) {
-        console.log(`Using in-memory cache for ${cacheKey}`);
-        return cached.data;
-      } else if (cached) {
-        requestCache.delete(cacheKey); // Expired cache
+    // Try to return from cache first if cache key exists
+    if (cacheKey && this.cacheMap.has(cacheKey)) {
+      const cached = this.cacheMap.get(cacheKey)!;
+      if (Date.now() - cached.timestamp < this.cacheTTL) {
+        try {
+          // Clone the response to avoid body already read issues
+          const clonedResponse = cached.response.clone();
+          // For non-GET methods, we should not cache
+          return clonedResponse as unknown as T;
+        } catch (e) {
+          console.warn('Failed to use cached response:', e);
+          // Continue to fresh request if we can't use cache
+        }
+      } else {
+        // Cache expired, remove it
+        this.cacheMap.delete(cacheKey);
       }
     }
-    
-    return new Promise<T>((resolve, reject) => {
+
+    return new Promise((resolve, reject) => {
       this.queue.push(async () => {
         try {
-          // Check if we're rate limited or paused
-          const now = Date.now();
-          const waitUntil = Math.max(this.rateLimitedUntil, this.pauseUntil);
-          
-          if (waitUntil > now) {
-            const waitTime = waitUntil - now;
-            console.log(`Rate limited or paused, waiting ${waitTime}ms`);
-            await new Promise(r => setTimeout(r, waitTime));
-          }
-          
-          // Ensure minimum delay between requests
-          const timeSinceLastRequest = now - this.lastRequestTime;
-          if (timeSinceLastRequest < this.requestDelay) {
-            const waitTime = this.requestDelay - timeSinceLastRequest;
-            await new Promise(r => setTimeout(r, waitTime));
-          }
-          
-          this.lastRequestTime = Date.now();
-          
-          // Execute the request
           const result = await request();
           
-          // Cache the successful response if cache key was provided
-          if (cacheKey) {
-            requestCache.set(cacheKey, {
-              data: result,
-              expiry: Date.now() + 60000 // 60 seconds memory cache
-            });
+          // Cache the result if we have a cache key and it's a Response object
+          if (cacheKey && result instanceof Response) {
+            try {
+              // Store a clone in the cache
+              this.cacheMap.set(cacheKey, { 
+                response: result.clone(),
+                timestamp: Date.now()
+              });
+            } catch (cacheError) {
+              console.warn('Failed to cache response:', cacheError);
+            }
           }
           
           resolve(result);
-        } catch (error: any) {
-          // If we got a 429 (too many requests), set a longer backoff
-          if (error?.status === 429) {
-            this.rateLimitedUntil = Date.now() + 120000; // 2 minute backoff
-            console.warn('Rate limit encountered, backing off for 2 minutes');
-          } 
-          // For other errors, brief pause
-          else {
-            this.pauseUntil = Date.now() + 5000;
-            console.warn('Request error, pausing for 5 seconds');
-          }
+        } catch (error) {
           reject(error);
         }
       });
@@ -91,6 +73,8 @@ export class RequestQueue {
       this.concurrentRequests++;
       
       try {
+        // Add a delay between requests to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, this.requestDelay));
         await request();
       } catch (error) {
         console.error('Error processing queued request:', error);
@@ -108,5 +92,5 @@ export class RequestQueue {
   }
 }
 
-// Create a global request queue
+// Create a singleton instance
 export const requestQueue = new RequestQueue();
