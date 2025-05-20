@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -149,9 +148,11 @@ serve(async (req) => {
         // Facebook App credentials
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         
-        // IMPORTANT: Use the FIXED redirect URI that matches the callback
-        // This address must match exactly what's used in the callback
+        // IMPORTANT: HARDCODED fixed redirect URI that must match exactly in both steps
+        // This exact URI must be registered in Facebook Developer Console
         const redirectUrl = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
+        
+        console.log(`[connect-social-media] Using FIXED redirect URL: ${redirectUrl}`);
 
         if (!clientId) {
           return new Response(
@@ -186,9 +187,11 @@ serve(async (req) => {
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         const clientSecret = Deno.env.get("FACEBOOK_APP_SECRET");
         
-        // IMPORTANT: Use FIXED redirect URI that matches the initiate
+        // IMPORTANT: HARDCODED fixed redirect URI that must match exactly the one used in authorize
         // This must be exactly the same as used in the authorization request
         const redirectUrl = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
+
+        console.log(`[connect-social-media] Using FIXED redirect URL for callback: ${redirectUrl}`);
 
         if (!clientId || !clientSecret) {
           return new Response(
@@ -219,7 +222,7 @@ serve(async (req) => {
           });
 
           const responseText = await tokenResponse.text();
-          console.log(`[connect-social-media] Raw token response: ${responseText.substring(0, 100)}...`);
+          console.log(`[connect-social-media] Raw token response: ${responseText.substring(0, 200)}`);
           
           let tokenData;
           try {
@@ -367,9 +370,10 @@ serve(async (req) => {
         // Instagram App credentials (same as Facebook App since it uses Facebook's OAuth)
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         
-        // IMPORTANT: Use the FIXED redirect URI that matches the callback
-        // This address must match exactly what's used in the callback
+        // IMPORTANT: HARDCODED redirect URI to match exactly in both places
         const redirectUrl = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
+        
+        console.log(`[connect-social-media] Using FIXED redirect URL for Instagram: ${redirectUrl}`);
 
         if (!clientId) {
           return new Response(
@@ -416,9 +420,10 @@ serve(async (req) => {
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         const clientSecret = Deno.env.get("FACEBOOK_APP_SECRET");
         
-        // IMPORTANT: Use FIXED redirect URI that matches the initiate
-        // This must be exactly the same as used in the authorization request
+        // IMPORTANT: HARDCODED redirect URI that must match exactly
         const redirectUrl = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
+        
+        console.log(`[connect-social-media] Using FIXED redirect URL for Instagram callback: ${redirectUrl}`);
 
         if (!clientId || !clientSecret) {
           return new Response(
@@ -450,7 +455,7 @@ serve(async (req) => {
           });
 
           const responseText = await tokenResponse.text();
-          console.log("[connect-social-media] Raw token response:", responseText);
+          console.log("[connect-social-media] Raw token response:", responseText?.substring(0, 200));
           
           let tokenData;
           try {

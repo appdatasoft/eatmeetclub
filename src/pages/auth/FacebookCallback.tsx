@@ -77,7 +77,7 @@ const FacebookCallback: React.FC = () => {
         // Get Supabase URL
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
         
-        // IMPORTANT: Use the exact same redirectUri that was used in the authorization request
+        // IMPORTANT: Use a FIXED hardcoded redirect URI that was used in the authorization request
         // This must match character-for-character what was used in the initial auth request
         const redirectUri = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
         

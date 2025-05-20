@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
@@ -225,8 +224,8 @@ export const useSocialMedia = () => {
       // Store state in sessionStorage for verification after redirect
       sessionStorage.setItem('facebook_oauth_state', state);
       
-      // IMPORTANT: Use a consistent redirect URI that will match in the callback
-      // This must be exactly the same as used in FacebookCallback.tsx and in the edge function
+      // IMPORTANT: Use a FIXED hardcoded redirect URI
+      // This must be exactly the same as used in the edge function
       const redirectUri = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
       
       console.log("Using Facebook OAuth redirect URI:", redirectUri);
@@ -290,8 +289,8 @@ export const useSocialMedia = () => {
       // Store state in sessionStorage for verification after redirect
       sessionStorage.setItem('instagram_oauth_state', state);
       
-      // IMPORTANT: Use a consistent redirect URI that will match in the callback
-      // This must be exactly the same as used in FacebookCallback.tsx and in the edge function
+      // IMPORTANT: Use a FIXED hardcoded redirect URI
+      // This must be exactly the same as used in the edge function
       const redirectUri = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
       
       console.log("Initiating Instagram OAuth with redirect:", redirectUri);
