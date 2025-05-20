@@ -1,14 +1,14 @@
-
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import MainLayout from "@/components/layout/MainLayout";
-import { PasswordForm, PasswordFormValues } from "@/components/auth/PasswordForm";
+import PasswordForm from "@/components/auth/PasswordForm";
 import PasswordSuccessMessage from "@/components/auth/PasswordSuccessMessage";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { PasswordFormValues } from "@/components/auth/PasswordForm";
 
 const SetPasswordPage = () => {
   const [searchParams] = useSearchParams();
