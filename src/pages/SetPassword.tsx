@@ -49,10 +49,11 @@ const SetPasswordPage = () => {
         type,
         url: window.location.href,
         hasErrorParam: !!urlError,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        rawParams: Object.fromEntries(searchParams.entries())
       };
       
-      console.log("URL parameters:", debugData);
+      console.log("URL parameters for password reset:", debugData);
       setDebugInfo(debugData);
       
       // For password recovery links
@@ -159,11 +160,15 @@ const SetPasswordPage = () => {
                 {debugInfo.hasToken && (
                   <>
                     <div>Token Length: {debugInfo.tokenLength}</div>
+                    <div>Token Start: {debugInfo.tokenStart}</div>
+                    <div>Token End: {debugInfo.tokenEnd}</div>
                     <div>Token Type: {debugInfo.type || "Not specified"}</div>
                   </>
                 )}
                 <div>URL Has Error: {debugInfo.hasErrorParam ? "Yes" : "No"}</div>
                 <div>Timestamp: {debugInfo.timestamp}</div>
+                <div>Raw Params: {JSON.stringify(debugInfo.rawParams)}</div>
+                <div>Full URL: {debugInfo.url}</div>
               </AlertDescription>
             </Alert>
           )}

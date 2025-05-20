@@ -49,13 +49,19 @@ serve(async (req) => {
         const url = new URL(redirectUrl);
         domain = `${url.protocol}//${url.host}`; // Get just the protocol and host
         console.log(`[${timestamp}] Extracted domain: ${domain}`);
+        
+        // Check if domain is a preview domain (lovable.app) and log it explicitly
+        if (url.host.includes('lovable.app')) {
+          console.log(`[${timestamp}] Using preview domain: ${domain}`);
+        }
       }
     } catch (e) {
       console.error("URL parsing failed:", e);
+      console.log(`[${timestamp}] Falling back to default domain: ${domain}`);
       // Continue with default domain
     }
     
-    // ALWAYS force the path to be /set-password
+    // CRITICAL FIX: ALWAYS force the path to be /set-password by constructing the final URL explicitly
     const finalRedirectUrl = `${domain}/set-password`;
     
     // CRITICAL DEBUGGING - Log the exact URL being passed to Supabase
@@ -89,14 +95,19 @@ serve(async (req) => {
         
         if (redirectParam) {
           console.log(`[${timestamp}] Extracted redirect_to param: ${redirectParam}`);
-          const redirectToUrl = new URL(redirectParam);
-          console.log(`[${timestamp}] redirect_to host: ${redirectToUrl.host}`);
-          console.log(`[${timestamp}] redirect_to pathname: ${redirectToUrl.pathname}`);
-          
-          if (redirectToUrl.pathname !== "/set-password") {
-            console.warn(`[${timestamp}] WARNING: Final redirect_to pathname is NOT /set-password: ${redirectToUrl.pathname}`);
-          } else {
-            console.log(`[${timestamp}] SUCCESS: redirect_to pathname is correctly set to /set-password`);
+          try {
+            const redirectToUrl = new URL(redirectParam);
+            console.log(`[${timestamp}] redirect_to host: ${redirectToUrl.host}`);
+            console.log(`[${timestamp}] redirect_to pathname: ${redirectToUrl.pathname}`);
+            
+            if (redirectToUrl.pathname !== "/set-password") {
+              console.warn(`[${timestamp}] WARNING: Final redirect_to pathname is NOT /set-password: ${redirectToUrl.pathname}`);
+              console.warn(`[${timestamp}] Please verify that the URL in the email contains /set-password path!`);
+            } else {
+              console.log(`[${timestamp}] SUCCESS: redirect_to pathname is correctly set to /set-password`);
+            }
+          } catch (e) {
+            console.error(`[${timestamp}] Error parsing redirect_to URL:`, e);
           }
         } else {
           console.warn(`[${timestamp}] WARNING: No redirect_to parameter found in action_link`);

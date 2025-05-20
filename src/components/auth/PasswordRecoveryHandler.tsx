@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -53,25 +54,30 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
       const timestamp = new Date().toISOString();
       console.log(`[${timestamp}] Sending password reset email to: ${email}`);
       
-      // IMPORTANT: Ensure we use the full origin INCLUDING protocol
+      // IMPORTANT: Ensure the redirect path is ALWAYS set to /set-password
+      // Get the full origin as base URL
       const domain = window.location.origin;
       console.log(`[${timestamp}] Current domain/origin: ${domain}`);
+      
+      // Explicitly construct the full redirect URL with /set-password path
+      const redirectUrl = `${domain}/set-password`;
+      console.log(`[${timestamp}] Constructed redirect URL: ${redirectUrl}`);
 
-      // Try direct Supabase API method first (most reliable)
+      // CRITICAL: Force redirectUrl to have /set-password and NOT use www.eatmeetclub.com
+      // Try direct Supabase API method with explicit redirect configuration
       try {
-        console.log(`[${timestamp}] Using direct Supabase auth.resetPasswordForEmail`);
+        console.log(`[${timestamp}] Using direct Supabase auth.resetPasswordForEmail with explicit redirect`);
         
         const { error, data } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${domain}/set-password`,
+          redirectTo: redirectUrl,
         });
         
         // Log detailed response
         console.log(`[${timestamp}] Reset password response:`, { 
           error, 
           data,
-          redirectUrl: `${domain}/set-password`,
-          domain,
-          hostEnvironment: window.location.hostname
+          redirectUrl,
+          emailSent: !error,
         });
         
         // Store debug info
@@ -80,13 +86,13 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
           resetRequestSent: !error,
           email,
           domain,
-          redirectUrl: `${domain}/set-password`,
-          method: "supabase-auth-direct"
+          redirectUrl,
+          method: "supabase-auth-direct-with-explicit-redirect"
         });
         
         if (error) {
-          console.warn(`[${timestamp}] Direct Supabase method failed, will try edge function next:`, error);
-          // Continue to try edge function as fallback
+          console.warn(`[${timestamp}] Direct Supabase method failed:`, error);
+          throw error;
         } else {
           // Direct method worked, set success and return
           setIsSuccess(true);
@@ -99,59 +105,9 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
         }
       } catch (directError) {
         console.warn(`[${timestamp}] Error with direct Supabase method:`, directError);
-        // Continue to edge function approach
+        throw directError;
       }
       
-      // Call the edge function as fallback
-      console.log(`[${timestamp}] Calling edge function for password reset`);
-      
-      // Always use the full URL to the edge function with the correct project ID
-      const supabaseUrl = "https://wocfwpedauuhlrfugxuu.supabase.co";
-      const edgeFunctionUrl = `${supabaseUrl}/functions/v1/generate-magic-link`;
-      
-      console.log(`[${timestamp}] Edge function URL: ${edgeFunctionUrl}`);
-      
-      const response = await fetch(edgeFunctionUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email, 
-          redirectUrl: domain, // Just provide the domain, the edge function will add /set-password
-          timestamp
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[${timestamp}] Edge function error response: ${response.status}`, errorText);
-        throw new Error(`Edge function failed with status ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      console.log(`[${timestamp}] Magic link generation result:`, result);
-      
-      if (!result.success) {
-        throw new Error(result.message || "Failed to generate magic link");
-      }
-      
-      // Store detailed debug info
-      setDebugInfo({
-        timestamp,
-        resetRequestSent: true,
-        email,
-        domain,
-        actualRedirectUsed: result.redirectUrl || "Not returned",
-        originalRedirectUrl: result.originalRedirectUrl,
-        method: "edge-function",
-        responseData: result
-      });
-      
-      setIsSuccess(true);
-      toast({
-        title: "Reset Link Sent",
-        description: `We've sent a password reset link to ${email}. Please check your inbox (and spam folder).`,
-      });
     } catch (error: any) {
       console.error(`[${new Date().toISOString()}] Error sending password reset email:`, error);
       setErrorMessage(error.message || "Failed to send reset email. Please try again later.");

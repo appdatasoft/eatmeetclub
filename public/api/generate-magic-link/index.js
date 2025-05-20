@@ -42,12 +42,15 @@ export default async function handler(req) {
     
     if (!response.ok) {
       console.error(`[${timestamp}] Edge function returned error status: ${response.status}`);
+      const responseText = await response.text();
+      console.error(`[${timestamp}] Error response body: ${responseText}`);
+      throw new Error(`Edge function failed with status: ${response.status}`);
     }
     
     const responseText = await response.text();
     console.log(`[${timestamp}] Response from edge function: ${responseText}`);
     
-    // Return the response from the Edge Function
+    // Return the response from the Edge Function with proper CORS headers
     return new Response(responseText, {
       status: response.status,
       headers: {
@@ -59,11 +62,19 @@ export default async function handler(req) {
     });
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error forwarding request to edge function:`, error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    
+    // Return a more descriptive error message
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      message: "Failed to forward request to Supabase edge function",
+      timestamp: new Date().toISOString()
+    }), {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
     });
   }
