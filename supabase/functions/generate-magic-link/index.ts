@@ -38,19 +38,22 @@ serve(async (req) => {
     
     console.log(`Generating magic link for ${email} with redirect to ${redirectUrl}`);
     
-    // First, construct a base URL (either from the provided redirectUrl or using default)
-    let baseUrl = redirectUrl;
+    // Always use the domain from the request or default to eatmeetclub.com
+    // This ensures we're always using the correct domain
+    let domain = "https://www.eatmeetclub.com";
     
-    // If no redirectUrl is provided or it's not absolute, use a default
-    if (!baseUrl || !baseUrl.startsWith('http')) {
-      baseUrl = "https://www.eatmeetclub.com";
+    // If redirectUrl contains a valid domain, use that instead
+    if (redirectUrl && redirectUrl.match(/^https?:\/\//)) {
+      try {
+        const url = new URL(redirectUrl);
+        domain = `${url.protocol}//${url.host}`;
+      } catch (e) {
+        console.warn("Invalid redirect URL provided, using default domain");
+      }
     }
     
-    // Strip any trailing slashes from the baseUrl
-    baseUrl = baseUrl.replace(/\/+$/, '');
-    
-    // Always ensure that the final redirect URL includes the /set-password path
-    const finalRedirectUrl = `${baseUrl}/set-password`;
+    // Always append /set-password to the domain (without any duplicate slashes)
+    const finalRedirectUrl = `${domain.replace(/\/+$/, '')}/set-password`;
     
     console.log(`Using final redirect URL: ${finalRedirectUrl}`);
     
@@ -59,7 +62,7 @@ serve(async (req) => {
       type: 'recovery',
       email: email,
       options: {
-        // Use the final redirect URL with the /set-password path
+        // Force the redirectTo to always use our constructed URL
         redirectTo: finalRedirectUrl,
       }
     });

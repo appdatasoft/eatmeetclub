@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -52,11 +53,53 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
     try {
       console.log("Sending password reset email to:", email);
       
-      // Create the full absolute URL to the set-password page
-      const redirectUrl = new URL('/set-password', window.location.origin).toString();
+      // Get the current domain
+      const domain = window.location.origin;
+      
+      // Always construct the redirect URL using the current domain
+      // This ensures we're using the correct domain in all environments
+      const redirectUrl = `${domain}/set-password`;
+      
       console.log("Reset email redirect URL:", redirectUrl);
       
-      // Use password recovery method
+      // Try to use our custom edge function first for better control
+      try {
+        const response = await fetch(`${domain}/api/generate-magic-link`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, redirectUrl }),
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.message || "Failed to generate magic link");
+        }
+        
+        console.log("Magic link generated via edge function");
+        
+        // Store debug info
+        setDebugInfo({
+          timestamp: new Date().toISOString(),
+          resetRequestSent: true,
+          email: email,
+          redirectUrl: redirectUrl,
+          method: "edge-function"
+        });
+        
+        setIsSuccess(true);
+        toast({
+          title: "Reset Link Sent",
+          description: `We've sent a password reset link to ${email}. Please check your inbox (and spam folder).`,
+        });
+        
+        return;
+      } catch (edgeError) {
+        console.warn("Edge function failed, falling back to default method:", edgeError);
+        // Continue to fallback method
+      }
+      
+      // Fallback: Use the default Supabase auth resetPasswordForEmail
       const { error, data } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
       });
@@ -75,7 +118,8 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
         timestamp: new Date().toISOString(),
         resetRequestSent: !error,
         email: email,
-        redirectUrl: redirectUrl
+        redirectUrl: redirectUrl,
+        method: "supabase-client"
       });
       
       if (error) throw error;
@@ -119,6 +163,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
               <div>Email: {debugInfo.email}</div>
               <div>Reset request sent: {debugInfo.resetRequestSent ? "Yes" : "No"}</div>
               <div>Redirect URL: {debugInfo.redirectUrl}</div>
+              <div>Method: {debugInfo.method}</div>
             </AlertDescription>
           </Alert>
         )}
