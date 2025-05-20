@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
@@ -320,8 +319,12 @@ export const useSocialMedia = () => {
       // Store state in sessionStorage for verification after redirect
       sessionStorage.setItem('facebook_oauth_state', state);
       
-      // Use the site's own callback URL
-      const redirectUri = `https://eatmeetclub.com/api/auth/callback/facebook`;
+      // Use the new callback URL
+      const redirectUri = window.location.hostname === 'localhost' 
+        ? `${window.location.protocol}//${window.location.hostname}:${window.location.port}/auth/facebook/callback`
+        : `${window.location.protocol}//${window.location.hostname}/auth/facebook/callback`;
+      
+      console.log("Using Facebook OAuth redirect URI:", redirectUri);
       
       // Use the Supabase URL from environment or fallback
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
@@ -382,8 +385,10 @@ export const useSocialMedia = () => {
       // Store state in sessionStorage for verification after redirect
       sessionStorage.setItem('instagram_oauth_state', state);
       
-      // Use the site's own callback URL
-      const redirectUri = `https://eatmeetclub.com/api/auth/callback/facebook`;
+      // Use the new callback URL
+      const redirectUri = window.location.hostname === 'localhost' 
+        ? `${window.location.protocol}//${window.location.hostname}:${window.location.port}/auth/facebook/callback`
+        : `${window.location.protocol}//${window.location.hostname}/auth/facebook/callback`;
       
       console.log("Initiating Instagram OAuth with redirect:", redirectUri);
       

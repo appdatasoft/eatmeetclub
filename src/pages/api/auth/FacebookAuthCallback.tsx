@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle, ExternalLink } from 'lucide-react';
@@ -12,6 +11,7 @@ import { customFetch } from '@/integrations/supabase/utils/fetchUtils';
 
 const FacebookAuthCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -43,7 +43,8 @@ const FacebookAuthCallback: React.FC = () => {
           error,
           errorReason,
           errorDescription,
-          currentUrl: urlWithoutHash
+          currentUrl: urlWithoutHash,
+          path: location.pathname
         });
         
         // Store debug info
@@ -54,6 +55,7 @@ const FacebookAuthCallback: React.FC = () => {
           errorReason,
           errorDescription,
           url: urlWithoutHash,
+          path: location.pathname,
           time: new Date().toISOString(),
           userAgent: navigator.userAgent
         });
@@ -99,17 +101,10 @@ const FacebookAuthCallback: React.FC = () => {
         // Get Supabase URL
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
         
-        // Determine the appropriate redirect URI based on the environment
-        let redirectUri;
-        const hostname = window.location.hostname;
-        
-        if (hostname === 'localhost' || hostname.includes('192.168.') || hostname.includes('127.0.0.1')) {
-          // Local development
-          redirectUri = `${window.location.protocol}//${hostname}:${window.location.port}/api/auth/callback/facebook`;
-        } else {
-          // Production - use the exact URL from Facebook developers console
-          redirectUri = `https://${hostname}/api/auth/callback/facebook`;
-        }
+        // Determine the appropriate redirect URI based on the environment and path
+        let redirectUri = window.location.hostname === 'localhost' 
+          ? `${window.location.protocol}//${window.location.hostname}:${window.location.port}${location.pathname}`
+          : `${window.location.protocol}//${window.location.hostname}${location.pathname}`;
         
         console.log(`[FacebookAuthCallback] Using redirectUri: ${redirectUri}`);
         
@@ -260,7 +255,7 @@ const FacebookAuthCallback: React.FC = () => {
     }, 1000); // Increase timeout for better reliability
     
     return () => clearTimeout(timeoutId);
-  }, [searchParams, navigate, toast, fetchConnections]);
+  }, [searchParams, navigate, toast, fetchConnections, location]);
   
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
