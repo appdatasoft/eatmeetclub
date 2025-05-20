@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,41 +37,25 @@ const SetPasswordPage = () => {
     // Log all URL parameters for debugging
     console.log("URL parameters:", Object.fromEntries(searchParams.entries()));
     
-    // Set session from URL parameters when component mounts
-    const setSessionFromUrl = async () => {
-      try {
-        // Check for both token param and hash fragment
-        const token = searchParams.get("token") || new URLSearchParams(window.location.hash.substring(1)).get("token");
-        const type = searchParams.get("type") || new URLSearchParams(window.location.hash.substring(1)).get("type");
-        
-        console.log("Recovery params:", { token: !!token, type });
-        
-        // For password recovery links
-        if (token && type === "recovery") {
-          console.log("Received recovery token, marking as valid");
-          setHasValidToken(true);
-          
-          // Clear any URL error since we have a valid token
-          if (urlError) {
-            setError(null);
-          }
-          
-          return true;
-        }
-        
-        return false;
-      } catch (err) {
-        console.error("Error parsing URL params:", err);
-        return false;
+    // Check for token in URL and hash fragment
+    const token = searchParams.get("token") || new URLSearchParams(window.location.hash.substring(1)).get("token");
+    const type = searchParams.get("type") || new URLSearchParams(window.location.hash.substring(1)).get("type");
+      
+    console.log("Recovery params:", { token: !!token, type });
+      
+    // For password recovery links, mark token as valid
+    if (token && type === "recovery") {
+      console.log("Received recovery token, marking as valid");
+      setHasValidToken(true);
+      
+      // Clear any URL error since we have a valid token
+      if (urlError) {
+        setError(null);
       }
-    };
-    
-    setSessionFromUrl().then(validSession => {
-      if (!validSession && !urlError) {
-        console.log("No valid session found and no URL error");
-        setError("Invalid or expired password reset link. Please request a new one.");
-      }
-    });
+    } else if (!urlError) {
+      console.log("No valid session found and no URL error");
+      setError("Invalid or expired password reset link. Please request a new one.");
+    }
   }, [searchParams]);
 
   const handleSetPassword = async (values: PasswordFormValues) => {
@@ -80,15 +65,7 @@ const SetPasswordPage = () => {
     try {
       console.log("Setting new password");
       
-      // Check for token in URL params or hash fragment
-      const token = searchParams.get("token") || new URLSearchParams(window.location.hash.substring(1)).get("token");
-      const type = searchParams.get("type") || new URLSearchParams(window.location.hash.substring(1)).get("type");
-      
-      if (!token || type !== "recovery") {
-        throw new Error("Invalid password reset link. Please request a new one.");
-      }
-      
-      // Update password using the token
+      // Update password using the current user session
       const { error } = await supabase.auth.updateUser({
         password: values.password,
       });

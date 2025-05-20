@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -55,7 +55,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
       console.log(`[${new Date().toISOString()}] Sending password reset email to: ${email}`);
       console.log(`[${new Date().toISOString()}] Redirect URL: ${redirectTo}`);
 
-      // Use Supabase's built-in password reset functionality
+      // Use Supabase's built-in password reset functionality with proper redirectTo
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectTo
       });
