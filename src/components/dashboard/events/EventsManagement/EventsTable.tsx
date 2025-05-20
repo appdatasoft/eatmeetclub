@@ -14,12 +14,14 @@ const EventsTable = ({ events, onRefresh }: EventsTableProps) => {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Event Image</TableHead>
             <TableHead>Title</TableHead>
             <TableHead>Restaurant</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Price</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Tickets</TableHead>
+            <TableHead>Copy Link</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>

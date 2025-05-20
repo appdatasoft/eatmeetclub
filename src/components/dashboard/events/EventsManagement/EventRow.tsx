@@ -1,15 +1,15 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, Edit, Eye, Trash2, AlertTriangle, Loader2 } from "lucide-react";
+import { Check, X, Edit, Eye, Trash2, AlertTriangle, Loader2, Copy, Link } from "lucide-react";
 import { TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Event } from "./types";
+import SupabaseImage from "@/components/common/SupabaseImage";
 
 interface EventRowProps {
   event: Event;
@@ -20,6 +20,7 @@ const EventRow = ({ event, onRefresh }: EventRowProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [processingEventId, setProcessingEventId] = useState<string | null>(null);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
 
   const formatDate = (dateString: string) => {
     try {
@@ -117,8 +118,53 @@ const EventRow = ({ event, onRefresh }: EventRowProps) => {
     }
   };
 
+  const getEventUrl = (event: Event): string => {
+    // Create a URL-friendly slug from event title
+    const titleSlug = event.title
+      .toLowerCase()
+      .replace(/[^\w\s]/gi, '')
+      .replace(/\s+/g, '-');
+    return `${window.location.origin}/event/${titleSlug}-${event.id}`;
+  };
+
+  const handleCopyLink = (event: Event) => {
+    const eventUrl = getEventUrl(event);
+    navigator.clipboard.writeText(eventUrl).then(
+      () => {
+        setCopiedLinkId(event.id);
+        toast({
+          title: "Link copied!",
+          description: "Event link copied to clipboard",
+        });
+        
+        // Reset the copied state after 2 seconds
+        setTimeout(() => {
+          setCopiedLinkId(null);
+        }, 2000);
+      },
+      (err) => {
+        console.error('Failed to copy text: ', err);
+        toast({
+          title: "Failed to copy",
+          description: "Please try again or copy manually",
+          variant: "destructive",
+        });
+      }
+    );
+  };
+
   return (
     <TableRow key={event.id}>
+      <TableCell>
+        <div className="h-12 w-16 overflow-hidden rounded-md">
+          <SupabaseImage
+            src={event.cover_image || ''}
+            alt={event.title || 'Event'}
+            className="h-full w-full object-cover"
+            fallbackSrc="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='8' text-anchor='middle' dominant-baseline='middle' fill='%23888'%3E🖼️%3C/text%3E%3C/svg%3E"
+          />
+        </div>
+      </TableCell>
       <TableCell className="font-medium">{event.title}</TableCell>
       <TableCell>{event.restaurant?.name || "Unknown"}</TableCell>
       <TableCell>{formatDate(event.date)}</TableCell>
@@ -153,6 +199,20 @@ const EventRow = ({ event, onRefresh }: EventRowProps) => {
         <span className="font-medium">
           {event.tickets_sold || 0}/{event.capacity}
         </span>
+      </TableCell>
+      <TableCell>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => handleCopyLink(event)}
+        >
+          {copiedLinkId === event.id ? (
+            <Check className="h-4 w-4 mr-1" />
+          ) : (
+            <Link className="h-4 w-4 mr-1" />
+          )}
+          {copiedLinkId === event.id ? "Copied" : "Copy"}
+        </Button>
       </TableCell>
       <TableCell>
         <div className="flex space-x-2">

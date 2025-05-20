@@ -11,4 +11,5 @@ export interface Event {
   tickets_sold: number;
   published: boolean;
   payment_status: string;
+  cover_image?: string; // Added cover_image field
 }
