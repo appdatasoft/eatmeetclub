@@ -41,13 +41,8 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile menu */}
-      <MobileMenu 
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-        user={user}
-        handleLogout={handleLogout}
-      />
+      {/* Mobile menu - no longer passing props */}
+      <MobileMenu />
     </nav>
   );
 };

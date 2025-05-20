@@ -1,3 +1,4 @@
+
 import {
   Sheet,
   SheetContent,
@@ -6,7 +7,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { AlignJustify, BarChart3, Calendar, CreditCard, FileText, Home, LayoutGrid, Link as LinkIcon, Settings, Utensils, Share2 } from "lucide-react";
+import { AlignJustify, BarChart3, Calendar, CreditCard, FileText, Home, LayoutGrid, Link as LinkIcon, Settings, Utensils, Share2, ShieldCheck } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -56,7 +57,7 @@ const navigationItems = [
 ];
 
 const MobileMenu = () => {
-  const { user, signOut } = useAuth();
+  const { user, handleLogout } = useAuth();
   const location = useLocation();
   const isAdmin = user?.user_metadata?.is_admin;
 
@@ -125,7 +126,7 @@ const MobileMenu = () => {
         <SheetTitle className="mt-4 text-left px-4">Account</SheetTitle>
         <div className="px-4">
           <button
-            onClick={() => signOut()}
+            onClick={() => handleLogout()}
             className="w-full rounded-md bg-secondary px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary/80"
           >
             Sign Out

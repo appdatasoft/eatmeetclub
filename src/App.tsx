@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -22,7 +23,7 @@ function App() {
               <Route path="/admin/*" element={<AdminRoutes />} />
 
               {/* Dashboard routes */}
-              <Route path="/dashboard/*" element={<DashboardRoutes />} />
+              <DashboardRoutes />
 
               {/* Catch-all route */}
               <Route path="*" element={<NotFound />} />
