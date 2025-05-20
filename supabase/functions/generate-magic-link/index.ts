@@ -38,31 +38,28 @@ serve(async (req) => {
     
     console.log(`Generating magic link for ${email} with redirect to ${redirectUrl}`);
     
-    // Always use the domain from the request or default to eatmeetclub.com
-    // This ensures we're always using the correct domain
-    let domain = "https://www.eatmeetclub.com";
+    // Always ensure the redirect URL ends with /set-password
+    let finalRedirectUrl;
     
-    // If redirectUrl contains a valid domain, use that instead
-    if (redirectUrl && redirectUrl.match(/^https?:\/\//)) {
-      try {
-        const url = new URL(redirectUrl);
-        domain = `${url.protocol}//${url.host}`;
-      } catch (e) {
-        console.warn("Invalid redirect URL provided, using default domain");
-      }
+    try {
+      // Parse the redirectUrl to extract domain
+      const parsedUrl = new URL(redirectUrl);
+      // Force the path to be /set-password regardless of what was provided
+      parsedUrl.pathname = "/set-password";
+      finalRedirectUrl = parsedUrl.toString();
+    } catch (e) {
+      // If URL parsing fails, use a hardcoded default with /set-password
+      console.warn("URL parsing failed, using default URL:", e);
+      finalRedirectUrl = "https://www.eatmeetclub.com/set-password";
     }
     
-    // Always append /set-password to the domain (without any duplicate slashes)
-    const finalRedirectUrl = `${domain.replace(/\/+$/, '')}/set-password`;
-    
-    console.log(`Using final redirect URL: ${finalRedirectUrl}`);
+    console.log(`FINAL redirect URL being used: ${finalRedirectUrl}`);
     
     // Generate a recovery link (for password reset/setup)
     const { data, error } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: email,
       options: {
-        // Force the redirectTo to always use our constructed URL
         redirectTo: finalRedirectUrl,
       }
     });
@@ -73,12 +70,14 @@ serve(async (req) => {
     }
     
     console.log("Magic link generated successfully");
+    console.log("Action link property:", data.properties?.action_link);
     
     // Return the generated action link to be used in the welcome email
     return new Response(
       JSON.stringify({
         success: true,
         magicLink: data.properties?.action_link,
+        redirectUrl: finalRedirectUrl // Return the redirect URL for debugging
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
