@@ -75,10 +75,11 @@ export const TicketPurchase = ({
                   size="icon"
                   onClick={decreaseCount}
                   disabled={ticketCount <= 1 || isProcessing}
+                  aria-label="Decrease ticket count"
                 >
                   <MinusCircle className="h-4 w-4" />
                 </Button>
-                <span className="text-lg font-semibold">{ticketCount}</span>
+                <span className="text-lg font-semibold" aria-label="Number of tickets">{ticketCount}</span>
                 <Button
                   variant="outline"
                   size="icon"
@@ -86,6 +87,7 @@ export const TicketPurchase = ({
                   disabled={
                     ticketCount >= Math.min(10, ticketsRemaining) || isProcessing
                   }
+                  aria-label="Increase ticket count"
                 >
                   <PlusCircle className="h-4 w-4" />
                 </Button>
