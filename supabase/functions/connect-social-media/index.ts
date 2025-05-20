@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -148,8 +149,9 @@ serve(async (req) => {
         // Facebook App credentials
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         
-        // Use the provided redirectUri or default to the new path
-        const redirectUrl = redirectUri || "https://eatmeetclub.com/auth/facebook/callback";
+        // IMPORTANT: Use the FIXED redirect URI that matches the callback
+        // This address must match exactly what's used in the callback
+        const redirectUrl = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
 
         if (!clientId) {
           return new Response(
@@ -183,8 +185,10 @@ serve(async (req) => {
 
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         const clientSecret = Deno.env.get("FACEBOOK_APP_SECRET");
-        // Use the provided redirectUri or default
-        const redirectUrl = redirectUri || "https://eatmeetclub.com/auth/facebook/callback";
+        
+        // IMPORTANT: Use FIXED redirect URI that matches the initiate
+        // This must be exactly the same as used in the authorization request
+        const redirectUrl = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
 
         if (!clientId || !clientSecret) {
           return new Response(
@@ -232,7 +236,7 @@ serve(async (req) => {
             console.error("[connect-social-media] Facebook token exchange error:", tokenData);
             return new Response(
               JSON.stringify({ 
-                error: tokenData.error_message || tokenData.error_description || "Failed to exchange code for token",
+                error: "Failed to exchange code for token",
                 details: tokenData
               }),
               { headers: corsHeaders, status: 400 }
@@ -363,8 +367,9 @@ serve(async (req) => {
         // Instagram App credentials (same as Facebook App since it uses Facebook's OAuth)
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         
-        // Use the provided redirectUri or default to the new path
-        const redirectUrl = redirectUri || "https://eatmeetclub.com/auth/facebook/callback";
+        // IMPORTANT: Use the FIXED redirect URI that matches the callback
+        // This address must match exactly what's used in the callback
+        const redirectUrl = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
 
         if (!clientId) {
           return new Response(
@@ -410,8 +415,10 @@ serve(async (req) => {
 
         const clientId = Deno.env.get("FACEBOOK_APP_ID");
         const clientSecret = Deno.env.get("FACEBOOK_APP_SECRET");
-        // Use the site's own callback URL
-        const redirectUrl = redirectUri || "https://eatmeetclub.com/auth/facebook/callback";
+        
+        // IMPORTANT: Use FIXED redirect URI that matches the initiate
+        // This must be exactly the same as used in the authorization request
+        const redirectUrl = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
 
         if (!clientId || !clientSecret) {
           return new Response(
@@ -460,7 +467,7 @@ serve(async (req) => {
             console.error("[connect-social-media] Facebook/Instagram token exchange error:", tokenData);
             return new Response(
               JSON.stringify({ 
-                error: tokenData.error_message || tokenData.error_description || "Failed to exchange code for token",
+                error: "Failed to exchange code for token",
                 details: tokenData
               }),
               { headers: corsHeaders, status: 400 }

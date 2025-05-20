@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,103 +29,8 @@ export const useSocialMedia = () => {
 
   // Check for OAuth callback in URL
   useEffect(() => {
-    const checkForOAuthCallback = async () => {
-      const url = new URL(window.location.href);
-      const code = url.searchParams.get('code');
-      const state = url.searchParams.get('state');
-      const error = url.searchParams.get('error');
-      const errorReason = url.searchParams.get('error_reason');
-      const errorDescription = url.searchParams.get('error_description');
-      
-      // If there's an error in the OAuth callback
-      if (error || errorReason || errorDescription) {
-        setOauthPending(false);
-        console.error('OAuth error:', error, errorReason, errorDescription);
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        toast({
-          title: 'Connection Failed',
-          description: errorDescription || errorReason || error || 'Failed to connect social media account',
-          variant: 'destructive',
-        });
-        
-        return;
-      }
-      
-      // If this is a Facebook OAuth callback (for both Facebook and Instagram)
-      if (code && state && (state.startsWith('facebook_') || state.startsWith('instagram_'))) {
-        setOauthPending(true);
-        
-        const platform = state.startsWith('facebook_') ? 'Facebook' : 'Instagram';
-        console.log(`Processing ${platform} OAuth callback with code: ${code.substring(0, 6)}...`);
-
-        try {
-          // Clean up URL to remove OAuth params
-          window.history.replaceState({}, document.title, window.location.pathname);
-          
-          // Get session to verify authentication
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) {
-            throw new Error('No active session found');
-          }
-          
-          // Supabase URL for the edge function
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
-          // Use the site's own callback URL
-          const redirectUri = `https://eatmeetclub.com/api/auth/callback/facebook`;
-          
-          // Complete OAuth flow by exchanging code for token
-          const response = await fetch(`${supabaseUrl}/functions/v1/connect-social-media`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({
-              platform,
-              action: 'callback',
-              code,
-              redirectUri
-            })
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Failed to complete ${platform} authentication`);
-          }
-          
-          const result = await response.json();
-          
-          // Check if this is a limited access connection
-          if (result.limited_access) {
-            toast({
-              title: `${platform} Connected with Limited Access`,
-              description: `Your ${platform} account was connected with limited functionality. Full integration requires app review by Facebook.`,
-            });
-          } else {
-            toast({
-              title: `${platform} Connected`,
-              description: result.message || `Successfully connected your ${platform} account`,
-            });
-          }
-          
-          // Refresh connections list
-          await fetchConnections();
-        } catch (err: any) {
-          console.error('OAuth callback handling error:', err);
-          setError(err.message);
-          toast({
-            title: 'Connection Failed',
-            description: err.message || 'Failed to connect social media account',
-            variant: 'destructive',
-          });
-        } finally {
-          setOauthPending(false);
-        }
-      }
-    };
-    
-    checkForOAuthCallback();
+    // Removed the OAuth callback handling from this component
+    // Now using dedicated callback components to handle authentication
   }, []);
 
   const fetchConnections = async () => {
@@ -320,7 +226,7 @@ export const useSocialMedia = () => {
       sessionStorage.setItem('facebook_oauth_state', state);
       
       // IMPORTANT: Use a consistent redirect URI that will match in the callback
-      // This must be exactly the same as used in FacebookCallback.tsx
+      // This must be exactly the same as used in FacebookCallback.tsx and in the edge function
       const redirectUri = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
       
       console.log("Using Facebook OAuth redirect URI:", redirectUri);
@@ -385,7 +291,7 @@ export const useSocialMedia = () => {
       sessionStorage.setItem('instagram_oauth_state', state);
       
       // IMPORTANT: Use a consistent redirect URI that will match in the callback
-      // This must be exactly the same as used in FacebookCallback.tsx
+      // This must be exactly the same as used in FacebookCallback.tsx and in the edge function
       const redirectUri = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
       
       console.log("Initiating Instagram OAuth with redirect:", redirectUri);
