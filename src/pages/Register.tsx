@@ -11,25 +11,62 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 const Register = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [address, setAddress] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Format phone number as user types
+  const formatPhoneNumber = (value: string) => {
+    // Remove any non-digit characters
+    const digits = value.replace(/\D/g, '');
+    
+    // Format as (XXX) XXX-XXXX for US phone numbers
+    if (digits.length <= 3) {
+      return digits;
+    } else if (digits.length <= 6) {
+      return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    } else {
+      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhoneNumber(formatPhoneNumber(e.target.value));
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
+    if (!firstName || !lastName || !email || !password || !phoneNumber || !address) {
+      setError("All fields are required");
+      setIsLoading(false);
+      return;
+    }
+
     try {
+      // Store user metadata
+      const metadata = {
+        full_name: `${firstName} ${lastName}`,
+        first_name: firstName,
+        last_name: lastName,
+        phone: phoneNumber,
+        address: address
+      };
+
+      // Register the user in Supabase Auth
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: {
-            full_name: name,
-          },
+          data: metadata,
+          emailRedirectTo: `${window.location.origin}/login?verified=true`,
         },
       });
 
@@ -65,17 +102,31 @@ const Register = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleRegister} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium">
-                  Name
-                </label>
-                <Input
-                  id="name"
-                  placeholder="Enter your name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="firstName" className="text-sm font-medium">
+                    First Name
+                  </label>
+                  <Input
+                    id="firstName"
+                    placeholder="Enter your first name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="lastName" className="text-sm font-medium">
+                    Last Name
+                  </label>
+                  <Input
+                    id="lastName"
+                    placeholder="Enter your last name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">
@@ -104,9 +155,34 @@ const Register = () => {
                   minLength={6}
                 />
               </div>
+              <div className="space-y-2">
+                <label htmlFor="phoneNumber" className="text-sm font-medium">
+                  Phone #
+                </label>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  placeholder="(123) 456-7890"
+                  value={phoneNumber}
+                  onChange={handlePhoneChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="address" className="text-sm font-medium">
+                  Address
+                </label>
+                <Input
+                  id="address"
+                  placeholder="123 Main St, City, State, Zip"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  required
+                />
+              </div>
               {error && <p className="text-red-500 text-sm">{error}</p>}
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating Account..." : "Register"}
+                {isLoading ? "Creating Account..." : "Sign Up"}
               </Button>
             </form>
           </CardContent>
