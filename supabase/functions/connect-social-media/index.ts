@@ -34,28 +34,52 @@ serve(async (req) => {
     }
 
     // Initialize Supabase client
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") || "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    
+    console.log(`[connect-social-media] Initializing Supabase client with URL: ${supabaseUrl.substring(0, 30)}...`);
+    
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Verify the JWT token and get the user's ID
     const token = authHeader.replace("Bearer ", "");
+    console.log(`[connect-social-media] Verifying token: ${token.substring(0, 15)}...`);
+    
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
+      console.error("[connect-social-media] Auth error:", authError);
       return new Response(
-        JSON.stringify({ error: "Invalid or expired token" }),
+        JSON.stringify({ error: "Invalid or expired token", details: authError }),
         { headers: corsHeaders, status: 401 }
       );
     }
+    
+    console.log(`[connect-social-media] Authenticated user: ${user.id}`);
 
     // Get the request parameters
-    const requestData: SocialMediaRequest = await req.json();
+    let requestData: SocialMediaRequest;
+    try {
+      requestData = await req.json();
+      console.log(`[connect-social-media] Request data:`, {
+        platform: requestData.platform,
+        action: requestData.action,
+        hasCode: !!requestData.code,
+        redirectUri: requestData.redirectUri,
+        state: requestData.state
+      });
+    } catch (e) {
+      console.error("[connect-social-media] Error parsing request body:", e);
+      return new Response(
+        JSON.stringify({ error: "Invalid request body" }),
+        { headers: corsHeaders, status: 400 }
+      );
+    }
+    
     const { platform, action = "connect", code, redirectUri, state } = requestData;
 
-    console.log(`Processing ${action} request for ${platform} by user ${user.id}`);
-    console.log(`Received redirectUri: ${redirectUri}`);
+    console.log(`[connect-social-media] Processing ${action} request for ${platform} by user ${user.id}`);
+    console.log(`[connect-social-media] Received redirectUri: ${redirectUri}`);
 
     // Check if the platform is supported
     const supportedPlatforms = ["Instagram", "Facebook", "Twitter", "X/Twitter", "TikTok", "YouTube", "Google Business", "Google Maps", "Yelp"];
@@ -68,7 +92,7 @@ serve(async (req) => {
 
     // Handle disconnect action
     if (action === "disconnect") {
-      console.log(`Disconnecting ${platform} for user ${user.id}`);
+      console.log(`[connect-social-media] Disconnecting ${platform} for user ${user.id}`);
       
       // First, find the connection to disconnect
       const { data: connection, error: fetchError } = await supabase
@@ -79,6 +103,7 @@ serve(async (req) => {
         .single();
       
       if (fetchError) {
+        console.error(`[connect-social-media] Error fetching connection:`, fetchError);
         return new Response(
           JSON.stringify({ error: `Failed to find ${platform} connection: ${fetchError.message}` }),
           { headers: corsHeaders, status: 404 }
@@ -92,9 +117,6 @@ serve(async (req) => {
         );
       }
 
-      // For OAuth connections, we may need to revoke access tokens
-      // This would be platform-specific and could be implemented here
-
       // Delete the connection from the database
       const { error: deleteError } = await supabase
         .from('social_media_connections')
@@ -102,11 +124,14 @@ serve(async (req) => {
         .eq('id', connection.id);
 
       if (deleteError) {
+        console.error(`[connect-social-media] Error deleting connection:`, deleteError);
         return new Response(
           JSON.stringify({ error: `Failed to disconnect ${platform}: ${deleteError.message}` }),
           { headers: corsHeaders, status: 500 }
         );
       }
+      
+      console.log(`[connect-social-media] Successfully disconnected ${platform} for user ${user.id}`);
 
       return new Response(
         JSON.stringify({ 
@@ -133,7 +158,7 @@ serve(async (req) => {
           );
         }
 
-        console.log(`Initiating Facebook OAuth flow with redirect: ${redirectUrl}`);
+        console.log(`[connect-social-media] Initiating Facebook OAuth flow with redirect: ${redirectUrl}`);
 
         // Generate authorization URL - using only public_profile scope which is available without app review
         const authUrl = new URL("https://www.facebook.com/v19.0/dialog/oauth");
@@ -168,7 +193,7 @@ serve(async (req) => {
           );
         }
 
-        console.log(`Processing Facebook callback with code length: ${code.length} and redirect: ${redirectUrl}`);
+        console.log(`[connect-social-media] Processing Facebook callback with code length: ${code.length} and redirect: ${redirectUrl}`);
 
         // Exchange code for access token
         try {
@@ -179,7 +204,7 @@ serve(async (req) => {
           tokenUrl.searchParams.append("redirect_uri", redirectUrl);
           tokenUrl.searchParams.append("code", code);
 
-          console.log(`Token request URL: ${tokenUrl.toString()}`);
+          console.log(`[connect-social-media] Token request URL: ${tokenUrl.toString().replace(clientSecret, "REDACTED")}`);
 
           // Make the request using proper URL-encoded form
           const tokenResponse = await fetch(tokenUrl.toString(), {
@@ -190,13 +215,13 @@ serve(async (req) => {
           });
 
           const responseText = await tokenResponse.text();
-          console.log(`Raw token response: ${responseText.substring(0, 100)}...`);
+          console.log(`[connect-social-media] Raw token response: ${responseText.substring(0, 100)}...`);
           
           let tokenData;
           try {
             tokenData = JSON.parse(responseText);
           } catch (e) {
-            console.error("Error parsing token response:", e);
+            console.error("[connect-social-media] Error parsing token response:", e);
             return new Response(
               JSON.stringify({ error: "Failed to parse token response", raw: responseText }),
               { headers: corsHeaders, status: 500 }
@@ -204,7 +229,7 @@ serve(async (req) => {
           }
           
           if (!tokenResponse.ok || tokenData.error) {
-            console.error("Facebook token exchange error:", tokenData);
+            console.error("[connect-social-media] Facebook token exchange error:", tokenData);
             return new Response(
               JSON.stringify({ 
                 error: tokenData.error_message || tokenData.error_description || "Failed to exchange code for token",
@@ -225,7 +250,7 @@ serve(async (req) => {
           const userData = await userResponse.json();
 
           if (!userResponse.ok || userData.error) {
-            console.error("Facebook user data error:", userData);
+            console.error("[connect-social-media] Facebook user data error:", userData);
             return new Response(
               JSON.stringify({ 
                 error: userData.error?.message || "Failed to get user profile" 
@@ -233,44 +258,94 @@ serve(async (req) => {
               { headers: corsHeaders, status: 400 }
             );
           }
+          
+          console.log(`[connect-social-media] Facebook user data retrieved:`, {
+            id: userData.id,
+            name: userData.name,
+            has_email: !!userData.email
+          });
 
           // Save the connection to the database
-          const { data: connection, error } = await supabase
-            .from('social_media_connections')
-            .upsert({
-              user_id: user.id,
-              platform: "Facebook",
-              username: userData.name,
-              profile_url: `https://facebook.com/${userData.id}`,
-              is_connected: true,
-              oauth_token: accessToken,
-              oauth_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days
-              meta_data: { 
-                facebook_user_id: userData.id,
-                connected_at: new Date().toISOString()
-              }
-            }, { onConflict: 'user_id, platform' })
-            .select()
-            .single();
+          try {
+            console.log(`[connect-social-media] Saving Facebook connection for user ${user.id}`);
+            
+            // First check if connection already exists
+            const { data: existingConn } = await supabase
+              .from('social_media_connections')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('platform', 'Facebook')
+              .maybeSingle();
+            
+            console.log(`[connect-social-media] Existing connection check:`, existingConn);
+            
+            let connection;
+            
+            if (existingConn) {
+              // Update existing connection
+              const { data: updatedConn, error: updateError } = await supabase
+                .from('social_media_connections')
+                .update({
+                  username: userData.name,
+                  profile_url: `https://facebook.com/${userData.id}`,
+                  is_connected: true,
+                  oauth_token: accessToken,
+                  oauth_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days
+                  meta_data: { 
+                    facebook_user_id: userData.id,
+                    connected_at: new Date().toISOString()
+                  },
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', existingConn.id)
+                .select()
+                .single();
+              
+              if (updateError) throw updateError;
+              connection = updatedConn;
+              console.log(`[connect-social-media] Updated existing Facebook connection, id: ${connection.id}`);
+            } else {
+              // Create new connection
+              const { data: newConn, error: insertError } = await supabase
+                .from('social_media_connections')
+                .insert({
+                  user_id: user.id,
+                  platform: "Facebook",
+                  username: userData.name,
+                  profile_url: `https://facebook.com/${userData.id}`,
+                  is_connected: true,
+                  oauth_token: accessToken,
+                  oauth_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days
+                  meta_data: { 
+                    facebook_user_id: userData.id,
+                    connected_at: new Date().toISOString()
+                  }
+                })
+                .select()
+                .single();
+              
+              if (insertError) throw insertError;
+              connection = newConn;
+              console.log(`[connect-social-media] Created new Facebook connection, id: ${connection.id}`);
+            }
 
-          if (error) {
-            console.error("Database error:", error);
+            return new Response(
+              JSON.stringify({ 
+                success: true,
+                connection, 
+                message: `Successfully connected Facebook account for ${userData.name}` 
+              }),
+              { headers: corsHeaders, status: 200 }
+            );
+          } catch (error) {
+            console.error("[connect-social-media] Database error saving connection:", error);
             return new Response(
               JSON.stringify({ error: `Failed to save connection: ${error.message}` }),
               { headers: corsHeaders, status: 500 }
             );
           }
-
-          return new Response(
-            JSON.stringify({ 
-              success: true,
-              connection, 
-              message: `Successfully connected Facebook account for ${userData.name}` 
-            }),
-            { headers: corsHeaders, status: 200 }
-          );
         } catch (error) {
-          console.error("Facebook OAuth error:", error);
+          console.error("[connect-social-media] Facebook OAuth error:", error);
           return new Response(
             JSON.stringify({ 
               error: error.message || "Failed to connect Facebook account",
@@ -297,7 +372,7 @@ serve(async (req) => {
           );
         }
 
-        console.log(`Initiating Instagram OAuth flow with client ID: ${clientId.substring(0, 6)}... and redirect: ${redirectUrl}`);
+        console.log(`[connect-social-media] Initiating Instagram OAuth flow with client ID: ${clientId.substring(0, 6)}... and redirect: ${redirectUrl}`);
 
         // Generate authorization URL using Facebook OAuth dialog with basic permissions only
         const authUrl = new URL("https://www.facebook.com/v19.0/dialog/oauth");
@@ -310,7 +385,7 @@ serve(async (req) => {
         }
         
         // Print the full URL for debugging
-        console.log("Generated Instagram auth URL (via Facebook):", authUrl.toString());
+        console.log("[connect-social-media] Generated Instagram auth URL (via Facebook):", authUrl.toString());
 
         return new Response(
           JSON.stringify({ 
@@ -344,11 +419,11 @@ serve(async (req) => {
           );
         }
 
-        console.log(`Processing Instagram callback with code: ${code.substring(0, 6)}... and redirect: ${redirectUrl}`);
+        console.log(`[connect-social-media] Processing Instagram callback with code: ${code.substring(0, 6)}... and redirect: ${redirectUrl}`);
 
         // Exchange code for access token using Facebook's token endpoint
         try {
-          console.log("Attempting to exchange code for token via Facebook...");
+          console.log("[connect-social-media] Attempting to exchange code for token via Facebook...");
           
           // Construct the token URL with proper query parameters
           const tokenUrl = new URL("https://graph.facebook.com/v19.0/oauth/access_token");
@@ -357,7 +432,7 @@ serve(async (req) => {
           tokenUrl.searchParams.append("redirect_uri", redirectUrl);
           tokenUrl.searchParams.append("code", code);
           
-          console.log("Token request URL:", tokenUrl.toString());
+          console.log("[connect-social-media] Token request URL:", tokenUrl.toString().replace(clientSecret, "REDACTED"));
           
           const tokenResponse = await fetch(tokenUrl.toString(), {
             method: "GET",
@@ -367,13 +442,13 @@ serve(async (req) => {
           });
 
           const responseText = await tokenResponse.text();
-          console.log("Raw token response:", responseText);
+          console.log("[connect-social-media] Raw token response:", responseText);
           
           let tokenData;
           try {
             tokenData = JSON.parse(responseText);
           } catch (e) {
-            console.error("Error parsing token response:", e);
+            console.error("[connect-social-media] Error parsing token response:", e);
             return new Response(
               JSON.stringify({ error: "Failed to parse token response", raw: responseText }),
               { headers: corsHeaders, status: 500 }
@@ -381,7 +456,7 @@ serve(async (req) => {
           }
           
           if (!tokenResponse.ok || tokenData.error) {
-            console.error("Facebook/Instagram token exchange error:", tokenData);
+            console.error("[connect-social-media] Facebook/Instagram token exchange error:", tokenData);
             return new Response(
               JSON.stringify({ 
                 error: tokenData.error_message || tokenData.error_description || "Failed to exchange code for token",
@@ -402,7 +477,7 @@ serve(async (req) => {
           const userData = await userProfileResponse.json();
           
           if (!userProfileResponse.ok || userData.error) {
-            console.error("Error getting user profile:", userData);
+            console.error("[connect-social-media] Error getting user profile:", userData);
             return new Response(
               JSON.stringify({ 
                 error: "Failed to get user profile information",
@@ -412,46 +487,100 @@ serve(async (req) => {
             );
           }
           
-          // Since we can't get Instagram data without advanced permissions, store the connection as "partial"
-          const { data: connection, error } = await supabase
-            .from('social_media_connections')
-            .upsert({
-              user_id: user.id,
-              platform: "Instagram",
-              username: userData.name || "User",
-              profile_url: null, // We don't have Instagram profile URL without permissions
-              is_connected: true,
-              oauth_token: accessToken,
-              oauth_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days
-              meta_data: { 
-                facebook_user_id: userData.id,
-                connected_at: new Date().toISOString(),
-                limited_access: true,
-                note: "Limited access due to app development mode. Full Instagram integration requires app review."
+          console.log(`[connect-social-media] User profile data retrieved:`, {
+            id: userData.id,
+            name: userData.name,
+            has_email: !!userData.email
+          });
+          
+          // Store the Instagram connection
+          try {
+            console.log(`[connect-social-media] Saving Instagram connection for user ${user.id}`);
+            
+            // First check if connection already exists
+            const { data: existingConn } = await supabase
+              .from('social_media_connections')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('platform', 'Instagram')
+              .maybeSingle();
+            
+            console.log(`[connect-social-media] Existing Instagram connection check:`, existingConn);
+            
+            let connection;
+            
+            if (existingConn) {
+              // Update existing connection
+              const { data: updatedConn, error: updateError } = await supabase
+                .from('social_media_connections')
+                .update({
+                  username: userData.name || "User",
+                  is_connected: true,
+                  oauth_token: accessToken,
+                  oauth_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days
+                  meta_data: { 
+                    facebook_user_id: userData.id,
+                    connected_at: new Date().toISOString(),
+                    limited_access: true,
+                    note: "Limited access due to app development mode. Full Instagram integration requires app review."
+                  },
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', existingConn.id)
+                .select()
+                .single();
+              
+              if (updateError) throw updateError;
+              connection = updatedConn;
+              console.log(`[connect-social-media] Updated existing Instagram connection, id: ${connection.id}`);
+            } else {
+              // Create new connection
+              const { data: newConn, error: insertError } = await supabase
+                .from('social_media_connections')
+                .insert({
+                  user_id: user.id,
+                  platform: "Instagram",
+                  username: userData.name || "User",
+                  profile_url: null, // We don't have Instagram profile URL without permissions
+                  is_connected: true,
+                  oauth_token: accessToken,
+                  oauth_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days
+                  meta_data: { 
+                    facebook_user_id: userData.id,
+                    connected_at: new Date().toISOString(),
+                    limited_access: true,
+                    note: "Limited access due to app development mode. Full Instagram integration requires app review."
+                  }
+                })
+                .select()
+                .single();
+              
+              if (insertError) {
+                console.error("[connect-social-media] Error inserting Instagram connection:", insertError);
+                throw insertError;
               }
-            }, { onConflict: 'user_id, platform' })
-            .select()
-            .single();
+              connection = newConn;
+              console.log(`[connect-social-media] Created new Instagram connection, id: ${connection.id}`);
+            }
 
-          if (error) {
-            console.error("Database error:", error);
+            return new Response(
+              JSON.stringify({ 
+                success: true,
+                connection, 
+                message: `Connected with limited access. Full Instagram integration requires app review.`,
+                limited_access: true
+              }),
+              { headers: corsHeaders, status: 200 }
+            );
+          } catch (error) {
+            console.error("[connect-social-media] Database error saving Instagram connection:", error);
             return new Response(
               JSON.stringify({ error: `Failed to save connection: ${error.message}` }),
               { headers: corsHeaders, status: 500 }
             );
           }
-
-          return new Response(
-            JSON.stringify({ 
-              success: true,
-              connection, 
-              message: `Connected with limited access. Full Instagram integration requires app review.`,
-              limited_access: true
-            }),
-            { headers: corsHeaders, status: 200 }
-          );
         } catch (error) {
-          console.error("Instagram OAuth error:", error);
+          console.error("[connect-social-media] Instagram OAuth error:", error);
           return new Response(
             JSON.stringify({ 
               error: error.message || "Failed to connect Instagram account",
@@ -464,36 +593,75 @@ serve(async (req) => {
     }
 
     // For other platforms - implement a mock connection
-    const { data: connection, error } = await supabase
-      .from('social_media_connections')
-      .upsert({
-        user_id: user.id,
-        platform: platform,
+    try {
+      console.log(`[connect-social-media] Creating mock connection for ${platform}`);
+      
+      // First check if connection already exists
+      const { data: existingConn } = await supabase
+        .from('social_media_connections')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('platform', platform)
+        .maybeSingle();
+      
+      let connection;
+      
+      const mockData = {
         username: "user_" + Math.random().toString(36).substring(2, 8),
         profile_url: `https://example.com/${platform}`,
         is_connected: true,
         meta_data: { connected_at: new Date().toISOString() }
-      }, { onConflict: 'user_id, platform' })
-      .select()
-      .single();
+      };
+      
+      if (existingConn) {
+        // Update existing connection
+        const { data: updatedConn, error: updateError } = await supabase
+          .from('social_media_connections')
+          .update({
+            ...mockData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingConn.id)
+          .select()
+          .single();
+        
+        if (updateError) throw updateError;
+        connection = updatedConn;
+        console.log(`[connect-social-media] Updated existing ${platform} connection, id: ${connection.id}`);
+      } else {
+        // Create new connection
+        const { data: newConn, error: insertError } = await supabase
+          .from('social_media_connections')
+          .insert({
+            user_id: user.id,
+            platform,
+            ...mockData
+          })
+          .select()
+          .single();
+        
+        if (insertError) throw insertError;
+        connection = newConn;
+        console.log(`[connect-social-media] Created new ${platform} connection, id: ${connection.id}`);
+      }
 
-    if (error) {
       return new Response(
-        JSON.stringify({ error: `Failed to save connection: ${error.message}` }),
+        JSON.stringify({ 
+          success: true, 
+          connection,
+          message: `Successfully connected ${platform} account` 
+        }),
+        { headers: corsHeaders, status: 200 }
+      );
+    } catch (error) {
+      console.error(`[connect-social-media] Error saving ${platform} connection:`, error);
+      return new Response(
+        JSON.stringify({ error: `Failed to save ${platform} connection: ${error.message}` }),
         { headers: corsHeaders, status: 500 }
       );
     }
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        connection,
-        message: `Successfully connected ${platform} account` 
-      }),
-      { headers: corsHeaders, status: 200 }
-    );
   } catch (error) {
-    console.error("Unexpected error:", error);
+    console.error("[connect-social-media] Unexpected error:", error);
     return new Response(
       JSON.stringify({ 
         error: error.message || "An unexpected error occurred",

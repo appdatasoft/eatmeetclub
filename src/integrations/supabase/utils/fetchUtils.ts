@@ -11,7 +11,7 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
     try {
       // Create a controller for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s timeout for OAuth operations (increased)
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s timeout for OAuth operations (increased)
       
       const fetchOptions = {
         ...options,
@@ -29,10 +29,10 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
       // For OAuth callback requests, log more details but protect sensitive data
       if (url.includes('connect-social-media') && options.body) {
         try {
-          const body = JSON.parse(options.body.toString());
+          const body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
           console.log(`[fetchUtils] Request body for ${url}: `, {
             ...body,
-            code: body.code ? `${body.code.substring(0, 10)}... (length: ${body.code.length})` : undefined,
+            code: body.code ? `${body.code.substring(0, 10)}... (length: ${typeof body.code === 'string' ? body.code.length : 0})` : undefined,
             redirectUri: body.redirectUri,
             platform: body.platform
           });
@@ -45,6 +45,7 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
       const response = await requestQueue.add(
         async () => {
           try {
+            console.log(`[fetchUtils] Executing fetch for ${url}`);
             const resp = await fetch(url, fetchOptions);
             console.log(`[fetchUtils] Response received from ${url}: status ${resp.status}`);
             return resp;
@@ -57,6 +58,27 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
       );
       
       clearTimeout(timeoutId);
+      
+      // For debugging OAuth issues, log response details for OAuth requests
+      if (url.includes('connect-social-media')) {
+        try {
+          const clonedResponse = response.clone();
+          const responseText = await clonedResponse.text();
+          console.log(`[fetchUtils] OAuth response from ${url}: status=${response.status}, body=`, 
+            responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''));
+          
+          // Return a new response since we consumed the original
+          return new Response(responseText, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: response.headers
+          });
+        } catch (error) {
+          console.error(`[fetchUtils] Error logging OAuth response: ${error}`);
+          // If we can't log the response, just return the original
+          return response;
+        }
+      }
       
       // If rate limited (429) or server error (5xx), retry with backoff
       if (response.status === 429 || (response.status >= 500 && response.status < 600)) {

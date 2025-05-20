@@ -92,7 +92,7 @@ const FacebookAuthCallback: React.FC = () => {
         
         console.log('[FacebookAuthCallback] Session found, user is authenticated');
         
-        // Check if it's an Instagram or Facebook connection based on state parameter
+        // Determine platform from state parameter
         const platform = state.startsWith('instagram_') ? 'Instagram' : 'Facebook';
         console.log(`[FacebookAuthCallback] Processing ${platform} connection`);
         
@@ -146,11 +146,12 @@ const FacebookAuthCallback: React.FC = () => {
           
           console.log(`[FacebookAuthCallback] Edge function response status: ${response.status}`);
           
-          let rawResponse;
+          // Try to get raw response and parse it
+          let rawResponse = '';
           try {
             // First try to get the response as text
             rawResponse = await response.text();
-            console.log('[FacebookAuthCallback] Raw edge function response:', rawResponse?.substring(0, 200));
+            console.log('[FacebookAuthCallback] Raw edge function response:', rawResponse?.substring(0, 500));
             
             let result;
             try {
@@ -164,8 +165,23 @@ const FacebookAuthCallback: React.FC = () => {
                 requestTime: new Date().toISOString()
               }));
               
-              if (!response.ok) {
+              if (!response.ok || !result.success) {
                 throw new Error(result?.error || `Failed to complete ${platform} authentication`);
+              }
+              
+              // Check if the connection was saved to database
+              if (result.connection) {
+                console.log(`[FacebookAuthCallback] ${platform} connection saved, id: ${result.connection.id}`);
+                setDebugInfo(prev => ({ 
+                  ...prev, 
+                  connection: result.connection
+                }));
+              } else {
+                console.warn(`[FacebookAuthCallback] ${platform} connection may not have been saved properly`);
+                setDebugInfo(prev => ({ 
+                  ...prev, 
+                  warning: `${platform} connection may not have been saved properly`
+                }));
               }
               
               // Refresh the connections list
@@ -193,7 +209,7 @@ const FacebookAuthCallback: React.FC = () => {
               setDebugInfo(prev => ({ 
                 ...prev, 
                 parseError: parseError.message, 
-                rawResponse: rawResponse?.substring(0, 500) 
+                rawResponse: rawResponse?.substring(0, 1000) 
               }));
               throw new Error(`Failed to parse response: ${parseError.message}`);
             }
@@ -201,7 +217,8 @@ const FacebookAuthCallback: React.FC = () => {
             console.error('[FacebookAuthCallback] Error reading response:', responseError);
             setDebugInfo(prev => ({ 
               ...prev, 
-              responseError: responseError.message
+              responseError: responseError.message,
+              rawResponse: rawResponse?.substring(0, 1000)
             }));
             throw responseError;
           }
@@ -271,24 +288,22 @@ const FacebookAuthCallback: React.FC = () => {
           </Alert>
         )}
         
-        {/* Always show debug info for now to help troubleshoot */}
-        {Object.keys(debugInfo).length > 0 && (
-          <div className="mt-4 border border-gray-300 rounded p-4 overflow-auto max-h-60 text-xs">
-            <h3 className="font-bold mb-2 flex items-center justify-between">
-              <span>Debug Information</span>
-              <a 
-                href="https://supabase.com/dashboard/project/wocfwpedauuhlrfugxuu/functions/connect-social-media/logs" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:underline flex items-center"
-              >
-                <span className="text-xs">View Logs</span>
-                <ExternalLink className="h-3 w-3 ml-1" />
-              </a>
-            </h3>
-            <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
-          </div>
-        )}
+        {/* Debug info panel */}
+        <div className="mt-4 border border-gray-300 rounded p-4 overflow-auto max-h-80 text-xs">
+          <h3 className="font-bold mb-2 flex items-center justify-between">
+            <span>Debug Information</span>
+            <a 
+              href="https://supabase.com/dashboard/project/wocfwpedauuhlrfugxuu/functions/connect-social-media/logs" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:underline flex items-center"
+            >
+              <span className="text-xs">View Logs</span>
+              <ExternalLink className="h-3 w-3 ml-1" />
+            </a>
+          </h3>
+          <pre className="whitespace-pre-wrap break-words">{JSON.stringify(debugInfo, null, 2)}</pre>
+        </div>
         
         <div className="flex justify-center mt-6">
           <Button 
