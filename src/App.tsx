@@ -16,25 +16,23 @@ function App() {
       <AuthProvider>
         <EditableContentProvider>
           <Routes>
-            <>
-              {/* Public routes */}
-              <Route path="/*" element={<PublicRoutes />} />
+            {/* Public routes */}
+            <Route path="/*" element={<PublicRoutes />} />
 
-              {/* Admin routes */}
-              <Route path="/admin/*" element={<AdminRoutes />} />
+            {/* Admin routes */}
+            <Route path="/admin/*" element={<AdminRoutes />} />
 
-              {/* Dashboard routes */}
-              {dashboardRoutes}
+            {/* Dashboard routes - spread the routes instead of rendering directly */}
+            {Array.isArray(dashboardRoutes) ? dashboardRoutes : null}
 
-              {/* Password reset route - ensure it's accessible directly */}
-              <Route path="/set-password" element={<SetPassword />} />
-              
-              {/* Admin Stripe Settings route */}
-              <Route path="admin/stripe-settings" element={<AdminStripeSettings />} />
+            {/* Password reset route - ensure it's accessible directly */}
+            <Route path="/set-password" element={<SetPassword />} />
+            
+            {/* Admin Stripe Settings route */}
+            <Route path="admin/stripe-settings" element={<AdminStripeSettings />} />
 
-              {/* Catch-all route */}
-              <Route path="*" element={<NotFound />} />
-            </>
+            {/* Catch-all route */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
         </EditableContentProvider>
