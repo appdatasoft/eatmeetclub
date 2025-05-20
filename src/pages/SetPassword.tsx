@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import MainLayout from "@/components/layout/MainLayout";
 import { PasswordForm, PasswordFormValues, PasswordSuccessMessage } from "@/components/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Info } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
@@ -16,15 +16,11 @@ const SetPasswordPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
-
-  // Track if we have a valid token
   const [hasValidToken, setHasValidToken] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   useEffect(() => {
     // Get error information from URL if present
     const urlError = searchParams.get("error");
-    const urlErrorCode = searchParams.get("error_code");
     const urlErrorDesc = searchParams.get("error_description");
 
     if (urlError) {
@@ -33,28 +29,13 @@ const SetPasswordPage = () => {
         : "Invalid or expired password reset link. Please request a new one.";
         
       setError(errorMessage);
-      console.error("Error from URL:", { urlError, urlErrorCode, errorMessage });
+      console.error("Error from URL:", { urlError, errorMessage });
     }
 
     // Set session from URL parameters when component mounts
     const setSessionFromUrl = async () => {
       const token = searchParams.get("token");
       const type = searchParams.get("type");
-      
-      const debugData = {
-        hasToken: !!token,
-        tokenLength: token?.length,
-        tokenStart: token?.substring(0, 5),
-        tokenEnd: token?.substring(token?.length - 5),
-        type,
-        url: window.location.href,
-        hasErrorParam: !!urlError,
-        timestamp: new Date().toISOString(),
-        rawParams: Object.fromEntries(searchParams.entries())
-      };
-      
-      console.log("URL parameters for password reset:", debugData);
-      setDebugInfo(debugData);
       
       // For password recovery links
       if (token && type === "recovery") {
@@ -84,8 +65,6 @@ const SetPasswordPage = () => {
     setError(null);
     
     try {
-      console.log("Updating password");
-      
       const token = searchParams.get("token");
       const type = searchParams.get("type");
       
@@ -96,15 +75,12 @@ const SetPasswordPage = () => {
       // Update password using the token
       const { error } = await supabase.auth.updateUser({
         password: values.password,
-      }, {
-        emailRedirectTo: window.location.origin
       });
       
       if (error) {
         throw error;
       }
       
-      console.log("Password updated successfully");
       setIsSuccess(true);
       toast({
         title: "Password set successfully",
@@ -148,28 +124,6 @@ const SetPasswordPage = () => {
                   Request New Link
                 </Button>
               </div>
-            </Alert>
-          )}
-          
-          {debugInfo && (
-            <Alert className="bg-blue-50 border-blue-200 mb-4">
-              <Info className="h-4 w-4 text-blue-500" />
-              <AlertDescription className="text-xs font-mono">
-                <div className="font-semibold mb-1">Debug information:</div>
-                <div>Has Token: {debugInfo.hasToken ? "Yes" : "No"}</div>
-                {debugInfo.hasToken && (
-                  <>
-                    <div>Token Length: {debugInfo.tokenLength}</div>
-                    <div>Token Start: {debugInfo.tokenStart}</div>
-                    <div>Token End: {debugInfo.tokenEnd}</div>
-                    <div>Token Type: {debugInfo.type || "Not specified"}</div>
-                  </>
-                )}
-                <div>URL Has Error: {debugInfo.hasErrorParam ? "Yes" : "No"}</div>
-                <div>Timestamp: {debugInfo.timestamp}</div>
-                <div>Raw Params: {JSON.stringify(debugInfo.rawParams)}</div>
-                <div>Full URL: {debugInfo.url}</div>
-              </AlertDescription>
             </Alert>
           )}
 

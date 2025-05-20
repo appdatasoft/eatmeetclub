@@ -1,13 +1,10 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { useInvoiceEmail } from "./useInvoiceEmail";
 
 /**
  * Hook for handling welcome email functionality
  */
 export const useWelcomeEmail = () => {
-  const { getInvoiceReceiptUrl } = useInvoiceEmail();
-  
   /**
    * Validates email data to prevent undefined placeholders
    */
@@ -24,7 +21,7 @@ export const useWelcomeEmail = () => {
   };
   
   /**
-   * Sends a combined welcome and activation email to the user
+   * Sends a welcome email with activation link to the user
    */
   const sendWelcomeEmail = async (email: string, name: string, sessionId?: string) => {
     try {
@@ -37,56 +34,30 @@ export const useWelcomeEmail = () => {
       }
       
       // Get the current origin for generating correct URLs
-      // Never use localhost in production emails - use the actual domain
       const currentOrigin = window.location.origin.includes('localhost') 
         ? "https://www.eatmeetclub.com" 
         : window.location.origin;
 
-      // If session ID is provided, try to get the receipt URL
-      let receiptUrl = "";
-      if (sessionId) {
-        try {
-          const url = await getInvoiceReceiptUrl(sessionId);
-          if (url) {
-            receiptUrl = `<p>You can view your invoice receipt <a href="${url}" style="color: #4a5568; font-weight: bold;" target="_blank">here</a>.</p>`;
-          }
-        } catch (receiptError) {
-          console.error("Failed to get receipt URL:", receiptError);
-          // Continue without the receipt URL
+      // Generate a magic link for account activation
+      const { data, error } = await supabase.auth.admin.generateLink({
+        type: 'signup',
+        email: validEmail,
+        options: {
+          redirectTo: `${currentOrigin}/login?verified=true`,
         }
+      });
+      
+      if (error || !data) {
+        console.error("Error generating activation link:", error);
+        throw new Error(error?.message || "Failed to generate activation link");
       }
       
-      // Generate a magic link using the Supabase Admin API via our Edge Function
-      // This creates a combined activation + password setup link
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/generate-magic-link`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: validEmail,
-            // Explicitly setting the complete URL for the set-password page
-            redirectUrl: `${currentOrigin}/set-password`
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Error generating magic link:", errorData);
-        throw new Error(errorData.message || "Error generating activation link");
-      }
-
-      const { magicLink } = await response.json();
+      const magicLink = data.properties?.action_link;
       
       if (!magicLink) {
-        throw new Error("Failed to generate magic link");
+        throw new Error("Failed to generate activation link");
       }
 
-      console.log("Generated magic link for email:", validEmail);
-      
       // Send the branded welcome email with the magic link using our custom email function
       const emailResponse = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-custom-email`,
@@ -106,19 +77,17 @@ export const useWelcomeEmail = () => {
                 
                 <p>We're thrilled to have you join our community. Your account has been created using <strong>${validEmail}</strong>.</p>
                 
-                <p>Click below to activate your account and set your password:</p>
+                <p>Click below to activate your account:</p>
                 
                 <div style="margin: 30px 0; text-align: center;">
                   <a href="${magicLink}" 
                      style="padding: 12px 24px; background: #ff5b2e; color: white; border-radius: 5px; display: inline-block; text-decoration: none; font-weight: bold;">
-                     Activate Account & Set Password
+                     Activate Account
                   </a>
                 </div>
                 
                 <p>If the button doesn't work, copy and paste this link in your browser:</p>
                 <p style="word-break: break-all; font-size: 14px; background-color: #f7fafc; padding: 10px; border-radius: 4px;">${magicLink}</p>
-                
-                ${receiptUrl}
                 
                 <div style="margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
                   <p>We look forward to seeing you at our next dining experience!</p>
@@ -143,9 +112,7 @@ export const useWelcomeEmail = () => {
     }
   };
 
-  return {
-    sendWelcomeEmail
-  };
+  return { sendWelcomeEmail };
 };
 
 export default useWelcomeEmail;

@@ -4,8 +4,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-
-// IMPORTANT: This needs to use the service role key to access admin features
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 export const corsHeaders = {
@@ -16,6 +14,7 @@ export const corsHeaders = {
 interface GenerateLinkRequest {
   email: string;
   redirectUrl: string;
+  type?: "signup" | "recovery" | "invite";
 }
 
 serve(async (req) => {
@@ -28,48 +27,45 @@ serve(async (req) => {
   }
 
   try {
-    console.log("Generate magic link function called");
-    
-    const { email, redirectUrl }: GenerateLinkRequest = await req.json();
+    const { email, redirectUrl, type = "recovery" }: GenerateLinkRequest = await req.json();
     
     if (!email) {
       throw new Error("Email is required");
     }
     
-    // Log the incoming request for debugging
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] Generating magic link for ${email}`);
+    console.log(`[${timestamp}] Generating ${type} link for ${email}`);
     console.log(`[${timestamp}] Original redirectUrl: ${redirectUrl}`);
     
     // Extract just the domain part from the redirectUrl
-    let domain = "https://www.eatmeetclub.com"; // Default domain
+    let domain = window.location.origin;
     
     try {
       if (redirectUrl) {
         const url = new URL(redirectUrl);
-        domain = `${url.protocol}//${url.host}`; // Get just the protocol and host
-        console.log(`[${timestamp}] Extracted domain: ${domain}`);
-        
-        // Check if domain is a preview domain (lovable.app) and log it explicitly
-        if (url.host.includes('lovable.app')) {
-          console.log(`[${timestamp}] Using preview domain: ${domain}`);
-        }
+        domain = `${url.protocol}//${url.host}`;
       }
     } catch (e) {
       console.error("URL parsing failed:", e);
       console.log(`[${timestamp}] Falling back to default domain: ${domain}`);
-      // Continue with default domain
     }
     
-    // CRITICAL FIX: ALWAYS force the path to be /set-password by constructing the final URL explicitly
-    const finalRedirectUrl = `${domain}/set-password`;
+    // Determine the final redirect path based on the link type
+    let finalPath = "/login?verified=true";
+    if (type === "recovery") {
+      finalPath = "/set-password";
+    }
     
-    // CRITICAL DEBUGGING - Log the exact URL being passed to Supabase
-    console.log(`[${timestamp}] FINAL redirect URL being passed to Supabase: ${finalRedirectUrl}`);
+    const finalRedirectUrl = `${domain}${finalPath}`;
+    console.log(`[${timestamp}] FINAL redirect URL: ${finalRedirectUrl}`);
     
-    // Generate a recovery link (for password reset/setup)
-    const { data, error } = await supabase.auth.admin.generateLink({
-      type: 'recovery',
+    // Generate the appropriate link type
+    const linkFunction = type === "recovery" 
+      ? supabase.auth.admin.generateLink
+      : supabase.auth.admin.generateLink;
+    
+    const { data, error } = await linkFunction({
+      type: type as "recovery" | "signup" | "invite",
       email: email,
       options: {
         redirectTo: finalRedirectUrl,
@@ -77,47 +73,21 @@ serve(async (req) => {
     });
     
     if (error) {
-      console.error(`[${timestamp}] Error generating magic link:`, error);
+      console.error(`[${timestamp}] Error generating link:`, error);
       throw error;
     }
     
-    // Log the generated link for debugging
-    console.log(`[${timestamp}] Magic link generated successfully`);
+    console.log(`[${timestamp}] Link generated successfully`);
     
+    // Extract and validate the action_link
     if (data.properties?.action_link) {
-      // Extract and validate the action_link
       try {
-        const actionLinkUrl = new URL(data.properties.action_link);
         console.log(`[${timestamp}] Final action_link: ${data.properties.action_link}`);
-        
-        const params = new URLSearchParams(actionLinkUrl.search);
-        const redirectParam = params.get('redirect_to');
-        
-        if (redirectParam) {
-          console.log(`[${timestamp}] Extracted redirect_to param: ${redirectParam}`);
-          try {
-            const redirectToUrl = new URL(redirectParam);
-            console.log(`[${timestamp}] redirect_to host: ${redirectToUrl.host}`);
-            console.log(`[${timestamp}] redirect_to pathname: ${redirectToUrl.pathname}`);
-            
-            if (redirectToUrl.pathname !== "/set-password") {
-              console.warn(`[${timestamp}] WARNING: Final redirect_to pathname is NOT /set-password: ${redirectToUrl.pathname}`);
-              console.warn(`[${timestamp}] Please verify that the URL in the email contains /set-password path!`);
-            } else {
-              console.log(`[${timestamp}] SUCCESS: redirect_to pathname is correctly set to /set-password`);
-            }
-          } catch (e) {
-            console.error(`[${timestamp}] Error parsing redirect_to URL:`, e);
-          }
-        } else {
-          console.warn(`[${timestamp}] WARNING: No redirect_to parameter found in action_link`);
-        }
       } catch (e) {
         console.error(`[${timestamp}] Error parsing action_link URL:`, e);
       }
     }
     
-    // Return the generated action link to be used in the welcome email
     return new Response(
       JSON.stringify({
         success: true,
@@ -131,12 +101,12 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Error generating magic link:", error);
+    console.error("Error generating link:", error);
     
     return new Response(
       JSON.stringify({
         success: false,
-        message: error.message || "An error occurred while generating the magic link",
+        message: error.message || "An error occurred while generating the link",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

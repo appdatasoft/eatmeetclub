@@ -16,7 +16,7 @@ export default async function handler(req) {
     const timestamp = new Date().toISOString();
     console.log(`[${timestamp}] Forwarding request to Supabase Edge Function: ${functionUrl}`);
     
-    // Get the request body for logging
+    // Get the request body
     let requestBody = null;
     if (req.method !== 'OPTIONS' && req.method !== 'GET') {
       const clone = req.clone();
@@ -24,6 +24,7 @@ export default async function handler(req) {
       console.log(`[${timestamp}] Request body: ${requestBody}`);
     }
     
+    // Set up request options for forwarding
     let requestOptions = {
       method: req.method,
       headers: {
@@ -33,7 +34,7 @@ export default async function handler(req) {
     };
     
     // Only add body for non-GET/OPTIONS requests
-    if (req.method !== 'OPTIONS' && req.method !== 'GET') {
+    if (req.method !== 'OPTIONS' && req.method !== 'GET' && requestBody) {
       requestOptions.body = requestBody;
     }
     

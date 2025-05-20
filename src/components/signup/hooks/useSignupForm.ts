@@ -39,47 +39,38 @@ export const useSignupForm = ({
         return;
       }
       
-      // For new users, continue with signup process
+      // Store basic user info in localStorage for persistence
       localStorage.setItem('signup_email', values.email);
-      localStorage.setItem('signup_name', values.email.split('@')[0]); // Using part of email as name
+      localStorage.setItem('signup_name', `${values.firstName} ${values.lastName}`);
       if (values.phoneNumber) {
         localStorage.setItem('signup_phone', values.phoneNumber);
       }
 
-      // Register the user in Supabase Auth WITH EMAIL CONFIRMATION DISABLED
+      // Register the user in Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
           data: {
+            first_name: values.firstName,
+            last_name: values.lastName,
             phone: values.phoneNumber || null,
+            address: values.address || null,
+            full_name: `${values.firstName} ${values.lastName}`
           },
-          // IMPORTANT: Set this to false to disable Supabase's default confirmation email
-          emailRedirectTo: `${window.location.origin}/set-password`,
+          emailRedirectTo: `${window.location.origin}/login?verified=true`,
         },
       });
 
       if (error) throw error;
       
-      // Send our custom welcome email - this is the ONLY email that should be sent
-      await sendWelcomeEmail(values.email, values.email.split('@')[0] || "Member");
+      // Send our welcome email with activation link
+      await sendWelcomeEmail(
+        values.email, 
+        `${values.firstName} ${values.lastName}` || values.email.split('@')[0]
+      );
       
-      // Verify that we have a session before proceeding
-      if (!data.session) {
-        console.log("No session returned from signup, attempting to sign in");
-        // Try to sign in to get a session
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: values.email,
-          password: values.password,
-        });
-        
-        if (signInError) {
-          console.error("Error signing in after signup:", signInError);
-          throw new Error("Account created but could not sign in automatically. Please try logging in separately.");
-        }
-      }
-
-      // Send notification via the edge function
+      // Send notification about registration
       const notificationResponse = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/send-member-notification`,
         {
@@ -89,7 +80,7 @@ export const useSignupForm = ({
           },
           body: JSON.stringify({
             email: values.email,
-            name: values.email.split('@')[0], // Just using part of email as name
+            name: `${values.firstName} ${values.lastName}`,
             phone: values.phoneNumber,
           }),
         }
@@ -98,15 +89,10 @@ export const useSignupForm = ({
       if (notificationResponse.ok) {
         setIsNotificationSent(true);
         showToast({
-          title: "Confirmation sent!",
-          description: "We've sent you an email with account activation instructions.",
+          title: "Registration successful!",
+          description: "We've sent you an email with an activation link. Please check your inbox.",
         });
       }
-
-      showToast({
-        title: "Registration successful",
-        description: "Your account has been created. Check your email to activate it.",
-      });
 
       // Proceed to payment form
       setUserDetails(values);

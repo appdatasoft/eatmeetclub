@@ -3,12 +3,13 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle2, AlertCircle, Info } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PasswordRecoveryHandlerProps {
   userEmail: string;
@@ -22,7 +23,6 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
   const { toast } = useToast();
 
   const form = useForm({
@@ -32,10 +32,9 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
     },
   });
 
-  const handleSendPasswordSetupEmail = async (formData: { email: string }) => {
+  const handleSendPasswordResetEmail = async (formData: { email: string }) => {
     setIsSubmitting(true);
     setErrorMessage(null);
-    setDebugInfo(null);
     const email = formData.email || userEmail;
 
     if (!email) {
@@ -49,40 +48,18 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
     }
 
     try {
-      const timestamp = new Date().toISOString();
-      const domain = window.location.origin;
+      // Get current origin for proper redirect
+      const currentOrigin = window.location.origin;
+      const redirectTo = `${currentOrigin}/set-password`;
+      console.log(`[${new Date().toISOString()}] Sending password reset email to: ${email}`);
+      console.log(`[${new Date().toISOString()}] Redirect URL: ${redirectTo}`);
 
-      const supabaseUrl = "https://wocfwpedauuhlrfugxuu.supabase.co";
-      const edgeFunctionUrl = `${supabaseUrl}/functions/v1/generate-magic-link`;
-
-      console.log(`[${timestamp}] Calling edge function: ${edgeFunctionUrl}`);
-
-      const response = await fetch(edgeFunctionUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          redirectUrl: domain, // edge function will append /set-password
-          timestamp,
-        }),
+      // Use Supabase's built-in password reset functionality
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectTo
       });
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Failed to generate magic link");
-      }
-
-      setDebugInfo({
-        timestamp,
-        resetRequestSent: true,
-        email,
-        domain,
-        actualRedirectUsed: result.redirectUrl || "Not returned",
-        originalRedirectUrl: result.originalRedirectUrl,
-        method: "edge-function",
-        responseData: result,
-      });
+      if (error) throw error;
 
       setIsSuccess(true);
       toast({
@@ -114,34 +91,6 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
           </AlertDescription>
         </Alert>
 
-        {debugInfo && (
-          <Alert className="bg-blue-50 border-blue-200">
-            <Info className="h-4 w-4 text-blue-500" />
-            <AlertDescription className="text-xs font-mono">
-              <div className="font-semibold mb-1">Debug information:</div>
-              <div>Timestamp: {debugInfo.timestamp}</div>
-              <div>Email: {debugInfo.email}</div>
-              <div>Reset request sent: {debugInfo.resetRequestSent ? "Yes" : "No"}</div>
-              <div>Domain: {debugInfo.domain}</div>
-              {debugInfo.actualRedirectUsed && (
-                <div>Actual redirect used: {debugInfo.actualRedirectUsed}</div>
-              )}
-              {debugInfo.originalRedirectUrl && (
-                <div>Original redirect URL: {debugInfo.originalRedirectUrl}</div>
-              )}
-              <div>Method: {debugInfo.method}</div>
-              {debugInfo.responseData && (
-                <div className="mt-1">
-                  Response data:
-                  <pre className="text-[0.65rem] mt-1 bg-gray-100 p-1 rounded overflow-auto max-h-32">
-                    {JSON.stringify(debugInfo.responseData, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </AlertDescription>
-          </Alert>
-        )}
-
         <div className="text-center mt-4">
           <Button variant="outline" onClick={() => setIsSuccess(false)} className="mr-2">
             Try Again with Different Email
@@ -172,7 +121,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
       )}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSendPasswordSetupEmail)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(handleSendPasswordResetEmail)} className="space-y-4">
           {!userEmail && (
             <FormField
               control={form.control}
