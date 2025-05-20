@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useEventFetch } from "@/hooks/useEventFetch";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,9 +29,29 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
 const EventDetailsPage = () => {
-  const { id } = useParams<{ id: string }>();
+  // Handle both /event/:id and /e/:slug routes
+  const { id, slug } = useParams<{ id?: string; slug?: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  // Extract event ID from slug if needed
+  const getEventIdFromParams = () => {
+    // If we have a direct ID, use it
+    if (id) return id;
+    
+    // Otherwise, try to extract from slug (format: event-name-eventId)
+    if (slug) {
+      const slugParts = slug.split('-');
+      if (slugParts.length > 0) {
+        // Last part should be the event ID
+        return slugParts[slugParts.length - 1];
+      }
+    }
+    
+    return undefined;
+  };
+  
+  const eventId = getEventIdFromParams();
   
   const { 
     event, 
@@ -40,13 +59,20 @@ const EventDetailsPage = () => {
     error,
     isCurrentUserOwner, 
     refreshEventDetails 
-  } = useEventFetch(id);
+  } = useEventFetch(eventId);
   
   // Track referrals when someone visits the event page
-  useReferralTracking(id);
+  const { referralCode } = useReferralTracking(eventId);
   
   const [isMenuSelectionOpen, setIsMenuSelectionOpen] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  
+  // Show debugging information about affiliate tracking
+  useEffect(() => {
+    if (eventId && referralCode) {
+      console.log(`Viewing event ${eventId} with referral code: ${referralCode}`);
+    }
+  }, [eventId, referralCode]);
   
   // Show error toast if there's an error that's not a "not found" error
   useEffect(() => {
@@ -180,6 +206,13 @@ const EventDetailsPage = () => {
 
         <div className="container-custom pt-4">
           <div className="flex flex-wrap gap-2">
+            {/* Show active referral if present */}
+            {referralCode && (
+              <Alert variant="outline" className="mb-4 w-full bg-blue-50 border-blue-200 text-blue-800">
+                <p className="text-sm">You're viewing this event through an affiliate link</p>
+              </Alert>
+            )}
+            
             {user && (
               <Button
                 variant="outline"
@@ -215,6 +248,7 @@ const EventDetailsPage = () => {
           handleDeleteEvent={() => setIsDeleteDialogOpen(true)}
           isPaymentProcessing={isPaymentProcessing}
           user={user}
+          referralCode={referralCode}
         />
         
         {/* Add affiliate share component for logged in users */}

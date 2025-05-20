@@ -8,7 +8,9 @@ import EventActionButtons from "./EventActionButtons";
 import EventAiAgent from "./EventAiAgent";
 import { EventDetails } from "@/types/event";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { supabase } from "@/integrations/supabase/client"; // Add this import
+import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert"; 
+import { Info } from "lucide-react";
 
 interface EventDetailsContentProps {
   event: EventDetails;
@@ -22,6 +24,7 @@ interface EventDetailsContentProps {
   handleDeleteEvent: () => void;
   isPaymentProcessing: boolean;
   user: any | null;
+  referralCode?: string | null;
 }
 
 const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
@@ -35,7 +38,8 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
   handleEditEvent,
   handleDeleteEvent,
   isPaymentProcessing,
-  user
+  user,
+  referralCode
 }) => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
@@ -94,6 +98,16 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
         </div>
       )}
       
+      {/* Show affiliate referral banner if present */}
+      {referralCode && (
+        <Alert className="mb-4 bg-blue-50 border-blue-200">
+          <Info className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-700">
+            You're viewing this event through an affiliate link (ref: {referralCode})
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="grid grid-cols-1 gap-4 md:gap-6 lg:gap-8 lg:grid-cols-3">
         {/* Main content */}
         <div className="lg:col-span-2">
@@ -126,6 +140,7 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
               ticketsRemaining={ticketsRemaining} 
               isProcessing={isPaymentProcessing}
               onPurchase={handleTicketPurchase}
+              referralCode={referralCode}
             />
           )}
           

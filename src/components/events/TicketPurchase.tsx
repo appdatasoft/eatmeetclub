@@ -12,6 +12,7 @@ interface TicketPurchaseProps {
   ticketsRemaining: number;
   isProcessing?: boolean;
   onPurchase?: (ticketCount: number) => void;
+  referralCode?: string | null;
 }
 
 export const TicketPurchase: React.FC<TicketPurchaseProps> = ({
@@ -19,7 +20,8 @@ export const TicketPurchase: React.FC<TicketPurchaseProps> = ({
   ticketPrice,
   ticketsRemaining,
   isProcessing = false,
-  onPurchase
+  onPurchase,
+  referralCode
 }) => {
   const [ticketCount, setTicketCount] = useState(1);
   const { user } = useAuth();
@@ -40,6 +42,11 @@ export const TicketPurchase: React.FC<TicketPurchaseProps> = ({
   const handlePurchase = () => {
     if (onPurchase) {
       onPurchase(ticketCount);
+      
+      // Log purchase with referral for debugging
+      if (referralCode) {
+        console.log(`Purchase initiated with referral code: ${referralCode}`);
+      }
     }
   };
 
@@ -108,6 +115,12 @@ export const TicketPurchase: React.FC<TicketPurchaseProps> = ({
             <span className="text-red-500">Sold out!</span>
           )}
         </div>
+        
+        {referralCode && (
+          <div className="text-xs text-blue-600 mb-4 bg-blue-50 p-2 rounded">
+            Referral code applied: {referralCode}
+          </div>
+        )}
       </div>
       
       <Button 
