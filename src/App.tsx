@@ -5,7 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { EditableContentProvider } from "@/components/editor/EditableContentProvider";
 import { PublicRoutes } from "@/routes/publicRoutes";
 import { AdminRoutes } from "@/routes/adminRoutes";
-import { DashboardRoutes } from "@/routes/dashboardRoutes";
+import dashboardRoutes from "@/routes/dashboardRoutes";
 import NotFound from "@/pages/NotFound";
 import AdminStripeSettings from '@/pages/admin/AdminStripeSettings';
 
@@ -23,7 +23,7 @@ function App() {
               <Route path="/admin/*" element={<AdminRoutes />} />
 
               {/* Dashboard routes */}
-              <DashboardRoutes />
+              {dashboardRoutes}
 
               {/* Catch-all route */}
               <Route path="*" element={<NotFound />} />
