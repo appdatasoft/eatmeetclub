@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Edit, Book, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,33 +16,30 @@ interface EventHeaderProps {
 }
 
 const EventHeader: React.FC<EventHeaderProps> = ({ 
-  title, 
-  restaurantName,
-  restaurantId,
+  title = "Untitled Event", 
+  restaurantName = "Unknown Restaurant",
+  restaurantId = "unknown",
   isOwner = false,
   onEditCover,
-  coverImage = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60"
+  coverImage = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60"
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const { user } = useAuth();
-  
-  // For debugging purposes: log the received props
+
   console.log("EventHeader props:", { title, restaurantName, restaurantId, isOwner, user });
 
   return (
     <div className="relative h-64 md:h-96 overflow-hidden">
       <SupabaseImage
         src={coverImage}
-        alt={title}
+        alt={title || "Event cover"}
         className="w-full h-full object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-      
-      {/* Fixed positioning and z-index */}
+
       <div className="absolute top-0 left-0 w-full">
-        {/* Edit Cover button on left side */}
-        <div className="absolute top-4 left-4">
-          {isOwner && (
+        {isOwner && (
+          <div className="absolute top-4 left-4">
             <Button 
               variant="secondary" 
               size="sm" 
@@ -52,12 +48,11 @@ const EventHeader: React.FC<EventHeaderProps> = ({
             >
               <Edit className="h-4 w-4 mr-1" /> Edit Cover
             </Button>
-          )}
-        </div>
-        
-        {/* View Menu button for all users */}
-        <div className="absolute top-4 right-4">
-          {restaurantId && restaurantId !== "unknown" && (
+          </div>
+        )}
+
+        {restaurantId !== "unknown" && (
+          <div className="absolute top-4 right-4">
             <Button
               variant="secondary"
               size="sm"
@@ -66,26 +61,25 @@ const EventHeader: React.FC<EventHeaderProps> = ({
             >
               <Book className="h-4 w-4 mr-1" /> {showMenu ? "Hide Menu" : "View Menu"}
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-      
+
       <div className="absolute bottom-0 left-0 p-6 text-white">
-        <h1 className="text-3xl md:text-4xl font-bold mb-1">{title}</h1>
-        {restaurantId && restaurantId !== "unknown" ? (
+        <h1 className="text-3xl md:text-4xl font-bold mb-1">{title || "Untitled Event"}</h1>
+        {restaurantId !== "unknown" ? (
           <Link 
             to={`/restaurant/${restaurantId}`}
             className="text-lg text-white/90 hover:text-white hover:underline"
           >
-            Hosted by {restaurantName}
+            Hosted by {restaurantName || "Unknown Restaurant"}
           </Link>
         ) : (
-          <p className="text-lg text-white/90">Hosted by {restaurantName}</p>
+          <p className="text-lg text-white/90">Hosted by {restaurantName || "Unknown Restaurant"}</p>
         )}
       </div>
 
-      {/* Removed the user check to allow all users to view the menu */}
-      {showMenu && restaurantId && restaurantId !== "unknown" && (
+      {showMenu && restaurantId !== "unknown" && (
         <div className="absolute top-0 right-0 w-1/2 h-full">
           <RestaurantMenuPreview restaurantId={restaurantId} />
           <Button 
