@@ -22,14 +22,31 @@ function App() {
             {/* Admin routes */}
             <Route path="/admin/*" element={<AdminRoutes />} />
 
-            {/* Dashboard routes - spread the routes instead of rendering directly */}
-            {Array.isArray(dashboardRoutes) ? dashboardRoutes : null}
+            {/* Dashboard routes - map through the routes object and render each route */}
+            {Array.isArray(dashboardRoutes) && 
+              dashboardRoutes.map((route, index) => (
+                <Route 
+                  key={index} 
+                  path={route.path} 
+                  element={route.element}
+                >
+                  {route.children?.map((childRoute, childIndex) => (
+                    <Route 
+                      key={`${index}-${childIndex}`} 
+                      path={childRoute.path} 
+                      element={childRoute.element} 
+                      index={childRoute.index} 
+                    />
+                  ))}
+                </Route>
+              ))
+            }
 
             {/* Password reset route - ensure it's accessible directly */}
             <Route path="/set-password" element={<SetPassword />} />
             
             {/* Admin Stripe Settings route */}
-            <Route path="admin/stripe-settings" element={<AdminStripeSettings />} />
+            <Route path="/admin/stripe-settings" element={<AdminStripeSettings />} />
 
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
