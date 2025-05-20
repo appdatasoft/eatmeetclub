@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -51,107 +50,102 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
     }
     
     try {
-      console.log(`[${new Date().toISOString()}] Sending password reset email to:`, email);
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] Sending password reset email to: ${email}`);
       
       // IMPORTANT: Ensure we use the full origin INCLUDING protocol
       const domain = window.location.origin;
-      console.log(`[${new Date().toISOString()}] Current domain/origin:`, domain);
-      
-      // Call the edge function via our API route
+      console.log(`[${timestamp}] Current domain/origin: ${domain}`);
+
+      // Try direct Supabase API method first (most reliable)
       try {
-        const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] Calling edge function for password reset`);
+        console.log(`[${timestamp}] Using direct Supabase auth.resetPasswordForEmail`);
         
-        // Always use the full URL to the edge function through our API route
-        const edgeFunctionUrl = `${domain}/api/generate-magic-link`;
-        console.log(`[${timestamp}] Edge function URL:`, edgeFunctionUrl);
-        
-        const response = await fetch(edgeFunctionUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            email, 
-            redirectUrl: domain, // Just provide the domain, the edge function will add /set-password
-            timestamp
-          }),
+        const { error, data } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${domain}/set-password`,
         });
         
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`[${timestamp}] Edge function error response:`, errorText);
-          throw new Error(`Edge function failed with status ${response.status}`);
-        }
+        // Log detailed response
+        console.log(`[${timestamp}] Reset password response:`, { 
+          error, 
+          data,
+          redirectUrl: `${domain}/set-password`,
+          domain,
+          hostEnvironment: window.location.hostname
+        });
         
-        const result = await response.json();
-        
-        console.log(`[${timestamp}] Magic link generation result:`, result);
-        
-        if (!result.success) {
-          throw new Error(result.message || "Failed to generate magic link");
-        }
-        
-        // Store detailed debug info
+        // Store debug info
         setDebugInfo({
           timestamp,
-          resetRequestSent: true,
+          resetRequestSent: !error,
           email,
           domain,
-          actualRedirectUsed: result.redirectUrl || "Not returned",
-          originalRedirectUrl: result.originalRedirectUrl,
-          method: "edge-function",
-          responseData: result
+          redirectUrl: `${domain}/set-password`,
+          method: "supabase-auth-direct"
         });
         
-        setIsSuccess(true);
-        toast({
-          title: "Reset Link Sent",
-          description: `We've sent a password reset link to ${email}. Please check your inbox (and spam folder).`,
-        });
-        
-        return;
-      } catch (edgeError) {
-        console.error(`[${new Date().toISOString()}] Edge function failed:`, edgeError);
-        console.warn(`[${new Date().toISOString()}] Falling back to default Supabase method`);
-        
-        // Store debug info about the edge function failure
-        setDebugInfo({
-          timestamp: new Date().toISOString(),
-          edgeFunctionError: edgeError.message,
-          fallbackToSupabaseDirect: true
-        });
-        
-        // Don't throw here - continue to fallback method
+        if (error) {
+          console.warn(`[${timestamp}] Direct Supabase method failed, will try edge function next:`, error);
+          // Continue to try edge function as fallback
+        } else {
+          // Direct method worked, set success and return
+          setIsSuccess(true);
+          toast({
+            title: "Reset Link Sent",
+            description: `We've sent a password reset link to ${email}. Please check your inbox (and spam folder).`,
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      } catch (directError) {
+        console.warn(`[${timestamp}] Error with direct Supabase method:`, directError);
+        // Continue to edge function approach
       }
       
-      // Fallback: Use the default Supabase auth resetPasswordForEmail
-      // Explicitly construct the redirect URL with /set-password path
-      const redirectUrl = `${domain}/set-password`;
-      console.log(`[${new Date().toISOString()}] Using Supabase fallback method with redirect:`, redirectUrl);
+      // Call the edge function as fallback
+      console.log(`[${timestamp}] Calling edge function for password reset`);
       
-      const { error, data } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectUrl,
+      // Always use the full URL to the edge function with the correct project ID
+      const supabaseUrl = "https://wocfwpedauuhlrfugxuu.supabase.co";
+      const edgeFunctionUrl = `${supabaseUrl}/functions/v1/generate-magic-link`;
+      
+      console.log(`[${timestamp}] Edge function URL: ${edgeFunctionUrl}`);
+      
+      const response = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email, 
+          redirectUrl: domain, // Just provide the domain, the edge function will add /set-password
+          timestamp
+        }),
       });
       
-      // Log detailed response
-      console.log(`[${new Date().toISOString()}] Reset password response:`, { 
-        error, 
-        data,
-        redirectUrl,
-        domain,
-        hostEnvironment: window.location.hostname
-      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[${timestamp}] Edge function error response: ${response.status}`, errorText);
+        throw new Error(`Edge function failed with status ${response.status}`);
+      }
       
-      // Update debug info with fallback method details
-      setDebugInfo(prevInfo => ({
-        ...prevInfo || {},
-        timestamp: new Date().toISOString(),
-        resetRequestSent: !error,
+      const result = await response.json();
+      
+      console.log(`[${timestamp}] Magic link generation result:`, result);
+      
+      if (!result.success) {
+        throw new Error(result.message || "Failed to generate magic link");
+      }
+      
+      // Store detailed debug info
+      setDebugInfo({
+        timestamp,
+        resetRequestSent: true,
         email,
-        redirectUrl,
-        method: "supabase-client-fallback"
-      }));
-      
-      if (error) throw error;
+        domain,
+        actualRedirectUsed: result.redirectUrl || "Not returned",
+        originalRedirectUrl: result.originalRedirectUrl,
+        method: "edge-function",
+        responseData: result
+      });
       
       setIsSuccess(true);
       toast({

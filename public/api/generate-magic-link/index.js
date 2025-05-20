@@ -18,21 +18,31 @@ export default async function handler(req) {
     
     // Get the request body for logging
     let requestBody = null;
-    if (req.method !== 'GET') {
+    if (req.method !== 'OPTIONS' && req.method !== 'GET') {
       const clone = req.clone();
       requestBody = await clone.text();
       console.log(`[${timestamp}] Request body: ${requestBody}`);
     }
     
-    // Forward the request to the Supabase Edge Function
-    const response = await fetch(functionUrl, {
+    let requestOptions = {
       method: req.method,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': req.headers.get('Authorization') || '',
-      },
-      body: req.method !== 'GET' ? await req.text() : undefined,
-    });
+      }
+    };
+    
+    // Only add body for non-GET/OPTIONS requests
+    if (req.method !== 'OPTIONS' && req.method !== 'GET') {
+      requestOptions.body = requestBody;
+    }
+    
+    // Forward the request to the Supabase Edge Function
+    const response = await fetch(functionUrl, requestOptions);
+    
+    if (!response.ok) {
+      console.error(`[${timestamp}] Edge function returned error status: ${response.status}`);
+    }
     
     const responseText = await response.text();
     console.log(`[${timestamp}] Response from edge function: ${responseText}`);
