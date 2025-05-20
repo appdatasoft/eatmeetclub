@@ -135,15 +135,11 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
         <div className="lg:col-span-1">
           {event.published && (
             <TicketPurchase
-              event={{
-                id: event.id,
-                title: event.title,
-                price: event.price
-              }}
+              eventId={event.id}
+              ticketPrice={event.price}
               ticketsRemaining={ticketsRemaining} 
-              ticketsPercentage={ticketsPercentage}
               isProcessing={isPaymentProcessing}
-              handleTicketPurchase={handleTicketPurchase}
+              onPurchase={handleTicketPurchase}
               referralCode={referralCode}
             />
           )}

@@ -5,25 +5,45 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { MinusCircle, PlusCircle } from "lucide-react";
 import { useReferralTracking } from "@/hooks/useReferralTracking";
 
+interface EventDetailsType {
+  id: string;
+  title: string;
+  price: number;
+}
+
 interface TicketPurchaseProps {
-  eventId: string;
-  ticketPrice: number;
+  // Support both direct event object and individual properties
+  event?: EventDetailsType;
+  eventId?: string;
+  ticketPrice?: number;
   ticketsRemaining: number;
+  ticketsPercentage?: number;
   isProcessing: boolean;
-  onPurchase: (count: number) => void;
+  handleTicketPurchase?: (count: number) => void;
+  onPurchase?: (count: number) => void;
   referralCode?: string | null;
 }
 
 export const TicketPurchase = ({
+  event,
   eventId,
   ticketPrice,
   ticketsRemaining,
+  ticketsPercentage = 0,
   isProcessing,
+  handleTicketPurchase,
   onPurchase,
-  referralCode,
+  referralCode: propReferralCode,
 }: TicketPurchaseProps) => {
   const [ticketCount, setTicketCount] = useState(1);
-  const { getStoredReferralCode } = useReferralTracking(eventId);
+  
+  // Get values from either props pattern
+  const effectiveEventId = event?.id || eventId || '';
+  const effectivePrice = event?.price || ticketPrice || 0;
+  
+  // Use either the hook or the passed prop for referral code
+  const { referralCode: hookReferralCode } = useReferralTracking(effectiveEventId);
+  const activeReferralCode = propReferralCode || hookReferralCode;
 
   const decreaseCount = () => {
     if (ticketCount > 1) {
@@ -37,12 +57,14 @@ export const TicketPurchase = ({
     }
   };
 
-  const handlePurchase = () => {
-    onPurchase(ticketCount);
+  const onPurchaseClick = () => {
+    // Use whichever function is provided
+    if (handleTicketPurchase) {
+      handleTicketPurchase(ticketCount);
+    } else if (onPurchase) {
+      onPurchase(ticketCount);
+    }
   };
-
-  // Either use the passed referral code or check for one in session storage
-  const activeReferralCode = referralCode || getStoredReferralCode(eventId);
 
   return (
     <Card>
@@ -59,7 +81,7 @@ export const TicketPurchase = ({
         <div className="w-full bg-muted rounded-full h-2.5 mb-4">
           <div
             className="bg-primary h-2.5 rounded-full"
-            style={{ width: `${(ticketPrice * 100) / 100}%` }}
+            style={{ width: `${ticketsPercentage}%` }}
           ></div>
         </div>
 
@@ -67,7 +89,7 @@ export const TicketPurchase = ({
           <>
             <div className="flex justify-between items-center my-4">
               <span className="text-lg font-bold">
-                ${ticketPrice.toFixed(2)} / ticket
+                ${effectivePrice.toFixed(2)} / ticket
               </span>
               <div className="flex items-center gap-3">
                 <Button
@@ -98,16 +120,16 @@ export const TicketPurchase = ({
             <div className="space-y-1 text-sm text-muted-foreground">
               <div className="flex justify-between">
                 <span>Price ({ticketCount} tickets)</span>
-                <span>${(ticketPrice * ticketCount).toFixed(2)}</span>
+                <span>${(effectivePrice * ticketCount).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Service fee</span>
-                <span>${(ticketPrice * ticketCount * 0.05).toFixed(2)}</span>
+                <span>${(effectivePrice * ticketCount * 0.05).toFixed(2)}</span>
               </div>
               <div className="border-t pt-1 mt-1 flex justify-between font-semibold text-foreground">
                 <span>Total</span>
                 <span>
-                  ${(ticketPrice * ticketCount * 1.05).toFixed(2)}
+                  ${(effectivePrice * ticketCount * 1.05).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -127,7 +149,7 @@ export const TicketPurchase = ({
       </CardContent>
       <CardFooter>
         <Button
-          onClick={handlePurchase}
+          onClick={onPurchaseClick}
           className="w-full"
           disabled={ticketsRemaining <= 0 || isProcessing}
         >

@@ -35,7 +35,7 @@ const EventRow = ({ event, onRefresh }: EventRowProps) => {
   };
 
   const handleEditEvent = (id: string) => {
-    navigate(`/edit-event/${id}`);
+    navigate(`/dashboard/events/edit/${id}`);
   };
 
   const handleTogglePublish = async (event: Event) => {

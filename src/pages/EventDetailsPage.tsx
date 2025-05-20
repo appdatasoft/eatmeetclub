@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useEventFetch } from "@/hooks/useEventFetch";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,30 +37,33 @@ const EventDetailsPage = () => {
   
   // Extract event ID from params or slug
   const getEventIdFromParams = () => {
-    // Extract UUID from either id or slug parameters
-    const uuidPattern = /([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i;
+    // First check the id parameter directly
+    if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+      return id;
+    }
     
-    // First check the id parameter
+    // Check if id contains a UUID within it (e.g., "event-title-123e4567-e89b-12d3-a456-426614174000")
     if (id) {
-      const match = id.match(uuidPattern);
-      if (match && match[1]) {
-        return match[1];
+      const uuidMatch = id.match(/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i);
+      if (uuidMatch && uuidMatch[1]) {
+        return uuidMatch[1];
       }
     }
     
-    // Otherwise check slug parameter
+    // Check if the slug has a UUID within it
     if (slug) {
-      const match = slug.match(uuidPattern);
-      if (match && match[1]) {
-        return match[1];
+      const uuidMatch = slug.match(/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i);
+      if (uuidMatch && uuidMatch[1]) {
+        return uuidMatch[1];
       }
     }
     
-    // If no match was found, just return whatever was passed (this will be validated later)
-    return id || slug;
+    // If no match was found, return whatever was passed (this will be validated later)
+    return id || slug || '';
   };
   
   const eventId = getEventIdFromParams();
+  console.log("Extracted event ID:", eventId, "from id:", id, "and slug:", slug);
   
   const { 
     event, 
@@ -205,8 +209,8 @@ const EventDetailsPage = () => {
       <div className="bg-white">
         <EventHeader 
           title={event.title} 
-          restaurantName={event.restaurant.name} 
-          restaurantId={event.restaurant.id}
+          restaurantName={event.restaurant?.name || "Unknown Restaurant"} 
+          restaurantId={event.restaurant?.id || "unknown"}
           isOwner={canEditEvent}
           onEditCover={handleEditCover}
           coverImage={coverImageUrl}
@@ -290,7 +294,7 @@ const EventDetailsPage = () => {
         isUploading={isUploadingCover}
       />
       
-      {event && (
+      {event && event.restaurant && (
         <MenuSelectionModal
           eventId={event.id}
           restaurantId={event.restaurant.id}
