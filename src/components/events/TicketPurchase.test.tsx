@@ -16,7 +16,7 @@ vi.mock('@/hooks/use-toast', () => ({
 vi.mock('@/hooks/membership/useCheckoutSession', () => ({
   useCheckoutSession: () => ({
     startCheckout: vi.fn(),
-    isLoading: false,
+    loading: false,
   }),
 }))
 
@@ -31,6 +31,14 @@ vi.mock('@/integrations/supabase/client', () => ({
   },
 }))
 
+// ✅ Mock useReferralTracking
+vi.mock('@/hooks/useReferralTracking', () => ({
+  useReferralTracking: () => ({
+    getStoredReferralCode: vi.fn().mockReturnValue(null),
+    referralCode: null,
+  }),
+}))
+
 const renderWithProviders = (ui: React.ReactElement) => {
   return render(<ThemeProvider>{ui}</ThemeProvider>)
 }
@@ -42,7 +50,13 @@ describe('TicketPurchase', () => {
 
   it('disables increase button when ticket count equals ticketsRemaining', () => {
     renderWithProviders(
-      <TicketPurchase eventId="123" ticketPrice={25} ticketsRemaining={1} />
+      <TicketPurchase 
+        eventId="123" 
+        ticketPrice={25} 
+        ticketsRemaining={1} 
+        isProcessing={false}
+        onPurchase={vi.fn()}
+      />
     )
 
     const increaseButton = screen.getByRole('button', {
@@ -53,7 +67,13 @@ describe('TicketPurchase', () => {
 
   it('increases and decreases ticket count with buttons', () => {
     renderWithProviders(
-      <TicketPurchase eventId="123" ticketPrice={25} ticketsRemaining={5} />
+      <TicketPurchase 
+        eventId="123" 
+        ticketPrice={25} 
+        ticketsRemaining={5}
+        isProcessing={false}
+        onPurchase={vi.fn()} 
+      />
     )
 
     const input = screen.getByRole('spinbutton', {
@@ -77,10 +97,16 @@ describe('TicketPurchase', () => {
 
   it('displays the correct total', () => {
     renderWithProviders(
-      <TicketPurchase eventId="123" ticketPrice={10} ticketsRemaining={10} />
+      <TicketPurchase 
+        eventId="123" 
+        ticketPrice={10} 
+        ticketsRemaining={10}
+        isProcessing={false}
+        onPurchase={vi.fn()} 
+      />
     )
 
-    const total = screen.getByText(/\$10\.50/) // 10 + 0.5 service fee
+    const total = screen.getByText(/\$10\.50/) // Assuming 5% service fee
     expect(total).toBeInTheDocument()
   })
 })
