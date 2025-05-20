@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -50,56 +51,51 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
     }
     
     try {
-      console.log("Sending password reset email to:", email);
+      console.log(`[${new Date().toISOString()}] Sending password reset email to:`, email);
       
-      // IMPORTANT: Always use a complete URL with protocol and host
-      // Get the current domain with protocol
+      // IMPORTANT: Ensure we use the full origin INCLUDING protocol
       const domain = window.location.origin;
+      console.log(`[${new Date().toISOString()}] Current domain/origin:`, domain);
       
-      // Construct the redirect URL with explicit /set-password path
-      let redirectUrl = new URL("/set-password", domain).toString();
-      
-      console.log("Reset email redirect URL:", redirectUrl);
-      
-      // First try the edge function approach for better control
+      // Call the edge function via our API route
       try {
         const timestamp = new Date().toISOString();
         console.log(`[${timestamp}] Calling edge function for password reset`);
         
-        // Always use the full URL to the edge function
+        // Always use the full URL to the edge function through our API route
         const edgeFunctionUrl = `${domain}/api/generate-magic-link`;
-        console.log("Edge function URL:", edgeFunctionUrl);
+        console.log(`[${timestamp}] Edge function URL:`, edgeFunctionUrl);
         
         const response = await fetch(edgeFunctionUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             email, 
-            redirectUrl,
+            redirectUrl: domain, // Just provide the domain, the edge function will add /set-password
             timestamp
           }),
         });
         
         if (!response.ok) {
           const errorText = await response.text();
-          console.error("Edge function error response:", errorText);
+          console.error(`[${timestamp}] Edge function error response:`, errorText);
           throw new Error(`Edge function failed with status ${response.status}`);
         }
         
         const result = await response.json();
         
-        console.log("Magic link generation result:", result);
+        console.log(`[${timestamp}] Magic link generation result:`, result);
         
         if (!result.success) {
           throw new Error(result.message || "Failed to generate magic link");
         }
         
-        // Store debug info with detailed data
+        // Store detailed debug info
         setDebugInfo({
           timestamp,
           resetRequestSent: true,
           email,
-          redirectUrl,
+          domain,
           actualRedirectUsed: result.redirectUrl || "Not returned",
           originalRedirectUrl: result.originalRedirectUrl,
           method: "edge-function",
@@ -114,35 +110,46 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
         
         return;
       } catch (edgeError) {
-        console.error("Edge function failed:", edgeError);
-        console.warn("Falling back to default Supabase method");
+        console.error(`[${new Date().toISOString()}] Edge function failed:`, edgeError);
+        console.warn(`[${new Date().toISOString()}] Falling back to default Supabase method`);
+        
+        // Store debug info about the edge function failure
+        setDebugInfo({
+          timestamp: new Date().toISOString(),
+          edgeFunctionError: edgeError.message,
+          fallbackToSupabaseDirect: true
+        });
+        
         // Don't throw here - continue to fallback method
       }
       
       // Fallback: Use the default Supabase auth resetPasswordForEmail
-      console.log("Using Supabase fallback method with redirect:", redirectUrl);
+      // Explicitly construct the redirect URL with /set-password path
+      const redirectUrl = `${domain}/set-password`;
+      console.log(`[${new Date().toISOString()}] Using Supabase fallback method with redirect:`, redirectUrl);
       
       const { error, data } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
       });
       
-      // Log detailed response from Supabase
-      console.log("Reset password response:", { 
+      // Log detailed response
+      console.log(`[${new Date().toISOString()}] Reset password response:`, { 
         error, 
         data,
-        timestamp: new Date().toISOString(),
-        hostEnvironment: window.location.hostname,
-        browserInfo: navigator.userAgent
+        redirectUrl,
+        domain,
+        hostEnvironment: window.location.hostname
       });
       
-      // Store debug info that can be displayed in the UI
-      setDebugInfo({
+      // Update debug info with fallback method details
+      setDebugInfo(prevInfo => ({
+        ...prevInfo || {},
         timestamp: new Date().toISOString(),
         resetRequestSent: !error,
-        email: email,
-        redirectUrl: redirectUrl,
-        method: "supabase-client"
-      });
+        email,
+        redirectUrl,
+        method: "supabase-client-fallback"
+      }));
       
       if (error) throw error;
       
@@ -152,7 +159,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
         description: `We've sent a password reset link to ${email}. Please check your inbox (and spam folder).`,
       });
     } catch (error: any) {
-      console.error("Error sending password reset email:", error);
+      console.error(`[${new Date().toISOString()}] Error sending password reset email:`, error);
       setErrorMessage(error.message || "Failed to send reset email. Please try again later.");
       toast({
         title: "Error",
@@ -184,12 +191,19 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
               <div>Timestamp: {debugInfo.timestamp}</div>
               <div>Email: {debugInfo.email}</div>
               <div>Reset request sent: {debugInfo.resetRequestSent ? "Yes" : "No"}</div>
-              <div>Redirect URL: {debugInfo.redirectUrl}</div>
+              {debugInfo.domain && <div>Domain: {debugInfo.domain}</div>}
+              {debugInfo.redirectUrl && <div>Redirect URL: {debugInfo.redirectUrl}</div>}
               {debugInfo.actualRedirectUsed && (
                 <div>Actual redirect used: {debugInfo.actualRedirectUsed}</div>
               )}
               {debugInfo.originalRedirectUrl && (
                 <div>Original redirect URL: {debugInfo.originalRedirectUrl}</div>
+              )}
+              {debugInfo.edgeFunctionError && (
+                <div>Edge function error: {debugInfo.edgeFunctionError}</div>
+              )}
+              {debugInfo.fallbackToSupabaseDirect && (
+                <div>Fallback to Supabase direct: Yes</div>
               )}
               <div>Method: {debugInfo.method}</div>
               {debugInfo.responseData && (

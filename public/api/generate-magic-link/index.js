@@ -6,20 +6,22 @@ export const config = {
 };
 
 export default async function handler(req) {
+  // Get the Supabase URL from environment or use the hardcoded fallback
   const supabaseUrl = process.env.SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co";
   
   // Construct the URL for the Supabase Edge Function
   const functionUrl = `${supabaseUrl}/functions/v1/generate-magic-link`;
   
   try {
-    console.log("Forwarding request to Supabase Edge Function:", functionUrl);
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] Forwarding request to Supabase Edge Function: ${functionUrl}`);
     
     // Get the request body for logging
     let requestBody = null;
     if (req.method !== 'GET') {
       const clone = req.clone();
       requestBody = await clone.text();
-      console.log("Request body:", requestBody);
+      console.log(`[${timestamp}] Request body: ${requestBody}`);
     }
     
     // Forward the request to the Supabase Edge Function
@@ -33,7 +35,7 @@ export default async function handler(req) {
     });
     
     const responseText = await response.text();
-    console.log("Response from edge function:", responseText);
+    console.log(`[${timestamp}] Response from edge function: ${responseText}`);
     
     // Return the response from the Edge Function
     return new Response(responseText, {
@@ -46,7 +48,7 @@ export default async function handler(req) {
       },
     });
   } catch (error) {
-    console.error("Error forwarding request to edge function:", error);
+    console.error(`[${new Date().toISOString()}] Error forwarding request to edge function:`, error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: {

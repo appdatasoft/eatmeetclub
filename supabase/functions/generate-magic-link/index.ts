@@ -36,33 +36,34 @@ serve(async (req) => {
       throw new Error("Email is required");
     }
     
-    console.log(`Generating magic link for ${email} with redirect to ${redirectUrl}`);
+    // Log the incoming request for debugging
+    console.log(`[${new Date().toISOString()}] Generating magic link for ${email}`);
+    console.log(`[${new Date().toISOString()}] Original redirectUrl: ${redirectUrl}`);
     
-    // Always ensure the redirect URL ends with /set-password
+    // Default redirect domain if none provided
+    const defaultDomain = "https://www.eatmeetclub.com";
+    
+    // CRITICAL: Force /set-password path regardless of input
     let finalRedirectUrl;
     
     try {
-      // Parse the redirectUrl to extract domain
-      const parsedUrl = new URL(redirectUrl || "https://www.eatmeetclub.com");
-      
-      // IMPORTANT: Force the path to be /set-password regardless of what was provided
-      parsedUrl.pathname = "/set-password";
-      finalRedirectUrl = parsedUrl.toString();
-      
-      // Double-check the URL is correct
-      console.log("Parsed URL object:", {
-        href: parsedUrl.href,
-        origin: parsedUrl.origin,
-        pathname: parsedUrl.pathname,
-        host: parsedUrl.host
-      });
+      // If redirectUrl is provided, extract just the origin (domain + protocol)
+      if (redirectUrl) {
+        const parsedUrl = new URL(redirectUrl);
+        // Extract just the origin and force the path to /set-password
+        const origin = parsedUrl.origin; // This gets just protocol + domain
+        finalRedirectUrl = `${origin}/set-password`; // Force the path
+      } else {
+        finalRedirectUrl = `${defaultDomain}/set-password`;
+      }
     } catch (e) {
-      // If URL parsing fails, use a hardcoded default with /set-password
+      // If URL parsing fails, use the default domain
       console.error("URL parsing failed:", e);
-      finalRedirectUrl = "https://www.eatmeetclub.com/set-password";
+      finalRedirectUrl = `${defaultDomain}/set-password`;
     }
     
-    console.log(`FINAL redirect URL being used: ${finalRedirectUrl}`);
+    // CRITICAL DEBUGGING - Always log the exact URL being used
+    console.log(`[${new Date().toISOString()}] FINAL redirect URL being passed to Supabase: ${finalRedirectUrl}`);
     
     // Generate a recovery link (for password reset/setup)
     const { data, error } = await supabase.auth.admin.generateLink({
@@ -78,18 +79,19 @@ serve(async (req) => {
       throw error;
     }
     
-    console.log("Magic link generated successfully");
-    console.log("Action link property:", data.properties?.action_link);
+    // Log the generated link for debugging
+    console.log(`[${new Date().toISOString()}] Magic link generated successfully`);
     
-    // Check if the action link contains the correct redirect URL
     if (data.properties?.action_link) {
       const actionLinkUrl = new URL(data.properties.action_link);
       const params = new URLSearchParams(actionLinkUrl.search);
       const redirectParam = params.get('redirect_to');
-      console.log("Redirect parameter in action link:", redirectParam);
+      
+      console.log(`[${new Date().toISOString()}] Final action_link: ${data.properties.action_link}`);
+      console.log(`[${new Date().toISOString()}] Extracted redirect_to param: ${redirectParam}`);
       
       if (redirectParam && !redirectParam.endsWith('/set-password')) {
-        console.warn("WARNING: redirect_to parameter does not end with /set-password:", redirectParam);
+        console.warn(`[${new Date().toISOString()}] WARNING: redirect_to parameter does not end with /set-password: ${redirectParam}`);
       }
     }
     
