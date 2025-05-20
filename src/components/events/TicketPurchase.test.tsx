@@ -76,9 +76,7 @@ describe('TicketPurchase', () => {
       />
     )
 
-    const input = screen.getByRole('spinbutton', {
-      name: /number of tickets/i,
-    })
+    const count = screen.getByText('1')
     const increase = screen.getByRole('button', {
       name: /increase ticket count/i,
     })
@@ -86,13 +84,13 @@ describe('TicketPurchase', () => {
       name: /decrease ticket count/i,
     })
 
-    expect(input).toHaveValue(1)
+    expect(count).toHaveTextContent('1')
 
     fireEvent.click(increase)
-    expect(input).toHaveValue(2)
+    expect(count).toHaveTextContent('2')
 
     fireEvent.click(decrease)
-    expect(input).toHaveValue(1)
+    expect(count).toHaveTextContent('1')
   })
 
   it('displays the correct total', () => {
