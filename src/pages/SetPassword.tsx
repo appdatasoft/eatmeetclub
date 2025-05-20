@@ -7,6 +7,7 @@ import { PasswordForm, PasswordFormValues, PasswordSuccessMessage } from "@/comp
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 const SetPasswordPage = () => {
   const [searchParams] = useSearchParams();
@@ -21,6 +22,20 @@ const SetPasswordPage = () => {
   const [debugInfo, setDebugInfo] = useState<any>(null);
 
   useEffect(() => {
+    // Get error information from URL if present
+    const urlError = searchParams.get("error");
+    const urlErrorCode = searchParams.get("error_code");
+    const urlErrorDesc = searchParams.get("error_description");
+
+    if (urlError) {
+      const errorMessage = urlErrorDesc 
+        ? decodeURIComponent(urlErrorDesc.replace(/\+/g, ' ')) 
+        : "Invalid or expired password reset link. Please request a new one.";
+        
+      setError(errorMessage);
+      console.error("Error from URL:", { urlError, urlErrorCode, errorMessage });
+    }
+
     // Set session from URL parameters when component mounts
     const setSessionFromUrl = async () => {
       const token = searchParams.get("token");
@@ -33,6 +48,7 @@ const SetPasswordPage = () => {
         tokenEnd: token?.substring(token?.length - 5),
         type,
         url: window.location.href,
+        hasErrorParam: !!urlError,
         timestamp: new Date().toISOString()
       };
       
@@ -43,6 +59,12 @@ const SetPasswordPage = () => {
       if (token && type === "recovery") {
         console.log("Received recovery token, marking as valid");
         setHasValidToken(true);
+        
+        // Clear any URL error since we have a valid token
+        if (urlError) {
+          setError(null);
+        }
+        
         return true;
       }
       
@@ -50,7 +72,7 @@ const SetPasswordPage = () => {
     };
     
     setSessionFromUrl().then(validSession => {
-      if (!validSession) {
+      if (!validSession && !urlError) {
         setError("Invalid or expired password reset link. Please request a new one.");
       }
     });
@@ -100,6 +122,11 @@ const SetPasswordPage = () => {
     }
   };
 
+  // Function to go to forgot password page
+  const handleRequestNewLink = () => {
+    navigate("/forgot-password");
+  };
+
   return (
     <MainLayout>
       <div className="flex min-h-[70vh] py-12">
@@ -115,6 +142,11 @@ const SetPasswordPage = () => {
             <Alert variant="destructive" className="mb-6">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
+              <div className="mt-2">
+                <Button size="sm" variant="outline" onClick={handleRequestNewLink}>
+                  Request New Link
+                </Button>
+              </div>
             </Alert>
           )}
           
@@ -130,6 +162,7 @@ const SetPasswordPage = () => {
                     <div>Token Type: {debugInfo.type || "Not specified"}</div>
                   </>
                 )}
+                <div>URL Has Error: {debugInfo.hasErrorParam ? "Yes" : "No"}</div>
                 <div>Timestamp: {debugInfo.timestamp}</div>
               </AlertDescription>
             </Alert>
@@ -146,7 +179,12 @@ const SetPasswordPage = () => {
             <Alert variant="destructive" className="mb-6">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Invalid or expired password reset link. Please request a new one.
+                <div className="mb-3">
+                  Invalid or expired password reset link. Please request a new one.
+                </div>
+                <Button size="sm" onClick={handleRequestNewLink}>
+                  Request New Password Reset
+                </Button>
               </AlertDescription>
             </Alert>
           )}

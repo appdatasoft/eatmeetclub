@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle, AlertCircle, Info } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -53,11 +53,11 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
     try {
       console.log("Sending password reset email to:", email);
       
-      // Make sure the redirect URL includes the /set-password path
-      const redirectUrl = `${window.location.origin}/set-password`;
+      // Make sure the redirect URL is the absolute URL to the set-password page
+      const redirectUrl = new URL('/set-password', window.location.origin).toString();
       console.log("Reset email redirect URL:", redirectUrl);
       
-      // Use password recovery method for simplicity, since it doesn't require session
+      // Use password recovery method
       const { error, data } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
       });
@@ -75,6 +75,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
       setDebugInfo({
         timestamp: new Date().toISOString(),
         resetRequestSent: !error,
+        email: email,
         redirectUrl: redirectUrl
       });
       
@@ -102,10 +103,11 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
     return (
       <div className="space-y-4">
         <Alert className="bg-green-50 border-green-200">
-          <CheckCircle className="h-4 w-4 text-green-500" />
+          <CheckCircle2 className="h-4 w-4 text-green-500" />
           <AlertDescription className="text-green-800">
-            We've sent a password reset link to <strong>{userEmail || form.getValues().email}</strong>. 
-            Please check your inbox (and spam/junk folder). If you don't see it within a few minutes, please try again.
+            <p className="font-medium">Reset link sent!</p>
+            <p>We've sent a password reset link to <strong>{userEmail || form.getValues().email}</strong>.</p>
+            <p className="mt-2">Please check your inbox and spam/junk folders. The email should arrive within a few minutes.</p>
           </AlertDescription>
         </Alert>
         
@@ -115,6 +117,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
             <AlertDescription className="text-xs font-mono">
               <div className="font-semibold mb-1">Debug information:</div>
               <div>Timestamp: {debugInfo.timestamp}</div>
+              <div>Email: {debugInfo.email}</div>
               <div>Reset request sent: {debugInfo.resetRequestSent ? "Yes" : "No"}</div>
               <div>Redirect URL: {debugInfo.redirectUrl}</div>
             </AlertDescription>
@@ -127,7 +130,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
             onClick={() => setIsSuccess(false)}
             className="mr-2"
           >
-            Try Again
+            Try Again with Different Email
           </Button>
           <Button 
             onClick={() => window.location.href = "/login"}
@@ -144,7 +147,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
       <Alert>
         <AlertDescription>
           {userEmail 
-            ? `To activate your account or reset your password, we'll send you a setup link to ${userEmail}.`
+            ? `To reset your password, we'll send a setup link to ${userEmail}.`
             : "Enter your email address to receive a password reset link."}
         </AlertDescription>
       </Alert>
@@ -170,6 +173,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
                       type="email"
                       placeholder="Enter your email address"
                       {...field}
+                      autoComplete="email"
                     />
                   </FormControl>
                 </FormItem>
@@ -201,7 +205,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
         <ul className="list-disc pl-5 mt-2">
           <li>Check your spam or junk folder</li>
           <li>Verify that you entered the correct email address</li>
-          <li>Check if your email provider is blocking emails from Supabase</li>
+          <li>Check if your email provider is blocking emails from our verification system</li>
         </ul>
       </div>
     </div>
