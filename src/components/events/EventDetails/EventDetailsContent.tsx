@@ -3,7 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import EventDetailsContainer from "./EventDetailsContainer";
-import { TicketPurchase } from "@/components/events/TicketPurchase";
+import { TicketPurchase } from "@/components/events/EventDetails/TicketPurchase";
 import EventActionButtons from "./EventActionButtons";
 import EventAiAgent from "./EventAiAgent";
 import { EventDetails } from "@/types/event";
@@ -135,11 +135,15 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
         <div className="lg:col-span-1">
           {event.published && (
             <TicketPurchase
-              eventId={event.id}
-              ticketPrice={event.price}
+              event={{
+                id: event.id,
+                title: event.title,
+                price: event.price
+              }}
               ticketsRemaining={ticketsRemaining} 
+              ticketsPercentage={ticketsPercentage}
               isProcessing={isPaymentProcessing}
-              onPurchase={handleTicketPurchase}
+              handleTicketPurchase={handleTicketPurchase}
               referralCode={referralCode}
             />
           )}
