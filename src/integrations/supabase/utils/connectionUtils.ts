@@ -72,6 +72,29 @@ export const getConnectionStatus = () => {
  * Returns an object with diagnostic data
  */
 export const getConnectionDiagnostics = () => {
+  // Extract URL from the supabase client configuration
+  // We can't directly access protected properties, so we'll try to get this info safely
+  let supabaseUrl = 'unavailable';
+  let anonKeyLength = 0;
+  
+  try {
+    // Try to get URL from the config
+    // Using toString() which might include the URL in some implementations
+    const clientInfo = supabase.toString();
+    if (clientInfo && clientInfo.includes('http')) {
+      const urlMatch = clientInfo.match(/(https?:\/\/[^\s"']+)/);
+      if (urlMatch && urlMatch[1]) {
+        supabaseUrl = urlMatch[1].substring(0, 30) + '...';
+      }
+    }
+    
+    // We'll try to check if auth is configured as an indirect indication of the key
+    const hasAuthConfig = Boolean(supabase.auth);
+    anonKeyLength = hasAuthConfig ? 'configured' : 'missing';
+  } catch (e) {
+    console.warn('Could not safely extract Supabase client info');
+  }
+  
   return {
     checked: connectionChecked,
     connected: isConnected,
@@ -83,12 +106,7 @@ export const getConnectionDiagnostics = () => {
       code: lastError.code,
       details: lastError.details,
     } : null,
-    // Use string properties safely without accessing protected members
-    supabaseUrl: typeof supabase.supabaseUrl === 'string' 
-      ? supabase.supabaseUrl.substring(0, 30) + '...' 
-      : 'unavailable',
-    anon_key_length: typeof supabase.supabaseKey === 'string' 
-      ? supabase.supabaseKey.length 
-      : 0,
+    supabaseUrl,
+    anon_key_length: anonKeyLength,
   };
 };
