@@ -7,7 +7,6 @@ import { useEventActions } from "@/hooks/useEventActions";
 import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useReferralTracking } from "@/hooks/useReferralTracking";
-import { checkSupabaseConnection } from "@/integrations/supabase/utils/connectionUtils";
 
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -20,7 +19,7 @@ import EditCoverDialog from "@/components/events/EventDetails/EditCoverDialog";
 import MenuSelectionModal from "@/components/events/menu-selection";
 import AffiliateShare from "@/components/events/AffiliateShare";
 import { Button } from "@/components/ui/button";
-import { UtensilsCrossed, Menu as MenuIcon, RefreshCw, Info, AlertTriangle } from "lucide-react";
+import { UtensilsCrossed, Menu as MenuIcon, RefreshCw, Info } from "lucide-react";
 import { EventDetails } from "@/hooks/types/eventTypes";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -28,38 +27,17 @@ const EventDetailsPage = () => {
   const { id, slug } = useParams<{ id?: string; slug?: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [retryAttempt, setRetryAttempt] = useState<number>(0);
 
   const getEventIdFromParams = () => {
-    // Extract event ID from the URL parameters - prioritize the "id" param
     if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
       return id;
     }
-    
-    // Look for UUID pattern in either the id or slug
     const uuidMatch = id?.match(/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i) ||
-                     slug?.match(/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i);
-    
+                      slug?.match(/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i);
     return uuidMatch?.[1] || id || slug || '';
   };
 
   const eventId = getEventIdFromParams();
-  
-  useEffect(() => {
-    // Check connection to Supabase when component mounts
-    const checkConnection = async () => {
-      const isConnected = await checkSupabaseConnection(true);
-      if (!isConnected) {
-        setConnectionError("Unable to connect to the database. Please check your internet connection and try again.");
-      } else {
-        setConnectionError(null);
-      }
-    };
-    
-    checkConnection();
-  }, [retryAttempt]);
-  
   const { event, isLoading, error, isCurrentUserOwner, refreshEventDetails } = useEventFetch(eventId);
   const { referralCode } = useReferralTracking(eventId);
 
@@ -71,6 +49,31 @@ const EventDetailsPage = () => {
       console.log(`Viewing event ${eventId} with referral code: ${referralCode}`);
     }
   }, [eventId, referralCode]);
+
+  useEffect(() => {
+    const safeError = typeof error === "string" ? error : String(error);
+    if (safeError && !safeError.includes("not found") && !safeError.includes("Invalid")) {
+      toast({
+        title: "Error loading event",
+        description: safeError,
+        variant: "destructive"
+      });
+    }
+  }, [error]);
+
+  const safeError = typeof error === "string" ? error : String(error);
+
+  if (safeError.includes("body stream already read")) {
+    return (
+      <>
+        <Navbar />
+        <div className="container-custom py-12 text-center text-red-500">
+          Unexpected error occurred. Please refresh the page.
+        </div>
+        <Footer />
+      </>
+    );
+  }
 
   const { canEditEvent } = useEventAccess(event as EventDetails);
 
@@ -97,29 +100,12 @@ const EventDetailsPage = () => {
 
   const handleRetry = () => {
     setIsRetrying(true);
-    if (connectionError) {
-      checkSupabaseConnection(true)
-        .then(isConnected => {
-          if (isConnected) {
-            setConnectionError(null);
-            setRetryAttempt(prev => prev + 1);
-          } else {
-            toast({
-              title: "Connection Error",
-              description: "Still unable to connect to the database. Please try again later.",
-              variant: "destructive"
-            });
-          }
-        })
-        .finally(() => setIsRetrying(false));
-    } else {
-      refreshEventDetails().finally(() => setIsRetrying(false));
-    }
+    refreshEventDetails().finally(() => setIsRetrying(false));
   };
 
   const handleManageMenu = () => {
     if (event?.restaurant?.id) {
-      navigate(`/dashboard/restaurant-menu/${event.restaurant.id}?eventId=${event.id}&eventName=${encodeURIComponent(event.title || '')}`);
+      navigate(`/dashboard/restaurant-menu/${event.restaurant.id}?eventId=${event.id}&eventName=${encodeURIComponent(event.title)}`);
     } else {
       toast({
         title: "Error",
@@ -138,28 +124,6 @@ const EventDetailsPage = () => {
   const ticketsPercentage = ((event?.tickets_sold || 0) / (event?.capacity || 1)) * 100;
   const coverImageUrl = event?.cover_image || "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=60";
 
-  if (connectionError) {
-    return (
-      <>
-        <Navbar />
-        <div className="container-custom py-12 text-center">
-          <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-amber-500" />
-          <h2 className="text-xl font-bold mb-4">Connection Error</h2>
-          <p className="mb-6 text-gray-600">{connectionError}</p>
-          <Button 
-            onClick={handleRetry} 
-            disabled={isRetrying} 
-            className="flex items-center mx-auto"
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} />
-            {isRetrying ? 'Connecting...' : 'Try Again'}
-          </Button>
-        </div>
-        <Footer />
-      </>
-    );
-  }
-
   if (isLoading) {
     return (
       <>
@@ -172,17 +136,14 @@ const EventDetailsPage = () => {
     );
   }
 
-  // Safely handle the error message
-  const safeError = typeof error === "string" ? error : error ? String(error) : null;
-
   if (!event || safeError) {
     return (
       <>
         <Navbar />
         <div className="container-custom py-8">
           <EventNotFound error={safeError} />
-          {safeError && (
-            <div className="mt-4 flex justify-center">
+          {safeError && !safeError.includes("not found") && (
+            <div className="mt-4">
               <Button
                 variant="outline"
                 onClick={handleRetry}
@@ -205,11 +166,7 @@ const EventDetailsPage = () => {
       <>
         <Navbar />
         <div className="container-custom py-12 text-center text-gray-600">
-          <div className="animate-pulse">
-            <div className="h-8 w-1/3 bg-gray-200 rounded mx-auto mb-4"></div>
-            <div className="h-4 w-1/2 bg-gray-200 rounded mx-auto"></div>
-          </div>
-          <p className="mt-6">Loading event details...</p>
+          Loading event details...
         </div>
         <Footer />
       </>
@@ -223,16 +180,12 @@ const EventDetailsPage = () => {
         <div className="container-custom py-8 text-center">
           <h1 className="text-2xl font-bold mb-4">Event Not Available</h1>
           <p className="mb-6">This event is not currently published.</p>
-          <Button variant="outline" onClick={() => navigate('/events')}>
-            Browse Events
-          </Button>
         </div>
         <Footer />
       </>
     );
   }
 
-  // If we get here, we have a valid event to display
   return (
     <>
       <Navbar />
