@@ -38,32 +38,29 @@ serve(async (req) => {
     
     console.log(`Generating magic link for ${email} with redirect to ${redirectUrl}`);
     
-    // Extract the base origin from redirectUrl to ensure we're using a properly formatted URL
-    let redirectTo = redirectUrl;
+    // First, construct a base URL (either from the provided redirectUrl or using default)
+    let baseUrl = redirectUrl;
     
-    // Ensure the redirect URL is absolute and properly formatted
-    if (!redirectTo.startsWith('http')) {
-      // If not absolute, construct a proper URL using a default domain
-      const defaultDomain = "https://www.eatmeetclub.com";
-      redirectTo = `${defaultDomain}${redirectTo.startsWith('/') ? '' : '/'}${redirectTo}`;
+    // If no redirectUrl is provided or it's not absolute, use a default
+    if (!baseUrl || !baseUrl.startsWith('http')) {
+      baseUrl = "https://www.eatmeetclub.com";
     }
     
-    // Ensure the redirect URL includes the /set-password path if it's not already there
-    if (!redirectTo.includes('/set-password')) {
-      // Strip trailing slash if present
-      const baseUrl = redirectTo.endsWith('/') ? redirectTo.slice(0, -1) : redirectTo;
-      redirectTo = `${baseUrl}/set-password`;
-    }
+    // Strip any trailing slashes from the baseUrl
+    baseUrl = baseUrl.replace(/\/+$/, '');
     
-    console.log(`Using redirect URL: ${redirectTo}`);
+    // Always ensure that the final redirect URL includes the /set-password path
+    const finalRedirectUrl = `${baseUrl}/set-password`;
+    
+    console.log(`Using final redirect URL: ${finalRedirectUrl}`);
     
     // Generate a recovery link (for password reset/setup)
     const { data, error } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: email,
       options: {
-        // Use the provided redirect URL with the set-password path
-        redirectTo: redirectTo,
+        // Use the final redirect URL with the /set-password path
+        redirectTo: finalRedirectUrl,
       }
     });
     

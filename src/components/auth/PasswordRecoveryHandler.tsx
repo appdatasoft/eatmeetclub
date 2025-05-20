@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -53,7 +52,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
     try {
       console.log("Sending password reset email to:", email);
       
-      // Make sure the redirect URL is the absolute URL to the set-password page
+      // Create the full absolute URL to the set-password page
       const redirectUrl = new URL('/set-password', window.location.origin).toString();
       console.log("Reset email redirect URL:", redirectUrl);
       
