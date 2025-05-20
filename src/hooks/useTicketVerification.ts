@@ -1,15 +1,14 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { useToast } from '@/hooks/use-toast';
 
 export interface TicketDetails {
-  event_id: string;
+  id: string;
+  payment_id: string;
   quantity: number;
-  price: number;
-  service_fee: number;
   total_amount: number;
+  purchase_date: string;
 }
 
 export interface EventDetails {
@@ -17,131 +16,123 @@ export interface EventDetails {
   title: string;
   date: string;
   time: string;
+  description?: string;
   restaurant: {
     name: string;
-    address: string;
-    city: string;
+    id: string;
   };
 }
 
 export const useTicketVerification = (sessionId: string | null) => {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [isVerifying, setIsVerifying] = useState(true);
   const [ticketDetails, setTicketDetails] = useState<TicketDetails | null>(null);
   const [eventDetails, setEventDetails] = useState<EventDetails | null>(null);
   const [emailSent, setEmailSent] = useState(false);
-
+  
   useEffect(() => {
-    if (!sessionId) {
-      toast({
-        title: "Error",
-        description: "No payment information found",
-        variant: "destructive",
-      });
-      navigate("/events");
-      return;
-    }
-
-    // Get stored ticket details from localStorage first
-    const storedTicketDetails = localStorage.getItem("ticketDetails");
-    if (storedTicketDetails) {
-      const parsedDetails = JSON.parse(storedTicketDetails);
-      setTicketDetails(parsedDetails);
-    }
-
-    // Clear the stored ticket details
-    localStorage.removeItem("ticketDetails");
-
     const verifyPayment = async () => {
+      if (!sessionId) {
+        setIsVerifying(false);
+        return;
+      }
+      
       try {
-        // Get session for the API call
-        const { data } = await supabase.auth.getSession();
-        if (!data.session) {
-          toast({
-            title: "Authentication Required",
-            description: "Please log in to view ticket details",
-            variant: "default",
-          });
-          navigate("/login");
-          return;
+        // Get current user's email
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error('User not authenticated');
         }
-
-        // Verify the payment with Stripe
-        const response = await supabase.functions.invoke("verify-ticket-payment", {
-          body: { sessionId },
-          headers: {
-            Authorization: `Bearer ${data.session.access_token}`,
-          },
+        
+        // Get the stored referral code if any
+        const searchParams = new URLSearchParams(window.location.search);
+        const eventId = searchParams.get('event_id');
+        let referralCode = null;
+        
+        if (eventId) {
+          referralCode = sessionStorage.getItem(`ref_${eventId}`);
+        }
+        
+        // Get Supabase URL
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
+        
+        // Verify the payment with the backend
+        const response = await fetch(`${supabaseUrl}/functions/v1/verify-ticket-payment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            sessionId, 
+            email: user.email,
+            eventId,
+            referralCode
+          })
         });
-
-        if (response.error) {
-          throw new Error(response.error.message || "Failed to verify payment");
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Verification failed');
         }
-
-        console.log("Verification response:", response.data);
-
-        // Get ticket details from response
-        const ticket = response.data.ticket;
-        setTicketDetails(ticket);
-        setEmailSent(!!response.data.emailSent);
-
-        // Notify about invoice email
-        if (response.data.emailSent) {
-          toast({
-            title: "Invoice Email Sent",
-            description: "Your ticket details have been emailed to you",
-          });
-        }
-
-        // Get event details
-        if (ticket) {
-          const { data: eventData, error: eventError } = await supabase
-            .from("events")
-            .select("*, restaurant:restaurants(*)")
-            .eq("id", ticket.event_id)
-            .single();
-
-          if (eventError) {
-            throw new Error(eventError.message);
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // Clear the referral code from session storage after successful purchase
+          if (eventId) {
+            sessionStorage.removeItem(`ref_${eventId}`);
           }
-
-          // Format date to be more readable
-          const formattedDate = new Date(eventData.date).toLocaleDateString(
-            "en-US",
-            {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            }
-          );
-
-          setEventDetails({
-            ...eventData,
-            date: formattedDate,
-          });
+          
+          // Mark email as sent
+          setEmailSent(true);
+          
+          // Fetch ticket details
+          const { data: ticketData, error: ticketError } = await supabase
+            .from('tickets')
+            .select('*')
+            .eq('payment_id', sessionId)
+            .single();
+            
+          if (ticketError) throw ticketError;
+          
+          setTicketDetails(ticketData as TicketDetails);
+          
+          // Fetch event details
+          const { data: eventData, error: eventError } = await supabase
+            .from('events')
+            .select(`
+              id,
+              title,
+              date,
+              time,
+              description,
+              restaurant:restaurants (
+                id,
+                name
+              )
+            `)
+            .eq('id', ticketData.event_id)
+            .single();
+            
+          if (eventError) throw eventError;
+          
+          setEventDetails(eventData as EventDetails);
+        } else {
+          throw new Error('Payment verification failed');
         }
-
-        toast({
-          title: "Success!",
-          description: "Your tickets have been purchased successfully",
-        });
       } catch (error: any) {
-        console.error("Error verifying payment:", error);
+        console.error('Error verifying ticket payment:', error);
         toast({
-          title: "Error",
-          description: error.message || "Failed to verify payment",
-          variant: "destructive",
+          title: 'Verification Failed',
+          description: error.message || 'Failed to verify your ticket purchase',
+          variant: 'destructive'
         });
       } finally {
         setIsVerifying(false);
       }
     };
-
+    
     verifyPayment();
-  }, [sessionId, navigate, toast]);
-
+  }, [sessionId, toast]);
+  
   return {
     isVerifying,
     ticketDetails,
@@ -149,5 +140,3 @@ export const useTicketVerification = (sessionId: string | null) => {
     emailSent
   };
 };
-
-export default useTicketVerification;

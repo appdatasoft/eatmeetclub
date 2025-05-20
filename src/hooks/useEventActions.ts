@@ -1,107 +1,116 @@
 
+// Import additional hooks for affiliate tracking
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { EventDetails } from "@/hooks/types/eventTypes";
+import { User } from "@supabase/supabase-js";
+import { EventDetails } from "./types/eventTypes";
+import { useReferralTracking } from "./useReferralTracking";
 
 export const useEventActions = (
-  event: EventDetails | null,
+  event: EventDetails | undefined,
   refreshEventDetails: () => Promise<void>,
   canEditEvent: boolean,
-  user: any | null
+  user: User | null
 ) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
-  
-  // State
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditCoverDialogOpen, setIsEditCoverDialogOpen] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   
+  // Get referral tracking
+  const { getStoredReferralCode } = useReferralTracking();
+
+  // Handle when a user clicks the edit button
   const handleEditEvent = () => {
-    if (!event) return;
-    navigate(`/edit-event/${event.id}`);
+    if (event && canEditEvent) {
+      navigate(`/dashboard/events/edit/${event.id}`);
+    } else {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to edit this event.",
+        variant: "destructive",
+      });
+    }
   };
-  
+
+  // Handle when a user clicks the edit cover button
   const handleEditCover = () => {
-    setIsEditCoverDialogOpen(true);
+    if (canEditEvent) {
+      setIsEditCoverDialogOpen(true);
+    } else {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to edit this event.",
+        variant: "destructive",
+      });
+    }
   };
-  
-  const handleSaveCover = async (coverFile: File) => {
-    if (!event) return;
+
+  // Handle saving a new cover image
+  const handleSaveCover = async (file: File) => {
+    if (!event || !canEditEvent) return;
+    
+    setIsUploadingCover(true);
     
     try {
-      setIsUploadingCover(true);
+      // Upload the file to storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${event.id}-cover-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `event-covers/${fileName}`;
       
-      // Generate a unique file path for the image
-      const fileExt = coverFile.name.split('.').pop();
-      const filePath = `${event.id}/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('events')
+        .upload(filePath, file);
+        
+      if (uploadError) throw uploadError;
       
-      // Upload the file to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('event-covers')
-        .upload(filePath, coverFile);
-      
-      if (uploadError) {
-        throw uploadError;
-      }
-      
-      // Get the public URL for the uploaded image
-      const { data: publicUrlData } = supabase.storage
-        .from('event-covers')
+      // Get the public URL
+      const { data } = supabase.storage
+        .from('events')
         .getPublicUrl(filePath);
+        
+      if (!data.publicUrl) throw new Error("Failed to get public URL");
       
-      const publicUrl = publicUrlData.publicUrl;
-      
-      // Update the event with the new cover image URL
+      // Update the event with the new cover image
       const { error: updateError } = await supabase
         .from('events')
-        .update({ cover_image: publicUrl })
+        .update({ cover_image: data.publicUrl })
         .eq('id', event.id);
+        
+      if (updateError) throw updateError;
       
-      if (updateError) {
-        throw updateError;
-      }
-      
-      // Refresh the event details to show the updated image
+      // Refresh event details
       await refreshEventDetails();
       
       toast({
         title: "Cover Updated",
-        description: "Event cover image has been updated successfully",
+        description: "The event cover image has been updated.",
       });
       
       setIsEditCoverDialogOpen(false);
     } catch (error: any) {
-      console.error("Error uploading cover image:", error);
+      console.error("Error updating cover:", error);
       toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to upload cover image",
-        variant: "destructive"
+        title: "Update Failed",
+        description: error.message || "Failed to update cover image.",
+        variant: "destructive",
       });
     } finally {
       setIsUploadingCover(false);
     }
   };
-  
+
+  // Handle deleting an event
   const handleDeleteEvent = async () => {
-    if (!event) return;
-    
-    // Check if user can delete this event
-    if (!canEditEvent) {
-      toast({
-        title: "Permission Denied",
-        description: "You don't have permission to delete this event",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (!event || !canEditEvent) return;
     
     setIsDeleting(true);
+    
     try {
       const { error } = await supabase
         .from('events')
@@ -112,65 +121,105 @@ export const useEventActions = (
       
       toast({
         title: "Event Deleted",
-        description: "Event has been successfully deleted",
+        description: "The event has been permanently deleted.",
       });
       
-      // Navigate back to events list
-      navigate('/dashboard');
+      navigate('/dashboard/events');
     } catch (error: any) {
       console.error("Error deleting event:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to delete event",
-        variant: "destructive"
+        title: "Deletion Failed",
+        description: error.message || "Failed to delete the event.",
+        variant: "destructive",
       });
     } finally {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
     }
   };
-  
-  // Handle ticket purchase for non-logged in users
-  const handleTicketPurchase = (ticketCount: number) => {
-    if (!event) return 0;
+
+  // Handle ticket purchase
+  const handleTicketPurchase = async (ticketCount: number) => {
+    if (!event) return;
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to purchase tickets.",
+        variant: "destructive",
+      });
+      navigate('/login');
+      return;
+    }
     
     setIsPaymentProcessing(true);
     
-    if (!user) {
-      // Store event ID and ticket count in local storage
-      localStorage.setItem('pendingTicketPurchase', JSON.stringify({
-        eventId: event.id,
-        ticketCount: ticketCount,
-        redirectPath: location.pathname
-      }));
+    try {
+      // Get the Supabase URL from environment or fallback
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
       
-      // Redirect to login page
-      toast({
-        title: "Login Required",
-        description: "Please log in or become a member to purchase tickets",
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No active session found');
+      
+      // Calculate price
+      const totalAmount = ticketCount * event.price;
+      const serviceFee = totalAmount * 0.05; // 5% service fee
+      
+      // Check for referral code from sessionStorage
+      const referralCode = getStoredReferralCode(event.id);
+      
+      // Create payment session
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-ticket-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          eventId: event.id,
+          quantity: ticketCount,
+          returnUrl: window.location.origin + '/ticket-success',
+          referralCode: referralCode || null
+        })
       });
       
-      navigate('/login', { state: { from: location.pathname } });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create payment session');
+      }
+      
+      const result = await response.json();
+      
+      if (result.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = result.url;
+      } else {
+        throw new Error('No payment URL returned');
+      }
+    } catch (error: any) {
+      console.error("Payment error:", error);
+      toast({
+        title: "Payment Failed",
+        description: error.message || "Failed to process payment.",
+        variant: "destructive",
+      });
       setIsPaymentProcessing(false);
-      return 0;
     }
-    
-    // If user is logged in, let EventDetailsPage handle the purchase
-    return ticketCount;
   };
 
   return {
     isDeleteDialogOpen,
     setIsDeleteDialogOpen,
     isDeleting,
-    isEditCoverDialogOpen,
+    isEditCoverDialogOpen, 
     setIsEditCoverDialogOpen,
     isUploadingCover,
+    isPaymentProcessing,
     handleEditEvent,
     handleEditCover,
     handleSaveCover,
     handleDeleteEvent,
     handleTicketPurchase,
-    isPaymentProcessing
   };
 };
+
+export default useEventActions;

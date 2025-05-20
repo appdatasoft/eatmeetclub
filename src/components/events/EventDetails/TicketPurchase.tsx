@@ -1,151 +1,142 @@
 
-import React, { useState } from 'react'
-import { useToast } from '@/hooks/use-toast'
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { MinusCircle, PlusCircle } from "lucide-react";
+import { useReferralTracking } from "@/hooks/useReferralTracking";
 
 interface TicketPurchaseProps {
-  price: number;
+  event: {
+    id: string;
+    title: string;
+    price: number;
+  };
   ticketsRemaining: number;
-  onBuyTickets: (ticketCount: number) => void;
-  isPaymentProcessing: boolean;
-  isLoggedIn: boolean;
+  ticketsPercentage: number;
+  handleTicketPurchase: (count: number) => void;
+  isProcessing: boolean;
 }
 
-export const TicketPurchase: React.FC<TicketPurchaseProps> = ({
-  price,
+export const TicketPurchase = ({
+  event,
   ticketsRemaining,
-  onBuyTickets,
-  isPaymentProcessing,
-  isLoggedIn
-}) => {
-  const [ticketCount, setTicketCount] = useState(1)
-  const { toast } = useToast()
+  ticketsPercentage,
+  handleTicketPurchase,
+  isProcessing,
+}: TicketPurchaseProps) => {
+  const [ticketCount, setTicketCount] = useState(1);
+  const { referralCode } = useReferralTracking(event.id);
 
-  const handleIncrease = () => {
-    if (ticketCount < ticketsRemaining) {
-      setTicketCount((prev) => prev + 1)
-    }
-  }
-
-  const handleDecrease = () => {
+  const decreaseCount = () => {
     if (ticketCount > 1) {
-      setTicketCount((prev) => prev - 1)
+      setTicketCount(ticketCount - 1);
     }
-  }
+  };
 
-  const handleBuy = () => {
-    onBuyTickets(ticketCount);
-  }
+  const increaseCount = () => {
+    if (ticketCount < Math.min(10, ticketsRemaining)) {
+      setTicketCount(ticketCount + 1);
+    }
+  };
 
-  const subtotal = price * ticketCount
-  const serviceFee = +(subtotal * 0.05).toFixed(2)
-  const total = +(subtotal + serviceFee).toFixed(2)
+  const onPurchase = () => {
+    handleTicketPurchase(ticketCount);
+  };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm sticky top-24">
-      <h3 className="text-lg font-semibold mb-4">Purchase Tickets</h3>
-
-      <div className="border-b pb-4 mb-4">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-gray-600">Ticket Price</span>
-          <span className="font-medium">${price.toFixed(2)}/person</span>
+    <Card>
+      <CardHeader>
+        <CardTitle>Purchase Tickets</CardTitle>
+        <CardDescription>
+          {ticketsRemaining > 0
+            ? `${ticketsRemaining} tickets remaining`
+            : "Sold Out"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {/* Progress bar showing tickets sold */}
+        <div className="w-full bg-muted rounded-full h-2.5 mb-4">
+          <div
+            className="bg-primary h-2.5 rounded-full"
+            style={{ width: `${ticketsPercentage}%` }}
+          ></div>
         </div>
-      </div>
 
-      <div className="mb-6">
-        <label htmlFor="ticket-count" className="block text-sm font-medium mb-2">
-          Number of Tickets
-        </label>
-        <div className="flex items-center">
-          <button
-            aria-label="Decrease ticket count"
-            className="bg-gray-100 p-2 rounded-l-md border border-gray-300"
-            type="button"
-            onClick={handleDecrease}
-            disabled={ticketCount <= 1}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M20 12H4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-            </svg>
-          </button>
-
-          <input
-            id="ticket-count"
-            aria-label="Number of Tickets"
-            type="number"
-            value={ticketCount}
-            className="p-2 w-12 text-center border-y border-gray-300"
-            min={1}
-            max={ticketsRemaining}
-            readOnly
-          />
-
-          <button
-            aria-label="Increase ticket count"
-            className="bg-gray-100 p-2 rounded-r-md border border-gray-300"
-            type="button"
-            onClick={handleIncrease}
-            disabled={ticketCount >= ticketsRemaining}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <div className="border-t pt-4 mb-6">
-        <div className="flex justify-between mb-2 text-gray-600">
-          <span>Subtotal</span>
-          <span>${subtotal.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between mb-2 text-gray-600">
-          <span>Service Fee</span>
-          <span>${serviceFee.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between text-lg font-medium mt-4">
-          <span>Total</span>
-          <span>${total.toFixed(2)}</span>
-        </div>
-      </div>
-
-      <button
-        onClick={handleBuy}
-        disabled={isPaymentProcessing}
-        className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none bg-primary text-white hover:bg-primary/90 h-11 rounded-md px-8 w-full"
-      >
-        {isPaymentProcessing ? (
+        {ticketsRemaining > 0 ? (
           <>
-            <svg
-              className="lucide lucide-loader-circle mr-2 h-4 w-4 animate-spin"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              width="24"
-            >
-              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-            </svg>
-            Processing...
+            <div className="flex justify-between items-center my-4">
+              <span className="text-lg font-bold">
+                ${event.price.toFixed(2)} / ticket
+              </span>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={decreaseCount}
+                  disabled={ticketCount <= 1 || isProcessing}
+                >
+                  <MinusCircle className="h-4 w-4" />
+                </Button>
+                <span className="text-lg font-semibold">{ticketCount}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={increaseCount}
+                  disabled={
+                    ticketCount >= Math.min(10, ticketsRemaining) || isProcessing
+                  }
+                >
+                  <PlusCircle className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Service fee calculation */}
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <div className="flex justify-between">
+                <span>Price ({ticketCount} tickets)</span>
+                <span>${(event.price * ticketCount).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Service fee</span>
+                <span>${(event.price * ticketCount * 0.05).toFixed(2)}</span>
+              </div>
+              <div className="border-t pt-1 mt-1 flex justify-between font-semibold text-foreground">
+                <span>Total</span>
+                <span>
+                  ${(event.price * ticketCount * 1.05).toFixed(2)}
+                </span>
+              </div>
+            </div>
+            
+            {/* Show referral indicator if came from affiliate link */}
+            {referralCode && (
+              <div className="text-xs text-muted-foreground mt-2 text-center bg-muted py-1 rounded-md">
+                You were referred by a friend
+              </div>
+            )}
           </>
         ) : (
-          'Buy Ticket'
+          <div className="text-center py-2 text-muted-foreground">
+            This event is currently sold out.
+          </div>
         )}
-      </button>
+      </CardContent>
+      <CardFooter>
+        <Button
+          onClick={onPurchase}
+          className="w-full"
+          disabled={ticketsRemaining <= 0 || isProcessing}
+        >
+          {isProcessing
+            ? "Processing..."
+            : ticketsRemaining > 0
+            ? `Buy ${ticketCount} ${ticketCount === 1 ? "Ticket" : "Tickets"}`
+            : "Sold Out"}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
 
-      <p className="text-xs text-gray-500 text-center mt-4">
-        By purchasing tickets, you agree to our Terms of Service and Privacy Policy. An invoice
-        will be sent to your email.
-      </p>
-    </div>
-  )
-}
-
-export default TicketPurchase
+export default TicketPurchase;

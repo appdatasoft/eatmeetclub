@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useEventFetch } from "@/hooks/useEventFetch";
 import { useAuth } from "@/hooks/useAuth";
@@ -5,6 +6,7 @@ import { useEventAccess } from "@/hooks/useEventAccess";
 import { useEventActions } from "@/hooks/useEventActions";
 import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
+import { useReferralTracking } from "@/hooks/useReferralTracking";
 
 // Layout components
 import Navbar from "@/components/layout/Navbar";
@@ -18,6 +20,7 @@ import EventNotFound from "@/components/events/EventDetails/EventNotFound";
 import DeleteEventDialog from "@/components/events/EventDetails/DeleteEventDialog";
 import EditCoverDialog from "@/components/events/EventDetails/EditCoverDialog";
 import MenuSelectionModal from "@/components/events/menu-selection";
+import AffiliateShare from "@/components/events/AffiliateShare";
 import { Button } from "@/components/ui/button";
 import { UtensilsCrossed, Menu as MenuIcon } from "lucide-react";
 
@@ -38,6 +41,9 @@ const EventDetailsPage = () => {
     isCurrentUserOwner, 
     refreshEventDetails 
   } = useEventFetch(id);
+  
+  // Track referrals when someone visits the event page
+  useReferralTracking(id);
   
   const [isMenuSelectionOpen, setIsMenuSelectionOpen] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -152,6 +158,12 @@ const EventDetailsPage = () => {
   const ticketsRemaining = event.capacity - (event.tickets_sold || 0);
   const ticketsPercentage = ((event.tickets_sold || 0) / event.capacity) * 100;
   const coverImageUrl = event.cover_image || "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60";
+  
+  // Generate a slug from the event title for affiliate links
+  const eventSlug = event.title
+    .toLowerCase()
+    .replace(/[^\w\s]/gi, '')
+    .replace(/\s+/g, '-');
 
   return (
     <>
@@ -204,6 +216,17 @@ const EventDetailsPage = () => {
           isPaymentProcessing={isPaymentProcessing}
           user={user}
         />
+        
+        {/* Add affiliate share component for logged in users */}
+        {user && (
+          <div className="container-custom py-4 mb-6">
+            <AffiliateShare 
+              eventId={event.id} 
+              eventTitle={event.title}
+              eventSlug={eventSlug} 
+            />
+          </div>
+        )}
       </div>
       <Footer />
       

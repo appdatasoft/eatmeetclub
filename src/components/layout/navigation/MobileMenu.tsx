@@ -1,91 +1,138 @@
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { AlignJustify, BarChart3, Calendar, CreditCard, FileText, Home, LayoutGrid, Link as LinkIcon, Settings, Utensils, Share2 } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 
-import { Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
+const navigationItems = [
+  {
+    name: "Dashboard",
+    to: "/dashboard",
+    icon: Home,
+  },
+  {
+    name: "Events",
+    to: "/dashboard/events",
+    icon: Calendar,
+  },
+  {
+    name: "Memories",
+    to: "/dashboard/memories",
+    icon: FileText,
+  },
+  {
+    name: "Restaurants",
+    to: "/dashboard/restaurants/add",
+    icon: Utensils,
+  },
+  {
+    name: "Social Media",
+    to: "/dashboard/social-media",
+    icon: LayoutGrid,
+  },
+  {
+    name: "Affiliate Links",
+    to: "/dashboard/affiliate-links",
+    icon: Share2,
+  },
+  {
+    name: "Payments",
+    to: "/dashboard/payments",
+    icon: CreditCard,
+  },
+  {
+    name: "Settings",
+    to: "/dashboard/settings",
+    icon: Settings,
+  },
+];
 
-interface MobileMenuProps {
-  isOpen: boolean;
-  onClose: () => void;
-  user: any;
-  handleLogout: () => Promise<void>;
-}
-
-const MobileMenu = ({ isOpen, onClose, user, handleLogout }: MobileMenuProps) => {
-  const { isAdmin } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  
-  if (!isOpen) return null;
-
-  const onLogout = async () => {
-    try {
-      await handleLogout();
-      toast({
-        title: "Logged out successfully",
-        description: "You have been logged out of your account"
-      });
-      onClose();
-      navigate('/');
-    } catch (error) {
-      console.error("Logout error:", error);
-      toast({
-        title: "Error logging out",
-        description: "An error occurred while logging out",
-        variant: "destructive"
-      });
-    }
-  };
+const MobileMenu = () => {
+  const { user, signOut } = useAuth();
+  const location = useLocation();
+  const isAdmin = user?.user_metadata?.is_admin;
 
   return (
-    <div className="md:hidden fixed inset-0 bg-white z-50">
-      <div className="flex flex-col h-full">
-        <div className="flex justify-end p-4">
-          <Button
-            variant="ghost"
-            onClick={onClose}
-            className="p-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x">
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </Button>
-        </div>
-        <nav className="flex flex-col p-4 space-y-4">
-          <Link to="/" onClick={onClose} className="text-lg py-2">Home</Link>
-          <Link to="/events" onClick={onClose} className="text-lg py-2">Events</Link>
-          <Link to="/venues" onClick={onClose} className="text-lg py-2">Venues</Link>
-          <Link to="/dashboard/memories" onClick={onClose} className="text-lg py-2">Memories</Link>
-          <Link to="/about" onClick={onClose} className="text-lg py-2">About</Link>
-          <Link to="/how-it-works" onClick={onClose} className="text-lg py-2">How it Works</Link>
-          
-          {user ? (
-            <>
-              <div className="pt-4 border-t border-gray-200">
-                <Link to="/dashboard" onClick={onClose} className="text-lg py-2">Dashboard</Link>
-                {isAdmin && (
-                  <Link to="/admin" onClick={onClose} className="text-lg py-2">Admin</Link>
-                )}
-                <Button 
-                  variant="ghost" 
-                  onClick={onLogout}
-                  className="w-full justify-start p-0 text-lg py-2"
-                >
-                  Logout
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="pt-4 border-t border-gray-200">
-              <Link to="/login" onClick={onClose} className="text-lg py-2">Login</Link>
-              <Link to="/signup" onClick={onClose} className="text-lg py-2">Sign Up</Link>
+    <Sheet>
+      <SheetTrigger asChild>
+        <button
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:bg-accent hover:text-muted-foreground px-2 h-9"
+          aria-label="Toggle Navigation Menu"
+        >
+          <AlignJustify className="h-4 w-4" />
+        </button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-full sm:w-64">
+        <SheetHeader className="text-left">
+          <SheetTitle>Menu</SheetTitle>
+          <SheetDescription>
+            Navigate through your dashboard options.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="py-4">
+          <div className="mb-4 px-4">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={user?.user_metadata?.avatar_url} />
+              <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="mt-2">
+              <p className="text-sm font-medium">{user?.user_metadata?.full_name || user?.email}</p>
+              <p className="text-xs text-muted-foreground">{user?.email}</p>
             </div>
-          )}
-        </nav>
-      </div>
-    </div>
+          </div>
+          <nav className="space-y-2 px-2">
+            {navigationItems.map((item) => (
+              <Link
+                key={item.name}
+                to={item.to}
+                className={cn(
+                  "flex items-center rounded-md text-sm font-medium hover:bg-secondary/50 px-2 py-1.5",
+                  location.pathname === item.to ||
+                    (item.to !== "/dashboard" &&
+                      location.pathname.startsWith(item.to))
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground"
+                )}
+              >
+                <item.icon className="mr-2 h-4 w-4" />
+                <span>{item.name}</span>
+              </Link>
+            ))}
+            {isAdmin && (
+              <Link
+                to="/dashboard/admin-settings"
+                className={cn(
+                  "flex items-center rounded-md text-sm font-medium hover:bg-secondary/50 px-2 py-1.5",
+                  location.pathname.startsWith("/dashboard/admin-settings")
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground"
+                )}
+              >
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                <span>Admin</span>
+              </Link>
+            )}
+          </nav>
+        </div>
+        <SheetTitle className="mt-4 text-left px-4">Account</SheetTitle>
+        <div className="px-4">
+          <button
+            onClick={() => signOut()}
+            className="w-full rounded-md bg-secondary px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary/80"
+          >
+            Sign Out
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 

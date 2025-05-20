@@ -19,8 +19,8 @@ serve(async (req) => {
   }
 
   try {
-    const { sessionId, email, eventId } = await req.json();
-    console.log("Request received:", { sessionId, email, eventId });
+    const { sessionId, email, eventId, referralCode } = await req.json();
+    console.log("Request received:", { sessionId, email, eventId, referralCode });
     
     if (!sessionId || !email || !eventId) throw new Error("Missing required fields");
 
@@ -90,34 +90,114 @@ serve(async (req) => {
     // Step 4: Check for existing ticket
     console.log("Checking for existing ticket");
     const { data: existingTicket } = await supabase
-      .from("event_attendees")
+      .from("tickets")
       .select("*")
       .eq("user_id", userId)
       .eq("event_id", eventId)
       .maybeSingle();
     
+    let ticketId;
     if (existingTicket) {
       console.log("Ticket already exists:", existingTicket.id);
+      ticketId = existingTicket.id;
     } else {
       // Step 5: Insert event ticket purchase
       console.log("Creating ticket record");
-      const { error: insertError } = await supabase.from("event_attendees").insert({
-        user_id: userId,
-        event_id: eventId,
-        payment_id: sessionId,
-        amount: amount / 100,
-        status: "confirmed"
-      });
+
+      // First lookup the event to get the price
+      const { data: eventData, error: eventError } = await supabase
+        .from("events")
+        .select("price")
+        .eq("id", eventId)
+        .single();
+
+      if (eventError) {
+        console.error("Error finding event:", eventError);
+        throw new Error("Failed to find event: " + eventError.message);
+      }
+
+      const ticketPrice = eventData.price;
+      const quantity = Math.round(amount / (ticketPrice * 100)) || 1; // Calculate quantity based on amount
+      const serviceFee = (amount / 100) - (quantity * ticketPrice);
+
+      const { data: ticketData, error: insertError } = await supabase
+        .from("tickets")
+        .insert({
+          user_id: userId,
+          event_id: eventId,
+          payment_id: sessionId,
+          price: ticketPrice,
+          quantity: quantity,
+          service_fee: serviceFee,
+          total_amount: amount / 100,
+          payment_status: "confirmed"
+        })
+        .select()
+        .single();
 
       if (insertError) {
         console.error("Failed to record ticket:", insertError);
         throw new Error("Failed to record ticket: " + insertError.message);
       }
+
+      ticketId = ticketData.id;
+      console.log("Ticket created successfully with ID:", ticketId);
       
-      console.log("Ticket created successfully");
+      // Step 5b: Increment tickets_sold counter on the event
+      const { error: updateError } = await supabase.rpc('increment_tickets_sold', { 
+        event_id: eventId, 
+        amount: quantity 
+      });
+      
+      if (updateError) {
+        console.warn("Failed to increment tickets_sold counter:", updateError);
+        // Don't fail the whole process if the counter update fails
+      }
+    }
+    
+    // Step 6: Track affiliate conversion if referral code exists
+    if (referralCode) {
+      try {
+        console.log("Processing affiliate conversion for code:", referralCode);
+        
+        // Find the affiliate link
+        const { data: affiliateLink, error: affiliateError } = await supabase
+          .from("affiliate_links")
+          .select("*")
+          .eq("code", referralCode)
+          .eq("event_id", eventId)
+          .single();
+        
+        if (affiliateError) {
+          console.warn("Affiliate link not found:", affiliateError);
+        } else if (affiliateLink) {
+          console.log("Affiliate link found:", affiliateLink.id);
+          
+          // Record the conversion
+          const { error: conversionError } = await supabase
+            .from("affiliate_tracking")
+            .insert({
+              affiliate_link_id: affiliateLink.id,
+              event_id: eventId,
+              referred_user_id: userId,
+              action_type: "conversion",
+              conversion_value: amount / 100,
+              ticket_id: ticketId
+            });
+            
+          if (conversionError) {
+            console.error("Failed to record affiliate conversion:", conversionError);
+          } else {
+            console.log("Affiliate conversion recorded successfully");
+          }
+        }
+      } catch (affiliateError) {
+        console.error("Error processing affiliate conversion:", affiliateError);
+        // Don't fail the whole process if affiliate tracking fails
+      }
     }
 
-    // Step 6: Send ticket confirmation email
+    // Step 7: Send ticket confirmation email
     try {
       console.log("Sending ticket confirmation email");
       const frontendUrl = Deno.env.get("FRONTEND_URL") || "https://eatmeetclub.lovable.app";
@@ -147,6 +227,7 @@ serve(async (req) => {
       userId,
       userCreated,
       eventId,
+      ticketId,
       paymentId: sessionId
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
