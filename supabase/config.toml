@@ -32,7 +32,8 @@ additional_redirect_urls = [
   "http://localhost:3000/api/auth/callback/facebook",
   "http://localhost:5173/api/auth/callback/facebook",
   "https://dev.eatmeetclub.com/api/auth/callback/facebook",
-  "https://preview.eatmeetclub.com/api/auth/callback/facebook"
+  "https://preview.eatmeetclub.com/api/auth/callback/facebook",
+  "https://preview--eatmeetclub.lovable.app/auth/facebook/callback"
 ]
 jwt_expiry = 3600
 enable_signup = true
