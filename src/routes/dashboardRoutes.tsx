@@ -1,6 +1,6 @@
 
 import { lazy } from "react";
-import { RouteObject } from "react-router-dom";
+import { RouteObject, Route } from "react-router-dom";
 
 // Import components
 import Dashboard from "@/pages/dashboard/Dashboard";

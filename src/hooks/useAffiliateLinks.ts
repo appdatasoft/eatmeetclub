@@ -4,12 +4,35 @@ import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
-export const useAffiliateLinks = () => {
+// Define interface for AffiliateLink
+export interface AffiliateLink {
+  id: string;
+  event_id: string;
+  user_id: string;
+  code: string;
+  created_at: string;
+  updated_at: string;
+  event?: {
+    title: string;
+  };
+}
+
+// Define interface for AffiliateStats
+export interface AffiliateStats {
+  clicks: number;
+  conversions: number;
+  conversionRate: number;
+  revenue: number;
+}
+
+export const useAffiliateLinks = (eventId?: string) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [affiliateLinks, setAffiliateLinks] = useState<any[]>([]);
+  const [affiliateLinks, setAffiliateLinks] = useState<AffiliateLink[]>([]);
+  const [affiliateLink, setAffiliateLink] = useState<AffiliateLink | null>(null);
+  const [stats, setStats] = useState<AffiliateStats | null>(null);
 
   // Generate a referral code from user's name or email
   const generateReferralCode = (eventId: string): string => {
@@ -149,6 +172,91 @@ export const useAffiliateLinks = () => {
     }
   };
 
+  // Get or create affiliate link and fetch stats
+  const getOrCreateAffiliateLink = async (eventId: string) => {
+    if (!eventId || !user) return null;
+    
+    try {
+      setIsLoading(true);
+      
+      let link = await getAffiliateLink(eventId);
+      
+      if (!link) {
+        link = await createAffiliateLink(eventId);
+      }
+      
+      if (link) {
+        setAffiliateLink(link);
+        
+        // Get stats for this link
+        await fetchLinkStats(link.id);
+      }
+      
+      return link;
+    } catch (error) {
+      console.error("Error getting/creating affiliate link:", error);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Get affiliate URL from code and event slug
+  const getAffiliateUrl = (eventSlug: string): string => {
+    if (!affiliateLink) return '';
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/e/${eventSlug}?ref=${affiliateLink.code}`;
+  };
+  
+  // Fetch stats for a specific link
+  const fetchLinkStats = async (linkId: string) => {
+    try {
+      // Get click count
+      const { count: clickCount, error: clickError } = await supabase
+        .from('affiliate_tracking')
+        .select('*', { count: 'exact', head: true })
+        .eq('affiliate_link_id', linkId)
+        .eq('action_type', 'click');
+      
+      if (clickError) throw clickError;
+      
+      // Get conversion count
+      const { count: conversionCount, error: convError } = await supabase
+        .from('affiliate_tracking')
+        .select('*', { count: 'exact', head: true })
+        .eq('affiliate_link_id', linkId)
+        .eq('action_type', 'conversion');
+      
+      if (convError) throw convError;
+      
+      // Get total earnings (sum of conversion values)
+      const { data: earnings, error: earningsError } = await supabase
+        .from('affiliate_tracking')
+        .select('conversion_value')
+        .eq('affiliate_link_id', linkId)
+        .eq('action_type', 'conversion');
+      
+      if (earningsError) throw earningsError;
+      
+      const totalEarnings = earnings?.reduce((sum, item) => sum + (parseFloat(item.conversion_value || '0')), 0) || 0;
+      
+      const convRate = clickCount > 0 ? (conversionCount / clickCount) * 100 : 0;
+      
+      const newStats = {
+        clicks: clickCount || 0,
+        conversions: conversionCount || 0,
+        conversionRate: convRate,
+        revenue: totalEarnings
+      };
+      
+      setStats(newStats);
+      return newStats;
+    } catch (error) {
+      console.error("Error fetching link stats:", error);
+      return null;
+    }
+  };
+
   // Fetch all affiliate links for the current user
   const fetchAffiliateLinks = async () => {
     if (!user) return [];
@@ -198,7 +306,7 @@ export const useAffiliateLinks = () => {
             .eq('affiliate_link_id', link.id)
             .eq('action_type', 'conversion');
           
-          const totalEarnings = earnings?.reduce((sum, item) => sum + (parseFloat(item.conversion_value) || 0), 0) || 0;
+          const totalEarnings = earnings?.reduce((sum, item) => sum + (parseFloat(item.conversion_value || '0')), 0) || 0;
           
           return {
             ...link,
@@ -220,12 +328,21 @@ export const useAffiliateLinks = () => {
     }
   };
 
+  // Initialize by fetching or creating link if eventId is provided
+  if (eventId) {
+    getOrCreateAffiliateLink(eventId);
+  }
+
   return {
     createAffiliateLink,
     getAffiliateLink,
     trackClick,
     fetchAffiliateLinks,
+    getOrCreateAffiliateLink,
+    getAffiliateUrl,
     affiliateLinks,
+    affiliateLink,
+    stats,
     isLoading,
     isGenerating
   };

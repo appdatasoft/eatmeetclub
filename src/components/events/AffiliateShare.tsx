@@ -17,10 +17,10 @@ export const AffiliateShare = ({ eventId, eventTitle, eventSlug }: AffiliateShar
   const { toast } = useToast();
   const { 
     isLoading, 
-    affiliateLink, 
-    stats, 
     getOrCreateAffiliateLink,
-    getAffiliateUrl 
+    affiliateLink,
+    stats,
+    getAffiliateUrl
   } = useAffiliateLinks(eventId);
   
   const [affiliateUrl, setAffiliateUrl] = useState<string>('');
