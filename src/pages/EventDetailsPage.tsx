@@ -8,13 +8,10 @@ import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useReferralTracking } from "@/hooks/useReferralTracking";
 
-// Layout components
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import EventHeader from "@/components/events/EventHeader";
 import EventDetailsContent from "@/components/events/EventDetails/EventDetailsContent";
-
-// Event components
 import EventSkeleton from "@/components/events/EventDetails/EventSkeleton";
 import EventNotFound from "@/components/events/EventDetails/EventNotFound";
 import DeleteEventDialog from "@/components/events/EventDetails/DeleteEventDialog";
@@ -23,70 +20,44 @@ import MenuSelectionModal from "@/components/events/menu-selection";
 import AffiliateShare from "@/components/events/AffiliateShare";
 import { Button } from "@/components/ui/button";
 import { UtensilsCrossed, Menu as MenuIcon } from "lucide-react";
-
-// Import types
 import { EventDetails } from "@/hooks/types/eventTypes";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, RefreshCw, Info } from "lucide-react";
+import { RefreshCw, Info } from "lucide-react";
 
 const EventDetailsPage = () => {
-  // Handle both /event/:id and /e/:slug routes
   const { id, slug } = useParams<{ id?: string; slug?: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  
-  // Extract event ID from params or slug
+
   const getEventIdFromParams = () => {
-    // First check the id parameter directly
     if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
       return id;
     }
-    
-    // Check if id contains a UUID within it (e.g., "event-title-123e4567-e89b-12d3-a456-426614174000")
-    if (id) {
-      const uuidMatch = id.match(/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i);
-      if (uuidMatch && uuidMatch[1]) {
-        return uuidMatch[1];
-      }
-    }
-    
-    // Check if the slug has a UUID within it
-    if (slug) {
-      const uuidMatch = slug.match(/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i);
-      if (uuidMatch && uuidMatch[1]) {
-        return uuidMatch[1];
-      }
-    }
-    
-    // If no match was found, return whatever was passed (this will be validated later)
-    return id || slug || '';
+    const uuidMatch = id?.match(/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i) ||
+                      slug?.match(/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i);
+    return uuidMatch?.[1] || id || slug || '';
   };
-  
+
   const eventId = getEventIdFromParams();
-  console.log("Extracted event ID:", eventId, "from id:", id, "and slug:", slug);
-  
-  const { 
-    event, 
-    isLoading, 
+
+  const {
+    event,
+    isLoading,
     error,
-    isCurrentUserOwner, 
-    refreshEventDetails 
+    isCurrentUserOwner,
+    refreshEventDetails
   } = useEventFetch(eventId);
-  
-  // Track referrals when someone visits the event page
+
   const { referralCode } = useReferralTracking(eventId);
-  
   const [isMenuSelectionOpen, setIsMenuSelectionOpen] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
-  
-  // Show debugging information about affiliate tracking
+
   useEffect(() => {
     if (eventId && referralCode) {
       console.log(`Viewing event ${eventId} with referral code: ${referralCode}`);
     }
   }, [eventId, referralCode]);
-  
-  // Show error toast if there's an error that's not a "not found" error
+
   useEffect(() => {
     if (error && !error.includes("not found") && !error.includes("Invalid")) {
       toast({
@@ -96,9 +67,9 @@ const EventDetailsPage = () => {
       });
     }
   }, [error]);
-  
+
   const { canEditEvent } = useEventAccess(event as EventDetails);
-  
+
   const {
     isDeleteDialogOpen,
     setIsDeleteDialogOpen,
@@ -113,22 +84,20 @@ const EventDetailsPage = () => {
     handleTicketPurchase,
     isPaymentProcessing,
   } = useEventActions(event as EventDetails, refreshEventDetails, canEditEvent, user);
-  
-  // Process ticket purchase when user is logged in
+
   const processTicketPurchase = (ticketCount: number) => {
     if (user) {
       handleTicketPurchase(ticketCount);
     }
   };
-  
+
   const handleRetry = () => {
     setIsRetrying(true);
-    refreshEventDetails()
-      .finally(() => setIsRetrying(false));
+    refreshEventDetails().finally(() => setIsRetrying(false));
   };
-  
+
   const handleManageMenu = () => {
-    if (event && event.restaurant && event.restaurant.id) {
+    if (event?.restaurant?.id) {
       navigate(`/dashboard/restaurant-menu/${event.restaurant.id}?eventId=${event.id}&eventName=${encodeURIComponent(event.title)}`);
     } else {
       toast({
@@ -138,9 +107,15 @@ const EventDetailsPage = () => {
       });
     }
   };
-  
-  // Get current URL for QR code
+
   const eventUrl = window.location.href;
+  const eventSlug = event?.title
+    ? event.title.toLowerCase().replace(/[^\w\s]/gi, '').replace(/\s+/g, '-')
+    : '';
+
+  const ticketsRemaining = (event?.capacity || 0) - (event?.tickets_sold || 0);
+  const ticketsPercentage = ((event?.tickets_sold || 0) / (event?.capacity || 1)) * 100;
+  const coverImageUrl = event?.cover_image || "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=60";
 
   if (isLoading) {
     return (
@@ -162,7 +137,7 @@ const EventDetailsPage = () => {
           <EventNotFound error={error} />
           {error && !error.includes("not found") && (
             <div className="mt-4">
-              <Button 
+              <Button
                 variant="outline"
                 onClick={handleRetry}
                 disabled={isRetrying}
@@ -179,7 +154,6 @@ const EventDetailsPage = () => {
     );
   }
 
-  // If event is not published and user is not owner or admin
   if (!event.published && !canEditEvent) {
     return (
       <>
@@ -193,23 +167,13 @@ const EventDetailsPage = () => {
     );
   }
 
-  const ticketsRemaining = event.capacity - (event.tickets_sold || 0);
-  const ticketsPercentage = ((event.tickets_sold || 0) / event.capacity) * 100;
-  const coverImageUrl = event.cover_image || "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cmVzdGF1cmFudHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60";
-  
-  // Generate a slug from the event title for affiliate links
-  const eventSlug = event.title
-    .toLowerCase()
-    .replace(/[^\w\s]/gi, '')
-    .replace(/\s+/g, '-');
-
   return (
     <>
       <Navbar />
       <div className="bg-white">
         <EventHeader 
-          title={event.title} 
-          restaurantName={event.restaurant?.name || "Unknown Restaurant"} 
+          title={event.title}
+          restaurantName={event.restaurant?.name || "Unknown Restaurant"}
           restaurantId={event.restaurant?.id || "unknown"}
           isOwner={canEditEvent}
           onEditCover={handleEditCover}
@@ -218,7 +182,6 @@ const EventDetailsPage = () => {
 
         <div className="container-custom pt-4">
           <div className="flex flex-wrap gap-2">
-            {/* Show active referral if present */}
             {referralCode && (
               <Alert className="mb-4 w-full bg-blue-50 border-blue-200">
                 <Info className="h-4 w-4 text-blue-600" />
@@ -227,7 +190,7 @@ const EventDetailsPage = () => {
                 </AlertDescription>
               </Alert>
             )}
-            
+
             {user && (
               <Button
                 variant="outline"
@@ -238,12 +201,9 @@ const EventDetailsPage = () => {
                 Select Menu Items
               </Button>
             )}
-            
-            {canEditEvent && event.restaurant && event.restaurant.id && (
-              <Button
-                variant="outline"
-                onClick={handleManageMenu}
-              >
+
+            {canEditEvent && event.restaurant?.id && (
+              <Button variant="outline" onClick={handleManageMenu}>
                 <MenuIcon className="h-4 w-4 mr-2" />
                 Manage Menu
               </Button>
@@ -251,50 +211,50 @@ const EventDetailsPage = () => {
           </div>
         </div>
 
-        <EventDetailsContent
-          event={event as EventDetails}
-          ticketsRemaining={ticketsRemaining}
-          ticketsPercentage={ticketsPercentage}
-          eventUrl={eventUrl}
-          isCurrentUserOwner={isCurrentUserOwner}
-          canEditEvent={canEditEvent}
-          handleTicketPurchase={processTicketPurchase}
-          handleEditEvent={handleEditEvent}
-          handleDeleteEvent={() => setIsDeleteDialogOpen(true)}
-          isPaymentProcessing={isPaymentProcessing}
-          user={user}
-          referralCode={referralCode}
-        />
-        
-        {/* Add affiliate share component for logged in users */}
+        {event && (
+          <EventDetailsContent
+            event={event}
+            ticketsRemaining={ticketsRemaining}
+            ticketsPercentage={ticketsPercentage}
+            eventUrl={eventUrl}
+            isCurrentUserOwner={isCurrentUserOwner}
+            canEditEvent={canEditEvent}
+            handleTicketPurchase={processTicketPurchase}
+            handleEditEvent={handleEditEvent}
+            handleDeleteEvent={() => setIsDeleteDialogOpen(true)}
+            isPaymentProcessing={isPaymentProcessing}
+            user={user}
+            referralCode={referralCode}
+          />
+        )}
+
         {user && (
           <div className="container-custom py-4 mb-6">
             <AffiliateShare 
-              eventId={event.id} 
+              eventId={event.id}
               eventTitle={event.title}
-              eventSlug={eventSlug} 
+              eventSlug={eventSlug}
             />
           </div>
         )}
       </div>
       <Footer />
-      
-      {/* Dialogs */}
+
       <DeleteEventDialog 
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         onDelete={handleDeleteEvent}
         isDeleting={isDeleting}
       />
-      
+
       <EditCoverDialog
         isOpen={isEditCoverDialogOpen}
         onClose={() => setIsEditCoverDialogOpen(false)}
         onSave={handleSaveCover}
         isUploading={isUploadingCover}
       />
-      
-      {event && event.restaurant && (
+
+      {event?.restaurant?.id && (
         <MenuSelectionModal
           eventId={event.id}
           restaurantId={event.restaurant.id}
