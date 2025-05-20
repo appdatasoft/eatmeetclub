@@ -69,7 +69,7 @@ export const AffiliateLinksTable = () => {
 
             const conversions = conversionData.length;
             const revenue = conversionData.reduce(
-              (sum, item) => sum + (parseFloat(item.conversion_value || '0')),
+              (sum, item) => sum + (parseFloat(item.conversion_value?.toString() || '0')),
               0
             );
             const conversionRate = clickCount > 0 ? (conversions / clickCount) * 100 : 0;

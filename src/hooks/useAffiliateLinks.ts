@@ -238,7 +238,11 @@ export const useAffiliateLinks = (eventId?: string) => {
       
       if (earningsError) throw earningsError;
       
-      const totalEarnings = earnings?.reduce((sum, item) => sum + (parseFloat(item.conversion_value || '0')), 0) || 0;
+      const totalEarnings = earnings?.reduce((sum, item) => {
+        const conversionValue = item.conversion_value ? 
+          (typeof item.conversion_value === 'string' ? parseFloat(item.conversion_value) : item.conversion_value) : 0;
+        return sum + conversionValue;
+      }, 0) || 0;
       
       const convRate = clickCount > 0 ? (conversionCount / clickCount) * 100 : 0;
       
@@ -261,6 +265,17 @@ export const useAffiliateLinks = (eventId?: string) => {
   const fetchAffiliateLinks = async () => {
     if (!user) return [];
     
+    type ExtendedAffiliateLink = AffiliateLink & { 
+      clicks: number;
+      conversions: number;
+      earnings: number;
+      events: {
+        id: string;
+        title: string;
+        date: string;
+      }
+    };
+    
     try {
       setIsLoading(true);
       
@@ -271,6 +286,8 @@ export const useAffiliateLinks = (eventId?: string) => {
           code,
           created_at,
           event_id,
+          user_id,
+          updated_at,
           events (
             id,
             title,
@@ -284,7 +301,7 @@ export const useAffiliateLinks = (eventId?: string) => {
       
       // Get stats for each link
       const linksWithStats = await Promise.all(
-        data.map(async (link) => {
+        (data || []).map(async (link) => {
           // Get click count
           const { count: clickCount, error: clickError } = await supabase
             .from('affiliate_tracking')
@@ -306,18 +323,22 @@ export const useAffiliateLinks = (eventId?: string) => {
             .eq('affiliate_link_id', link.id)
             .eq('action_type', 'conversion');
           
-          const totalEarnings = earnings?.reduce((sum, item) => sum + (parseFloat(item.conversion_value || '0')), 0) || 0;
+          const totalEarnings = earnings?.reduce((sum, item) => {
+            const conversionValue = item.conversion_value ? 
+              (typeof item.conversion_value === 'string' ? parseFloat(item.conversion_value) : item.conversion_value) : 0;
+            return sum + conversionValue;
+          }, 0) || 0;
           
           return {
             ...link,
             clicks: clickCount || 0,
             conversions: conversionCount || 0,
             earnings: totalEarnings
-          };
+          } as ExtendedAffiliateLink;
         })
       );
       
-      setAffiliateLinks(linksWithStats);
+      setAffiliateLinks(linksWithStats as unknown as AffiliateLink[]);
       return linksWithStats;
     } catch (error) {
       console.error("Error fetching affiliate links:", error);

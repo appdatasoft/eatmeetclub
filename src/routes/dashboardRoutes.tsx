@@ -1,6 +1,6 @@
 
 import { lazy } from "react";
-import { RouteObject, Route } from "react-router-dom";
+import { RouteObject } from "react-router-dom";
 
 // Import components
 import Dashboard from "@/pages/dashboard/Dashboard";
@@ -25,28 +25,6 @@ const PaymentSuccessPage = lazy(
 );
 const PaymentsPage = lazy(() => import("@/pages/dashboard/PaymentsPage"));
 const EventPayment = lazy(() => import("@/pages/dashboard/EventPayment"));
-
-// Changed from RouteObject to JSX.Element since we're using it in App.tsx
-const DashboardRoutes = () => (
-  <>
-    {dashboardRoutes.map((route) => (
-      <Route
-        key={route.path || 'index'}
-        path={route.path}
-        element={route.element}
-      >
-        {route.children?.map(child => (
-          <Route 
-            key={child.path || 'index-child'}
-            index={child.index}
-            path={child.path}
-            element={child.element}
-          />
-        ))}
-      </Route>
-    ))}
-  </>
-);
 
 const dashboardRoutes: RouteObject[] = [
   {
@@ -132,5 +110,4 @@ const dashboardRoutes: RouteObject[] = [
   },
 ];
 
-export { DashboardRoutes };
 export default dashboardRoutes;
