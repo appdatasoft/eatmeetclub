@@ -10,9 +10,13 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
   console.log("Fetching event details for ID:", eventId);
   
   try {
+    // Extract event ID if it's in the format "name-name-uuid"
+    const extractedId = extractUuidFromSlug(eventId);
+    const idToUse = extractedId || eventId;
+    
     // Validate UUID format to prevent invalid requests
-    if (!isValidUUID(eventId)) {
-      console.error("Invalid event ID format:", eventId);
+    if (!isValidUUID(idToUse)) {
+      console.error("Invalid event ID format:", idToUse);
       throw new Error("Invalid event ID format");
     }
     
@@ -34,7 +38,7 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
           logo_url
         )
       `)
-      .eq("id", eventId)
+      .eq("id", idToUse)
       .single();
 
     if (eventError) {
@@ -106,8 +110,12 @@ export const fetchEventDetails = async (eventId: string): Promise<EventDetails> 
  */
 export const checkEventOwnership = async (eventId: string): Promise<boolean> => {
   try {
+    // Extract UUID if needed
+    const extractedId = extractUuidFromSlug(eventId);
+    const idToUse = extractedId || eventId;
+    
     // Validate UUID format
-    if (!isValidUUID(eventId)) {
+    if (!isValidUUID(idToUse)) {
       return false;
     }
     
@@ -122,7 +130,7 @@ export const checkEventOwnership = async (eventId: string): Promise<boolean> => 
     const { data } = await supabase
       .from("events")
       .select("user_id")
-      .eq("id", eventId)
+      .eq("id", idToUse)
       .single();
       
     return data?.user_id === currentUserId;
@@ -139,4 +147,19 @@ function isValidUUID(uuid: string): boolean {
   // Simple regex for UUID validation
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(uuid);
+}
+
+/**
+ * Extract UUID from slug if in format "name-name-uuid"
+ */
+function extractUuidFromSlug(slug: string): string | null {
+  // Check if the input contains a UUID pattern
+  const uuidPattern = /([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i;
+  const match = slug.match(uuidPattern);
+  
+  if (match && match[1]) {
+    return match[1];
+  }
+  
+  return null;
 }

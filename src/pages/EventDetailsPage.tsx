@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useEventFetch } from "@/hooks/useEventFetch";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,21 +34,29 @@ const EventDetailsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // Extract event ID from slug if needed
+  // Extract event ID from params or slug
   const getEventIdFromParams = () => {
-    // If we have a direct ID, use it
-    if (id) return id;
+    // Extract UUID from either id or slug parameters
+    const uuidPattern = /([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i;
     
-    // Otherwise, try to extract from slug (format: event-name-eventId)
-    if (slug) {
-      const slugParts = slug.split('-');
-      if (slugParts.length > 0) {
-        // Last part should be the event ID
-        return slugParts[slugParts.length - 1];
+    // First check the id parameter
+    if (id) {
+      const match = id.match(uuidPattern);
+      if (match && match[1]) {
+        return match[1];
       }
     }
     
-    return undefined;
+    // Otherwise check slug parameter
+    if (slug) {
+      const match = slug.match(uuidPattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    
+    // If no match was found, just return whatever was passed (this will be validated later)
+    return id || slug;
   };
   
   const eventId = getEventIdFromParams();

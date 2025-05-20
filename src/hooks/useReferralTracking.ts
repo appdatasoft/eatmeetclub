@@ -13,14 +13,26 @@ export const useReferralTracking = (eventId?: string) => {
   
   // Extract event ID from slug if needed
   const extractEventIdFromSlug = () => {
-    if (params.slug && !eventId) {
-      // Expected format: event-name-{eventId}
-      const slugParts = params.slug.split('-');
-      if (slugParts.length > 0) {
-        // Last part should be the event ID
-        return slugParts[slugParts.length - 1];
+    if (params.slug) {
+      // Extract UUID from slug format "name-name-uuid"
+      const uuidPattern = /([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i;
+      const match = params.slug.match(uuidPattern);
+      
+      if (match && match[1]) {
+        return match[1];
       }
     }
+    
+    // Also check the id param format if we're on a /event/:id route
+    if (params.id) {
+      const uuidPattern = /([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i;
+      const match = params.id.match(uuidPattern);
+      
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    
     return null;
   };
 
