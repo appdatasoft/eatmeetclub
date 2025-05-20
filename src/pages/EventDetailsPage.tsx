@@ -18,10 +18,9 @@ import EditCoverDialog from "@/components/events/EventDetails/EditCoverDialog";
 import MenuSelectionModal from "@/components/events/menu-selection";
 import AffiliateShare from "@/components/events/AffiliateShare";
 import { Button } from "@/components/ui/button";
-import { UtensilsCrossed, Menu as MenuIcon } from "lucide-react";
+import { UtensilsCrossed, Menu as MenuIcon, RefreshCw, Info } from "lucide-react";
 import { EventDetails } from "@/hooks/types/eventTypes";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { RefreshCw, Info } from "lucide-react";
 
 const EventDetailsPage = () => {
   const { id, slug } = useParams<{ id?: string; slug?: string }>();
@@ -29,7 +28,6 @@ const EventDetailsPage = () => {
   const { user } = useAuth();
 
   const getEventIdFromParams = () => {
-    console.log("Extracted event ID:", id, "from id:", id, "and slug:", slug);
     if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
       return id;
     }
@@ -39,16 +37,9 @@ const EventDetailsPage = () => {
   };
 
   const eventId = getEventIdFromParams();
-
-  const {
-    event,
-    isLoading,
-    error,
-    isCurrentUserOwner,
-    refreshEventDetails
-  } = useEventFetch(eventId);
-
+  const { event, isLoading, error, isCurrentUserOwner, refreshEventDetails } = useEventFetch(eventId);
   const { referralCode } = useReferralTracking(eventId);
+
   const [isMenuSelectionOpen, setIsMenuSelectionOpen] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
 
@@ -59,14 +50,29 @@ const EventDetailsPage = () => {
   }, [eventId, referralCode]);
 
   useEffect(() => {
-    if (error && !error.includes("not found") && !error.includes("Invalid")) {
+    const safeError = typeof error === "string" ? error : String(error);
+    if (safeError && !safeError.includes("not found") && !safeError.includes("Invalid")) {
       toast({
         title: "Error loading event",
-        description: error,
+        description: safeError,
         variant: "destructive"
       });
     }
   }, [error]);
+
+  const safeError = typeof error === "string" ? error : String(error);
+
+  if (safeError.includes("body stream already read")) {
+    return (
+      <>
+        <Navbar />
+        <div className="container-custom py-12 text-center text-red-500">
+          Unexpected error occurred. Please refresh the page.
+        </div>
+        <Footer />
+      </>
+    );
+  }
 
   const { canEditEvent } = useEventAccess(event as EventDetails);
 
@@ -129,13 +135,13 @@ const EventDetailsPage = () => {
     );
   }
 
-  if (error || !event) {
+  if (!event || safeError) {
     return (
       <>
         <Navbar />
         <div className="container-custom py-8">
-          <EventNotFound error={error} />
-          {error && !error.includes("not found") && (
+          <EventNotFound error={safeError} />
+          {safeError && !safeError.includes("not found") && (
             <div className="mt-4">
               <Button
                 variant="outline"
@@ -148,6 +154,18 @@ const EventDetailsPage = () => {
               </Button>
             </div>
           )}
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  if (!event.title) {
+    return (
+      <>
+        <Navbar />
+        <div className="container-custom py-12 text-center text-gray-600">
+          Loading event details...
         </div>
         <Footer />
       </>
@@ -211,22 +229,20 @@ const EventDetailsPage = () => {
           </div>
         </div>
 
-        {event && (
-          <EventDetailsContent
-            event={event}
-            ticketsRemaining={ticketsRemaining}
-            ticketsPercentage={ticketsPercentage}
-            eventUrl={eventUrl}
-            isCurrentUserOwner={isCurrentUserOwner}
-            canEditEvent={canEditEvent}
-            handleTicketPurchase={processTicketPurchase}
-            handleEditEvent={handleEditEvent}
-            handleDeleteEvent={() => setIsDeleteDialogOpen(true)}
-            isPaymentProcessing={isPaymentProcessing}
-            user={user}
-            referralCode={referralCode}
-          />
-        )}
+        <EventDetailsContent
+          event={event}
+          ticketsRemaining={ticketsRemaining}
+          ticketsPercentage={ticketsPercentage}
+          eventUrl={eventUrl}
+          isCurrentUserOwner={isCurrentUserOwner}
+          canEditEvent={canEditEvent}
+          handleTicketPurchase={processTicketPurchase}
+          handleEditEvent={handleEditEvent}
+          handleDeleteEvent={() => setIsDeleteDialogOpen(true)}
+          isPaymentProcessing={isPaymentProcessing}
+          user={user}
+          referralCode={referralCode}
+        />
 
         {user && (
           <div className="container-custom py-4 mb-6">
