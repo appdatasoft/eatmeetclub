@@ -84,7 +84,6 @@ describe('TicketPurchase', () => {
       />
     )
 
-    // Use the span with aria-label instead of spinbutton
     const count = screen.getByText('1')
     const increase = screen.getByRole('button', {
       name: /increase ticket count/i,

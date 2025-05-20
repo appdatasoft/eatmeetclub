@@ -42,7 +42,8 @@ export const TicketPurchase = ({
   
   // Use either the hook or the passed prop for referral code
   const { getStoredReferralCode } = useReferralTracking(effectiveEventId);
-  const activeReferralCode = propReferralCode || getStoredReferralCode?.(effectiveEventId);
+  const storedReferralCode = getStoredReferralCode?.(effectiveEventId);
+  const activeReferralCode = propReferralCode || storedReferralCode;
 
   const decreaseCount = () => {
     if (ticketCount > 1) {

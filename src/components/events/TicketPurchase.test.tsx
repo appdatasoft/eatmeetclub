@@ -2,7 +2,7 @@
 /// <reference types="vitest" />
 import { describe, it, vi, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { TicketPurchase } from './TicketPurchase'
+import { TicketPurchase } from '@/components/events/EventDetails/TicketPurchase'
 import { ThemeProvider } from '@/components/theme-provider'
 
 // ✅ Mock useToast
@@ -51,11 +51,15 @@ describe('TicketPurchase', () => {
   it('disables increase button when ticket count equals ticketsRemaining', () => {
     renderWithProviders(
       <TicketPurchase 
-        eventId="123" 
-        ticketPrice={25} 
-        ticketsRemaining={1} 
+        event={{
+          id: "123",
+          title: "Test Event",
+          price: 25
+        }} 
+        ticketsRemaining={1}
+        ticketsPercentage={50}
         isProcessing={false}
-        onPurchase={vi.fn()}
+        handleTicketPurchase={vi.fn()}
       />
     )
 
@@ -68,14 +72,19 @@ describe('TicketPurchase', () => {
   it('increases and decreases ticket count with buttons', () => {
     renderWithProviders(
       <TicketPurchase 
-        eventId="123" 
-        ticketPrice={25} 
+        event={{
+          id: "123",
+          title: "Test Event", 
+          price: 25
+        }} 
         ticketsRemaining={5}
+        ticketsPercentage={50}
         isProcessing={false}
-        onPurchase={vi.fn()} 
+        handleTicketPurchase={vi.fn()} 
       />
     )
 
+    // Use the span with aria-label instead of spinbutton
     const count = screen.getByText('1')
     const increase = screen.getByRole('button', {
       name: /increase ticket count/i,
@@ -96,11 +105,15 @@ describe('TicketPurchase', () => {
   it('displays the correct total', () => {
     renderWithProviders(
       <TicketPurchase 
-        eventId="123" 
-        ticketPrice={10} 
+        event={{
+          id: "123",
+          title: "Test Event",
+          price: 10
+        }} 
         ticketsRemaining={10}
+        ticketsPercentage={50}
         isProcessing={false}
-        onPurchase={vi.fn()} 
+        handleTicketPurchase={vi.fn()} 
       />
     )
 
