@@ -12,6 +12,16 @@ export default async function handler(req) {
   const functionUrl = `${supabaseUrl}/functions/v1/generate-magic-link`;
   
   try {
+    console.log("Forwarding request to Supabase Edge Function:", functionUrl);
+    
+    // Get the request body for logging
+    let requestBody = null;
+    if (req.method !== 'GET') {
+      const clone = req.clone();
+      requestBody = await clone.text();
+      console.log("Request body:", requestBody);
+    }
+    
     // Forward the request to the Supabase Edge Function
     const response = await fetch(functionUrl, {
       method: req.method,
@@ -22,8 +32,11 @@ export default async function handler(req) {
       body: req.method !== 'GET' ? await req.text() : undefined,
     });
     
+    const responseText = await response.text();
+    console.log("Response from edge function:", responseText);
+    
     // Return the response from the Edge Function
-    return new Response(await response.text(), {
+    return new Response(responseText, {
       status: response.status,
       headers: {
         'Content-Type': 'application/json',
@@ -33,6 +46,7 @@ export default async function handler(req) {
       },
     });
   } catch (error) {
+    console.error("Error forwarding request to edge function:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: {

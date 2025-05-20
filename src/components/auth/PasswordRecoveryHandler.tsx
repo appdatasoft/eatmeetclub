@@ -52,44 +52,58 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
     try {
       console.log("Sending password reset email to:", email);
       
+      // IMPORTANT: Always use a complete URL with protocol and host
       // Get the current domain with protocol
       const domain = window.location.origin;
       
-      // Always construct the redirect URL using the current domain
-      // Make sure it's a complete URL with protocol and host
-      const redirectUrl = new URL("/set-password", domain).toString();
+      // Construct the redirect URL with explicit /set-password path
+      let redirectUrl = new URL("/set-password", domain).toString();
       
       console.log("Reset email redirect URL:", redirectUrl);
       
       // First try the edge function approach for better control
       try {
-        // Ensure we're using the correct API path
+        const timestamp = new Date().toISOString();
+        console.log(`[${timestamp}] Calling edge function for password reset`);
+        
+        // Always use the full URL to the edge function
         const edgeFunctionUrl = `${domain}/api/generate-magic-link`;
-        console.log("Calling edge function at:", edgeFunctionUrl);
+        console.log("Edge function URL:", edgeFunctionUrl);
         
         const response = await fetch(edgeFunctionUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, redirectUrl }),
+          body: JSON.stringify({ 
+            email, 
+            redirectUrl,
+            timestamp
+          }),
         });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Edge function error response:", errorText);
+          throw new Error(`Edge function failed with status ${response.status}`);
+        }
         
         const result = await response.json();
         
-        if (!response.ok) {
-          console.error("Edge function error:", result);
+        console.log("Magic link generation result:", result);
+        
+        if (!result.success) {
           throw new Error(result.message || "Failed to generate magic link");
         }
         
-        console.log("Magic link generated via edge function:", result);
-        
-        // Store debug info
+        // Store debug info with detailed data
         setDebugInfo({
-          timestamp: new Date().toISOString(),
+          timestamp,
           resetRequestSent: true,
-          email: email,
-          redirectUrl: redirectUrl,
+          email,
+          redirectUrl,
           actualRedirectUsed: result.redirectUrl || "Not returned",
-          method: "edge-function"
+          originalRedirectUrl: result.originalRedirectUrl,
+          method: "edge-function",
+          responseData: result
         });
         
         setIsSuccess(true);
@@ -100,9 +114,9 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
         
         return;
       } catch (edgeError) {
-        console.error("Edge function failed, details:", edgeError);
+        console.error("Edge function failed:", edgeError);
         console.warn("Falling back to default Supabase method");
-        // Continue to fallback method
+        // Don't throw here - continue to fallback method
       }
       
       // Fallback: Use the default Supabase auth resetPasswordForEmail
@@ -174,7 +188,18 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
               {debugInfo.actualRedirectUsed && (
                 <div>Actual redirect used: {debugInfo.actualRedirectUsed}</div>
               )}
+              {debugInfo.originalRedirectUrl && (
+                <div>Original redirect URL: {debugInfo.originalRedirectUrl}</div>
+              )}
               <div>Method: {debugInfo.method}</div>
+              {debugInfo.responseData && (
+                <div>
+                  <div className="mt-1">Response data:</div>
+                  <pre className="text-[0.65rem] mt-1 bg-gray-100 p-1 rounded overflow-auto max-h-32">
+                    {JSON.stringify(debugInfo.responseData, null, 2)}
+                  </pre>
+                </div>
+              )}
             </AlertDescription>
           </Alert>
         )}

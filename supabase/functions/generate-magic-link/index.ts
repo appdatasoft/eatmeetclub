@@ -43,13 +43,22 @@ serve(async (req) => {
     
     try {
       // Parse the redirectUrl to extract domain
-      const parsedUrl = new URL(redirectUrl);
-      // Force the path to be /set-password regardless of what was provided
+      const parsedUrl = new URL(redirectUrl || "https://www.eatmeetclub.com");
+      
+      // IMPORTANT: Force the path to be /set-password regardless of what was provided
       parsedUrl.pathname = "/set-password";
       finalRedirectUrl = parsedUrl.toString();
+      
+      // Double-check the URL is correct
+      console.log("Parsed URL object:", {
+        href: parsedUrl.href,
+        origin: parsedUrl.origin,
+        pathname: parsedUrl.pathname,
+        host: parsedUrl.host
+      });
     } catch (e) {
       // If URL parsing fails, use a hardcoded default with /set-password
-      console.warn("URL parsing failed, using default URL:", e);
+      console.error("URL parsing failed:", e);
       finalRedirectUrl = "https://www.eatmeetclub.com/set-password";
     }
     
@@ -72,12 +81,25 @@ serve(async (req) => {
     console.log("Magic link generated successfully");
     console.log("Action link property:", data.properties?.action_link);
     
+    // Check if the action link contains the correct redirect URL
+    if (data.properties?.action_link) {
+      const actionLinkUrl = new URL(data.properties.action_link);
+      const params = new URLSearchParams(actionLinkUrl.search);
+      const redirectParam = params.get('redirect_to');
+      console.log("Redirect parameter in action link:", redirectParam);
+      
+      if (redirectParam && !redirectParam.endsWith('/set-password')) {
+        console.warn("WARNING: redirect_to parameter does not end with /set-password:", redirectParam);
+      }
+    }
+    
     // Return the generated action link to be used in the welcome email
     return new Response(
       JSON.stringify({
         success: true,
         magicLink: data.properties?.action_link,
-        redirectUrl: finalRedirectUrl // Return the redirect URL for debugging
+        redirectUrl: finalRedirectUrl, // Return the redirect URL for debugging
+        originalRedirectUrl: redirectUrl // Return the original redirect URL for debugging
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
