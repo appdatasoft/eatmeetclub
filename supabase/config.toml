@@ -40,3 +40,4 @@ enable_confirmations = true
 [functions]
 [functions.generate-magic-link]
 verify_jwt = false
+

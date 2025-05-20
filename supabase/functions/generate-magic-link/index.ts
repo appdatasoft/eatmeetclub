@@ -37,17 +37,21 @@ serve(async (req) => {
     console.log(`[${timestamp}] Generating ${type} link for ${email}`);
     console.log(`[${timestamp}] Original redirectUrl: ${redirectUrl}`);
     
-    // Extract just the domain part from the redirectUrl
-    let domain = window.location.origin;
+    // Extract the domain from the redirectUrl
+    let domain = "";
     
     try {
       if (redirectUrl) {
         const url = new URL(redirectUrl);
         domain = `${url.protocol}//${url.host}`;
+      } else {
+        // Fallback to request origin or a default
+        domain = req.headers.get("origin") || "https://www.eatmeetclub.com";
       }
     } catch (e) {
       console.error("URL parsing failed:", e);
-      console.log(`[${timestamp}] Falling back to default domain: ${domain}`);
+      domain = req.headers.get("origin") || "https://www.eatmeetclub.com";
+      console.log(`[${timestamp}] Falling back to domain from headers: ${domain}`);
     }
     
     // Determine the final redirect path based on the link type
@@ -59,18 +63,38 @@ serve(async (req) => {
     const finalRedirectUrl = `${domain}${finalPath}`;
     console.log(`[${timestamp}] FINAL redirect URL: ${finalRedirectUrl}`);
     
-    // Generate the appropriate link type
-    const linkFunction = type === "recovery" 
-      ? supabase.auth.admin.generateLink
-      : supabase.auth.admin.generateLink;
+    // Generate the appropriate link
+    let result;
     
-    const { data, error } = await linkFunction({
-      type: type as "recovery" | "signup" | "invite",
-      email: email,
-      options: {
-        redirectTo: finalRedirectUrl,
-      }
-    });
+    if (type === "signup") {
+      result = await supabase.auth.admin.generateLink({
+        type: "signup",
+        email: email,
+        options: {
+          redirectTo: finalRedirectUrl,
+        }
+      });
+    } else if (type === "recovery") {
+      result = await supabase.auth.admin.generateLink({
+        type: "recovery",
+        email: email,
+        options: {
+          redirectTo: finalRedirectUrl,
+        }
+      });
+    } else if (type === "invite") {
+      result = await supabase.auth.admin.generateLink({
+        type: "invite",
+        email: email,
+        options: {
+          redirectTo: finalRedirectUrl,
+        }
+      });
+    } else {
+      throw new Error(`Invalid link type: ${type}`);
+    }
+    
+    const { data, error } = result;
     
     if (error) {
       console.error(`[${timestamp}] Error generating link:`, error);
@@ -81,11 +105,9 @@ serve(async (req) => {
     
     // Extract and validate the action_link
     if (data.properties?.action_link) {
-      try {
-        console.log(`[${timestamp}] Final action_link: ${data.properties.action_link}`);
-      } catch (e) {
-        console.error(`[${timestamp}] Error parsing action_link URL:`, e);
-      }
+      console.log(`[${timestamp}] Final action_link: ${data.properties.action_link}`);
+    } else {
+      console.error(`[${timestamp}] No action_link found in response`);
     }
     
     return new Response(

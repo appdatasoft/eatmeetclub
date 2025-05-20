@@ -20,8 +20,12 @@ export default async function handler(req) {
     let requestBody = null;
     if (req.method !== 'OPTIONS' && req.method !== 'GET') {
       const clone = req.clone();
-      requestBody = await clone.text();
-      console.log(`[${timestamp}] Request body: ${requestBody}`);
+      try {
+        requestBody = await clone.text();
+        console.log(`[${timestamp}] Request body: ${requestBody}`);
+      } catch (bodyError) {
+        console.error(`[${timestamp}] Error reading request body:`, bodyError);
+      }
     }
     
     // Set up request options for forwarding

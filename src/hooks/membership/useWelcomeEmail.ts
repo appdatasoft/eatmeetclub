@@ -38,21 +38,29 @@ export const useWelcomeEmail = () => {
         ? "https://www.eatmeetclub.com" 
         : window.location.origin;
 
-      // Generate a magic link for account activation
-      const { data, error } = await supabase.auth.admin.generateLink({
-        type: 'signup',
-        email: validEmail,
-        options: {
-          redirectTo: `${currentOrigin}/login?verified=true`,
+      // Call our custom edge function to generate a magic link
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/generate-magic-link`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: validEmail,
+            redirectUrl: `${currentOrigin}/login?verified=true`,
+            type: "signup"
+          }),
         }
-      });
+      );
       
-      if (error || !data) {
-        console.error("Error generating activation link:", error);
-        throw new Error(error?.message || "Failed to generate activation link");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to generate activation link");
       }
       
-      const magicLink = data.properties?.action_link;
+      const data = await response.json();
+      const magicLink = data.magicLink;
       
       if (!magicLink) {
         throw new Error("Failed to generate activation link");
