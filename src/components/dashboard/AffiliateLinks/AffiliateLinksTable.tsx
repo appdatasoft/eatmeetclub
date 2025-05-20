@@ -15,11 +15,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AffiliateLink, AffiliateStats } from "@/hooks/useAffiliateLinks";
+import { Spinner } from "@/components/ui/spinner";
 
 export const AffiliateLinksTable = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [affiliateLinks, setAffiliateLinks] = useState<
     (AffiliateLink & { event: { title: string }; stats: AffiliateStats })[]
   >([]);
@@ -27,15 +29,27 @@ export const AffiliateLinksTable = () => {
 
   useEffect(() => {
     const fetchLinks = async () => {
-      if (!user) return;
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
 
       setIsLoading(true);
+      setError(null);
+      
       try {
+        console.log("Fetching affiliate links for user:", user.id);
+        
         const { data: links, error } = await supabase
           .from("affiliate_links")
           .select(
             `
-            *,
+            id,
+            event_id,
+            user_id,
+            code,
+            created_at,
+            updated_at,
             event:events (
               id,
               title
@@ -46,49 +60,65 @@ export const AffiliateLinksTable = () => {
 
         if (error) throw error;
 
+        console.log("Fetched links:", links);
+
         // Fetch stats for each link
         const linksWithStats = await Promise.all(
           (links || []).map(async (link) => {
-            // Get click count
-            const { count: clickCount, error: clickError } = await supabase
-              .from("affiliate_tracking")
-              .select("*", { count: "exact", head: true })
-              .eq("affiliate_link_id", link.id)
-              .eq("action_type", "click");
+            try {
+              // Get click count
+              const { count: clickCount, error: clickError } = await supabase
+                .from("affiliate_tracking")
+                .select("*", { count: "exact", head: true })
+                .eq("affiliate_link_id", link.id)
+                .eq("action_type", "click");
 
-            if (clickError) throw clickError;
+              if (clickError) throw clickError;
 
-            // Get conversion count and sum
-            const { data: conversionData, error: conversionError } = await supabase
-              .from("affiliate_tracking")
-              .select("conversion_value")
-              .eq("affiliate_link_id", link.id)
-              .eq("action_type", "conversion");
+              // Get conversion count and sum
+              const { data: conversionData, error: conversionError } = await supabase
+                .from("affiliate_tracking")
+                .select("conversion_value")
+                .eq("affiliate_link_id", link.id)
+                .eq("action_type", "conversion");
 
-            if (conversionError) throw conversionError;
+              if (conversionError) throw conversionError;
 
-            const conversions = conversionData.length;
-            const revenue = conversionData.reduce(
-              (sum, item) => sum + (parseFloat(item.conversion_value?.toString() || '0')),
-              0
-            );
-            const conversionRate = clickCount > 0 ? (conversions / clickCount) * 100 : 0;
+              const conversions = conversionData?.length || 0;
+              const revenue = conversionData?.reduce(
+                (sum, item) => sum + (parseFloat(item.conversion_value?.toString() || '0')),
+                0
+              ) || 0;
+              const conversionRate = clickCount > 0 ? (conversions / clickCount) * 100 : 0;
 
-            return {
-              ...link,
-              stats: {
-                clicks: clickCount || 0,
-                conversions,
-                conversionRate,
-                revenue,
-              },
-            };
+              return {
+                ...link,
+                stats: {
+                  clicks: clickCount || 0,
+                  conversions,
+                  conversionRate,
+                  revenue,
+                },
+              };
+            } catch (err) {
+              console.error("Error fetching stats for link:", link.id, err);
+              return {
+                ...link,
+                stats: {
+                  clicks: 0,
+                  conversions: 0,
+                  conversionRate: 0,
+                  revenue: 0,
+                },
+              };
+            }
           })
         );
 
         setAffiliateLinks(linksWithStats);
       } catch (err: any) {
         console.error("Error fetching affiliate links:", err);
+        setError(err.message || "Failed to load affiliate links");
         toast({
           title: "Error",
           description: err.message || "Failed to load affiliate links",
@@ -139,8 +169,28 @@ export const AffiliateLinksTable = () => {
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Spinner size="lg" className="text-primary" />
+        <span className="ml-3">Loading your affiliate links...</span>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center text-red-500">
+            <p>Failed to load affiliate links: {error}</p>
+            <Button 
+              variant="outline" 
+              className="mt-4" 
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -176,10 +226,10 @@ export const AffiliateLinksTable = () => {
             </TableHeader>
             <TableBody>
               {affiliateLinks.map((link) => {
-                const affiliateUrl = getAffiliateUrl(link.code, link.event.title);
+                const affiliateUrl = getAffiliateUrl(link.code, link.event?.title || '');
                 return (
                   <TableRow key={link.id}>
-                    <TableCell className="font-medium">{link.event.title}</TableCell>
+                    <TableCell className="font-medium">{link.event?.title || 'Unknown Event'}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       {new Date(link.created_at).toLocaleDateString()}
                     </TableCell>
