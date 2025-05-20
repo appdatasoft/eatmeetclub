@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useEventFetch } from "@/hooks/useEventFetch";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,7 +27,7 @@ import { UtensilsCrossed, Menu as MenuIcon } from "lucide-react";
 // Import types
 import { EventDetails } from "@/hooks/types/eventTypes";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, Info } from "lucide-react";
 
 const EventDetailsPage = () => {
   // Handle both /event/:id and /e/:slug routes
@@ -208,8 +209,11 @@ const EventDetailsPage = () => {
           <div className="flex flex-wrap gap-2">
             {/* Show active referral if present */}
             {referralCode && (
-              <Alert variant="outline" className="mb-4 w-full bg-blue-50 border-blue-200 text-blue-800">
-                <p className="text-sm">You're viewing this event through an affiliate link</p>
+              <Alert className="mb-4 w-full bg-blue-50 border-blue-200">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-700">
+                  You're viewing this event through an affiliate link (ref: {referralCode})
+                </AlertDescription>
               </Alert>
             )}
             

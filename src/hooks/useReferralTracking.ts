@@ -58,9 +58,17 @@ export const useReferralTracking = (eventId?: string) => {
     return sessionStorage.getItem(`ref_${eventId}`);
   };
   
+  // Generate an affiliate URL with the current referral code
+  const generateAffiliateUrl = (eventId: string, eventSlug: string, code: string): string => {
+    const baseUrl = window.location.origin;
+    // Create SEO-friendly URL with the affiliate code
+    return `${baseUrl}/e/${eventSlug}-${eventId}?ref=${code}`;
+  };
+  
   return {
     referralCode,
     getStoredReferralCode,
-    resolvedEventId
+    resolvedEventId,
+    generateAffiliateUrl
   };
 };
