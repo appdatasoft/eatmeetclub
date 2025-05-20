@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -110,7 +110,8 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
         </Alert>
         
         {debugInfo && (
-          <Alert>
+          <Alert className="bg-blue-50 border-blue-200">
+            <Info className="h-4 w-4 text-blue-500" />
             <AlertDescription className="text-xs font-mono">
               <div className="font-semibold mb-1">Debug information:</div>
               <div>Timestamp: {debugInfo.timestamp}</div>
@@ -119,6 +120,21 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
             </AlertDescription>
           </Alert>
         )}
+        
+        <div className="text-center mt-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsSuccess(false)}
+            className="mr-2"
+          >
+            Try Again
+          </Button>
+          <Button 
+            onClick={() => window.location.href = "/login"}
+          >
+            Back to Login
+          </Button>
+        </div>
       </div>
     );
   }

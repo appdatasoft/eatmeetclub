@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import MainLayout from "@/components/layout/MainLayout";
 import { PasswordForm, PasswordFormValues, PasswordSuccessMessage } from "@/components/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const SetPasswordPage = () => {
@@ -18,6 +18,7 @@ const SetPasswordPage = () => {
 
   // Track if we have a valid token
   const [hasValidToken, setHasValidToken] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   useEffect(() => {
     // Set session from URL parameters when component mounts
@@ -25,10 +26,18 @@ const SetPasswordPage = () => {
       const token = searchParams.get("token");
       const type = searchParams.get("type");
       
-      console.log("URL parameters:", { 
+      const debugData = {
         hasToken: !!token,
-        type
-      });
+        tokenLength: token?.length,
+        tokenStart: token?.substring(0, 5),
+        tokenEnd: token?.substring(token?.length - 5),
+        type,
+        url: window.location.href,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log("URL parameters:", debugData);
+      setDebugInfo(debugData);
       
       // For password recovery links
       if (token && type === "recovery") {
@@ -106,6 +115,23 @@ const SetPasswordPage = () => {
             <Alert variant="destructive" className="mb-6">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          {debugInfo && (
+            <Alert className="bg-blue-50 border-blue-200 mb-4">
+              <Info className="h-4 w-4 text-blue-500" />
+              <AlertDescription className="text-xs font-mono">
+                <div className="font-semibold mb-1">Debug information:</div>
+                <div>Has Token: {debugInfo.hasToken ? "Yes" : "No"}</div>
+                {debugInfo.hasToken && (
+                  <>
+                    <div>Token Length: {debugInfo.tokenLength}</div>
+                    <div>Token Type: {debugInfo.type || "Not specified"}</div>
+                  </>
+                )}
+                <div>Timestamp: {debugInfo.timestamp}</div>
+              </AlertDescription>
             </Alert>
           )}
 

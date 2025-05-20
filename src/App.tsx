@@ -8,6 +8,7 @@ import { AdminRoutes } from "@/routes/adminRoutes";
 import dashboardRoutes from "@/routes/dashboardRoutes";
 import NotFound from "@/pages/NotFound";
 import AdminStripeSettings from '@/pages/admin/AdminStripeSettings';
+import SetPassword from "@/pages/SetPassword";
 
 function App() {
   return (
@@ -25,11 +26,14 @@ function App() {
               {/* Dashboard routes */}
               {dashboardRoutes}
 
+              {/* Password reset route - ensure it's accessible directly */}
+              <Route path="/set-password" element={<SetPassword />} />
+              
+              {/* Admin Stripe Settings route */}
+              <Route path="admin/stripe-settings" element={<AdminStripeSettings />} />
+
               {/* Catch-all route */}
               <Route path="*" element={<NotFound />} />
-
-              {/* New route for Admin Stripe Settings */}
-              <Route path="admin/stripe-settings" element={<AdminStripeSettings />} />
             </>
           </Routes>
           <Toaster />
