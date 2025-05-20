@@ -1063,6 +1063,10 @@ export type Database = {
           created_at: string | null
           id: string
           is_connected: boolean
+          meta_data: Json | null
+          oauth_expires_at: string | null
+          oauth_token: string | null
+          oauth_token_secret: string | null
           platform: string
           profile_url: string | null
           updated_at: string | null
@@ -1073,6 +1077,10 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_connected?: boolean
+          meta_data?: Json | null
+          oauth_expires_at?: string | null
+          oauth_token?: string | null
+          oauth_token_secret?: string | null
           platform: string
           profile_url?: string | null
           updated_at?: string | null
@@ -1083,6 +1091,10 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_connected?: boolean
+          meta_data?: Json | null
+          oauth_expires_at?: string | null
+          oauth_token?: string | null
+          oauth_token_secret?: string | null
           platform?: string
           profile_url?: string | null
           updated_at?: string | null

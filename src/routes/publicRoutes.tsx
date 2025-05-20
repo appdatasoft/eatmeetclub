@@ -22,7 +22,6 @@ import Terms from "@/pages/Terms";
 import DataDeletion from "@/pages/DataDeletion";
 import AuthRedirect from "@/components/auth/AuthRedirect";
 import MetaDeauth from "@/pages/api/meta/MetaDeauth";
-import FacebookAuthCallback from "@/pages/api/auth/FacebookAuthCallback";
 import FacebookCallback from "@/pages/auth/FacebookCallback";
 
 const PublicRoutes = () => {
@@ -50,9 +49,8 @@ const PublicRoutes = () => {
       <Route path="/terms" element={<Terms />} />
       <Route path="/data-deletion" element={<DataDeletion />} />
       <Route path="/api/meta/deauth" element={<MetaDeauth />} />
-      <Route path="/api/auth/callback/facebook" element={<FacebookAuthCallback />} />
       
-      {/* New proper route for OAuth callback */}
+      {/* OAuth callback routes */}
       <Route path="/auth/facebook/callback" element={<FacebookCallback />} />
     </Routes>
   );
