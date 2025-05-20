@@ -319,10 +319,9 @@ export const useSocialMedia = () => {
       // Store state in sessionStorage for verification after redirect
       sessionStorage.setItem('facebook_oauth_state', state);
       
-      // Use the new callback URL
-      const redirectUri = window.location.hostname === 'localhost' 
-        ? `${window.location.protocol}//${window.location.hostname}:${window.location.port}/auth/facebook/callback`
-        : `${window.location.protocol}//${window.location.hostname}/auth/facebook/callback`;
+      // IMPORTANT: Use a consistent redirect URI that will match in the callback
+      // This must be exactly the same as used in FacebookCallback.tsx
+      const redirectUri = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
       
       console.log("Using Facebook OAuth redirect URI:", redirectUri);
       
@@ -385,10 +384,9 @@ export const useSocialMedia = () => {
       // Store state in sessionStorage for verification after redirect
       sessionStorage.setItem('instagram_oauth_state', state);
       
-      // Use the new callback URL
-      const redirectUri = window.location.hostname === 'localhost' 
-        ? `${window.location.protocol}//${window.location.hostname}:${window.location.port}/auth/facebook/callback`
-        : `${window.location.protocol}//${window.location.hostname}/auth/facebook/callback`;
+      // IMPORTANT: Use a consistent redirect URI that will match in the callback
+      // This must be exactly the same as used in FacebookCallback.tsx
+      const redirectUri = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
       
       console.log("Initiating Instagram OAuth with redirect:", redirectUri);
       

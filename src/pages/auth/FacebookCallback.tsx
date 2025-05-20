@@ -77,7 +77,8 @@ const FacebookCallback: React.FC = () => {
         // Get Supabase URL
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
         
-        // Use a fixed path for the redirect URI to match what's configured in supabase/config.toml
+        // IMPORTANT: Use the exact same redirectUri that was used in the authorization request
+        // This must match character-for-character what was used in the initial auth request
         const redirectUri = "https://preview--eatmeetclub.lovable.app/auth/facebook/callback";
         
         console.log(`[FacebookCallback] Using redirectUri: ${redirectUri}`);
@@ -96,12 +97,12 @@ const FacebookCallback: React.FC = () => {
               platform,
               action: 'callback',
               code,
-              redirectUri,
+              redirectUri, // Pass the exact redirect URI
               state
             })
           });
           
-          // Try to get raw response
+          // Get raw response for better debugging
           const rawResponse = await response.text();
           console.log('[FacebookCallback] Raw response:', rawResponse?.substring(0, 500));
           
@@ -109,9 +110,22 @@ const FacebookCallback: React.FC = () => {
           try {
             result = JSON.parse(rawResponse);
             
+            // Update debug info with API response
+            setDebugInfo(prev => ({
+              ...prev,
+              apiResponse: result,
+              responseStatus: response.status,
+              responseOk: response.ok
+            }));
+            
             if (!response.ok || !result.success) {
+              // Handle Facebook API errors specifically
+              if (rawResponse.includes('Invalid verification code format') || 
+                  rawResponse.includes('OAuthException')) {
+                throw new Error(`Facebook API error: ${result?.error || 'Invalid verification code. This might be due to code expiration or redirect URI mismatch.'}`);
+              }
               // Handle database schema errors specifically
-              if (rawResponse.includes('meta_data') && rawResponse.includes('schema cache')) {
+              else if (rawResponse.includes('meta_data') && rawResponse.includes('schema cache')) {
                 throw new Error(`Database schema issue: The social_media_connections table schema needs to be refreshed. Please contact support.`);
               } else {
                 throw new Error(result?.error || `Failed to complete ${platform} authentication`);
