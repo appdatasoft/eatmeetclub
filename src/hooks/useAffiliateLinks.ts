@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -120,16 +120,17 @@ export const useAffiliateLinks = (eventId?: string) => {
     if (!user) return null;
     
     try {
+      // Fix: Remove single() and use different headers to avoid 406 error
       const { data, error } = await supabase
         .from('affiliate_links')
         .select('*')
         .eq('event_id', eventId)
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', user.id);
       
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
       
-      return data || null;
+      // Return the first item if available
+      return data && data.length > 0 ? data[0] : null;
     } catch (error) {
       console.error("Error fetching affiliate link:", error);
       return null;
@@ -139,22 +140,25 @@ export const useAffiliateLinks = (eventId?: string) => {
   // Track a click on an affiliate link
   const trackClick = async (referralCode: string, eventId: string) => {
     try {
-      // Find the affiliate link ID using the referral code
+      // Fix: Remove single() to avoid 406 errors
       const { data: linkData, error: linkError } = await supabase
         .from('affiliate_links')
         .select('id')
         .eq('code', referralCode)
-        .eq('event_id', eventId)
-        .single();
+        .eq('event_id', eventId);
       
       if (linkError) throw linkError;
+      if (!linkData || linkData.length === 0) {
+        console.error('No affiliate link found for code:', referralCode);
+        return false;
+      }
       
       // Record the click in tracking table
       const { error: trackError } = await supabase
         .from('affiliate_tracking')
         .insert([
           {
-            affiliate_link_id: linkData.id,
+            affiliate_link_id: linkData[0].id,
             event_id: eventId,
             action_type: 'click',
             referred_user_id: user?.id,
@@ -205,25 +209,25 @@ export const useAffiliateLinks = (eventId?: string) => {
   const getAffiliateUrl = (eventSlug: string): string => {
     if (!affiliateLink) return '';
     const baseUrl = window.location.origin;
-    return `${baseUrl}/e/${eventSlug}?ref=${affiliateLink.code}`;
+    return `${baseUrl}/e/${eventSlug}-${affiliateLink.event_id}?ref=${affiliateLink.code}`;
   };
   
   // Fetch stats for a specific link
   const fetchLinkStats = async (linkId: string) => {
     try {
-      // Get click count
+      // Fix: Remove head:true which can cause issues with some Supabase configurations
       const { count: clickCount, error: clickError } = await supabase
         .from('affiliate_tracking')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('affiliate_link_id', linkId)
         .eq('action_type', 'click');
       
       if (clickError) throw clickError;
       
-      // Get conversion count
+      // Fix: Remove head:true to avoid potential errors
       const { count: conversionCount, error: convError } = await supabase
         .from('affiliate_tracking')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('affiliate_link_id', linkId)
         .eq('action_type', 'conversion');
       
