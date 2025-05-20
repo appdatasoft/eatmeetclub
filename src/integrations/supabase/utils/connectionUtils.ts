@@ -90,7 +90,8 @@ export const getConnectionDiagnostics = () => {
     
     // We'll try to check if auth is configured as an indirect indication of the key
     const hasAuthConfig = Boolean(supabase.auth);
-    anonKeyLength = hasAuthConfig ? 'configured' : 'missing';
+    // Fix the type error: ensure anonKeyLength is always a number
+    anonKeyLength = hasAuthConfig ? 0 : 0; // Both cases return 0 now
   } catch (e) {
     console.warn('Could not safely extract Supabase client info');
   }
@@ -107,7 +108,6 @@ export const getConnectionDiagnostics = () => {
       details: lastError.details,
     } : null,
     supabaseUrl,
-    // Fix the type error here - change 'configured'/'missing' to a number
-    anon_key_length: typeof anonKeyLength === 'string' ? 0 : anonKeyLength,
+    anon_key_length: anonKeyLength, // Now always a number
   };
 };
