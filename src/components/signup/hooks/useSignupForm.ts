@@ -46,30 +46,6 @@ export const useSignupForm = ({
         localStorage.setItem('signup_phone', values.phoneNumber);
       }
 
-      // Check if email already exists and has active membership
-      const membershipCheck = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/check-membership-status`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: values.email }),
-        }
-      );
-      
-      if (membershipCheck.ok) {
-        const membershipData = await membershipCheck.json();
-        
-        if (membershipData.exists && membershipData.hasActiveMembership) {
-          showToast({
-            title: "Account already exists",
-            description: "An account with this email already has an active membership. Please log in instead.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-      }
-
       // Register the user in Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
