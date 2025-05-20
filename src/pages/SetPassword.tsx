@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import MainLayout from "@/components/layout/MainLayout";
-import { PasswordForm, PasswordFormValues, PasswordSuccessMessage } from "@/components/auth";
+import { PasswordForm, PasswordFormValues } from "@/components/auth/PasswordForm";
+import PasswordSuccessMessage from "@/components/auth/PasswordSuccessMessage";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -32,29 +33,41 @@ const SetPasswordPage = () => {
       console.error("Error from URL:", { urlError, errorMessage });
     }
 
+    // Log all URL parameters for debugging
+    console.log("URL parameters:", Object.fromEntries(searchParams.entries()));
+    
     // Set session from URL parameters when component mounts
     const setSessionFromUrl = async () => {
-      const token = searchParams.get("token");
-      const type = searchParams.get("type");
-      
-      // For password recovery links
-      if (token && type === "recovery") {
-        console.log("Received recovery token, marking as valid");
-        setHasValidToken(true);
+      try {
+        // Check for both token param and hash fragment
+        const token = searchParams.get("token") || new URLSearchParams(window.location.hash.substring(1)).get("token");
+        const type = searchParams.get("type") || new URLSearchParams(window.location.hash.substring(1)).get("type");
         
-        // Clear any URL error since we have a valid token
-        if (urlError) {
-          setError(null);
+        console.log("Recovery params:", { token: !!token, type });
+        
+        // For password recovery links
+        if (token && type === "recovery") {
+          console.log("Received recovery token, marking as valid");
+          setHasValidToken(true);
+          
+          // Clear any URL error since we have a valid token
+          if (urlError) {
+            setError(null);
+          }
+          
+          return true;
         }
         
-        return true;
+        return false;
+      } catch (err) {
+        console.error("Error parsing URL params:", err);
+        return false;
       }
-      
-      return false;
     };
     
     setSessionFromUrl().then(validSession => {
       if (!validSession && !urlError) {
+        console.log("No valid session found and no URL error");
         setError("Invalid or expired password reset link. Please request a new one.");
       }
     });
@@ -65,8 +78,11 @@ const SetPasswordPage = () => {
     setError(null);
     
     try {
-      const token = searchParams.get("token");
-      const type = searchParams.get("type");
+      console.log("Setting new password");
+      
+      // Check for token in URL params or hash fragment
+      const token = searchParams.get("token") || new URLSearchParams(window.location.hash.substring(1)).get("token");
+      const type = searchParams.get("type") || new URLSearchParams(window.location.hash.substring(1)).get("type");
       
       if (!token || type !== "recovery") {
         throw new Error("Invalid password reset link. Please request a new one.");
@@ -81,6 +97,7 @@ const SetPasswordPage = () => {
         throw error;
       }
       
+      console.log("Password updated successfully");
       setIsSuccess(true);
       toast({
         title: "Password set successfully",

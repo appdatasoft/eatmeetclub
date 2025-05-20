@@ -50,6 +50,7 @@ const PasswordRecoveryHandler: React.FC<PasswordRecoveryHandlerProps> = ({ userE
     try {
       // Get current origin for proper redirect
       const currentOrigin = window.location.origin;
+      console.log(`[${new Date().toISOString()}] Current origin: ${currentOrigin}`);
       const redirectTo = `${currentOrigin}/set-password`;
       console.log(`[${new Date().toISOString()}] Sending password reset email to: ${email}`);
       console.log(`[${new Date().toISOString()}] Redirect URL: ${redirectTo}`);

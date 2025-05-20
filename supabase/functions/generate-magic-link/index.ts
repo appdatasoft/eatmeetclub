@@ -54,13 +54,19 @@ serve(async (req) => {
       console.log(`[${timestamp}] Falling back to domain from headers: ${domain}`);
     }
     
-    // Determine the final redirect path based on the link type
-    let finalPath = "/login?verified=true";
-    if (type === "recovery") {
-      finalPath = "/set-password";
+    // Always preserve the full redirectUrl for recovery links
+    let finalRedirectUrl = redirectUrl;
+    
+    // If no redirectUrl was provided, construct one based on the type
+    if (!redirectUrl) {
+      let finalPath = "/login?verified=true";
+      if (type === "recovery") {
+        finalPath = "/set-password";
+      }
+      
+      finalRedirectUrl = `${domain}${finalPath}`;
     }
     
-    const finalRedirectUrl = `${domain}${finalPath}`;
     console.log(`[${timestamp}] FINAL redirect URL: ${finalRedirectUrl}`);
     
     // Generate the appropriate link
