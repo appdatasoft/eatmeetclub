@@ -40,13 +40,6 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
 
-# Optionally add SMTP credentials (host, port, user, pass) like this:
-#[auth.email.smtp]
-#host = "smtp.mailgun.org"
-#port = 587
-#user = "postmaster@yourdomain.com"
-#pass = "your-smtp-password"
-
 [analytics]
 enabled = false
 port = 54327

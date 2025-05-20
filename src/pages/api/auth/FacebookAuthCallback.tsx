@@ -20,6 +20,7 @@ const FacebookAuthCallback: React.FC = () => {
   const { fetchConnections } = useSocialMedia();
   
   useEffect(() => {
+    // This function handles the OAuth callback
     const processCallback = async () => {
       try {
         console.log('Processing Facebook/Instagram OAuth callback');
@@ -41,8 +42,7 @@ const FacebookAuthCallback: React.FC = () => {
           error,
           errorReason,
           errorDescription,
-          currentUrl,
-          allSearchParams: Object.fromEntries([...searchParams.entries()])
+          currentUrl
         });
         
         // Store debug info
@@ -68,19 +68,13 @@ const FacebookAuthCallback: React.FC = () => {
         // Validate required parameters
         if (!code || !state) {
           setStatus('error');
-          setMessage('Invalid callback: missing parameters');
+          setMessage('Invalid callback: missing required parameters');
           return;
         }
         
-        // Get the current session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        // Check if user is authenticated
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          setDebugInfo(prev => ({ ...prev, sessionError }));
-        }
-        
-        // If no session, redirect to login with return URL
         if (!session) {
           console.log('No active session found, redirecting to login');
           setStatus('error');
@@ -101,32 +95,25 @@ const FacebookAuthCallback: React.FC = () => {
         const platform = state.startsWith('instagram_') ? 'Instagram' : 'Facebook';
         console.log(`Processing ${platform} connection`);
         
-        // Get Supabase URL and determine the appropriate redirect URI
+        // Get Supabase URL
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
         
-        // Properly determine the redirect URI based on the current domain
-        // This is critical for OAuth to work correctly with Facebook
+        // Determine the appropriate redirect URI based on the environment
         let redirectUri;
         const hostname = window.location.hostname;
         
         if (hostname === 'localhost' || hostname.includes('192.168.') || hostname.includes('127.0.0.1')) {
-          // For local development
+          // Local development
           redirectUri = `${window.location.protocol}//${hostname}:${window.location.port}/api/auth/callback/facebook`;
-          console.log(`Using local redirect URI: ${redirectUri}`);
         } else if (hostname.includes('eatmeetclub.com')) {
-          // For production domain - use the configured URL from Facebook developers console
+          // Production - use the exact URL from Facebook developers console
           redirectUri = `https://eatmeetclub.com/api/auth/callback/facebook`;
-          console.log(`Using production redirect URI: ${redirectUri}`);
         } else {
-          // For preview deployments or unknown environments
+          // Preview or unknown environment
           redirectUri = `${window.location.origin}/api/auth/callback/facebook`;
-          console.log(`Using dynamic redirect URI: ${redirectUri}`);
         }
         
-        console.log(`Calling edge function with platform: ${platform}, redirectUri: ${redirectUri}, supabaseUrl: ${supabaseUrl}`);
-        
-        // Add artificial delay to ensure supabase auth is fully initialized
-        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log(`Calling edge function with platform: ${platform}, redirectUri: ${redirectUri}`);
         
         const edgeFunctionUrl = `${supabaseUrl}/functions/v1/connect-social-media`;
         console.log(`Edge function URL: ${edgeFunctionUrl}`);
@@ -135,17 +122,12 @@ const FacebookAuthCallback: React.FC = () => {
           ...prev, 
           platform,
           redirectUri,
-          requestParams: {
-            action: 'callback',
-            code,
-            redirectUri,
-            state
-          },
-          edgeFunctionUrl
+          edgeFunctionUrl,
+          sessionExists: !!session
         }));
         
         try {
-          // Use the customFetch utility for improved error handling and retries
+          // Use customFetch utility with better error handling
           console.log(`Sending request to edge function with code (length: ${code?.length})`);
           const response = await customFetch(edgeFunctionUrl, {
             method: 'POST',
@@ -163,54 +145,66 @@ const FacebookAuthCallback: React.FC = () => {
           });
           
           console.log(`Edge function response status: ${response.status}`);
-          setDebugInfo(prev => ({ 
-            ...prev, 
-            edgeFunctionStatus: response.status,
-            requestTime: new Date().toISOString()
-          }));
           
-          const responseText = await response.text();
-          console.log(`Raw edge function response (first 50 chars): ${responseText.substring(0, 50)}...`);
-          
-          let result;
+          let rawResponse;
           try {
-            result = JSON.parse(responseText);
-            console.log('Parsed response:', result);
-            setDebugInfo(prev => ({ ...prev, edgeFunctionResponse: result }));
-          } catch (e) {
-            console.error('Error parsing response:', e);
+            // First try to get the response as text
+            rawResponse = await response.text();
+            console.log('Raw edge function response:', rawResponse.substring(0, 100));
+            
+            let result;
+            try {
+              result = JSON.parse(rawResponse);
+              console.log('Parsed response:', result);
+              
+              setDebugInfo(prev => ({ 
+                ...prev, 
+                edgeFunctionStatus: response.status,
+                edgeFunctionResponse: result,
+                requestTime: new Date().toISOString()
+              }));
+              
+              if (!response.ok) {
+                throw new Error(result?.error || `Failed to complete ${platform} authentication`);
+              }
+              
+              // Refresh the connections list
+              await fetchConnections();
+              
+              // Show success message
+              setStatus('success');
+              setMessage(`Your ${platform} account has been successfully connected!`);
+              
+              toast({
+                title: `${platform} Connected`,
+                description: result.limited_access 
+                  ? `Your ${platform} account was connected with limited functionality.` 
+                  : `Your ${platform} account has been successfully connected!`,
+                variant: 'default',
+              });
+              
+              // Redirect after a delay
+              setTimeout(() => {
+                navigate('/dashboard/social-media', { replace: true });
+              }, 2000);
+              
+            } catch (parseError) {
+              console.error('Error parsing response:', parseError);
+              setDebugInfo(prev => ({ 
+                ...prev, 
+                parseError: parseError.message, 
+                rawResponse: rawResponse.substring(0, 500) 
+              }));
+              throw new Error(`Failed to parse response: ${parseError.message}`);
+            }
+          } catch (responseError) {
+            console.error('Error reading response:', responseError);
             setDebugInfo(prev => ({ 
               ...prev, 
-              parseError: e.message, 
-              rawResponse: responseText.substring(0, 500) 
+              responseError: responseError.message
             }));
-            throw new Error(`Failed to parse response: ${e.message}`);
+            throw responseError;
           }
-          
-          if (!response.ok) {
-            throw new Error(result?.error || `Failed to complete ${platform} authentication`);
-          }
-          
-          // Refresh the connections list to reflect the new connection
-          await fetchConnections();
-          
-          // Show success message
-          setStatus('success');
-          setMessage(`Your ${platform} account has been successfully connected!`);
-          
-          // Create a custom toast message
-          toast({
-            title: `${platform} Connected`,
-            description: result.limited_access 
-              ? `Your ${platform} account was connected with limited functionality.` 
-              : `Your ${platform} account has been successfully connected!`,
-            variant: 'default',
-          });
-          
-          // Redirect after a short delay
-          setTimeout(() => {
-            navigate('/dashboard/social-media', { replace: true });
-          }, 2000);
         } catch (fetchError: any) {
           console.error('Fetch error:', fetchError);
           setDebugInfo(prev => ({ 
@@ -220,7 +214,6 @@ const FacebookAuthCallback: React.FC = () => {
           }));
           throw fetchError;
         }
-        
       } catch (err: any) {
         console.error('Error processing callback:', err);
         setStatus('error');
@@ -237,14 +230,19 @@ const FacebookAuthCallback: React.FC = () => {
           variant: 'destructive',
         });
         
-        // Redirect to dashboard after error
+        // Still redirect to dashboard after error for better user experience
         setTimeout(() => {
           navigate('/dashboard/social-media', { replace: true });
-        }, 3000);
+        }, 5000); // Longer timeout to give user time to see the error
       }
     };
     
-    processCallback();
+    // Add a small delay to ensure all params are properly loaded
+    const timeoutId = setTimeout(() => {
+      processCallback();
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
   }, [searchParams, navigate, toast, fetchConnections]);
   
   return (
@@ -273,7 +271,8 @@ const FacebookAuthCallback: React.FC = () => {
           </Alert>
         )}
         
-        {status === 'error' && Object.keys(debugInfo).length > 0 && (
+        {/* Always show debug info for now to help troubleshoot */}
+        {Object.keys(debugInfo).length > 0 && (
           <div className="mt-4 border border-gray-300 rounded p-4 overflow-auto max-h-60 text-xs">
             <h3 className="font-bold mb-2 flex items-center justify-between">
               <span>Debug Information</span>
