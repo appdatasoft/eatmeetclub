@@ -144,6 +144,7 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
               ticketsPercentage={ticketsPercentage}
               isProcessing={isPaymentProcessing}
               handleTicketPurchase={handleTicketPurchase}
+              referralCode={referralCode}
             />
           )}
           

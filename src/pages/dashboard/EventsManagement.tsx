@@ -20,6 +20,20 @@ const EventsManagement = () => {
     }
   }, [events]);
 
+  // Add a listener for navigation to event details
+  useEffect(() => {
+    const handleEventClick = (eventId: string) => {
+      if (eventId) {
+        navigate(`/event/${eventId}`);
+      }
+    };
+
+    // Clean up any potential event listeners if needed
+    return () => {
+      // Cleanup code if necessary
+    };
+  }, [navigate]);
+
   return (
     <DashboardLayout>
       <Card>
