@@ -57,13 +57,13 @@ serve(async (req) => {
     
     console.log(`Using redirect URL: ${redirectTo}`);
     
-    // Generate a signup link (combines email verification and password setup)
+    // Generate a recovery link (for password reset/setup)
     const { data, error } = await supabase.auth.admin.generateLink({
-      type: 'signup',
+      type: 'recovery',
       email: email,
       options: {
         // Use the provided redirect URL with the set-password path
-        emailRedirectTo: redirectTo,
+        redirectTo: redirectTo,
       }
     });
     
