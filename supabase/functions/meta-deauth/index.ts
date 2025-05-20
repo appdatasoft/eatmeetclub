@@ -1,7 +1,8 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { createHmac } from "https://deno.land/std@0.190.0/node/crypto.ts";
+// Update the crypto import to use a compatible version
+import { createHmac } from "https://deno.land/std@0.190.0/crypto/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
