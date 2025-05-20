@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { EventDetails } from "@/types/event";
 
@@ -13,11 +14,15 @@ export const useEventDataFetch = () => {
         .from("events")
         .select("*, restaurants(*)")
         .eq("id", eventId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching event from Supabase:", error.message);
         return { event: null, error: "Event not found or failed to fetch." };
+      }
+
+      if (!data) {
+        return { event: null, error: "Event not found" };
       }
 
       const { ticketsSold, ticketsError } = await fetchTicketsSold(eventId);
@@ -25,14 +30,10 @@ export const useEventDataFetch = () => {
         console.warn("Ticket fetch warning:", ticketsError.message);
       }
 
-      if (data) {
-        return {
-          event: formatEventData(data, ticketsSold),
-          error: null
-        };
-      }
-
-      return { event: null, error: "No data found" };
+      return {
+        event: formatEventData(data, ticketsSold),
+        error: null
+      };
     } catch (err: any) {
       console.error("Unexpected error:", err.message);
       return { event: null, error: "Unexpected error occurred while loading event." };

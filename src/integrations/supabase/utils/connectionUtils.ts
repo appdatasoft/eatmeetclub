@@ -83,7 +83,12 @@ export const getConnectionDiagnostics = () => {
       code: lastError.code,
       details: lastError.details,
     } : null,
-    supabaseUrl: supabase.supabaseUrl?.substring(0, 30) + '...',
-    anon_key_length: supabase.supabaseKey?.length || 0,
+    // Use string properties safely without accessing protected members
+    supabaseUrl: typeof supabase.supabaseUrl === 'string' 
+      ? supabase.supabaseUrl.substring(0, 30) + '...' 
+      : 'unavailable',
+    anon_key_length: typeof supabase.supabaseKey === 'string' 
+      ? supabase.supabaseKey.length 
+      : 0,
   };
 };

@@ -63,10 +63,10 @@ export const useEventFetching = (eventId?: string) => {
       }
       
       // Use the fetchWithRetry utility with our event fetching function
-      const eventData = await fetchWithRetry(
+      const result = await fetchWithRetry(
         async () => {
           const data = await fetchEventWithDetails(eventId);
-          if (!data) {
+          if (!data.event) {
             throw new Error("Event not found");
           }
           return data;
@@ -82,16 +82,18 @@ export const useEventFetching = (eventId?: string) => {
         }
       );
       
-      if (eventData) {
-        setEvent(eventData);
+      if (result && result.event) {
+        setEvent(result.event);
         // Cache the result
-        cache.set(eventData);
+        cache.set(result.event);
         
         // Check if current user is the owner
-        if (eventData.user_id) {
-          const isOwner = await checkOwnership(eventData.user_id);
+        if (result.event.user_id) {
+          const isOwner = await checkOwnership(result.event.user_id);
           setIsCurrentUserOwner(isOwner);
         }
+      } else if (result && result.error) {
+        setError(result.error);
       }
     } catch (error: any) {
       console.error("Error in fetchEventDetails:", error);
@@ -115,16 +117,16 @@ export const useEventFetching = (eventId?: string) => {
   ) => {
     try {
       console.log("Refreshing event details in background");
-      const data = await fetchEventWithDetails(eventId);
+      const result = await fetchEventWithDetails(eventId);
       
-      if (data) {
+      if (result && result.event) {
         // Only update if there are actual differences
-        const hasChanged = JSON.stringify(data) !== JSON.stringify(currentEvent);
+        const hasChanged = JSON.stringify(result.event) !== JSON.stringify(currentEvent);
         
         if (hasChanged) {
           console.log("Background refresh found updated data");
-          setEvent(data);
-          cache.set(data);
+          setEvent(result.event);
+          cache.set(result.event);
         } else {
           console.log("Background refresh found no changes");
           // Update the cache expiry anyway
