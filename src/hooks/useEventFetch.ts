@@ -17,6 +17,7 @@ export const useEventFetch = (eventId: string | undefined): EventDetailsResponse
       return;
     }
 
+    console.log("🔄 Refreshing event details for ID:", eventId);
     setIsLoading(true);
     setError(null);
 
@@ -30,26 +31,31 @@ export const useEventFetch = (eventId: string | undefined): EventDetailsResponse
 
     try {
       const eventDetails = await fetchEventDetails(eventId);
+      console.log("✅ Event fetched:", eventDetails);
+
+      if (!eventDetails || !eventDetails.id) {
+        throw new Error("Event not found or malformed");
+      }
+
       setEvent(eventDetails);
 
       try {
         const isOwner = await checkEventOwnership(eventId);
-        setIsCurrentUserOwner(isOwner);
+        console.log("👤 Ownership check:", isOwner);
+        setIsCurrentUserOwner(!!isOwner);
       } catch (ownershipError) {
-        console.warn("Ownership check failed or skipped");
+        console.warn("⚠️ Ownership check failed or skipped", ownershipError);
         setIsCurrentUserOwner(false);
       }
 
       clearTimeout(timeoutId);
     } catch (err: any) {
-      console.error("Error in useEventFetch:", err);
+      console.error("❌ Error in useEventFetch:", err);
       setEvent(null);
-      setError(err.message || "An unexpected error occurred");
+      const message = err.message || "An unexpected error occurred";
+      setError(message);
 
-      if (
-        err.message !== "Invalid event ID format" &&
-        err.message !== "Event not found"
-      ) {
+      if (message !== "Invalid event ID format" && message !== "Event not found") {
         toast({
           title: "Error loading event",
           description: getUserFriendlyEventError(err),
@@ -61,7 +67,7 @@ export const useEventFetch = (eventId: string | undefined): EventDetailsResponse
     } finally {
       setIsLoading(false);
     }
-  }, [eventId]); // ✅ Only include eventId
+  }, [eventId]);
 
   useEffect(() => {
     refreshEventDetails();
