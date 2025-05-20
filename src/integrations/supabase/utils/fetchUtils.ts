@@ -11,7 +11,7 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
     try {
       // Create a controller for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for OAuth operations
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s timeout for OAuth operations (increased)
       
       const fetchOptions = {
         ...options,
@@ -24,19 +24,20 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
         }
       };
       
-      console.log(`Fetching ${url} with method ${options.method || 'GET'}`);
+      console.log(`[fetchUtils] Fetching ${url} with method ${options.method || 'GET'}`);
       
       // For OAuth callback requests, log more details but protect sensitive data
       if (url.includes('connect-social-media') && options.body) {
         try {
           const body = JSON.parse(options.body.toString());
-          console.log(`Request body for ${url}: `, {
+          console.log(`[fetchUtils] Request body for ${url}: `, {
             ...body,
             code: body.code ? `${body.code.substring(0, 10)}... (length: ${body.code.length})` : undefined,
-            redirectUri: body.redirectUri
+            redirectUri: body.redirectUri,
+            platform: body.platform
           });
         } catch (e) {
-          console.log('Could not parse request body for logging');
+          console.log('[fetchUtils] Could not parse request body for logging');
         }
       }
       
@@ -45,10 +46,10 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
         async () => {
           try {
             const resp = await fetch(url, fetchOptions);
-            console.log(`Response received from ${url}: status ${resp.status}`);
+            console.log(`[fetchUtils] Response received from ${url}: status ${resp.status}`);
             return resp;
           } catch (error) {
-            console.error(`Fetch error for ${url}:`, error);
+            console.error(`[fetchUtils] Fetch error for ${url}:`, error);
             throw error;
           }
         },
@@ -64,7 +65,7 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
         }
         
         const retryDelay = response.status === 429 ? delay * 5 : delay * 3;
-        console.warn(`Rate limited or server error (${response.status}). Waiting ${retryDelay}ms before retry.`);
+        console.warn(`[fetchUtils] Rate limited or server error (${response.status}). Waiting ${retryDelay}ms before retry.`);
         
         // Wait before retrying
         await new Promise(resolve => setTimeout(resolve, retryDelay));
@@ -88,7 +89,7 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
           // If it's not JSON, use the raw text
         }
         
-        console.error(`Request failed with status: ${response.status}, details:`, errorInfo);
+        console.error(`[fetchUtils] Request failed with status: ${response.status}, details:`, errorInfo);
         
         if (retries === 0) {
           return response;
@@ -98,7 +99,7 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
         await new Promise(resolve => setTimeout(resolve, delay));
         return fetchWithRetry(retries - 1, delay * 2);
       } catch (error) {
-        console.error('Error reading response body:', error);
+        console.error('[fetchUtils] Error reading response body:', error);
         if (retries === 0) return response;
         
         // Wait before retrying
@@ -107,7 +108,7 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        console.warn('Request timed out, retrying...');
+        console.warn('[fetchUtils] Request timed out, retrying...');
         if (retries === 0) throw new Error('Request timed out after multiple retries');
         
         // Wait before retrying
@@ -118,12 +119,12 @@ export const customFetch = async (url: string, options: RequestInit = {}): Promi
       if (retries === 0) throw error;
       
       // For network errors, retry with exponential backoff
-      console.warn(`Fetch error: ${error.message}, retrying...`);
+      console.warn(`[fetchUtils] Fetch error: ${error.message}, retrying...`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return fetchWithRetry(retries - 1, delay * 2);
     }
   };
   
   // Initial retry attempt with exponential backoff
-  return fetchWithRetry(4, 2000); // 4 retries with 2s initial delay
+  return fetchWithRetry(5, 2000); // 5 retries (increased) with 2s initial delay
 };
