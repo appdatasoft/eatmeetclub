@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -43,10 +42,9 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  
-  console.log("EventDetailsContent received event:", event);
-  
-  // Ensure restaurant info is available
+
+  if (!event || !event.title) return null;
+
   const restaurant = event.restaurant || { 
     id: "unknown", 
     name: "Unknown Restaurant", 
@@ -56,15 +54,14 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
     zipcode: '',
     description: ''
   };
-  const locationStr = `${restaurant.address}, ${restaurant.city}, ${restaurant.state} ${restaurant.zipcode}`;
 
-  // Get user team ID if available
+  const locationStr = `${restaurant.address || ''}, ${restaurant.city || ''}, ${restaurant.state || ''} ${restaurant.zipcode || ''}`;
+
   const [userTeamId, setUserTeamId] = React.useState<string | undefined>(undefined);
-  
+
   React.useEffect(() => {
     const fetchUserTeam = async () => {
       if (!user?.id || !event?.id) return;
-      
       try {
         const { data } = await supabase
           .from('event_team_members')
@@ -72,15 +69,11 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
           .eq('user_id', user.id)
           .eq('event_id', event.id)
           .single();
-          
-        if (data) {
-          setUserTeamId(data.team_id);
-        }
+        if (data) setUserTeamId(data.team_id);
       } catch (error) {
         console.error('Error fetching user team:', error);
       }
     };
-    
     fetchUserTeam();
   }, [user?.id, event?.id]);
 
@@ -90,15 +83,14 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
         <div className={`flex ${isMobile ? 'flex-col' : 'justify-end'} mb-4 ${isMobile ? 'space-y-2' : 'space-x-2'}`}>
           <EventActionButtons
             eventUrl={eventUrl}
-            eventTitle={event.title}
+            eventTitle={event.title || ''}
             onEditEvent={handleEditEvent}
             onDeleteEvent={handleDeleteEvent}
-            isPublished={event.published}
+            isPublished={!!event.published}
           />
         </div>
       )}
-      
-      {/* Show affiliate referral banner if present */}
+
       {referralCode && (
         <Alert className="mb-4 bg-blue-50 border-blue-200">
           <Info className="h-4 w-4 text-blue-600" />
@@ -107,9 +99,8 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
           </AlertDescription>
         </Alert>
       )}
-      
+
       <div className="grid grid-cols-1 gap-4 md:gap-6 lg:gap-8 lg:grid-cols-3">
-        {/* Main content */}
         <div className="lg:col-span-2">
           <EventDetailsContainer
             event={event}
@@ -119,8 +110,7 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
             eventUrl={eventUrl}
             isCurrentUserOwner={isCurrentUserOwner}
           />
-          
-          {/* Add the AI Agent component */}
+
           {event.published && (
             <div className="mt-6">
               <EventAiAgent 
@@ -131,23 +121,22 @@ const EventDetailsContent: React.FC<EventDetailsContentProps> = ({
           )}
         </div>
 
-        {/* Ticket purchase sidebar */}
         <div className="lg:col-span-1">
           {event.published && (
             <TicketPurchase
               event={{
                 id: event.id,
-                title: event.title,
-                price: event.price
+                title: event.title || '',
+                price: event.price || 0
               }}
-              ticketsRemaining={ticketsRemaining} 
+              ticketsRemaining={ticketsRemaining}
               ticketsPercentage={ticketsPercentage}
               isProcessing={isPaymentProcessing}
               handleTicketPurchase={handleTicketPurchase}
               referralCode={referralCode}
             />
           )}
-          
+
           {!event.published && canEditEvent && (
             <div className="bg-white p-6 rounded-lg shadow-sm sticky top-24">
               <div className="mb-4 text-amber-600 font-medium">⚠️ This event is not published</div>
