@@ -1,16 +1,16 @@
 
 /// <reference types="vitest" />
-import { describe, it, vi, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { TicketPurchase } from './TicketPurchase'
-import { ThemeProvider } from '@/components/theme-provider'
+import { describe, it, vi, expect, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { TicketPurchase } from './TicketPurchase';
+import { ThemeProvider } from '@/components/theme-provider';
 
 // ✅ Mock useToast
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
     toast: vi.fn(),
   }),
-}))
+}));
 
 // ✅ Mock useCheckoutSession hook
 vi.mock('@/hooks/membership/useCheckoutSession', () => ({
@@ -18,7 +18,7 @@ vi.mock('@/hooks/membership/useCheckoutSession', () => ({
     startCheckout: vi.fn(),
     isLoading: false,
   }),
-}))
+}));
 
 // ✅ Mock Supabase auth
 vi.mock('@/integrations/supabase/client', () => ({
@@ -29,58 +29,58 @@ vi.mock('@/integrations/supabase/client', () => ({
       }),
     },
   },
-}))
+}));
 
 const renderWithProviders = (ui: React.ReactElement) => {
-  return render(<ThemeProvider>{ui}</ThemeProvider>)
-}
+  return render(<ThemeProvider>{ui}</ThemeProvider>);
+};
 
 describe('TicketPurchase', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   it('disables increase button when ticket count equals ticketsRemaining', () => {
     renderWithProviders(
       <TicketPurchase eventId="123" ticketPrice={25} ticketsRemaining={1} />
-    )
+    );
 
     const increaseButton = screen.getByRole('button', {
       name: /increase ticket count/i,
-    })
-    expect(increaseButton).toBeDisabled()
-  })
+    });
+    expect(increaseButton).toBeDisabled();
+  });
 
   it('increases and decreases ticket count with buttons', () => {
     renderWithProviders(
       <TicketPurchase eventId="123" ticketPrice={25} ticketsRemaining={5} />
-    )
+    );
 
     const input = screen.getByRole('spinbutton', {
       name: /number of tickets/i,
-    })
+    });
     const increase = screen.getByRole('button', {
       name: /increase ticket count/i,
-    })
+    });
     const decrease = screen.getByRole('button', {
       name: /decrease ticket count/i,
-    })
+    });
 
-    expect(input).toHaveValue(1)
+    expect(input).toHaveValue(1);
 
-    fireEvent.click(increase)
-    expect(input).toHaveValue(2)
+    fireEvent.click(increase);
+    expect(input).toHaveValue(2);
 
-    fireEvent.click(decrease)
-    expect(input).toHaveValue(1)
-  })
+    fireEvent.click(decrease);
+    expect(input).toHaveValue(1);
+  });
 
   it('displays the correct total', () => {
     renderWithProviders(
       <TicketPurchase eventId="123" ticketPrice={10} ticketsRemaining={10} />
-    )
+    );
 
-    const total = screen.getByText(/\$10\.50/) // 10 + 0.5 service fee
-    expect(total).toBeInTheDocument()
-  })
-})
+    const total = screen.getByText(/\$10\.50/); // 10 + 0.5 service fee
+    expect(total).toBeInTheDocument();
+  });
+});

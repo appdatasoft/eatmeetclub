@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SocialMediaTab from '../SocialMediaTab';
 import { useSocialMedia } from '@/hooks/useSocialMedia';
 import { useEditableContent } from '@/components/editor/EditableContentProvider';

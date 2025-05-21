@@ -1,8 +1,8 @@
 
 import { render, screen } from "@/lib/test-setup";
 import { EventDetails } from "@/types/event";
-import EventDetailsContainer from "./EventDetailsContainer";
 import { describe, it, expect, vi } from "vitest";
+import EventDetailsContainer from "./EventDetailsContainer";
 
 // Mock useIsMobile hook
 vi.mock("@/hooks/use-mobile", () => ({

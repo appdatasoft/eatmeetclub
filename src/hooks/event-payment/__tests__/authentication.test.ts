@@ -1,17 +1,17 @@
 
 /// <reference types="vitest" />
-import { describe, it, vi, expect, beforeEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
-import { useEventPaymentHandler } from '../../useEventPaymentHandler'
-import { EventDetails } from '@/hooks/types/eventTypes'
+import { describe, it, vi, expect, beforeEach } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { useEventPaymentHandler } from '../useEventPaymentHandler';
+import { EventDetails } from '@/hooks/types/eventTypes';
 
 vi.mock('@/lib/navigation', () => ({
   redirectToLogin: vi.fn(),
-}))
+}));
 
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: vi.fn() }),
-}))
+}));
 
 // ✅ Mock Supabase auth completely
 vi.mock('@/integrations/supabase/client', () => ({
@@ -29,12 +29,12 @@ vi.mock('@/integrations/supabase/client', () => ({
       }),
     },
   },
-}))
+}));
 
 describe('useEventPaymentHandler authentication flow', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   it('should redirect to login when user is not authenticated', async () => {
     // Create a mock event object that satisfies the EventDetails type
@@ -68,5 +68,5 @@ describe('useEventPaymentHandler authentication flow', () => {
     expect(result.current.isPaymentProcessing).toBe(false);
     // Verify handleBuyTickets is defined
     expect(typeof result.current.handleBuyTickets).toBe('function');
-  })
-})
+  });
+});
