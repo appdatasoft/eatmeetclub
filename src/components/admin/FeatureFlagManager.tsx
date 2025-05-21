@@ -1,25 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { FeatureFlag, FeatureFlagValue, AppEnvironment } from '@/hooks/useFeatureFlags';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { AlertTriangle, Info, RefreshCw, Users, User } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Input } from '@/components/ui/input';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { AlertTriangle, Info, RefreshCw } from 'lucide-react';
+import UserTargetingDialog from './feature-flags/UserTargetingDialog';
+import EnvironmentTabContent from './feature-flags/EnvironmentTabContent';
 
 interface UserFeatureTarget {
   id: string;
@@ -27,11 +17,6 @@ interface UserFeatureTarget {
   feature_id: string;
   is_enabled: boolean;
   email?: string;
-}
-
-interface UserSearchResult {
-  id: string;
-  email: string;
 }
 
 export const FeatureFlagManager = () => {
@@ -44,9 +29,8 @@ export const FeatureFlagManager = () => {
   const [flagValues, setFlagValues] = useState<FeatureFlagValue[]>([]);
   const [userTargets, setUserTargets] = useState<UserFeatureTarget[]>([]);
   const [currentEnv, setCurrentEnv] = useState<AppEnvironment>('production');
-  const [emailInput, setEmailInput] = useState('');
-  const [userSearchResults, setUserSearchResults] = useState<UserSearchResult[]>([]);
   const [selectedFeature, setSelectedFeature] = useState<FeatureFlag | null>(null);
+  const [userTargetingOpen, setUserTargetingOpen] = useState(false);
 
   const fetchFeatureFlags = async () => {
     try {
@@ -106,101 +90,6 @@ export const FeatureFlagManager = () => {
     }
   };
 
-  const searchUsersByEmail = async (email: string) => {
-    try {
-      if (!email || email.length < 3) {
-        setUserSearchResults([]);
-        return;
-      }
-
-      // In a real app, you'd have a secure way to search users
-      // For now, we'll use demo data for UI testing
-      setUserSearchResults([
-        { id: 'demo-user-1', email: 'demo1@example.com' },
-        { id: 'demo-user-2', email: 'demo2@example.com' }
-      ]);
-    } catch (err: any) {
-      console.error('Error searching users:', err);
-      toast({
-        title: 'Failed to search users',
-        description: err.message || 'Please try again later',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const addUserTargeting = async (userId: string, featureId: string, isEnabled: boolean) => {
-    try {
-      setIsUpdating(true);
-
-      // Use the set_user_feature_targeting RPC function
-      const { data, error } = await supabase
-        .rpc('set_user_feature_targeting', {
-          user_uuid: userId,
-          feature_uuid: featureId,
-          enabled: isEnabled
-        });
-        
-      if (error) throw error;
-
-      toast({
-        title: 'User targeting updated',
-        description: `Feature has been ${isEnabled ? 'enabled' : 'disabled'} for user`,
-      });
-
-      // Refresh the data
-      fetchFeatureFlags();
-    } catch (err: any) {
-      console.error('Error updating user targeting:', err);
-      toast({
-        title: 'Failed to update user targeting',
-        description: err.message || 'Please try again later',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsUpdating(false);
-      setEmailInput('');
-      setUserSearchResults([]);
-    }
-  };
-
-  const removeUserTargeting = async (targetId: string) => {
-    try {
-      setIsUpdating(true);
-
-      // Use the remove_user_feature_targeting RPC function
-      const { data, error } = await supabase
-        .rpc('remove_user_feature_targeting', {
-          target_uuid: targetId
-        });
-
-      if (error) throw error;
-
-      // Update local state
-      setUserTargets(prev => prev.filter(t => t.id !== targetId));
-
-      toast({
-        title: 'User targeting removed',
-        description: 'The user will now use the default feature setting',
-      });
-    } catch (err: any) {
-      console.error('Error removing user targeting:', err);
-      toast({
-        title: 'Failed to remove user targeting',
-        description: err.message || 'Please try again later',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user && isAdmin) {
-      fetchFeatureFlags();
-    }
-  }, [user, isAdmin]);
-
   const handleToggleFeature = async (featureId: string, environment: AppEnvironment, isEnabled: boolean) => {
     try {
       setIsUpdating(true);
@@ -242,6 +131,17 @@ export const FeatureFlagManager = () => {
       setIsUpdating(false);
     }
   };
+
+  const handleOpenUserTargeting = (flag: FeatureFlag) => {
+    setSelectedFeature(flag);
+    setUserTargetingOpen(true);
+  };
+
+  useEffect(() => {
+    if (user && isAdmin) {
+      fetchFeatureFlags();
+    }
+  }, [user, isAdmin]);
 
   if (!isAdmin) {
     return (
@@ -307,150 +207,27 @@ export const FeatureFlagManager = () => {
         </TabsList>
 
         {(['development', 'staging', 'production'] as AppEnvironment[]).map((env) => (
-          <TabsContent key={env} value={env} className="space-y-4">
-            {featureFlags.map((flag) => {
-              const flagValue = flagValues.find(
-                v => v.feature_id === flag.id && v.environment === env
-              );
-              
-              const isEnabled = flagValue?.is_enabled || false;
-              
-              return (
-                <Card key={flag.id}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">{flag.display_name}</CardTitle>
-                    <CardDescription>{flag.description || `Key: ${flag.feature_key}`}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor={`${flag.id}-${env}`} className="flex-1">
-                        Enable for {env}
-                      </Label>
-                      <Switch
-                        id={`${flag.id}-${env}`}
-                        checked={isEnabled}
-                        onCheckedChange={(checked) => handleToggleFeature(flag.id, env, checked)}
-                        disabled={isUpdating}
-                      />
-                    </div>
-                  </CardContent>
-                  <CardFooter className="pb-3">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="mt-2"
-                          onClick={() => setSelectedFeature(flag)}
-                        >
-                          <Users className="mr-2 h-4 w-4" /> Manage User Targeting
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-[500px]">
-                        <DialogHeader>
-                          <DialogTitle>User Targeting for {flag.display_name}</DialogTitle>
-                          <DialogDescription>
-                            Override the {env} environment setting for specific users
-                          </DialogDescription>
-                        </DialogHeader>
-                        
-                        <div className="space-y-4 my-4">
-                          <div className="flex items-center space-x-2">
-                            <Input
-                              placeholder="Search user by email"
-                              value={emailInput}
-                              onChange={(e) => {
-                                setEmailInput(e.target.value);
-                                searchUsersByEmail(e.target.value);
-                              }}
-                            />
-                          </div>
-                          
-                          {userSearchResults.length > 0 && (
-                            <div className="border rounded-md p-2">
-                              <h4 className="text-sm font-semibold mb-2">Search Results</h4>
-                              <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {userSearchResults.map(user => (
-                                  <div key={user.id} className="flex items-center justify-between border-b pb-2">
-                                    <div className="flex items-center">
-                                      <User className="h-4 w-4 mr-2" />
-                                      <span>{user.email}</span>
-                                    </div>
-                                    <div className="flex space-x-2">
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => addUserTargeting(user.id, flag.id, true)}
-                                        disabled={isUpdating}
-                                      >
-                                        Enable
-                                      </Button>
-                                      <Button
-                                        size="sm" 
-                                        variant="outline"
-                                        onClick={() => addUserTargeting(user.id, flag.id, false)}
-                                        disabled={isUpdating}
-                                      >
-                                        Disable
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {userTargets.filter(t => t.feature_id === flag.id).length > 0 && (
-                            <div className="border rounded-md p-2">
-                              <h4 className="text-sm font-semibold mb-2">Current Overrides</h4>
-                              <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {userTargets
-                                  .filter(t => t.feature_id === flag.id)
-                                  .map(target => {
-                                    // Find user email from search results if available
-                                    const targetUser = userSearchResults.find(u => u.id === target.user_id);
-                                    return (
-                                      <div key={target.id} className="flex items-center justify-between border-b pb-2">
-                                        <div className="flex items-center">
-                                          <User className="h-4 w-4 mr-2" />
-                                          <span>
-                                            {targetUser?.email || target.user_id.substring(0, 8)}
-                                            {target.is_enabled ? ' (Enabled)' : ' (Disabled)'}
-                                          </span>
-                                        </div>
-                                        <Button 
-                                          size="sm" 
-                                          variant="destructive"
-                                          onClick={() => removeUserTargeting(target.id)}
-                                          disabled={isUpdating}
-                                        >
-                                          Remove
-                                        </Button>
-                                      </div>
-                                    );
-                                  })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <DialogFooter>
-                          <Button variant="outline" onClick={() => {
-                            setEmailInput('');
-                            setUserSearchResults([]);
-                          }}>
-                            Close
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </CardFooter>
-                </Card>
-              );
-            })}
-          </TabsContent>
+          <EnvironmentTabContent
+            key={env}
+            environment={env}
+            featureFlags={featureFlags}
+            flagValues={flagValues}
+            isUpdating={isUpdating}
+            onToggleFeature={handleToggleFeature}
+            onOpenUserTargeting={handleOpenUserTargeting}
+          />
         ))}
       </Tabs>
+
+      <UserTargetingDialog
+        open={userTargetingOpen}
+        setOpen={setUserTargetingOpen}
+        feature={selectedFeature}
+        userTargets={userTargets}
+        onUserTargetsChange={fetchFeatureFlags}
+      />
     </div>
   );
 };
+
+export default FeatureFlagManager;
