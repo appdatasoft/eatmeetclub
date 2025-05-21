@@ -10,6 +10,10 @@ export interface TicketDetails {
   price: number;
   service_fee: number;
   total_amount: number;
+  app_fee?: number;
+  affiliate_fee?: number;
+  ambassador_fee?: number;
+  restaurant_revenue?: number;
 }
 
 export interface EventDetails {
@@ -31,6 +35,12 @@ export const useTicketVerification = (sessionId: string | null) => {
   const [ticketDetails, setTicketDetails] = useState<TicketDetails | null>(null);
   const [eventDetails, setEventDetails] = useState<EventDetails | null>(null);
   const [emailSent, setEmailSent] = useState(false);
+  const [distributionDetails, setDistributionDetails] = useState<{
+    appFee?: number;
+    affiliateFee?: number;
+    ambassadorFee?: number;
+    restaurantRevenue?: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!sessionId) {
@@ -85,6 +95,11 @@ export const useTicketVerification = (sessionId: string | null) => {
         const ticket = response.data.ticket;
         setTicketDetails(ticket);
         setEmailSent(!!response.data.emailSent);
+        
+        // Set distribution details if available
+        if (response.data.distribution) {
+          setDistributionDetails(response.data.distribution);
+        }
 
         // Notify about invoice email
         if (response.data.emailSent) {
@@ -146,7 +161,8 @@ export const useTicketVerification = (sessionId: string | null) => {
     isVerifying,
     ticketDetails,
     eventDetails,
-    emailSent
+    emailSent,
+    distributionDetails
   };
 };
 

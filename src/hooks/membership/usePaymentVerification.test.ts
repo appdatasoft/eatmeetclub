@@ -1,223 +1,210 @@
 
-import { renderHook, act } from '@testing-library/react-hooks';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { vi } from 'vitest';
 import { usePaymentVerification } from './usePaymentVerification';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useVerificationRequest } from './payment-verification/useVerificationRequest';
-import { useBackupProcessing } from './payment-verification/useBackupProcessing';
-import { useUserStorage } from './payment-verification/useUserStorage';
+import { useNavigate } from 'react-router-dom';
 
 // Mock dependencies
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: {
+    functions: {
+      invoke: vi.fn()
+    }
+  }
+}));
+
 vi.mock('@/hooks/use-toast', () => ({
-  useToast: vi.fn()
+  useToast: vi.fn(() => ({
+    toast: vi.fn()
+  }))
 }));
 
-vi.mock('./payment-verification/useVerificationRequest', () => ({
-  useVerificationRequest: vi.fn()
+vi.mock('react-router-dom', () => ({
+  useNavigate: vi.fn(() => vi.fn())
 }));
 
-vi.mock('./payment-verification/useBackupProcessing', () => ({
-  useBackupProcessing: vi.fn()
-}));
+// Mock localStorage
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, value: string) => { store[key] = value },
+    removeItem: (key: string) => { delete store[key] },
+    clear: () => { store = {} }
+  };
+})();
 
-vi.mock('./payment-verification/useUserStorage', () => ({
-  useUserStorage: vi.fn()
-}));
+Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
 describe('usePaymentVerification', () => {
-  const mockSetIsProcessing = vi.fn();
-  const mockToast = { toast: vi.fn() };
-  const mockSendVerificationRequest = vi.fn();
-  const mockHandleSimplifiedVerification = vi.fn();
-  const mockSendBackupEmails = vi.fn();
-  const mockShowVerificationToasts = vi.fn();
-  const mockGetUserDetails = vi.fn();
-  const mockClearUserDetails = vi.fn();
-  
   beforeEach(() => {
     vi.clearAllMocks();
-    
-    (useToast as any).mockReturnValue(mockToast);
-    
-    (useVerificationRequest as any).mockReturnValue({
-      sendVerificationRequest: mockSendVerificationRequest,
-      isVerifying: false,
-      verificationError: null,
-      verificationAttempts: 0,
-      setVerificationAttempts: vi.fn()
-    });
-    
-    (useBackupProcessing as any).mockReturnValue({
-      handleSimplifiedVerification: mockHandleSimplifiedVerification,
-      sendBackupEmails: mockSendBackupEmails,
-      showVerificationToasts: mockShowVerificationToasts
-    });
-    
-    (useUserStorage as any).mockReturnValue({
-      getUserDetails: mockGetUserDetails,
-      clearUserDetails: mockClearUserDetails,
-      storeUserDetails: vi.fn()
-    });
-  });
-
-  it('should return verifyPayment function', () => {
-    const { result } = renderHook(() => usePaymentVerification({ setIsProcessing: mockSetIsProcessing }));
-    
-    expect(typeof result.current.verifyPayment).toBe('function');
-  });
-
-  it('should not verify payment if email is missing', async () => {
-    mockGetUserDetails.mockReturnValue({ email: '', name: '', phone: '', address: '' });
-    
-    const { result } = renderHook(() => usePaymentVerification({ setIsProcessing: mockSetIsProcessing }));
-    
-    const success = await result.current.verifyPayment('payment_123');
-    
-    expect(success).toBe(false);
-    expect(mockToast.toast).toHaveBeenCalledWith(expect.objectContaining({ 
-      title: 'Email missing',
-      variant: 'destructive'
-    }));
-    expect(mockSendVerificationRequest).not.toHaveBeenCalled();
+    localStorageMock.clear();
+    localStorageMock.setItem('signup_email', 'test@example.com');
+    localStorageMock.setItem('signup_name', 'Test User');
   });
 
   it('should successfully verify payment', async () => {
-    mockGetUserDetails.mockReturnValue({ 
-      email: 'test@example.com', 
-      name: 'Test User', 
-      phone: '123456', 
-      address: '123 Test St' 
+    // Mock successful payment verification
+    const mockSuccessResponse = { data: { success: true } };
+    (supabase.functions.invoke as jest.Mock).mockResolvedValueOnce(mockSuccessResponse);
+
+    const mockToast = vi.fn();
+    (useToast as jest.Mock).mockReturnValue({ toast: mockToast });
+
+    const mockNavigate = vi.fn();
+    (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
+
+    const mockOnSuccess = vi.fn();
+
+    const { result } = renderHook(() => usePaymentVerification({
+      onSuccess: mockOnSuccess
+    }));
+
+    await act(async () => {
+      await result.current.verifyPayment('pi_123456789');
     });
-    
-    mockSendVerificationRequest.mockResolvedValueOnce({ success: true });
-    
-    const { result } = renderHook(() => usePaymentVerification({ setIsProcessing: mockSetIsProcessing }));
-    
-    const success = await result.current.verifyPayment('payment_123');
-    
-    expect(mockSetIsProcessing).toHaveBeenCalledWith(true);
-    expect(mockSendVerificationRequest).toHaveBeenCalledWith(
-      'payment_123', 
-      'test@example.com', 
-      'Test User',
-      expect.objectContaining({
-        phone: '123456',
-        address: '123 Test St',
-        isSubscription: true
-      })
+
+    // Verify that the correct function was called
+    expect(supabase.functions.invoke).toHaveBeenCalledWith(
+      'verify-membership-payment',
+      {
+        body: {
+          paymentId: 'pi_123456789',
+          email: 'test@example.com'
+        }
+      }
     );
-    expect(mockShowVerificationToasts).toHaveBeenCalledWith({ success: true });
-    expect(mockClearUserDetails).toHaveBeenCalled();
-    expect(mockSetIsProcessing).toHaveBeenCalledWith(false);
-    expect(success).toBe(true);
+
+    // Verify success callbacks
+    expect(mockToast).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+    expect(mockOnSuccess).toHaveBeenCalled();
   });
 
-  it('should try simplified verification as fallback when regular verification fails', async () => {
-    mockGetUserDetails.mockReturnValue({ 
-      email: 'test@example.com', 
-      name: 'Test User', 
-      phone: '', 
-      address: '' 
-    });
-    
-    mockSendVerificationRequest.mockRejectedValueOnce(new Error('Verification failed'));
-    mockHandleSimplifiedVerification.mockResolvedValueOnce(true);
-    mockSendVerificationRequest.mockResolvedValueOnce({ success: true });
-    
-    const { result } = renderHook(() => usePaymentVerification({ setIsProcessing: mockSetIsProcessing }));
-    
-    const success = await result.current.verifyPayment('payment_123', { retry: true });
-    
-    expect(mockHandleSimplifiedVerification).toHaveBeenCalledWith(
-      'payment_123',
-      'test@example.com',
-      'Test User'
-    );
-    expect(mockSendVerificationRequest).toHaveBeenCalledWith(
-      'payment_123',
-      'test@example.com',
-      'Test User',
-      expect.objectContaining({
-        simplifiedVerification: true,
-        safeMode: true,
-        forceSendEmails: true
-      })
-    );
-    expect(mockClearUserDetails).toHaveBeenCalled();
-    expect(success).toBe(true);
-  });
+  it('should handle payment verification error', async () => {
+    // Mock failed payment verification
+    const mockErrorResponse = { error: { message: 'Verification failed' } };
+    (supabase.functions.invoke as jest.Mock).mockResolvedValueOnce(mockErrorResponse);
 
-  it('should send backup emails when all verification attempts fail', async () => {
-    mockGetUserDetails.mockReturnValue({ 
-      email: 'test@example.com', 
-      name: 'Test User', 
-      phone: '', 
-      address: '' 
+    const mockToast = vi.fn();
+    (useToast as jest.Mock).mockReturnValue({ toast: mockToast });
+
+    const mockOnError = vi.fn();
+
+    const { result } = renderHook(() => usePaymentVerification({
+      onError: mockOnError
+    }));
+
+    let response;
+    await act(async () => {
+      response = await result.current.verifyPayment('pi_invalid');
     });
-    
-    mockSendVerificationRequest.mockRejectedValueOnce(new Error('Verification failed'));
-    mockHandleSimplifiedVerification.mockResolvedValueOnce(false);
-    
-    const { result } = renderHook(() => usePaymentVerification({ setIsProcessing: mockSetIsProcessing }));
-    
-    const success = await result.current.verifyPayment('payment_123', { retry: true });
-    
-    expect(mockToast.toast).toHaveBeenCalledWith(expect.objectContaining({ 
-      title: 'Verification issue',
+
+    // Verify error handling
+    expect(response).toEqual({ success: false, error: 'Verification failed' });
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
       variant: 'destructive'
     }));
-    expect(mockSendBackupEmails).toHaveBeenCalledWith('payment_123', 'test@example.com', 'Test User');
-    expect(success).toBe(false);
+    expect(mockOnError).toHaveBeenCalledWith('Verification failed');
   });
 
-  it('should not verify the same session ID twice', async () => {
-    mockGetUserDetails.mockReturnValue({ 
-      email: 'test@example.com', 
-      name: 'Test User', 
-      phone: '', 
-      address: '' 
+  it('should handle missing email', async () => {
+    localStorageMock.removeItem('signup_email');
+
+    const mockToast = vi.fn();
+    (useToast as jest.Mock).mockReturnValue({ toast: mockToast });
+
+    const mockOnError = vi.fn();
+
+    const { result } = renderHook(() => usePaymentVerification({
+      onError: mockOnError
+    }));
+
+    let response;
+    await act(async () => {
+      response = await result.current.verifyPayment('pi_123456789');
     });
-    
-    mockSendVerificationRequest.mockResolvedValue({ success: true });
-    
-    const { result } = renderHook(() => usePaymentVerification({ setIsProcessing: mockSetIsProcessing }));
-    
-    // First verification
-    await result.current.verifyPayment('payment_123');
-    expect(mockSendVerificationRequest).toHaveBeenCalledTimes(1);
-    
-    // Reset mock to check if it's called again
-    mockSendVerificationRequest.mockClear();
-    
-    // Second verification with same ID
-    const success = await result.current.verifyPayment('payment_123');
-    
-    expect(mockSendVerificationRequest).not.toHaveBeenCalled();
-    expect(success).toBe(true);
+
+    // Verify error handling for missing email
+    expect(response).toEqual({ success: false, error: 'Missing email for verification' });
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
+      variant: 'destructive'
+    }));
+    expect(mockOnError).toHaveBeenCalledWith('Missing email for verification');
   });
 
-  it('should bypass duplication check when forceSendEmails is true', async () => {
-    mockGetUserDetails.mockReturnValue({ 
-      email: 'test@example.com', 
-      name: 'Test User', 
-      phone: '', 
-      address: '' 
+  it('should handle API exceptions', async () => {
+    // Mock API exception
+    (supabase.functions.invoke as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+
+    const mockToast = vi.fn();
+    (useToast as jest.Mock).mockReturnValue({ toast: mockToast });
+
+    const mockOnError = vi.fn();
+
+    const { result } = renderHook(() => usePaymentVerification({
+      onError: mockOnError
+    }));
+
+    let response;
+    await act(async () => {
+      response = await result.current.verifyPayment('pi_123456789');
     });
+
+    // Verify exception handling
+    expect(response).toEqual({ success: false, error: 'Network error' });
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
+      variant: 'destructive'
+    }));
+    expect(mockOnError).toHaveBeenCalledWith('Network error');
+  });
+
+  it('should clear local storage on success', async () => {
+    // Set up localStorage
+    localStorageMock.setItem('signup_email', 'test@example.com');
+    localStorageMock.setItem('signup_name', 'Test User');
+    localStorageMock.setItem('signup_phone', '1234567890');
+    localStorageMock.setItem('signup_address', '123 Main St');
     
-    mockSendVerificationRequest.mockResolvedValue({ success: true });
-    
-    const { result } = renderHook(() => usePaymentVerification({ setIsProcessing: mockSetIsProcessing }));
-    
-    // First verification
-    await result.current.verifyPayment('payment_123');
-    expect(mockSendVerificationRequest).toHaveBeenCalledTimes(1);
-    
-    // Reset mock to check if it's called again
-    mockSendVerificationRequest.mockClear();
-    
-    // Second verification with force option
-    await result.current.verifyPayment('payment_123', { forceSendEmails: true });
-    
-    expect(mockSendVerificationRequest).toHaveBeenCalledTimes(1);
+    // Mock successful payment verification
+    const mockSuccessResponse = { data: { success: true } };
+    (supabase.functions.invoke as jest.Mock).mockResolvedValueOnce(mockSuccessResponse);
+
+    const { result } = renderHook(() => usePaymentVerification({}));
+
+    await act(async () => {
+      await result.current.verifyPayment('pi_123456789');
+    });
+
+    // Verify localStorage was cleared
+    expect(localStorageMock.getItem('signup_email')).toBeNull();
+    expect(localStorageMock.getItem('signup_name')).toBeNull();
+    expect(localStorageMock.getItem('signup_phone')).toBeNull();
+    expect(localStorageMock.getItem('signup_address')).toBeNull();
+  });
+
+  it('should return verification data', async () => {
+    const mockVerificationData = { 
+      data: { 
+        success: true,
+        userId: 'user_123',
+        userCreated: false,
+        membershipId: 'mem_123'
+      } 
+    };
+    (supabase.functions.invoke as jest.Mock).mockResolvedValueOnce(mockVerificationData);
+
+    const { result } = renderHook(() => usePaymentVerification({}));
+
+    let response;
+    await act(async () => {
+      response = await result.current.verifyPayment('pi_123456789');
+    });
+
+    // Verify returned data
+    expect(response).toEqual(mockVerificationData.data);
   });
 });

@@ -9,7 +9,7 @@ import { usePaymentConfig } from "@/hooks/usePaymentConfig";
 
 export interface EventPaymentHandlerResponse {
   isPaymentProcessing: boolean;
-  handleBuyTickets: (ticketCount: number) => Promise<void>;
+  handleBuyTickets: (ticketCount: number, affiliateId?: string) => Promise<void>;
 }
 
 export const useEventPaymentHandler = (
@@ -21,7 +21,7 @@ export const useEventPaymentHandler = (
   const { data: paymentConfig } = usePaymentConfig();
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
 
-  const handleBuyTickets = async (ticketCount: number) => {
+  const handleBuyTickets = async (ticketCount: number, affiliateId?: string) => {
     if (!event) {
       toast({
         title: "Error",
@@ -36,6 +36,7 @@ export const useEventPaymentHandler = (
       localStorage.setItem('pendingTicketPurchase', JSON.stringify({
         eventId: event.id,
         ticketCount: ticketCount,
+        affiliateId: affiliateId, // Store affiliate ID if available
         redirectPath: `/event/${event.id}`
       }));
       
@@ -81,10 +82,11 @@ export const useEventPaymentHandler = (
       console.log("Creating payment with:", {
         eventId: event.id,
         quantity: ticketCount,
-        userId: user.id
+        userId: user.id,
+        affiliateId: affiliateId
       });
       
-      const paymentResult = await createTicketPayment(event.id, ticketCount, user.id);
+      const paymentResult = await createTicketPayment(event.id, ticketCount, user.id, affiliateId);
       
       if (paymentResult.error) {
         throw new Error(paymentResult.error);

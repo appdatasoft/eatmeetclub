@@ -73,7 +73,7 @@ serve(async (req) => {
       );
     }
     
-    const { eventId, quantity } = purchaseData;
+    const { eventId, quantity, affiliateId } = purchaseData;
 
     logPaymentStep("Processing purchase data", purchaseData);
 
@@ -85,11 +85,20 @@ serve(async (req) => {
       );
     }
 
-    // Verify event exists
+    // Verify event exists and is approved
     logPaymentStep("Fetching event details", { eventId });
     const { data: event, error: eventError } = await supabaseClient
       .from('events')
-      .select('title, tickets_sold, capacity, price')
+      .select(`
+        title, 
+        tickets_sold, 
+        capacity, 
+        price, 
+        approval_status, 
+        restaurant_id, 
+        user_id,
+        ambassador_fee_percentage
+      `)
       .eq('id', eventId)
       .single();
 
@@ -100,8 +109,17 @@ serve(async (req) => {
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
+    
     logPaymentStep("Event found", event);
+    
+    // Verify event is approved
+    if (event.approval_status !== 'approved') {
+      logPaymentStep("Event not approved", { status: event.approval_status });
+      return new Response(
+        JSON.stringify({ error: 'This event has not been approved by the restaurant owner yet' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Check if there are enough tickets available
     const ticketsAvailable = event.capacity - (event.tickets_sold || 0);
@@ -112,6 +130,42 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Get fee distribution configuration
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    
+    // Get app-wide fee settings
+    const { data: configData, error: configError } = await supabaseAdmin
+      .from('app_config')
+      .select('key, value')
+      .in('key', ['APP_FEE_PERCENTAGE', 'AFFILIATE_FEE_PERCENTAGE'])
+      .order('key');
+      
+    if (configError) {
+      logPaymentStep("Error fetching app config", { error: configError.message });
+      // Continue with default values if config fetch fails
+    }
+    
+    // Set up fee percentages (defaults if not found in config)
+    const appFeePercentage = Number(
+      configData?.find(item => item.key === 'APP_FEE_PERCENTAGE')?.value || 5
+    );
+    
+    const affiliateFeePercentage = Number(
+      configData?.find(item => item.key === 'AFFILIATE_FEE_PERCENTAGE')?.value || 10
+    );
+    
+    // Ambassador fee percentage can be event-specific or use restaurant default
+    const ambassadorFeePercentage = Number(event.ambassador_fee_percentage || 15);
+    
+    logPaymentStep("Fee configuration", { 
+      appFeePercentage, 
+      affiliateFeePercentage, 
+      ambassadorFeePercentage 
+    });
 
     // Initialize Stripe with the secret key from environment variable
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
@@ -154,13 +208,25 @@ serve(async (req) => {
     // Calculate pricing
     const unitPrice = event.price;
     const subtotal = unitPrice * quantity;
-    const serviceFee = subtotal * 0.05; // 5% service fee
+    
+    // Calculate distribution 
+    const appFee = (subtotal * appFeePercentage) / 100;
+    const affiliateFee = affiliateId ? (subtotal * affiliateFeePercentage) / 100 : 0;
+    const ambassadorFee = (subtotal * ambassadorFeePercentage) / 100;
+    const restaurantRevenue = subtotal - (appFee + affiliateFee + ambassadorFee);
+    
+    // Service fee is the sum of all fees (simplifying for the customer)
+    const serviceFee = appFee;
     const totalAmount = subtotal + serviceFee;
     
     logPaymentStep("Price calculation", { 
       unitPrice, 
       quantity,
       subtotal,
+      appFee,
+      affiliateFee,
+      ambassadorFee,
+      restaurantRevenue,
       serviceFee,
       totalAmount
     });
@@ -186,7 +252,7 @@ serve(async (req) => {
               currency: 'usd',
               product_data: {
                 name: 'Service Fee',
-                description: '5% service fee',
+                description: `${appFeePercentage}% service fee`,
               },
               unit_amount: Math.round((serviceFee / quantity) * 100), // Stripe uses cents
             },
@@ -203,7 +269,13 @@ serve(async (req) => {
           userId: user.id,
           quantity,
           unitPrice,
-          serviceFee,
+          appFee,
+          affiliateFee: affiliateId ? affiliateFee : 0,
+          affiliateId: affiliateId || null,
+          ambassadorFee,
+          ambassadorId: event.user_id,
+          restaurantId: event.restaurant_id,
+          restaurantRevenue,
           totalAmount
         },
       });
@@ -225,7 +297,12 @@ serve(async (req) => {
             service_fee: serviceFee,
             total_amount: totalAmount,
             payment_id: session.id,
-            payment_status: 'pending'
+            payment_status: 'pending',
+            affiliate_id: affiliateId || null,
+            affiliate_fee: affiliateId ? affiliateFee : 0,
+            ambassador_fee: ambassadorFee,
+            app_fee: appFee,
+            restaurant_revenue: restaurantRevenue
           }
         ]);
 

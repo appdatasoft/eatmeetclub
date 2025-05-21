@@ -1,73 +1,48 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export interface PaymentResponse {
-  url?: string;
-  error?: string;
-  sessionId?: string;
-}
-
 export const createTicketPayment = async (
   eventId: string, 
   quantity: number, 
-  userId: string
-): Promise<PaymentResponse> => {
+  userId: string,
+  affiliateId?: string
+) => {
   try {
-    // Get user session for authorization
+    // Get session token for auth
     const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-    
+    const token = sessionData?.session?.access_token;
+
     if (!token) {
-      throw new Error("User not authenticated");
+      return { error: "Authentication required" };
     }
 
-    console.log("Creating ticket payment with params:", {
-      eventId, quantity, userId,
-      timestamp: new Date().toISOString()
-    });
+    // Prepare purchase data
+    const purchaseData = {
+      eventId,
+      quantity,
+      affiliateId // Include optional affiliate ID
+    };
 
-    // Call the Supabase Edge Function to create a payment
-    const response = await supabase.functions.invoke('create-ticket-payment', {
-      body: {
-        purchaseData: {
-          eventId,
-          quantity,
-          unitPrice: 0, // Will be determined by the backend
-          serviceFee: 0, // Will be calculated by the backend
-          totalAmount: 0 // Will be calculated by the backend
-        }
-      },
+    // Invoke the edge function to create payment
+    const { data, error } = await supabase.functions.invoke("create-ticket-payment", {
+      body: { purchaseData },
       headers: {
         Authorization: `Bearer ${token}`
       }
     });
 
-    console.log("Payment function response:", response);
-
-    if (response.error) {
-      console.error("Error from payment function:", response.error);
-      return { 
-        error: response.error.message || "Payment creation failed"
-      };
+    if (error) {
+      console.error("Error creating payment:", error);
+      return { error: error.message || "Failed to create payment" };
     }
 
-    if (!response.data?.url) {
-      console.error("No URL in response:", response.data);
-      return { 
-        error: "No checkout URL returned"
-      };
+    if (!data?.url) {
+      return { error: "No checkout URL returned" };
     }
 
-    console.log("Payment session created successfully with URL:", response.data.url);
-    
-    return {
-      url: response.data.url,
-      sessionId: response.data.sessionId
-    };
+    return { url: data.url, sessionId: data.sessionId };
   } catch (error: any) {
-    console.error("Error creating ticket payment:", error);
-    return {
-      error: error.message || "Failed to create payment session"
-    };
+    console.error("Error in createTicketPayment:", error);
+    return { error: error.message || "Failed to create payment" };
   }
 };

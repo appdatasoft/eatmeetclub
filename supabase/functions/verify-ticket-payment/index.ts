@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { stripe } from "../_shared/stripe.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.36.0";
+import * as dbOperations from "./db-operations.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -83,9 +84,30 @@ serve(async (req) => {
       }
     }
 
-    // Step 3: Get payment amount
+    // Step 3: Get payment and distribution details from metadata
     const amount = session.amount_total || 1000;
     console.log("Payment amount:", amount / 100);
+    
+    // Parse distribution details from session metadata
+    const metadata = session.metadata || {};
+    const appFee = parseFloat(metadata.appFee || '0');
+    const affiliateFee = parseFloat(metadata.affiliateFee || '0');
+    const ambassadorFee = parseFloat(metadata.ambassadorFee || '0');
+    const restaurantRevenue = parseFloat(metadata.restaurantRevenue || '0');
+    
+    const affiliateId = metadata.affiliateId || null;
+    const ambassadorId = metadata.ambassadorId || null;
+    const restaurantId = metadata.restaurantId || null;
+    
+    console.log("Revenue distribution:", {
+      appFee,
+      affiliateFee,
+      ambassadorFee,
+      restaurantRevenue,
+      affiliateId,
+      ambassadorId,
+      restaurantId
+    });
 
     // Step 4: Check for existing ticket
     console.log("Checking for existing ticket");
@@ -116,8 +138,101 @@ serve(async (req) => {
       
       console.log("Ticket created successfully");
     }
+    
+    // Step 6: Update tickets table with final payment status and distribution details
+    console.log("Updating tickets record with distribution details");
+    const { error: ticketUpdateError } = await supabase
+      .from("tickets")
+      .update({
+        payment_status: "completed",
+        app_fee: appFee,
+        affiliate_fee: affiliateFee,
+        ambassador_fee: ambassadorFee,
+        restaurant_revenue: restaurantRevenue,
+        affiliate_id: affiliateId,
+        payment_completed_at: new Date().toISOString()
+      })
+      .eq("payment_id", sessionId);
+      
+    if (ticketUpdateError) {
+      console.error("Failed to update ticket with distribution details:", ticketUpdateError);
+    }
+    
+    // Step 7: Update tickets sold count
+    const quantity = parseInt(metadata.quantity || '1');
+    await dbOperations.incrementTicketsSold(supabase, eventId, quantity);
+    
+    // Step 8: Record payments to different parties
+    console.log("Recording payment distributions");
+    
+    // Record application fee
+    if (appFee > 0) {
+      const { error: appFeeError } = await supabase
+        .from("payment_distributions")
+        .insert({
+          ticket_id: sessionId,
+          recipient_type: "platform",
+          amount: appFee,
+          status: "completed"
+        });
+        
+      if (appFeeError) {
+        console.error("Failed to record app fee:", appFeeError);
+      }
+    }
+    
+    // Record affiliate fee if applicable
+    if (affiliateFee > 0 && affiliateId) {
+      const { error: affiliateFeeError } = await supabase
+        .from("payment_distributions")
+        .insert({
+          ticket_id: sessionId,
+          recipient_type: "affiliate",
+          recipient_id: affiliateId,
+          amount: affiliateFee,
+          status: "pending_payout"
+        });
+        
+      if (affiliateFeeError) {
+        console.error("Failed to record affiliate fee:", affiliateFeeError);
+      }
+    }
+    
+    // Record ambassador fee
+    if (ambassadorFee > 0 && ambassadorId) {
+      const { error: ambassadorFeeError } = await supabase
+        .from("payment_distributions")
+        .insert({
+          ticket_id: sessionId,
+          recipient_type: "ambassador",
+          recipient_id: ambassadorId,
+          amount: ambassadorFee,
+          status: "pending_payout"
+        });
+        
+      if (ambassadorFeeError) {
+        console.error("Failed to record ambassador fee:", ambassadorFeeError);
+      }
+    }
+    
+    // Record restaurant revenue
+    if (restaurantRevenue > 0 && restaurantId) {
+      const { error: restaurantFeeError } = await supabase
+        .from("payment_distributions")
+        .insert({
+          ticket_id: sessionId,
+          recipient_type: "restaurant",
+          recipient_id: restaurantId,
+          amount: restaurantRevenue,
+          status: "pending_payout"
+        });
+        
+      if (restaurantFeeError) {
+        console.error("Failed to record restaurant revenue:", restaurantFeeError);
+      }
+    }
 
-    // Step 6: Send ticket confirmation email
+    // Step 9: Send ticket confirmation email
     try {
       console.log("Sending ticket confirmation email");
       const frontendUrl = Deno.env.get("FRONTEND_URL") || "https://eatmeetclub.lovable.app";
@@ -147,7 +262,13 @@ serve(async (req) => {
       userId,
       userCreated,
       eventId,
-      paymentId: sessionId
+      paymentId: sessionId,
+      distribution: {
+        appFee,
+        affiliateFee,
+        ambassadorFee,
+        restaurantRevenue
+      }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
