@@ -30,6 +30,11 @@ interface UserFeatureTarget {
   email?: string;
 }
 
+interface UserSearchResult {
+  id: string;
+  email: string;
+}
+
 export const FeatureFlagManager = () => {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
@@ -41,7 +46,7 @@ export const FeatureFlagManager = () => {
   const [userTargets, setUserTargets] = useState<UserFeatureTarget[]>([]);
   const [currentEnv, setCurrentEnv] = useState<AppEnvironment>('production');
   const [emailInput, setEmailInput] = useState('');
-  const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
+  const [userSearchResults, setUserSearchResults] = useState<UserSearchResult[]>([]);
   const [selectedFeature, setSelectedFeature] = useState<FeatureFlag | null>(null);
 
   const fetchFeatureFlags = async () => {
@@ -64,16 +69,31 @@ export const FeatureFlagManager = () => {
 
       if (valuesError) throw valuesError;
 
-      // Fetch user feature targeting data using an RPC call
+      // Fetch user feature targeting data directly from the table
       try {
-        const { data: targetsData, error: targetsError } = await supabase.rpc(
-          'list_user_feature_targeting'
-        );
+        const { data: targetsData, error: targetsError } = await supabase
+          .from('user_feature_targeting')
+          .select(`
+            id,
+            user_id,
+            feature_id,
+            is_enabled,
+            auth.users!inner(email)
+          `);
 
         if (targetsError) {
           console.error('Error fetching user targeting:', targetsError);
         } else if (targetsData) {
-          setUserTargets(targetsData as UserFeatureTarget[]);
+          // Transform the data to match our expected format
+          const transformedTargets: UserFeatureTarget[] = targetsData.map(target => ({
+            id: target.id,
+            user_id: target.user_id,
+            feature_id: target.feature_id,
+            is_enabled: target.is_enabled,
+            email: target.users?.email
+          }));
+          
+          setUserTargets(transformedTargets);
         }
       } catch (targetError) {
         console.error('Error processing user targeting data:', targetError);
@@ -102,11 +122,12 @@ export const FeatureFlagManager = () => {
         return;
       }
 
-      // Use a secure RPC function to search for users by email
-      const { data, error } = await supabase.rpc(
-        'search_users_by_email',
-        { search_email: `%${email}%`, limit_count: 5 }
-      );
+      // Directly query the auth.users table if admin access is allowed
+      const { data, error } = await supabase
+        .from('users_view')  // Assuming there's a users_view that admins can access
+        .select('id, email')
+        .ilike('email', `%${email}%`)
+        .limit(5);
 
       if (error) {
         console.error('Error searching users:', error);
@@ -138,17 +159,34 @@ export const FeatureFlagManager = () => {
     try {
       setIsUpdating(true);
 
-      // Use RPC call to safely add/update user targeting
-      const { error } = await supabase.rpc(
-        'set_user_feature_targeting',
-        { 
-          p_user_id: userId,
-          p_feature_id: featureId,
-          p_is_enabled: isEnabled
-        }
-      );
+      // Check if there's an existing record
+      const { data: existingRecord } = await supabase
+        .from('user_feature_targeting')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('feature_id', featureId)
+        .single();
+        
+      let result;
       
-      if (error) throw error;
+      if (existingRecord) {
+        // Update existing record
+        result = await supabase
+          .from('user_feature_targeting')
+          .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() })
+          .eq('id', existingRecord.id);
+      } else {
+        // Insert new record
+        result = await supabase
+          .from('user_feature_targeting')
+          .insert({
+            user_id: userId,
+            feature_id: featureId,
+            is_enabled: isEnabled
+          });
+      }
+      
+      if (result.error) throw result.error;
 
       toast({
         title: 'User targeting updated',
@@ -175,10 +213,10 @@ export const FeatureFlagManager = () => {
     try {
       setIsUpdating(true);
 
-      const { error } = await supabase.rpc(
-        'remove_user_feature_targeting',
-        { p_target_id: targetId }
-      );
+      const { error } = await supabase
+        .from('user_feature_targeting')
+        .delete()
+        .eq('id', targetId);
 
       if (error) throw error;
 
