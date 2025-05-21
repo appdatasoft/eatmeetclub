@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -64,15 +65,21 @@ export const FeatureFlagManager = () => {
 
       if (valuesError) throw valuesError;
 
-      // Fetch user feature targeting using RPC function
+      // Fetch user feature targeting using custom query
       try {
-        const { data: targets, error: targetsError } = await supabase
-          .rpc('get_all_user_feature_targeting');
+        const { data: targetsData, error: targetsError } = await supabase
+          .from('user_feature_targeting')
+          .select(`
+            id,
+            user_id,
+            feature_id,
+            is_enabled
+          `);
 
         if (targetsError) {
           console.error('Error fetching user targeting:', targetsError);
         } else {
-          setUserTargets(targets as UserFeatureTarget[] || []);
+          setUserTargets(targetsData as UserFeatureTarget[] || []);
         }
       } catch (targetError) {
         console.error('Error processing user targeting data:', targetError);
@@ -127,15 +134,14 @@ export const FeatureFlagManager = () => {
     try {
       setIsUpdating(true);
 
-      // Use RPC to add or update user feature targeting
-      const { data, error } = await supabase.rpc(
-        'set_user_feature_targeting', 
-        { 
-          user_uuid: userId, 
-          feature_uuid: featureId, 
-          enabled: isEnabled 
-        }
-      );
+      // Insert or update user feature targeting directly
+      const { data, error } = await supabase
+        .from('user_feature_targeting')
+        .upsert({
+          user_id: userId,
+          feature_id: featureId,
+          is_enabled: isEnabled
+        });
 
       if (error) throw error;
 
@@ -164,11 +170,11 @@ export const FeatureFlagManager = () => {
     try {
       setIsUpdating(true);
 
-      // Use RPC to remove user feature targeting
-      const { error } = await supabase.rpc(
-        'remove_user_feature_targeting',
-        { target_uuid: targetId }
-      );
+      // Remove user feature targeting directly
+      const { error } = await supabase
+        .from('user_feature_targeting')
+        .delete()
+        .eq('id', targetId);
 
       if (error) throw error;
 

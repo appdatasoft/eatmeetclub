@@ -10,13 +10,26 @@ import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import * as d3 from 'd3-format';
 
+interface AffiliateClickData {
+  created_at: string;
+}
+
+interface AffiliateSignupData {
+  created_at: string;
+}
+
+interface ChartDataPoint {
+  day: string;
+  value: number;
+}
+
 const AffiliateAnalytics = () => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [clickData, setClickData] = useState<any[]>([]);
-  const [signupData, setSignupData] = useState<any[]>([]);
-  const [conversionData, setConversionData] = useState<any[]>([]);
+  const [clickData, setClickData] = useState<ChartDataPoint[]>([]);
+  const [signupData, setSignupData] = useState<ChartDataPoint[]>([]);
+  const [conversionData, setConversionData] = useState<ChartDataPoint[]>([]);
   const [timeframe, setTimeframe] = useState<'7d' | '30d' | '90d'>('30d');
 
   useEffect(() => {
@@ -47,21 +60,23 @@ const AffiliateAnalytics = () => {
         const startDateStr = startDate.toISOString().split('T')[0];
         const endDateStr = endDate.toISOString().split('T')[0];
         
-        // Fetch click data
+        // Fetch click data - using affiliate_tracking table with 'click' action type
         const { data: clicks, error: clicksError } = await supabase
-          .from('affiliate_link_clicks')
+          .from('affiliate_tracking')
           .select('created_at')
-          .eq('affiliate_id', user.id)
+          .eq('action_type', 'click')
+          .eq('affiliate_link_id', user.id) // Assuming affiliate_link_id is related to user.id
           .gte('created_at', startDateStr)
           .lte('created_at', endDateStr);
           
         if (clicksError) throw new Error(clicksError.message);
         
-        // Fetch signup data (users who signed up using affiliate link)
+        // Fetch signup data - using affiliate_tracking with action_type 'signup'
         const { data: signups, error: signupsError } = await supabase
-          .from('profiles')
+          .from('affiliate_tracking')
           .select('created_at')
-          .eq('referred_by', user.id)
+          .eq('action_type', 'signup')
+          .eq('affiliate_link_id', user.id)
           .gte('created_at', startDateStr)
           .lte('created_at', endDateStr);
           
@@ -89,9 +104,9 @@ const AffiliateAnalytics = () => {
   }, [user, timeframe]);
   
   // Helper function to process data by day
-  const processDataByDay = (data: any[], startDate: Date, endDate: Date) => {
-    const result = [];
-    const dateMap = new Map();
+  const processDataByDay = (data: AffiliateClickData[] | AffiliateSignupData[], startDate: Date, endDate: Date) => {
+    const result: ChartDataPoint[] = [];
+    const dateMap = new Map<string, number>();
     
     // Initialize all dates in range with 0 count
     const currentDate = new Date(startDate);
@@ -105,7 +120,7 @@ const AffiliateAnalytics = () => {
     data.forEach(item => {
       const dateStr = item.created_at.split('T')[0];
       if (dateMap.has(dateStr)) {
-        dateMap.set(dateStr, dateMap.get(dateStr) + 1);
+        dateMap.set(dateStr, dateMap.get(dateStr)! + 1);
       }
     });
     
@@ -121,7 +136,7 @@ const AffiliateAnalytics = () => {
   };
   
   // Calculate conversion rates
-  const calculateConversionRates = (clicks: any[], signups: any[]) => {
+  const calculateConversionRates = (clicks: ChartDataPoint[], signups: ChartDataPoint[]) => {
     return clicks.map((clickItem, index) => {
       const signupItem = signups[index];
       const clickCount = clickItem.value;
@@ -141,7 +156,7 @@ const AffiliateAnalytics = () => {
   
   // Format percentage for display
   const formatPercentage = (value: number) => {
-    return d3.format('.1f')(value.toString()) + '%';
+    return d3.format('.1f')(value) + '%';
   };
   
   if (isLoading) {
