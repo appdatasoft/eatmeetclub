@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -63,10 +64,11 @@ export const FeatureFlagManager = () => {
 
       if (valuesError) throw valuesError;
 
-      // Fetch user feature targeting using custom RPC function
+      // Fetch user feature targeting using direct query
       try {
         const { data: targetsData, error: targetsError } = await supabase
-          .rpc('get_all_user_feature_targeting');
+          .from('user_feature_targeting')
+          .select('*');
 
         if (targetsError) {
           console.error('Error fetching user targeting:', targetsError);
@@ -101,7 +103,7 @@ export const FeatureFlagManager = () => {
         return;
       }
 
-      // Call the RPC function to get users as an admin
+      // Call the built-in RPC function to get users as an admin
       const { data, error } = await supabase.rpc('get_users_for_admin');
 
       if (error) throw error;
@@ -127,15 +129,37 @@ export const FeatureFlagManager = () => {
     try {
       setIsUpdating(true);
 
-      // Use the RPC function to set user targeting
-      const { data, error } = await supabase
-        .rpc('set_user_feature_targeting', {
-          user_uuid: userId,
-          feature_uuid: featureId,
-          enabled: isEnabled
-        });
+      // Use direct insert/update instead of RPC function
+      const { data: existingData, error: checkError } = await supabase
+        .from('user_feature_targeting')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('feature_id', featureId)
+        .single();
 
-      if (error) throw error;
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+
+      let result;
+      if (existingData) {
+        // Update existing record
+        result = await supabase
+          .from('user_feature_targeting')
+          .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() })
+          .eq('id', existingData.id);
+      } else {
+        // Insert new record
+        result = await supabase
+          .from('user_feature_targeting')
+          .insert({ 
+            user_id: userId, 
+            feature_id: featureId, 
+            is_enabled: isEnabled 
+          });
+      }
+
+      if (result.error) throw result.error;
 
       toast({
         title: 'User targeting updated',
@@ -162,11 +186,11 @@ export const FeatureFlagManager = () => {
     try {
       setIsUpdating(true);
 
-      // Use the RPC function to remove user targeting
-      const { data, error } = await supabase
-        .rpc('remove_user_feature_targeting', {
-          target_uuid: targetId
-        });
+      // Use direct delete instead of RPC function
+      const { error } = await supabase
+        .from('user_feature_targeting')
+        .delete()
+        .eq('id', targetId);
 
       if (error) throw error;
 
@@ -448,3 +472,4 @@ export const FeatureFlagManager = () => {
     </div>
   );
 };
+

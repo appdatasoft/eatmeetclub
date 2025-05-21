@@ -43,6 +43,7 @@ const Login = () => {
             <LoginForm 
               connectionOk={connectionOk}
               onSubmit={handleSubmit}
+              loading={loading}
             />
           </div>
         </div>
