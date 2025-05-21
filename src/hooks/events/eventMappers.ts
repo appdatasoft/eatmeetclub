@@ -1,5 +1,5 @@
 
-import { RawEventData } from "./eventsApi";
+import { RawEventData } from "./api";
 import { EventCardProps } from "@/components/events/EventCard";
 import { formatEventDate, formatEventTime, getCategoryFromTime } from "./formatters";
 import { addCacheBuster } from "@/utils/supabaseStorage";

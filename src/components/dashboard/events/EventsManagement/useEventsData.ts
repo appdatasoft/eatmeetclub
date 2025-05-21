@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Event } from "./types";
+import { extractRestaurantData } from "@/hooks/events/utils/restaurantDataUtils";
 
 export const useEventsData = () => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -33,28 +34,15 @@ export const useEventsData = () => {
 
       // Transform the data to match our Event type structure
       const formattedEvents: Event[] = (data || []).map(item => {
-        // Define default restaurant name
-        let restaurantName = 'Unknown';
-        
-        // Check if restaurants property exists and extract name safely
-        if (item.restaurants) {
-          // Handle object form
-          if (typeof item.restaurants === 'object' && !Array.isArray(item.restaurants)) {
-            restaurantName = item.restaurants.name || 'Unknown';
-          }
-          // Handle array form (but this shouldn't happen in this query)
-          else if (Array.isArray(item.restaurants) && item.restaurants.length > 0 && 
-                  typeof item.restaurants[0] === 'object' && item.restaurants[0] !== null) {
-            restaurantName = item.restaurants[0].name || 'Unknown';
-          }
-        }
+        // Extract restaurant name using our utility function
+        const restaurantData = extractRestaurantData(item.restaurants);
 
         return {
           id: item.id,
           title: item.title,
           date: item.date,
           restaurant: {
-            name: restaurantName
+            name: restaurantData.name
           },
           price: item.price,
           capacity: item.capacity,

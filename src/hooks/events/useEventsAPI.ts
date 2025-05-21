@@ -1,5 +1,5 @@
 
-import { fetchPublishedEventsWithSupabase, fetchPublishedEventsWithREST } from "./eventsApi";
+import { fetchPublishedEventsWithSupabase, fetchPublishedEventsWithREST } from "./api";
 import { mapToEventCardProps } from "./eventMappers";
 import { useRef, useState } from "react";
 import { EventCardProps } from "@/components/events/EventCard";
