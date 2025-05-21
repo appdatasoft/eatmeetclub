@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface RawEventData {
@@ -117,4 +116,61 @@ export const fetchPublishedEventsWithREST = async (): Promise<RawEventData[] | n
   }));
   
   return transformedData;
+};
+
+export const fetchEvents = async (filters = {}) => {
+  const { data, error } = await supabase
+    .from('events')
+    .select(`
+      id, 
+      title, 
+      date, 
+      price, 
+      capacity,
+      cover_image,
+      restaurants (
+        name,
+        city,
+        state
+      )
+    `)
+    // Add filter conditions here based on the filters parameter
+    .order('date', { ascending: true });
+    
+  if (error) {
+    console.error('Error fetching events:', error);
+    throw error;
+  }
+  
+  // Transform the data to match our expected format
+  return (data || []).map(event => {
+    // Handle the restaurants property correctly
+    let restaurantData = { name: 'Unknown', city: '', state: '' };
+    
+    // Check if restaurants exists and how to access it
+    if (event.restaurants) {
+      // If it's an array, take the first item
+      if (Array.isArray(event.restaurants) && event.restaurants.length > 0) {
+        restaurantData.name = event.restaurants[0].name || 'Unknown';
+        restaurantData.city = event.restaurants[0].city || '';
+        restaurantData.state = event.restaurants[0].state || '';
+      } 
+      // If it's an object (single restaurant)
+      else if (typeof event.restaurants === 'object') {
+        restaurantData.name = event.restaurants.name || 'Unknown';
+        restaurantData.city = event.restaurants.city || '';
+        restaurantData.state = event.restaurants.state || '';
+      }
+    }
+    
+    return {
+      id: event.id,
+      title: event.title,
+      date: event.date,
+      price: event.price,
+      capacity: event.capacity,
+      cover_image: event.cover_image,
+      restaurant: restaurantData
+    };
+  });
 };

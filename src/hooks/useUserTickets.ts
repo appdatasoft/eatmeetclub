@@ -50,7 +50,7 @@ const fetchUserTickets = async (userId: string): Promise<UserTicket[]> => {
   console.log("Tickets fetched:", data);
 
   // Format the data for display
-  return (data as TicketResponse[]).map((ticket) => ({
+  return (data as unknown as TicketResponse[]).map((ticket) => ({
     id: ticket.id,
     event_id: ticket.event_id,
     event_title: ticket.events.title,

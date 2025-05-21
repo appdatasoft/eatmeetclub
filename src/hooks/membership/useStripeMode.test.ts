@@ -1,129 +1,111 @@
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react-hooks';
 import { useStripeMode } from './useStripeMode';
-import { supabase } from '@/integrations/supabase/client';
 
-// Mock Supabase client
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: vi.fn()
-  }
-}));
+// Mock the fetch function
+global.fetch = jest.fn();
 
 describe('useStripeMode', () => {
-  const mockResponse = (data: any, error = null) => ({
-    data,
-    error,
-    count: data?.length || 0
-  });
-
   beforeEach(() => {
-    vi.clearAllMocks();
-    
-    // Setup a more compatible mock that doesn't cause TypeScript issues
-    vi.mocked(supabase.from).mockImplementation(() => {
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn()
-      } as any;
-    });
+    jest.clearAllMocks();
   });
 
-  afterEach(() => {
-    vi.resetAllMocks();
-    localStorage.clear();
-  });
-
-  it('returns test mode when in development environment', async () => {
-    // Save original NODE_ENV
-    const originalEnv = import.meta.env.MODE;
-    
-    // Mock environment to development
-    vi.stubEnv('MODE', 'development');
-    
-    // Mock the Supabase response for test mode
-    const mockSingle = vi.fn().mockResolvedValue(
-      mockResponse({ value: 'test' })
-    );
-    
-    vi.mocked(supabase.from).mockImplementation(() => ({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: mockSingle
-    }) as any);
-
-    const { result, waitForNextUpdate } = renderHook(() => useStripeMode());
-    
-    // Initially should be null
-    expect(result.current.stripeMode).toBeNull();
-    expect(result.current.isLoading).toBe(true);
-    
-    // Wait for the hook to update
-    await waitForNextUpdate();
-    
-    expect(result.current.stripeMode).toBe('test');
-    expect(result.current.isLoading).toBe(false);
-    
-    // Restore original NODE_ENV
-    vi.stubEnv('MODE', originalEnv);
-  });
-
-  it('returns live mode when set in config', async () => {
-    // Mock the Supabase response for live mode
-    const mockSingle = vi.fn().mockResolvedValue(
-      mockResponse({ value: 'live' })
-    );
-    
-    vi.mocked(supabase.from).mockImplementation(() => ({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: mockSingle
-    }) as any);
-
-    const { result, waitForNextUpdate } = renderHook(() => useStripeMode());
-    
-    // Wait for the hook to update
-    await waitForNextUpdate();
-    
-    expect(result.current.stripeMode).toBe('live');
-    expect(result.current.isLoading).toBe(false);
-  });
-
-  it('falls back to test mode when error occurs', async () => {
-    // Mock a Supabase error
-    const mockError = { message: 'Database error' };
-    const mockSingle = vi.fn().mockResolvedValue(
-      mockResponse(null, mockError)
-    );
-    
-    vi.mocked(supabase.from).mockImplementation(() => ({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: mockSingle
-    }) as any);
-
-    const { result, waitForNextUpdate } = renderHook(() => useStripeMode());
-    
-    // Wait for the hook to update
-    await waitForNextUpdate();
-    
-    expect(result.current.stripeMode).toBe('test');
-    expect(result.current.isLoading).toBe(false);
-  });
-
-  it('uses cached mode when available', async () => {
-    // Set a cached mode
-    localStorage.setItem('stripe_mode', 'live');
-    
+  it('should initialize with default values', () => {
     const { result } = renderHook(() => useStripeMode());
-    
-    // Should immediately use the cached value
-    expect(result.current.stripeMode).toBe('live');
+
+    expect(result.current.mode).toBe('test'); // Default mode
     expect(result.current.isLoading).toBe(false);
-    
-    // Clear for other tests
-    localStorage.removeItem('stripe_mode');
+    expect(result.current.error).toBe('');
+    expect(result.current.stripeCheckError).toBe('');
+    expect(result.current.isStripeTestMode).toBe(true);
+  });
+
+  it('should update mode when updateStripeMode is called', async () => {
+    // Mock the fetch response for successful update
+    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      })
+    );
+
+    const { result, waitForNextUpdate } = renderHook(() => useStripeMode());
+
+    await act(async () => {
+      const success = await result.current.updateStripeMode('live');
+      expect(success).toBe(true);
+    });
+
+    expect(result.current.mode).toBe('live');
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('update-stripe-mode'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.any(Object),
+        body: expect.stringContaining('"mode":"live"'),
+      })
+    );
+  });
+
+  it('should handle fetch error in updateStripeMode', async () => {
+    // Mock the fetch to throw an error
+    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+      Promise.reject(new Error('Network error'))
+    );
+
+    const { result } = renderHook(() => useStripeMode());
+
+    await act(async () => {
+      const success = await result.current.updateStripeMode('live');
+      expect(success).toBe(false);
+    });
+
+    expect(result.current.mode).toBe('test'); // Mode should remain unchanged
+    expect(result.current.error).toBe('Network error');
+  });
+
+  it('should handle API error response in updateStripeMode', async () => {
+    // Mock the fetch to return an error response
+    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        json: () => Promise.resolve({ error: 'Invalid mode' }),
+      })
+    );
+
+    const { result } = renderHook(() => useStripeMode());
+
+    await act(async () => {
+      const success = await result.current.updateStripeMode('live');
+      expect(success).toBe(false);
+    });
+
+    expect(result.current.mode).toBe('test'); // Mode should remain unchanged
+    expect(result.current.error).toBe('Error updating Stripe mode: 400 Bad Request');
+  });
+
+  it('should retry stripe check when handleRetryStripeCheck is called', async () => {
+    // Mock the fetch response for successful check
+    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ mode: 'test' }),
+      })
+    );
+
+    const { result } = renderHook(() => useStripeMode());
+
+    await act(async () => {
+      result.current.handleRetryStripeCheck();
+    });
+
+    expect(result.current.mode).toBe('test');
+    expect(result.current.stripeCheckError).toBe('');
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('check-stripe-mode'),
+      expect.any(Object)
+    );
   });
 });
