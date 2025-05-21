@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,8 +19,12 @@ const AuthRedirect: React.FC<AuthRedirectProps> = ({ children }) => {
   const getRedirectPath = useRedirectPath();
 
   useEffect(() => {
-    console.log("AuthRedirect - checking auth status:", { isLoading, authenticated: !!session });
-  }, [isLoading, session]);
+    console.log("AuthRedirect - checking auth status:", { 
+      isLoading, 
+      authenticated: !!session,
+      path: location.pathname
+    });
+  }, [isLoading, session, location.pathname]);
 
   // Show loading state while auth is being checked
   if (isLoading) {

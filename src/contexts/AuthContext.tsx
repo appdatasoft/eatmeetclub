@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient'; // Use a single consistent supabase client
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Critical order: First set listener, then check for existing session
+    console.log("Initializing auth provider");
     
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -39,8 +39,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Defer Supabase calls with setTimeout to prevent deadlocks
         if (currentSession?.user) {
           setTimeout(async () => {
-            // Check if user is admin using direct database query
             try {
+              // Check if user is admin using direct database query
               const { data: adminData } = await supabase
                 .from('user_roles')
                 .select('role')
@@ -52,23 +52,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             } catch (error) {
               console.error('Error checking admin status:', error);
               setIsAdmin(false);
+            } finally {
+              setIsLoading(false);
             }
           }, 0);
         } else {
           setIsAdmin(false);
+          setIsLoading(false);
         }
-        
-        setIsLoading(false);
       }
     );
 
     // THEN check for existing session
-    async function loadUserData() {
+    const loadUserData = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error.message);
+          setIsLoading(false);
+          return;
         }
         
         setSession(data.session);
@@ -90,7 +93,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } finally {
         setIsLoading(false);
       }
-    }
+    };
 
     loadUserData();
 
@@ -100,23 +103,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    setIsLoading(true);
     try {
+      console.log(`Attempting to sign in: ${email}`);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      
+      toast({
+        title: "Login successful",
+        description: "Welcome back!",
+      });
     } catch (error: any) {
+      console.error("Login error:", error);
       toast({
         title: "Login Error",
         description: error.message || "Failed to log in",
         variant: "destructive",
       });
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string) => {
+    setIsLoading(true);
     try {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
+      
+      toast({
+        title: "Registration successful",
+        description: "Please check your email to verify your account.",
+      });
     } catch (error: any) {
       toast({
         title: "Signup Error",
@@ -124,11 +143,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         variant: "destructive",
       });
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signOut = async () => {
+    setIsLoading(true);
     try {
+      console.log("Signing out user");
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
@@ -149,6 +172,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         variant: "destructive",
       });
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 

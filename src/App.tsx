@@ -13,7 +13,16 @@ import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from "@/components/ui/toaster"
 import { FeatureFlagProvider } from './contexts/FeatureFlagContext';
 
-const queryClient = new QueryClient()
+// Create a single QueryClient instance to prevent multiple instances
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30000,
+      refetchOnWindowFocus: false,
+    },
+  },
+})
 
 function App() {
   return (

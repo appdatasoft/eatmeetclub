@@ -22,6 +22,7 @@ const AuthButtons = () => {
 
   const handleLogoutClick = async () => {
     try {
+      console.log("Logout clicked");
       await signOut();
       navigate('/');
     } catch (error: any) {

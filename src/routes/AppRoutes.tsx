@@ -13,6 +13,7 @@ import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import SetPassword from '@/pages/SetPassword';
+import Signup from '@/pages/Signup';
 
 const AppRoutes = () => {
   return (
@@ -22,9 +23,11 @@ const AppRoutes = () => {
       <Route path="/event/:id" element={<EventDetails />} />
       <Route path="/become-member" element={<BecomeMember />} />
       
-      {/* Auth routes directly in the main router */}
+      {/* Auth routes - support multiple path patterns */}
       <Route path="/login" element={<Login />} />
+      <Route path="/auth/login" element={<Login />} /> {/* Add additional path for login */}
       <Route path="/register" element={<Register />} />
+      <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/set-password" element={<SetPassword />} />
 
