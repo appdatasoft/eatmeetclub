@@ -456,56 +456,58 @@ const RestaurantJoin = () => {
       </main>
       <Footer />
       
-      <style jsx>{`
-        .step-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          z-index: 1;
-        }
-        
-        .step-circle {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background-color: #e5e7eb;
-          color: #6b7280;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 600;
-          margin-bottom: 8px;
-        }
-        
-        .step-text {
-          font-size: 0.875rem;
-          color: #6b7280;
-          font-weight: 500;
-        }
-        
-        .step-connector {
-          height: 2px;
-          flex: 1;
-          background-color: #e5e7eb;
-          margin: 0 8px;
-          position: relative;
-          top: -24px;
-        }
-        
-        .step-item.active .step-circle {
-          background-color: #2563eb;
-          color: white;
-        }
-        
-        .step-item.active .step-text {
-          color: #2563eb;
-          font-weight: 600;
-        }
-        
-        .step-connector.active {
-          background-color: #2563eb;
-        }
-      `}</style>
+      <style>
+        {`
+          .step-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1;
+          }
+          
+          .step-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #e5e7eb;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-bottom: 8px;
+          }
+          
+          .step-text {
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-weight: 500;
+          }
+          
+          .step-connector {
+            height: 2px;
+            flex: 1;
+            background-color: #e5e7eb;
+            margin: 0 8px;
+            position: relative;
+            top: -24px;
+          }
+          
+          .step-item.active .step-circle {
+            background-color: #2563eb;
+            color: white;
+          }
+          
+          .step-item.active .step-text {
+            color: #2563eb;
+            font-weight: 600;
+          }
+          
+          .step-connector.active {
+            background-color: #2563eb;
+          }
+        `}
+      </style>
     </>
   );
 };

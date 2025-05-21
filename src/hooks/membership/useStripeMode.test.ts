@@ -1,13 +1,14 @@
 
 import { renderHook, act } from '@testing-library/react-hooks';
 import { useStripeMode } from './useStripeMode';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock the fetch function
-global.fetch = jest.fn();
+global.fetch = vi.fn();
 
 describe('useStripeMode', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should initialize with default values', () => {
@@ -22,7 +23,7 @@ describe('useStripeMode', () => {
 
   it('should update mode when updateStripeMode is called', async () => {
     // Mock the fetch response for successful update
-    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() =>
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ success: true }),
@@ -49,7 +50,7 @@ describe('useStripeMode', () => {
 
   it('should handle fetch error in updateStripeMode', async () => {
     // Mock the fetch to throw an error
-    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() =>
       Promise.reject(new Error('Network error'))
     );
 
@@ -66,7 +67,7 @@ describe('useStripeMode', () => {
 
   it('should handle API error response in updateStripeMode', async () => {
     // Mock the fetch to return an error response
-    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() =>
       Promise.resolve({
         ok: false,
         status: 400,
@@ -88,7 +89,7 @@ describe('useStripeMode', () => {
 
   it('should retry stripe check when handleRetryStripeCheck is called', async () => {
     // Mock the fetch response for successful check
-    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() =>
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ mode: 'test' }),

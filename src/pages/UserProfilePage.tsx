@@ -42,6 +42,10 @@ interface EventData {
   } | null;
 }
 
+interface TicketWithEvent {
+  events: EventData | null;
+}
+
 const UserProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -210,7 +214,7 @@ const UserProfilePage: React.FC = () => {
         setProfile(profileData);
         
         // Format created events - properly handle the nested structure
-        const formattedCreatedEvents = (createdEventsData as EventData[])?.map(event => ({
+        const formattedCreatedEvents = (createdEventsData as unknown as EventData[])?.map(event => ({
           id: event.id,
           title: event.title,
           date: event.date,
@@ -222,11 +226,7 @@ const UserProfilePage: React.FC = () => {
         setEventsCreated(formattedCreatedEvents);
         
         // Format attended events - properly handle the nested structure and null events
-        interface TicketWithEvent {
-          events: EventData | null;
-        }
-        
-        const attendingEvents = (ticketsData as TicketWithEvent[])?.map(ticket => {
+        const attendingEvents = (ticketsData as unknown as TicketWithEvent[])?.map(ticket => {
           // Skip if events is null (can happen if event was deleted)
           if (!ticket.events) return null;
           

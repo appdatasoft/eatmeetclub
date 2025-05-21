@@ -7,6 +7,7 @@ export { supabase };
 // Add a function to check if Supabase connection is working
 export const checkSupabaseConnection = async () => {
   try {
+    // Use a simple query that doesn't require any specific table
     const { error } = await supabase.from('app_config').select('key').limit(1);
     if (error) {
       console.error('Supabase connection check failed:', error);

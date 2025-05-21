@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface RawEventData {
@@ -34,7 +35,7 @@ export const fetchPublishedEventsWithSupabase = async (): Promise<RawEventData[]
       published,
       user_id,
       restaurant_id,
-      restaurants!inner(name, city, state)
+      restaurants:restaurants(name, city, state)
     `)
     .eq('published', true)
     .order('date', { ascending: true });
@@ -44,7 +45,7 @@ export const fetchPublishedEventsWithSupabase = async (): Promise<RawEventData[]
     throw response.error;
   }
   
-  // Transform the nested restaurants array format to our expected RawEventData format
+  // Transform the nested restaurants format to our expected RawEventData format
   const transformedData: RawEventData[] = response.data?.map(event => ({
     id: event.id,
     title: event.title,
@@ -96,7 +97,7 @@ export const fetchPublishedEventsWithREST = async (): Promise<RawEventData[] | n
     throw new Error("Unexpected response format from REST API");
   }
   
-  // Transform the nested restaurants array format to our expected RawEventData format
+  // Transform the nested restaurants format to our expected RawEventData format
   const transformedData: RawEventData[] = rawData.map(event => ({
     id: event.id,
     title: event.title,
@@ -149,14 +150,8 @@ export const fetchEvents = async (filters = {}) => {
     
     // Check if restaurants exists and how to access it
     if (event.restaurants) {
-      // If it's an array, take the first item
-      if (Array.isArray(event.restaurants) && event.restaurants.length > 0) {
-        restaurantData.name = event.restaurants[0].name || 'Unknown';
-        restaurantData.city = event.restaurants[0].city || '';
-        restaurantData.state = event.restaurants[0].state || '';
-      } 
       // If it's an object (single restaurant)
-      else if (typeof event.restaurants === 'object') {
+      if (typeof event.restaurants === 'object' && !Array.isArray(event.restaurants)) {
         restaurantData.name = event.restaurants.name || 'Unknown';
         restaurantData.city = event.restaurants.city || '';
         restaurantData.state = event.restaurants.state || '';
