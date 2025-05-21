@@ -62,6 +62,7 @@ interface PaymentContentAreaProps {
   clientSecret: string | null;
   existingMembership?: any;
   proratedAmount?: number | null;
+  restaurantId?: string | null;
 }
 
 const PaymentContentArea = ({
@@ -81,7 +82,8 @@ const PaymentContentArea = ({
   handleCancel,
   clientSecret,
   existingMembership,
-  proratedAmount
+  proratedAmount,
+  restaurantId
 }: PaymentContentAreaProps) => {
   const email = localStorage.getItem('signup_email') || '';
   
@@ -154,7 +156,8 @@ const PaymentContentArea = ({
           ) : (
             <form onSubmit={(e) => {
               e.preventDefault();
-              handleSubmit({});
+              // Pass restaurant ID if available
+              handleSubmit(restaurantId ? { restaurantId } : {});
             }}>
               <button 
                 type="submit" 

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { MembershipFormValues } from "@/components/membership/MembershipPaymentForm";
@@ -26,9 +27,7 @@ export const useMembershipPayment = () => {
   const { membershipFee, isLoading } = useMembershipConfig();
   const { paymentCanceled, paymentSuccess, sessionId } = useUrlParams();
   
-  const { verifyPayment } = usePaymentVerification({
-    setIsProcessing
-  });
+  const { verifyPayment } = usePaymentVerification({});
   
   const { handleSubmit } = useFormSubmission({
     setIsProcessing,

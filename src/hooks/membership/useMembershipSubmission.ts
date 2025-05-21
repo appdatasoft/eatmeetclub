@@ -25,11 +25,14 @@ export const useMembershipSubmission = () => {
       localStorage.setItem('signup_address', formData.address);
 
       // Step 1: Check if user exists and has active membership
-      const { userExists, hasActiveMembership } = await verifyEmailAndMembershipStatus(formData.email);
+      const { userExists, hasActiveMembership, productInfo } = await verifyEmailAndMembershipStatus(
+        formData.email,
+        formData.restaurantId
+      );
 
       // If user exists and has active membership, redirect to login
       if (userExists && hasActiveMembership) {
-        handleExistingMember(formData.email);
+        handleExistingMember(formData.email, formData.restaurantId, productInfo);
         return;
       }
 
@@ -44,6 +47,7 @@ export const useMembershipSubmission = () => {
           sendPasswordEmail: !userExists,
           sendInvoiceEmail: true,
           checkExisting: true,
+          restaurantId: formData.restaurantId
         }
       );
 

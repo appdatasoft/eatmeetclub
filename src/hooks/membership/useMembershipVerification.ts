@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,15 +22,19 @@ export const useMembershipVerification = () => {
       setIsVerifying(true);
       
       // Find a user with the provided email
-      const { data: userData, error: userError } = await supabase.auth
-        .admin.listUsers({ filter: `email.eq.${email}` });
+      const { data: userData, error: userError } = await supabase
+        .from('auth.users')
+        .select('id, email')
+        .eq('email', email)
+        .limit(1)
+        .single();
         
-      if (userError || !userData?.users || userData.users.length === 0) {
+      if (userError || !userData) {
         console.error('Error checking user existence:', userError || 'User not found');
         return { userExists: false, hasActiveMembership: false, userId: null };
       }
       
-      const authUser = userData.users[0];
+      const authUser = userData;
       
       // Check if the user has a user role
       const { data: userRoleData, error: roleError } = await supabase
@@ -116,7 +121,7 @@ export const useMembershipVerification = () => {
     }
   };
 
-  const handleExistingMember = (email: string, restaurantId: string, productInfo?: { name?: string; description?: string; } | null) => {
+  const handleExistingMember = (email: string, restaurantId?: string, productInfo?: { name?: string; description?: string; } | null) => {
     // Store email in local storage for the login form
     localStorage.setItem('loginEmail', email);
     

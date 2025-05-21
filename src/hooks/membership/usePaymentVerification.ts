@@ -21,10 +21,8 @@ interface VerificationOptions {
   restaurantId?: string;
 }
 
-export const usePaymentVerification = ({
-  setIsLoading,
-  navigate
-}: PaymentVerificationProps) => {
+export const usePaymentVerification = (props: PaymentVerificationProps = {}) => {
+  const { setIsLoading, navigate } = props;
   const [isPaymentVerified, setIsPaymentVerified] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
   const [verificationAttempts, setVerificationAttempts] = useState(0);

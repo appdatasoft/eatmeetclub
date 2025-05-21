@@ -24,9 +24,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [emailCheckDone, setEmailCheckDone] = useState(false);
   const [maxRetriesReached, setMaxRetriesReached] = useState(false);
-  const { verifyPayment, isVerifying, verificationAttempts } = usePaymentVerification({
-    setIsProcessing
-  });
+  const { verifyPayment, isVerifyingPayment, verificationAttempts } = usePaymentVerification({});
   const { sendDirectBackupEmail } = useBackupEmail();
   const { sendWelcomeEmail } = useWelcomeEmail();
 
@@ -59,7 +57,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
     
     const verifyCheckoutCompletion = async () => {
       // Verify only once with valid session ID when success parameter is present
-      if (sessionId && paymentSuccess && !verificationProcessed && !isVerifying) {
+      if (sessionId && paymentSuccess && !verificationProcessed && !isVerifyingPayment) {
         console.log("Starting payment verification with session ID:", sessionId);
         
         try {
@@ -176,7 +174,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
     };
     
     verifyCheckoutCompletion();
-  }, [sessionId, paymentSuccess, verificationProcessed, toast, setVerificationProcessed, verifyPayment, isVerifying, emailCheckDone, verificationAttempts, sendDirectBackupEmail, sendWelcomeEmail, restaurantId]);
+  }, [sessionId, paymentSuccess, verificationProcessed, toast, setVerificationProcessed, verifyPayment, isVerifyingPayment, emailCheckDone, verificationAttempts, sendDirectBackupEmail, sendWelcomeEmail, restaurantId]);
 
   return null; // This component doesn't render anything
 };
