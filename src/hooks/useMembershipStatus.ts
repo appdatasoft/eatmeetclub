@@ -22,34 +22,26 @@ export const useMembershipStatus = () => {
     try {
       setIsLoading(true);
       
-      // Call the RPC function to check if user has active membership
-      const { data, error } = await supabase.rpc('has_active_membership', {
-        user_id: user.id
-      });
+      // Query for active membership instead of using RPC
+      const { data, error } = await supabase
+        .from('memberships')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
       
       if (error) {
         console.error("Error checking membership:", error.message);
         throw error;
       }
       
-      setIsActive(!!data);
+      // Check if membership is active and not expired
+      const isActiveMembership = !!data && (!data.renewal_at || new Date(data.renewal_at) > new Date());
+      setIsActive(isActiveMembership);
       
-      // Get membership details if active
-      if (data) {
-        const { data: membershipData, error: membershipError } = await supabase
-          .from('memberships')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .single();
-          
-        if (membershipError) {
-          console.error("Error fetching membership details:", membershipError.message);
-          throw membershipError;
-        }
-        
-        setMembership(membershipData);
-        setExpiresAt(membershipData?.renewal_at || null);
+      if (data && isActiveMembership) {
+        setMembership(data);
+        setExpiresAt(data?.renewal_at || null);
       } else {
         setMembership(null);
         setExpiresAt(null);

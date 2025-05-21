@@ -1318,6 +1318,41 @@ export type Database = {
           },
         ]
       }
+      user_feature_targeting: {
+        Row: {
+          created_at: string | null
+          feature_id: string
+          id: string
+          is_enabled: boolean
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          feature_id: string
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          feature_id?: string
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_feature_targeting_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "feature_flags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string

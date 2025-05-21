@@ -104,16 +104,16 @@ export const useFeatureFlags = () => {
               }, {});
               
               // Get user-specific targeting
-              const { data: userTargeting, error: userError } = await supabase
+              const { data: userTargetingData, error: userError } = await supabase
                 .from('user_feature_targeting')
                 .select('id, feature_id, is_enabled')
                 .eq('user_id', user.id);
 
               if (userError) {
                 console.error('Error fetching user feature targeting:', userError);
-              } else if (userTargeting && Array.isArray(userTargeting)) {
+              } else if (userTargetingData && Array.isArray(userTargetingData)) {
                 // Apply user-specific overrides
-                userTargeting.forEach((override) => {
+                userTargetingData.forEach((override) => {
                   const featureKey = featureIdToKey[override.feature_id];
                   if (featureKey && override.is_enabled !== undefined) {
                     flagsMap[featureKey] = override.is_enabled;

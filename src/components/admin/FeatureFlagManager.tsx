@@ -53,15 +53,15 @@ export const FeatureFlagManager = () => {
       if (valuesError) throw valuesError;
 
       // Fetch user feature targeting data
-      const { data: targets, error: targetsError } = await supabase
+      const { data: targetData, error: targetsError } = await supabase
         .from('user_feature_targeting')
         .select('*');
 
       if (targetsError) {
         console.error('Error fetching user targeting:', targetsError);
         // We still continue with the flags and values
-      } else if (targets) {
-        setUserTargets(targets);
+      } else if (targetData) {
+        setUserTargets(targetData as UserFeatureTarget[]);
       }
 
       setFeatureFlags(flags || []);
