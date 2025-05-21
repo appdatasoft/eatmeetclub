@@ -68,29 +68,23 @@ export const FeatureFlagManager = () => {
 
       if (valuesError) throw valuesError;
 
-      // Fetch user feature targeting data with user emails
+      // Fetch user feature targeting data using RPC
       try {
-        // Get user targeting data
         const { data: targetsData, error: targetsError } = await supabase
-          .from('user_feature_targeting')
-          .select('id, user_id, feature_id, is_enabled');
+          .rpc('get_all_user_feature_targeting');
 
         if (targetsError) {
           console.error('Error fetching user targeting:', targetsError);
           throw targetsError;
         }
 
-        // Get user emails (assuming you have a profiles table or can fetch users with admin privileges)
-        // Here we'll just set up the targets without the emails, which can be fetched separately
         if (targetsData) {
-          const transformedTargets: UserFeatureTarget[] = targetsData.map(target => ({
+          setUserTargets(targetsData.map(target => ({
             id: target.id,
             user_id: target.user_id,
             feature_id: target.feature_id,
             is_enabled: target.is_enabled
-          }));
-          
-          setUserTargets(transformedTargets);
+          })));
         }
       } catch (targetError) {
         console.error('Error processing user targeting data:', targetError);
@@ -139,35 +133,15 @@ export const FeatureFlagManager = () => {
     try {
       setIsUpdating(true);
 
-      // Check if there's an existing record
-      const { data: existingRecords, error: checkError } = await supabase
-        .from('user_feature_targeting')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('feature_id', featureId);
+      // Use the set_user_feature_targeting RPC function
+      const { data, error } = await supabase
+        .rpc('set_user_feature_targeting', {
+          user_uuid: userId,
+          feature_uuid: featureId,
+          enabled: isEnabled
+        });
         
-      if (checkError) throw checkError;
-
-      let result;
-      
-      if (existingRecords && existingRecords.length > 0) {
-        // Update existing record
-        result = await supabase
-          .from('user_feature_targeting')
-          .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() })
-          .eq('id', existingRecords[0].id);
-      } else {
-        // Insert new record
-        result = await supabase
-          .from('user_feature_targeting')
-          .insert({
-            user_id: userId,
-            feature_id: featureId,
-            is_enabled: isEnabled
-          });
-      }
-      
-      if (result.error) throw result.error;
+      if (error) throw error;
 
       toast({
         title: 'User targeting updated',
@@ -194,10 +168,11 @@ export const FeatureFlagManager = () => {
     try {
       setIsUpdating(true);
 
-      const { error } = await supabase
-        .from('user_feature_targeting')
-        .delete()
-        .eq('id', targetId);
+      // Use the remove_user_feature_targeting RPC function
+      const { data, error } = await supabase
+        .rpc('remove_user_feature_targeting', {
+          target_uuid: targetId
+        });
 
       if (error) throw error;
 
