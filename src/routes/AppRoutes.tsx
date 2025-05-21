@@ -2,6 +2,7 @@
 import React from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AdminRoutes } from './adminRoutes';
+import { DashboardRoutes } from './dashboardRoutes';
 import Index from '@/pages/Index';
 import Events from '@/pages/Events';
 import EventDetails from '@/pages/EventDetails';
@@ -14,6 +15,7 @@ import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import SetPassword from '@/pages/SetPassword';
 import Signup from '@/pages/Signup';
+import AuthRedirect from '@/components/auth/AuthRedirect';
 
 const AppRoutes = () => {
   return (
@@ -23,18 +25,18 @@ const AppRoutes = () => {
       <Route path="/event/:id" element={<EventDetails />} />
       <Route path="/become-member" element={<BecomeMember />} />
       
-      {/* Auth routes - support multiple path patterns */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/auth/login" element={<Login />} /> {/* Add additional path for login */}
-      <Route path="/register" element={<Register />} />
-      <Route path="/signup" element={<Signup />} />
+      {/* Auth routes with AuthRedirect for authenticated users */}
+      <Route path="/login" element={<AuthRedirect><Login /></AuthRedirect>} />
+      <Route path="/auth/login" element={<AuthRedirect><Login /></AuthRedirect>} />
+      <Route path="/register" element={<AuthRedirect><Register /></AuthRedirect>} />
+      <Route path="/signup" element={<AuthRedirect><Signup /></AuthRedirect>} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/set-password" element={<SetPassword />} />
 
       {/* Dashboard routes */}
       <Route path="/dashboard/*" element={
         <ProtectedRoute>
-          <Dashboard />
+          <DashboardRoutes />
         </ProtectedRoute>
       } />
 

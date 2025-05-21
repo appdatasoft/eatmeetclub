@@ -12,12 +12,14 @@ import AppRoutes from './routes/AppRoutes';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from "@/components/ui/toaster"
 import { FeatureFlagProvider } from './contexts/FeatureFlagContext';
+import { checkSupabaseConnection } from './lib/supabaseClient';
 
 // Create a single QueryClient instance to prevent multiple instances
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
+      retry: 2,
+      retryDelay: attempt => Math.min(attempt > 1 ? 2000 : 1000, 30000),
       staleTime: 30000,
       refetchOnWindowFocus: false,
     },
@@ -25,6 +27,16 @@ const queryClient = new QueryClient({
 })
 
 function App() {
+  // Check Supabase connection on initial load
+  React.useEffect(() => {
+    const checkConnection = async () => {
+      const isConnected = await checkSupabaseConnection();
+      console.log('Supabase connection check:', isConnected ? 'Connected' : 'Failed');
+    };
+    
+    checkConnection();
+  }, []);
+  
   return (
     <BrowserRouter>
       <ThemeProvider defaultTheme="light">

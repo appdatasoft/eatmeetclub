@@ -2,13 +2,13 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Facebook, Instagram, Twitter, Map, Globe, Youtube, AlertCircle, Link2Off, AlertTriangle } from "lucide-react";
+import { Facebook, Instagram, Twitter, Map, Globe, Youtube, AlertCircle, Link2Off, AlertTriangle, RefreshCw } from "lucide-react";
 import { useEditableContent } from '@/components/editor/EditableContentProvider';
 import EditableText from '@/components/editor/EditableText';
 import { useToast } from '@/hooks/use-toast';
 import { useSocialMedia, SocialMediaConnection } from '@/hooks/useSocialMedia';
 import ConnectionDetailsModal from './ConnectionDetailsModal';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SocialMediaTabProps {
   isAdmin?: boolean;
@@ -21,6 +21,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
     connections, 
     isLoading, 
     oauthPending,
+    error,
     fetchConnections, 
     connectSocialMedia,
     getConnectionStatus,
@@ -29,10 +30,16 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
   
   const [selectedConnection, setSelectedConnection] = useState<SocialMediaConnection | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [loadAttempts, setLoadAttempts] = useState(0);
   
   useEffect(() => {
-    fetchConnections();
-  }, []);
+    // Add a small delay to prevent immediate fetch on first render
+    const timer = setTimeout(() => {
+      fetchConnections();
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [loadAttempts]);
 
   const handleConnectAccount = async (platform: string) => {
     try {
@@ -67,6 +74,10 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
         variant: "destructive",
       });
     }
+  };
+  
+  const handleRetry = () => {
+    setLoadAttempts(prev => prev + 1);
   };
 
   const renderConnectionButton = (platform: string) => {
@@ -124,6 +135,58 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
       );
     }
   };
+  
+  // Show error state if there are issues loading
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold">Failed to load social media connections</p>
+              <p className="text-sm">{error.message || 'An unknown error occurred'}</p>
+            </div>
+            <Button 
+              size="sm"
+              variant="outline" 
+              onClick={handleRetry}
+              className="ml-4"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" /> Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+        
+        {/* Show the UI anyway with limited functionality */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Social Media Accounts</CardTitle>
+            <CardDescription>
+              Connect your social media accounts to enhance your profile and reach.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Social media connection service is currently unavailable. Please try again later.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (isLoading && loadAttempts === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center p-8">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+          <span className="ml-3">Loading social media connections...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
