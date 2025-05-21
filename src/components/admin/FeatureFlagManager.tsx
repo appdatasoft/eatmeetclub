@@ -64,11 +64,10 @@ export const FeatureFlagManager = () => {
 
       if (valuesError) throw valuesError;
 
-      // Fetch user feature targeting using direct query
+      // Fetch user feature targeting using RPC
       try {
         const { data: targetsData, error: targetsError } = await supabase
-          .from('user_feature_targeting')
-          .select('*');
+          .rpc('get_all_user_feature_targeting');
 
         if (targetsError) {
           console.error('Error fetching user targeting:', targetsError);
@@ -129,37 +128,15 @@ export const FeatureFlagManager = () => {
     try {
       setIsUpdating(true);
 
-      // Use direct insert/update instead of RPC function
-      const { data: existingData, error: checkError } = await supabase
-        .from('user_feature_targeting')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('feature_id', featureId)
-        .single();
+      // Use the RPC function to set user targeting
+      const { data, error } = await supabase
+        .rpc('set_user_feature_targeting', {
+          user_uuid: userId,
+          feature_uuid: featureId,
+          enabled: isEnabled
+        });
 
-      if (checkError && checkError.code !== 'PGRST116') {
-        throw checkError;
-      }
-
-      let result;
-      if (existingData) {
-        // Update existing record
-        result = await supabase
-          .from('user_feature_targeting')
-          .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() })
-          .eq('id', existingData.id);
-      } else {
-        // Insert new record
-        result = await supabase
-          .from('user_feature_targeting')
-          .insert({ 
-            user_id: userId, 
-            feature_id: featureId, 
-            is_enabled: isEnabled 
-          });
-      }
-
-      if (result.error) throw result.error;
+      if (error) throw error;
 
       toast({
         title: 'User targeting updated',
@@ -186,11 +163,11 @@ export const FeatureFlagManager = () => {
     try {
       setIsUpdating(true);
 
-      // Use direct delete instead of RPC function
-      const { error } = await supabase
-        .from('user_feature_targeting')
-        .delete()
-        .eq('id', targetId);
+      // Use the RPC function to remove user targeting
+      const { data, error } = await supabase
+        .rpc('remove_user_feature_targeting', {
+          target_uuid: targetId
+        });
 
       if (error) throw error;
 
@@ -472,4 +449,3 @@ export const FeatureFlagManager = () => {
     </div>
   );
 };
-

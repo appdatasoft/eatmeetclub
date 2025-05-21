@@ -5,17 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 
 interface LoginFormProps {
   connectionOk: boolean;
   onSubmit: (email: string, password: string) => Promise<void>;
+  loading: boolean;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ connectionOk, onSubmit }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ connectionOk, onSubmit, loading }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [internalLoading, setInternalLoading] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,13 +30,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ connectionOk, onSubmit }) 
       return;
     }
 
-    setLoading(true);
+    setInternalLoading(true);
     console.log("Attempting login for:", email);
     
     try {
       await onSubmit(email, password);
     } finally {
-      setLoading(false);
+      setInternalLoading(false);
     }
   };
 
@@ -78,9 +78,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ connectionOk, onSubmit }) 
           <Button 
             type="submit" 
             className="w-full"
-            disabled={loading}
+            disabled={loading || internalLoading}
           >
-            {loading ? "Logging in..." : "Log in"}
+            {loading || internalLoading ? "Logging in..." : "Log in"}
           </Button>
         </form>
         <div className="mt-4 text-center text-sm">
