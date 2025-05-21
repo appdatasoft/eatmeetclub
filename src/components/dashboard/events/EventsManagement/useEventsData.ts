@@ -33,12 +33,21 @@ export const useEventsData = () => {
 
       // Transform the data to match our Event type structure
       const formattedEvents: Event[] = (data || []).map(item => {
-        // Ensure restaurants is handled correctly regardless of its type
-        const restaurantName = item.restaurants 
-          ? typeof item.restaurants === 'object' && !Array.isArray(item.restaurants) 
-            ? item.restaurants.name || 'Unknown'
-            : 'Unknown'
-          : 'Unknown';
+        // Define default restaurant name
+        let restaurantName = 'Unknown';
+        
+        // Check if restaurants property exists and extract name safely
+        if (item.restaurants) {
+          // Handle object form
+          if (typeof item.restaurants === 'object' && !Array.isArray(item.restaurants)) {
+            restaurantName = item.restaurants.name || 'Unknown';
+          }
+          // Handle array form (but this shouldn't happen in this query)
+          else if (Array.isArray(item.restaurants) && item.restaurants.length > 0 && 
+                  typeof item.restaurants[0] === 'object' && item.restaurants[0] !== null) {
+            restaurantName = item.restaurants[0].name || 'Unknown';
+          }
+        }
 
         return {
           id: item.id,

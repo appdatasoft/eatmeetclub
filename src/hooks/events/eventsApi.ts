@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface RawEventData {
@@ -15,7 +16,7 @@ export interface RawEventData {
     name: string;
     city?: string;
     state?: string;
-  };
+  } | any; // Add any to handle various types that might come from Supabase
 }
 
 export const fetchPublishedEventsWithSupabase = async (): Promise<RawEventData[] | null> => {
@@ -47,23 +48,28 @@ export const fetchPublishedEventsWithSupabase = async (): Promise<RawEventData[]
   // Transform the nested restaurants format to our expected RawEventData format
   const transformedData: RawEventData[] = response.data?.map(event => {
     // Safely extract restaurant data based on its structure
-    let restaurantData = undefined;
+    let restaurantData = {
+      name: 'Unknown',
+      city: undefined,
+      state: undefined
+    };
     
     if (event.restaurants) {
+      // Handle single restaurant object
       if (typeof event.restaurants === 'object' && !Array.isArray(event.restaurants)) {
-        // Handle single restaurant object
         restaurantData = {
-          name: event.restaurants.name,
+          name: event.restaurants.name || 'Unknown',
           city: event.restaurants.city,
           state: event.restaurants.state
         };
-      } else if (Array.isArray(event.restaurants) && event.restaurants.length > 0) {
-        // Handle potential array structure (first item only)
-        const firstRestaurant = event.restaurants[0];
+      } 
+      // Handle potential array structure (first item only)
+      else if (Array.isArray(event.restaurants) && event.restaurants.length > 0 &&
+               typeof event.restaurants[0] === 'object' && event.restaurants[0] !== null) {
         restaurantData = {
-          name: firstRestaurant.name,
-          city: firstRestaurant.city,
-          state: firstRestaurant.state
+          name: event.restaurants[0].name || 'Unknown',
+          city: event.restaurants[0].city,
+          state: event.restaurants[0].state
         };
       }
     }
@@ -119,23 +125,28 @@ export const fetchPublishedEventsWithREST = async (): Promise<RawEventData[] | n
   // Transform the nested restaurants format to our expected RawEventData format
   const transformedData: RawEventData[] = rawData.map(event => {
     // Safely extract restaurant data based on its structure
-    let restaurantData = undefined;
+    let restaurantData = {
+      name: 'Unknown',
+      city: undefined,
+      state: undefined
+    };
     
     if (event.restaurants) {
+      // Handle single restaurant object
       if (typeof event.restaurants === 'object' && !Array.isArray(event.restaurants)) {
-        // Handle single restaurant object
         restaurantData = {
-          name: event.restaurants.name,
+          name: event.restaurants.name || 'Unknown',
           city: event.restaurants.city,
           state: event.restaurants.state
         };
-      } else if (Array.isArray(event.restaurants) && event.restaurants.length > 0) {
-        // Handle potential array structure (first item only)
-        const firstRestaurant = event.restaurants[0];
+      } 
+      // Handle potential array structure (first item only)
+      else if (Array.isArray(event.restaurants) && event.restaurants.length > 0 &&
+               typeof event.restaurants[0] === 'object' && event.restaurants[0] !== null) {
         restaurantData = {
-          name: firstRestaurant.name,
-          city: firstRestaurant.city,
-          state: firstRestaurant.state
+          name: event.restaurants[0].name || 'Unknown',
+          city: event.restaurants[0].city,
+          state: event.restaurants[0].state
         };
       }
     }
