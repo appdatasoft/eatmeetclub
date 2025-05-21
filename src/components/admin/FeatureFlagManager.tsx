@@ -52,28 +52,16 @@ export const FeatureFlagManager = () => {
 
       if (valuesError) throw valuesError;
 
-      // Fetch user feature targeting data using a direct query instead of RPC
-      try {
-        const { data: targetsData, error: targetsError } = await supabase
-          .from('user_feature_targeting')
-          .select(`
-            id, 
-            user_id,
-            feature_id,
-            is_enabled
-          `);
+      // Fetch user feature targeting data
+      const { data: targets, error: targetsError } = await supabase
+        .from('user_feature_targeting')
+        .select('*');
 
-        if (targetsError) {
-          console.error('Error fetching user targeting:', targetsError);
-          throw targetsError;
-        }
-
-        if (targetsData) {
-          setUserTargets(targetsData);
-        }
-      } catch (targetError) {
-        console.error('Error processing user targeting data:', targetError);
-        // Continue with the flags and values, even if user targeting fails
+      if (targetsError) {
+        console.error('Error fetching user targeting:', targetsError);
+        // We still continue with the flags and values
+      } else if (targets) {
+        setUserTargets(targets);
       }
 
       setFeatureFlags(flags || []);

@@ -34,13 +34,6 @@ export interface UserFeatureTargeting {
   updated_at: string;
 }
 
-// Interface for user feature targeting response from RPC
-export interface UserFeatureTargetingResponse {
-  id: string;
-  feature_key: string;
-  is_enabled: boolean;
-}
-
 // Determine the current environment
 const getCurrentEnvironment = (): AppEnvironment => {
   // In a real application, this would be set based on deployment environment
@@ -98,25 +91,35 @@ export const useFeatureFlags = () => {
         // If user is authenticated, check for user-specific overrides
         if (user) {
           try {
-            // Use a direct query instead of RPC function for user-specific feature targeting
-            const { data: userTargeting, error: userError } = await supabase
-              .from('user_feature_targeting')
-              .select(`
-                id,
-                feature_flags!inner(feature_key),
-                is_enabled
-              `)
-              .eq('user_id', user.id);
+            // First, get feature IDs and keys mapping to use for overrides
+            const { data: featureMapping } = await supabase
+              .from('feature_flags')
+              .select('id, feature_key');
+              
+            if (featureMapping) {
+              // Create a map of feature IDs to feature keys
+              const featureIdToKey = featureMapping.reduce((acc: Record<string, string>, feature) => {
+                acc[feature.id] = feature.feature_key;
+                return acc;
+              }, {});
+              
+              // Get user-specific targeting
+              const { data: userTargeting, error: userError } = await supabase
+                .from('user_feature_targeting')
+                .select('id, feature_id, is_enabled')
+                .eq('user_id', user.id);
 
-            if (userError) {
-              console.error('Error fetching user feature targeting:', userError);
-            } else if (userTargeting && Array.isArray(userTargeting)) {
-              // Apply user-specific overrides
-              userTargeting.forEach((override) => {
-                if (override.feature_flags?.feature_key && override.is_enabled !== undefined) {
-                  flagsMap[override.feature_flags.feature_key] = override.is_enabled;
-                }
-              });
+              if (userError) {
+                console.error('Error fetching user feature targeting:', userError);
+              } else if (userTargeting && Array.isArray(userTargeting)) {
+                // Apply user-specific overrides
+                userTargeting.forEach((override) => {
+                  const featureKey = featureIdToKey[override.feature_id];
+                  if (featureKey && override.is_enabled !== undefined) {
+                    flagsMap[featureKey] = override.is_enabled;
+                  }
+                });
+              }
             }
           } catch (userFetchError) {
             console.error('Error processing user targeting:', userFetchError);
