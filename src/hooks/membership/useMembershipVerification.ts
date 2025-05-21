@@ -23,13 +23,13 @@ export const useMembershipVerification = () => {
       // Add timestamp to prevent caching
       const timestamp = new Date().getTime();
       
-      // Check if user exists - using auth.users query
-      // Note: We need to modify this approach as auth.admin.listUsers is not available
+      // Query user table directly rather than using RPC
+      // Note: We need to check if a user with this email exists in auth.users
       const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .maybeSingle();
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'user')
+        .single();
 
       if (userError) {
         console.error('Error checking user existence:', userError);
@@ -48,12 +48,12 @@ export const useMembershipVerification = () => {
           id,
           status,
           renewal_at,
-          products (
+          products:products (
             name,
             description
           )
         `)
-        .eq('user_id', userData.id)
+        .eq('user_id', userData.user_id)
         .eq('status', 'active')
         .maybeSingle();
 
@@ -67,11 +67,20 @@ export const useMembershipVerification = () => {
         memberships.status === 'active' && 
         (!memberships.renewal_at || new Date(memberships.renewal_at) > new Date());
 
+      // Handle products relationship properly
+      let productInfo = null;
+      if (memberships && memberships.products) {
+        productInfo = {
+          name: memberships.products.name,
+          description: memberships.products.description
+        };
+      }
+
       return { 
         userExists: true, 
         hasActiveMembership: hasActiveMembership,
-        userId: userData.id,
-        productInfo: memberships?.products || null
+        userId: userData.user_id,
+        productInfo: productInfo
       };
     } catch (error: any) {
       console.error('Verification error:', error);
