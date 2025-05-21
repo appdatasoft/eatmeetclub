@@ -34,6 +34,13 @@ export interface UserFeatureTargeting {
   updated_at: string;
 }
 
+// Interface for user feature targeting response from RPC
+interface UserFeatureTargetingResponse {
+  id: string;
+  feature_key: string;
+  is_enabled: boolean;
+}
+
 // Determine the current environment
 const getCurrentEnvironment = (): AppEnvironment => {
   // In a real application, this would be set based on deployment environment
@@ -91,19 +98,26 @@ export const useFeatureFlags = () => {
         // If user is authenticated, check for user-specific overrides
         if (user) {
           try {
-            // Use the RPC function to get user-specific feature targeting
+            // Use a direct query instead of RPC to get user-specific feature targeting
             const { data: userTargeting, error: userError } = await supabase
-              .rpc('get_user_feature_targeting', {
-                user_uuid: user.id
-              });
+              .from('user_feature_targeting')
+              .select(`
+                id,
+                feature_id,
+                is_enabled,
+                feature_flags!inner(
+                  feature_key
+                )
+              `)
+              .eq('user_id', user.id);
 
             if (userError) {
               console.error('Error fetching user feature targeting:', userError);
             } else if (userTargeting && Array.isArray(userTargeting)) {
               // Apply user-specific overrides
               userTargeting.forEach((override) => {
-                if (override.feature_key && override.is_enabled !== undefined) {
-                  flagsMap[override.feature_key] = override.is_enabled;
+                if (override.feature_flags?.feature_key && override.is_enabled !== undefined) {
+                  flagsMap[override.feature_flags.feature_key] = override.is_enabled;
                 }
               });
             }
