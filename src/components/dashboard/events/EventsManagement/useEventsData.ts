@@ -37,7 +37,7 @@ export const useEventsData = () => {
         title: item.title,
         date: item.date,
         restaurant: {
-          name: item.restaurants?.name || 'Unknown'
+          name: item.restaurants ? item.restaurants.name || 'Unknown' : 'Unknown'
         },
         price: item.price,
         capacity: item.capacity,

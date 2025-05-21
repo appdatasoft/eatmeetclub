@@ -46,23 +46,25 @@ export const fetchPublishedEventsWithSupabase = async (): Promise<RawEventData[]
   }
   
   // Transform the nested restaurants format to our expected RawEventData format
-  const transformedData: RawEventData[] = response.data?.map(event => ({
-    id: event.id,
-    title: event.title,
-    date: event.date,
-    time: event.time,
-    price: event.price,
-    capacity: event.capacity,
-    cover_image: event.cover_image,
-    published: event.published,
-    user_id: event.user_id,
-    restaurant_id: event.restaurant_id,
-    restaurants: event.restaurants ? {
-      name: event.restaurants.name,
-      city: event.restaurants.city,
-      state: event.restaurants.state
-    } : undefined
-  })) || [];
+  const transformedData: RawEventData[] = response.data?.map(event => {
+    return {
+      id: event.id,
+      title: event.title,
+      date: event.date,
+      time: event.time,
+      price: event.price,
+      capacity: event.capacity,
+      cover_image: event.cover_image,
+      published: event.published,
+      user_id: event.user_id,
+      restaurant_id: event.restaurant_id,
+      restaurants: event.restaurants ? {
+        name: event.restaurants.name,
+        city: event.restaurants.city,
+        state: event.restaurants.state
+      } : undefined
+    };
+  }) || [];
   
   console.log("Events fetched successfully with Supabase client:", transformedData.length, "events");
   return transformedData;
@@ -98,23 +100,25 @@ export const fetchPublishedEventsWithREST = async (): Promise<RawEventData[] | n
   }
   
   // Transform the nested restaurants format to our expected RawEventData format
-  const transformedData: RawEventData[] = rawData.map(event => ({
-    id: event.id,
-    title: event.title,
-    date: event.date,
-    time: event.time,
-    price: event.price,
-    capacity: event.capacity,
-    cover_image: event.cover_image,
-    published: event.published,
-    user_id: event.user_id,
-    restaurant_id: event.restaurant_id,
-    restaurants: event.restaurants ? {
-      name: event.restaurants.name,
-      city: event.restaurants.city,
-      state: event.restaurants.state
-    } : undefined
-  }));
+  const transformedData: RawEventData[] = rawData.map(event => {
+    return {
+      id: event.id,
+      title: event.title,
+      date: event.date,
+      time: event.time,
+      price: event.price,
+      capacity: event.capacity,
+      cover_image: event.cover_image,
+      published: event.published,
+      user_id: event.user_id,
+      restaurant_id: event.restaurant_id,
+      restaurants: event.restaurants ? {
+        name: event.restaurants.name,
+        city: event.restaurants.city,
+        state: event.restaurants.state
+      } : undefined
+    };
+  });
   
   return transformedData;
 };

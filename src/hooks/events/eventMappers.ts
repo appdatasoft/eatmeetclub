@@ -27,9 +27,9 @@ export const mapToEventCardProps = (rawEvents: RawEventData[]): EventCardProps[]
       eventImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' text-anchor='middle' dominant-baseline='middle' fill='%23888'%3ENo Image%3C/text%3E%3C/svg%3E";
     }
     
-    const restaurantName = event.restaurant?.name || "Restaurant name not available";
-    const location = event.restaurant ? 
-      `${event.restaurant.city || "Unknown city"}${event.restaurant.state ? `, ${event.restaurant.state}` : ""}` : 
+    const restaurantName = event.restaurants ? event.restaurants.name || "Restaurant name not available" : "Restaurant name not available";
+    const location = event.restaurants ? 
+      `${event.restaurants.city || "Unknown city"}${event.restaurants.state ? `, ${event.restaurants.state}` : ""}` : 
       "Location not available";
     
     return {
