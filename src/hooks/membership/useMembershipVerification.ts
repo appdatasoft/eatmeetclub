@@ -23,35 +23,37 @@ export const useMembershipVerification = () => {
       // Add timestamp to prevent caching
       const timestamp = new Date().getTime();
       
-      // Query user table directly rather than using RPC
-      // Note: We need to check if a user with this email exists in auth.users
+      // First, find a user with the provided email
+      const { data: authUser, error: authError } = await supabase.auth
+        .admin.getUserByEmail(email);
+        
+      if (authError || !authUser) {
+        console.error('Error checking user existence:', authError || 'User not found');
+        return { userExists: false, hasActiveMembership: false, userId: null };
+      }
+      
+      // Check if the user has a user role
       const { data: userData, error: userError } = await supabase
         .from('user_roles')
         .select('user_id')
+        .eq('user_id', authUser.id)
         .eq('role', 'user')
-        .single();
+        .maybeSingle();
 
-      if (userError) {
-        console.error('Error checking user existence:', userError);
-        return { userExists: false, hasActiveMembership: false, userId: null };
-      }
-
-      // If no user found, return early
-      if (!userData) {
+      // If no user role found, return early
+      if (userError || !userData) {
+        console.error('Error checking user role:', userError || 'User role not found');
         return { userExists: false, hasActiveMembership: false, userId: null };
       }
 
       // Check if user has an active membership
-      const { data: memberships, error: membershipError } = await supabase
+      const { data: membership, error: membershipError } = await supabase
         .from('memberships')
         .select(`
           id,
           status,
           renewal_at,
-          products:products (
-            name,
-            description
-          )
+          product_id
         `)
         .eq('user_id', userData.user_id)
         .eq('status', 'active')
@@ -63,17 +65,25 @@ export const useMembershipVerification = () => {
       }
 
       // Check if membership is active and not expired
-      const hasActiveMembership = !!memberships && 
-        memberships.status === 'active' && 
-        (!memberships.renewal_at || new Date(memberships.renewal_at) > new Date());
-
-      // Handle products relationship properly
+      const hasActiveMembership = !!membership && 
+        membership.status === 'active' && 
+        (!membership.renewal_at || new Date(membership.renewal_at) > new Date());
+      
+      // If we have a membership, fetch the product info separately
       let productInfo = null;
-      if (memberships && memberships.products) {
-        productInfo = {
-          name: memberships.products.name,
-          description: memberships.products.description
-        };
+      if (membership && hasActiveMembership && membership.product_id) {
+        const { data: productData } = await supabase
+          .from('products')
+          .select('name, description')
+          .eq('id', membership.product_id)
+          .single();
+          
+        if (productData) {
+          productInfo = {
+            name: productData.name,
+            description: productData.description
+          };
+        }
       }
 
       return { 
