@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -69,28 +68,26 @@ export const FeatureFlagManager = () => {
 
       if (valuesError) throw valuesError;
 
-      // Fetch user feature targeting data directly from the table
+      // Fetch user feature targeting data with user emails
       try {
+        // Get user targeting data
         const { data: targetsData, error: targetsError } = await supabase
           .from('user_feature_targeting')
-          .select(`
-            id,
-            user_id,
-            feature_id,
-            is_enabled,
-            auth.users!inner(email)
-          `);
+          .select('id, user_id, feature_id, is_enabled');
 
         if (targetsError) {
           console.error('Error fetching user targeting:', targetsError);
-        } else if (targetsData) {
-          // Transform the data to match our expected format
+          throw targetsError;
+        }
+
+        // Get user emails (assuming you have a profiles table or can fetch users with admin privileges)
+        // Here we'll just set up the targets without the emails, which can be fetched separately
+        if (targetsData) {
           const transformedTargets: UserFeatureTarget[] = targetsData.map(target => ({
             id: target.id,
             user_id: target.user_id,
             feature_id: target.feature_id,
-            is_enabled: target.is_enabled,
-            email: target.users?.email
+            is_enabled: target.is_enabled
           }));
           
           setUserTargets(transformedTargets);
@@ -122,24 +119,12 @@ export const FeatureFlagManager = () => {
         return;
       }
 
-      // Directly query the auth.users table if admin access is allowed
-      const { data, error } = await supabase
-        .from('users_view')  // Assuming there's a users_view that admins can access
-        .select('id, email')
-        .ilike('email', `%${email}%`)
-        .limit(5);
-
-      if (error) {
-        console.error('Error searching users:', error);
-        // Fallback to a simple array for demo purposes
-        setUserSearchResults([
-          { id: 'demo-user-1', email: 'demo1@example.com' },
-          { id: 'demo-user-2', email: 'demo2@example.com' }
-        ]);
-        return;
-      }
-      
-      setUserSearchResults(data || []);
+      // In a real app, you'd have a secure way to search users
+      // For now, we'll use demo data for UI testing
+      setUserSearchResults([
+        { id: 'demo-user-1', email: 'demo1@example.com' },
+        { id: 'demo-user-2', email: 'demo2@example.com' }
+      ]);
     } catch (err: any) {
       console.error('Error searching users:', err);
       toast({
@@ -147,11 +132,6 @@ export const FeatureFlagManager = () => {
         description: err.message || 'Please try again later',
         variant: 'destructive',
       });
-      // Provide some demo data for UI testing
-      setUserSearchResults([
-        { id: 'demo-user-1', email: 'demo1@example.com' },
-        { id: 'demo-user-2', email: 'demo2@example.com' }
-      ]);
     }
   };
 
@@ -160,21 +140,22 @@ export const FeatureFlagManager = () => {
       setIsUpdating(true);
 
       // Check if there's an existing record
-      const { data: existingRecord } = await supabase
+      const { data: existingRecords, error: checkError } = await supabase
         .from('user_feature_targeting')
         .select('id')
         .eq('user_id', userId)
-        .eq('feature_id', featureId)
-        .single();
+        .eq('feature_id', featureId);
         
+      if (checkError) throw checkError;
+
       let result;
       
-      if (existingRecord) {
+      if (existingRecords && existingRecords.length > 0) {
         // Update existing record
         result = await supabase
           .from('user_feature_targeting')
           .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() })
-          .eq('id', existingRecord.id);
+          .eq('id', existingRecords[0].id);
       } else {
         // Insert new record
         result = await supabase

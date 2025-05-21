@@ -91,14 +91,16 @@ export const useFeatureFlags = () => {
         // If user is authenticated, check for user-specific overrides
         if (user) {
           try {
-            // Use direct table query instead of RPC
+            // Query user feature targeting directly instead of using RPC
             const { data: userTargeting, error: userError } = await supabase
               .from('user_feature_targeting')
               .select(`
                 id,
                 feature_id,
                 is_enabled,
-                feature_flags!inner(feature_key)
+                feature_flags!inner(
+                  feature_key
+                )
               `)
               .eq('user_id', user.id);
 
