@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface RawEventData {
@@ -47,6 +46,28 @@ export const fetchPublishedEventsWithSupabase = async (): Promise<RawEventData[]
   
   // Transform the nested restaurants format to our expected RawEventData format
   const transformedData: RawEventData[] = response.data?.map(event => {
+    // Safely extract restaurant data based on its structure
+    let restaurantData = undefined;
+    
+    if (event.restaurants) {
+      if (typeof event.restaurants === 'object' && !Array.isArray(event.restaurants)) {
+        // Handle single restaurant object
+        restaurantData = {
+          name: event.restaurants.name,
+          city: event.restaurants.city,
+          state: event.restaurants.state
+        };
+      } else if (Array.isArray(event.restaurants) && event.restaurants.length > 0) {
+        // Handle potential array structure (first item only)
+        const firstRestaurant = event.restaurants[0];
+        restaurantData = {
+          name: firstRestaurant.name,
+          city: firstRestaurant.city,
+          state: firstRestaurant.state
+        };
+      }
+    }
+
     return {
       id: event.id,
       title: event.title,
@@ -58,11 +79,7 @@ export const fetchPublishedEventsWithSupabase = async (): Promise<RawEventData[]
       published: event.published,
       user_id: event.user_id,
       restaurant_id: event.restaurant_id,
-      restaurants: event.restaurants ? {
-        name: event.restaurants.name,
-        city: event.restaurants.city,
-        state: event.restaurants.state
-      } : undefined
+      restaurants: restaurantData
     };
   }) || [];
   
@@ -101,6 +118,28 @@ export const fetchPublishedEventsWithREST = async (): Promise<RawEventData[] | n
   
   // Transform the nested restaurants format to our expected RawEventData format
   const transformedData: RawEventData[] = rawData.map(event => {
+    // Safely extract restaurant data based on its structure
+    let restaurantData = undefined;
+    
+    if (event.restaurants) {
+      if (typeof event.restaurants === 'object' && !Array.isArray(event.restaurants)) {
+        // Handle single restaurant object
+        restaurantData = {
+          name: event.restaurants.name,
+          city: event.restaurants.city,
+          state: event.restaurants.state
+        };
+      } else if (Array.isArray(event.restaurants) && event.restaurants.length > 0) {
+        // Handle potential array structure (first item only)
+        const firstRestaurant = event.restaurants[0];
+        restaurantData = {
+          name: firstRestaurant.name,
+          city: firstRestaurant.city,
+          state: firstRestaurant.state
+        };
+      }
+    }
+    
     return {
       id: event.id,
       title: event.title,
@@ -112,11 +151,7 @@ export const fetchPublishedEventsWithREST = async (): Promise<RawEventData[] | n
       published: event.published,
       user_id: event.user_id,
       restaurant_id: event.restaurant_id,
-      restaurants: event.restaurants ? {
-        name: event.restaurants.name,
-        city: event.restaurants.city,
-        state: event.restaurants.state
-      } : undefined
+      restaurants: restaurantData
     };
   });
   

@@ -32,20 +32,29 @@ export const useEventsData = () => {
       if (error) throw error;
 
       // Transform the data to match our Event type structure
-      const formattedEvents: Event[] = (data || []).map(item => ({
-        id: item.id,
-        title: item.title,
-        date: item.date,
-        restaurant: {
-          name: item.restaurants ? item.restaurants.name || 'Unknown' : 'Unknown'
-        },
-        price: item.price,
-        capacity: item.capacity,
-        tickets_sold: item.tickets_sold || 0,
-        published: item.published || false,
-        payment_status: item.payment_status || 'pending',
-        restaurant_id: item.restaurant_id
-      }));
+      const formattedEvents: Event[] = (data || []).map(item => {
+        // Ensure restaurants is handled correctly regardless of its type
+        const restaurantName = item.restaurants 
+          ? typeof item.restaurants === 'object' && !Array.isArray(item.restaurants) 
+            ? item.restaurants.name || 'Unknown'
+            : 'Unknown'
+          : 'Unknown';
+
+        return {
+          id: item.id,
+          title: item.title,
+          date: item.date,
+          restaurant: {
+            name: restaurantName
+          },
+          price: item.price,
+          capacity: item.capacity,
+          tickets_sold: item.tickets_sold || 0,
+          published: item.published || false,
+          payment_status: item.payment_status || 'pending',
+          restaurant_id: item.restaurant_id
+        };
+      });
 
       setEvents(formattedEvents);
     } catch (error: any) {
