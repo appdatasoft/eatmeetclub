@@ -1,326 +1,296 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Spinner } from '@/components/ui/spinner';
-import { Button } from '@/components/ui/button';
-import { RefreshCw, TrendingUp, ArrowDown } from 'lucide-react';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { supabase } from '@/lib/supabaseClient';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { useFeatureFlagContext } from '@/contexts/FeatureFlagContext';
-
-interface AnalyticsStat {
-  title: string;
-  value: string | number;
-  change?: string;
-  icon?: React.ReactNode;
-  trend?: 'up' | 'down' | 'neutral';
-}
-
-interface ClickData {
-  date: string;
-  clicks: number;
-}
+import { Skeleton } from '@/components/ui/skeleton';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import * as d3 from 'd3-format';
 
 const AffiliateAnalytics = () => {
-  const { code } = useParams();
   const { user } = useAuth();
-  const { toast } = useToast();
-  const { isFeatureEnabled } = useFeatureFlagContext();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [affiliate, setAffiliate] = useState<any>(null);
-  const [stats, setStats] = useState<AnalyticsStat[]>([]);
-  const [clickData, setClickData] = useState<ClickData[]>([]);
-  const [timeframe, setTimeframe] = useState('week');
+  const [clickData, setClickData] = useState<any[]>([]);
+  const [signupData, setSignupData] = useState<any[]>([]);
+  const [conversionData, setConversionData] = useState<any[]>([]);
+  const [timeframe, setTimeframe] = useState<'7d' | '30d' | '90d'>('30d');
 
   useEffect(() => {
-    // Check if the affiliates feature is enabled
-    if (!isFeatureEnabled('affiliates')) {
-      setError('The affiliates feature is currently disabled');
-      setIsLoading(false);
-      return;
-    }
-
-    if (user && code) {
-      fetchAffiliateData();
-    }
-  }, [user, code, timeframe, isFeatureEnabled]);
-
-  const fetchAffiliateData = async () => {
-    if (!code) {
-      setError('No affiliate code provided');
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Get the affiliate link details
-      const { data: affiliateLink, error: linkError } = await supabase
-        .from('affiliate_links')
-        .select(`
-          id,
-          code,
-          event_id,
-          event:events (
-            title,
-            date,
-            cover_image
-          )
-        `)
-        .eq('code', code)
-        .eq('user_id', user?.id)
-        .single();
-
-      if (linkError) {
-        throw linkError;
-      }
-
-      if (!affiliateLink) {
-        throw new Error('Affiliate link not found');
-      }
-
-      setAffiliate(affiliateLink);
-
-      // Get the tracking data for this affiliate link
-      const timeFilter = getTimeFilter(timeframe);
-      const { data: trackingData, error: trackingError } = await supabase
-        .from('affiliate_tracking')
-        .select('*')
-        .eq('affiliate_link_id', affiliateLink.id)
-        .gte('created_at', timeFilter)
-        .order('created_at', { ascending: true });
-
-      if (trackingError) {
-        throw trackingError;
-      }
-
-      // Calculate stats
-      const clicks = trackingData.filter(item => item.action_type === 'click').length;
-      const conversions = trackingData.filter(item => item.action_type === 'conversion').length;
-      const conversionRate = clicks > 0 ? (conversions / clicks) * 100 : 0;
-      const revenue = trackingData
-        .filter(item => item.action_type === 'conversion')
-        .reduce((sum, item) => sum + (parseFloat(item.conversion_value) || 0), 0);
-
-      // Prepare stats for display
-      setStats([
-        {
-          title: 'Total Clicks',
-          value: clicks,
-          icon: <TrendingUp className="h-4 w-4 text-green-500" />,
-          trend: 'up'
-        },
-        {
-          title: 'Conversions',
-          value: conversions,
-        },
-        {
-          title: 'Conversion Rate',
-          value: `${conversionRate.toFixed(1)}%`,
-        },
-        {
-          title: 'Revenue',
-          value: `$${revenue.toFixed(2)}`,
+    const fetchAnalytics = async () => {
+      if (!user) return;
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Calculate date range based on timeframe
+        const endDate = new Date();
+        const startDate = new Date();
+        
+        switch (timeframe) {
+          case '7d':
+            startDate.setDate(endDate.getDate() - 7);
+            break;
+          case '30d':
+            startDate.setDate(endDate.getDate() - 30);
+            break;
+          case '90d':
+            startDate.setDate(endDate.getDate() - 90);
+            break;
         }
-      ]);
-
-      // Prepare chart data
-      const clicksByDay = processClickData(trackingData);
-      setClickData(clicksByDay);
-
-    } catch (err: any) {
-      console.error('Error fetching affiliate analytics:', err);
-      setError(err.message);
-      toast({
-        title: 'Error loading analytics',
-        description: err.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+        
+        // Format dates for Supabase query
+        const startDateStr = startDate.toISOString().split('T')[0];
+        const endDateStr = endDate.toISOString().split('T')[0];
+        
+        // Fetch click data
+        const { data: clicks, error: clicksError } = await supabase
+          .from('affiliate_link_clicks')
+          .select('created_at')
+          .eq('affiliate_id', user.id)
+          .gte('created_at', startDateStr)
+          .lte('created_at', endDateStr);
+          
+        if (clicksError) throw new Error(clicksError.message);
+        
+        // Fetch signup data (users who signed up using affiliate link)
+        const { data: signups, error: signupsError } = await supabase
+          .from('profiles')
+          .select('created_at')
+          .eq('referred_by', user.id)
+          .gte('created_at', startDateStr)
+          .lte('created_at', endDateStr);
+          
+        if (signupsError) throw new Error(signupsError.message);
+        
+        // Process data for charts
+        const clicksByDay = processDataByDay(clicks || [], startDate, endDate);
+        const signupsByDay = processDataByDay(signups || [], startDate, endDate);
+        
+        // Calculate conversion rates
+        const conversionRates = calculateConversionRates(clicksByDay, signupsByDay);
+        
+        setClickData(clicksByDay);
+        setSignupData(signupsByDay);
+        setConversionData(conversionRates);
+      } catch (err: any) {
+        console.error('Error fetching affiliate analytics:', err);
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchAnalytics();
+  }, [user, timeframe]);
+  
+  // Helper function to process data by day
+  const processDataByDay = (data: any[], startDate: Date, endDate: Date) => {
+    const result = [];
+    const dateMap = new Map();
+    
+    // Initialize all dates in range with 0 count
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const dateStr = format(currentDate, 'yyyy-MM-dd');
+      dateMap.set(dateStr, 0);
+      currentDate.setDate(currentDate.getDate() + 1);
     }
-  };
-
-  const getTimeFilter = (timeframe: string) => {
-    const now = new Date();
-    switch (timeframe) {
-      case 'day':
-        return new Date(now.setDate(now.getDate() - 1)).toISOString();
-      case 'week':
-        return new Date(now.setDate(now.getDate() - 7)).toISOString();
-      case 'month':
-        return new Date(now.setMonth(now.getMonth() - 1)).toISOString();
-      case 'year':
-        return new Date(now.setFullYear(now.getFullYear() - 1)).toISOString();
-      default:
-        return new Date(now.setDate(now.getDate() - 7)).toISOString();
-    }
-  };
-
-  const processClickData = (trackingData: any[]) => {
-    const clicksOnly = trackingData.filter(item => item.action_type === 'click');
-    const dateGroups: Record<string, number> = {};
-
-    // Group clicks by date
-    clicksOnly.forEach(click => {
-      const date = new Date(click.created_at).toLocaleDateString();
-      dateGroups[date] = (dateGroups[date] || 0) + 1;
+    
+    // Count occurrences by date
+    data.forEach(item => {
+      const dateStr = item.created_at.split('T')[0];
+      if (dateMap.has(dateStr)) {
+        dateMap.set(dateStr, dateMap.get(dateStr) + 1);
+      }
     });
-
-    // Convert to array format for chart
-    return Object.entries(dateGroups).map(([date, clicks]) => ({
-      date,
-      clicks
-    }));
+    
+    // Convert map to array for chart
+    dateMap.forEach((count, dateStr) => {
+      result.push({
+        day: dateStr,
+        value: count
+      });
+    });
+    
+    return result.sort((a, b) => a.day.localeCompare(b.day));
   };
-
-  if (!isFeatureEnabled('affiliates')) {
-    return (
-      <Alert>
-        <AlertDescription>
-          The affiliate feature is currently disabled.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
+  
+  // Calculate conversion rates
+  const calculateConversionRates = (clicks: any[], signups: any[]) => {
+    return clicks.map((clickItem, index) => {
+      const signupItem = signups[index];
+      const clickCount = clickItem.value;
+      const signupCount = signupItem ? signupItem.value : 0;
+      
+      return {
+        day: clickItem.day,
+        value: clickCount > 0 ? (signupCount / clickCount) * 100 : 0
+      };
+    });
+  };
+  
+  // Format date for display
+  const formatDate = (dateStr: string) => {
+    return format(new Date(dateStr), 'MMM d');
+  };
+  
+  // Format percentage for display
+  const formatPercentage = (value: number) => {
+    return d3.format('.1f')(value.toString()) + '%';
+  };
+  
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
-        <Spinner size="lg" className="text-primary" />
-        <span className="ml-3">Loading affiliate analytics...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertDescription>
-          Failed to load affiliate analytics: {error}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="mt-2" 
-            onClick={fetchAffiliateData}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" /> Retry
-          </Button>
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (!affiliate) {
-    return (
-      <Alert>
-        <AlertDescription>
-          No affiliate link found with code: {code}
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Affiliate Analytics for "{affiliate.event?.title}"</h1>
-        <p className="text-muted-foreground">Code: {code}</p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, index) => (
-          <Card key={index}>
-            <CardHeader className="pb-2">
-              <CardDescription>{stat.title}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <p className="text-2xl font-semibold">{stat.value}</p>
-                {stat.icon}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Click Activity</CardTitle>
-            <Tabs value={timeframe} onValueChange={setTimeframe}>
-              <TabsList>
-                <TabsTrigger value="day">24h</TabsTrigger>
-                <TabsTrigger value="week">Week</TabsTrigger>
-                <TabsTrigger value="month">Month</TabsTrigger>
-                <TabsTrigger value="year">Year</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+          <CardTitle>Affiliate Analytics</CardTitle>
+          <CardDescription>Loading your performance data...</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-80">
-            {clickData.length > 0 ? (
-              <ChartContainer 
-                config={{
-                  clicks: { label: 'Clicks', theme: { light: '#2563eb', dark: '#3b82f6' } },
-                }}
-              >
-                <BarChart data={clickData}>
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="rounded-lg border bg-background p-2 shadow-sm">
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="flex flex-col">
-                              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                Date
-                              </span>
-                              <span className="font-bold text-muted-foreground">
-                                {payload[0].payload.date}
-                              </span>
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                Clicks
-                              </span>
-                              <span className="font-bold">
-                                {payload[0].value?.toString()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }} />
-                  <Bar
-                    dataKey="clicks"
-                    fill="rgba(37, 99, 235, 1)"
-                    radius={[4, 4, 0, 0]}
-                    name="clicks"
-                  />
-                </BarChart>
-              </ChartContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <p className="text-muted-foreground">No click data available for selected period</p>
-              </div>
-            )}
-          </div>
+          <Skeleton className="h-[300px] w-full" />
         </CardContent>
       </Card>
-    </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Affiliate Analytics</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              Failed to load analytics data: {error}
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Affiliate Analytics</CardTitle>
+        <CardDescription>Track your affiliate link performance</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="clicks" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <TabsList>
+              <TabsTrigger value="clicks">Clicks</TabsTrigger>
+              <TabsTrigger value="signups">Signups</TabsTrigger>
+              <TabsTrigger value="conversion">Conversion Rate</TabsTrigger>
+            </TabsList>
+            
+            <TabsList>
+              <TabsTrigger 
+                value="7d" 
+                onClick={() => setTimeframe('7d')}
+                className={timeframe === '7d' ? 'bg-primary text-primary-foreground' : ''}
+              >
+                7 Days
+              </TabsTrigger>
+              <TabsTrigger 
+                value="30d" 
+                onClick={() => setTimeframe('30d')}
+                className={timeframe === '30d' ? 'bg-primary text-primary-foreground' : ''}
+              >
+                30 Days
+              </TabsTrigger>
+              <TabsTrigger 
+                value="90d" 
+                onClick={() => setTimeframe('90d')}
+                className={timeframe === '90d' ? 'bg-primary text-primary-foreground' : ''}
+              >
+                90 Days
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          
+          <TabsContent value="clicks">
+            <h3 className="text-lg font-medium mb-2">Link Clicks</h3>
+            {clickData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={clickData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="day" 
+                    tickFormatter={(value) => typeof value === 'number' ? value.toString() : formatDate(value)} 
+                  />
+                  <YAxis />
+                  <Tooltip labelFormatter={(value) => `Date: ${formatDate(value.toString())}`} />
+                  <Legend />
+                  <Line type="monotone" dataKey="value" name="Clicks" stroke="#8884d8" />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex justify-center items-center h-[300px] border rounded-md">
+                <p className="text-muted-foreground">No click data available for this period</p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="signups">
+            <h3 className="text-lg font-medium mb-2">Referral Signups</h3>
+            {signupData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={signupData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="day" 
+                    tickFormatter={(value) => typeof value === 'number' ? value.toString() : formatDate(value)} 
+                  />
+                  <YAxis />
+                  <Tooltip labelFormatter={(value) => `Date: ${formatDate(value.toString())}`} />
+                  <Legend />
+                  <Line type="monotone" dataKey="value" name="Signups" stroke="#82ca9d" />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex justify-center items-center h-[300px] border rounded-md">
+                <p className="text-muted-foreground">No signup data available for this period</p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="conversion">
+            <h3 className="text-lg font-medium mb-2">Conversion Rate</h3>
+            {conversionData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={conversionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="day" 
+                    tickFormatter={(value) => typeof value === 'number' ? value.toString() : formatDate(value)} 
+                  />
+                  <YAxis tickFormatter={(value) => formatPercentage(value)} />
+                  <Tooltip 
+                    labelFormatter={(value) => `Date: ${formatDate(value.toString())}`}
+                    formatter={(value: any) => [formatPercentage(value), "Conversion Rate"]}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="value" name="Conversion %" stroke="#ff7300" />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex justify-center items-center h-[300px] border rounded-md">
+                <p className="text-muted-foreground">No conversion data available for this period</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 };
 

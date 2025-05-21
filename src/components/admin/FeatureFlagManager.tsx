@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -65,16 +64,10 @@ export const FeatureFlagManager = () => {
 
       if (valuesError) throw valuesError;
 
-      // Fetch user feature targeting
+      // Fetch user feature targeting using RPC function
       try {
         const { data: targets, error: targetsError } = await supabase
-          .from('user_feature_targeting')
-          .select(`
-            id, 
-            user_id, 
-            feature_id, 
-            is_enabled
-          `);
+          .rpc('get_all_user_feature_targeting');
 
         if (targetsError) {
           console.error('Error fetching user targeting:', targetsError);
@@ -114,7 +107,7 @@ export const FeatureFlagManager = () => {
       if (error) throw error;
 
       // Filter the results client-side
-      const filteredUsers = data.filter(u => 
+      const filteredUsers = data.filter((u: any) => 
         u.email && u.email.toLowerCase().includes(email.toLowerCase())
       ).slice(0, 5);
       
@@ -134,49 +127,25 @@ export const FeatureFlagManager = () => {
     try {
       setIsUpdating(true);
 
-      // Check if there's an existing record
-      try {
-        const { data: existing, error: findError } = await supabase
-          .from('user_feature_targeting')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('feature_id', featureId)
-          .single();
-
-        if (findError && findError.code !== 'PGRST116') { // PGRST116 is "not found" which is expected
-          throw findError;
+      // Use RPC to add or update user feature targeting
+      const { data, error } = await supabase.rpc(
+        'set_user_feature_targeting', 
+        { 
+          user_uuid: userId, 
+          feature_uuid: featureId, 
+          enabled: isEnabled 
         }
+      );
 
-        // Update or insert
-        let result;
-        if (existing) {
-          result = await supabase
-            .from('user_feature_targeting')
-            .update({ is_enabled: isEnabled })
-            .eq('id', existing.id);
-        } else {
-          result = await supabase
-            .from('user_feature_targeting')
-            .insert({
-              user_id: userId,
-              feature_id: featureId,
-              is_enabled: isEnabled
-            });
-        }
+      if (error) throw error;
 
-        if (result.error) throw result.error;
+      toast({
+        title: 'User targeting updated',
+        description: `Feature has been ${isEnabled ? 'enabled' : 'disabled'} for user`,
+      });
 
-        // Refresh the data
-        fetchFeatureFlags();
-
-        toast({
-          title: 'User targeting updated',
-          description: `Feature has been ${isEnabled ? 'enabled' : 'disabled'} for user`,
-        });
-      } catch (error) {
-        console.error('Error updating user targeting record:', error);
-        throw error;
-      }
+      // Refresh the data
+      fetchFeatureFlags();
     } catch (err: any) {
       console.error('Error updating user targeting:', err);
       toast({
@@ -195,10 +164,11 @@ export const FeatureFlagManager = () => {
     try {
       setIsUpdating(true);
 
-      const { error } = await supabase
-        .from('user_feature_targeting')
-        .delete()
-        .eq('id', targetId);
+      // Use RPC to remove user feature targeting
+      const { error } = await supabase.rpc(
+        'remove_user_feature_targeting',
+        { target_uuid: targetId }
+      );
 
       if (error) throw error;
 

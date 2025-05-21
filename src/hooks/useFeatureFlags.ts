@@ -88,28 +88,23 @@ export const useFeatureFlags = () => {
           });
         }
 
-        // If user is authenticated, check for user-specific overrides
+        // If user is authenticated, check for user-specific overrides using raw SQL query for now
+        // until the Supabase types are updated
         if (user) {
           try {
+            // Use a raw query to get user targeting data
             const { data: userOverrides, error: userError } = await supabase
-              .from('user_feature_targeting')
-              .select(`
-                feature_id,
-                is_enabled,
-                feature_flags:feature_id(
-                  feature_key
-                )
-              `)
-              .eq('user_id', user.id);
+              .rpc('get_user_feature_targeting', { 
+                user_uuid: user.id 
+              });
 
             if (userError) {
               console.error('Error fetching user feature targeting:', userError);
             } else if (userOverrides) {
               // Apply user-specific overrides
-              userOverrides.forEach(override => {
-                const featureKey = override.feature_flags?.feature_key;
-                if (featureKey) {
-                  flagsMap[featureKey] = override.is_enabled;
+              userOverrides.forEach((override: any) => {
+                if (override.feature_key && override.is_enabled !== undefined) {
+                  flagsMap[override.feature_key] = override.is_enabled;
                 }
               });
             }
