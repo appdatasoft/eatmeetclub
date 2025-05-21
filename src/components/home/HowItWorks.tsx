@@ -2,9 +2,29 @@
 import EditableText from "@/components/editor/EditableText";
 import EditableImage from "@/components/editor/EditableImage";
 import { useEditableContent } from "@/components/editor/EditableContentProvider";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const HowItWorks = () => {
   const { editModeEnabled } = useEditableContent();
+  
+  useEffect(() => {
+    // Test connection to Supabase on component mount
+    const testConnection = async () => {
+      try {
+        const { data, error } = await supabase.from('page_content').select('count(*)').limit(1);
+        if (error) {
+          console.error("Error connecting to Supabase in HowItWorks:", error);
+        } else {
+          console.log("Successfully connected to Supabase in HowItWorks");
+        }
+      } catch (err) {
+        console.error("Failed to test Supabase connection:", err);
+      }
+    };
+    
+    testConnection();
+  }, []);
 
   return (
     <section className="section-padding bg-white">
@@ -33,7 +53,7 @@ const HowItWorks = () => {
                 shape="circle"
                 className="w-48 h-48 bg-brand-100"
                 alt="Step 1"
-                defaultImage=""
+                defaultImage="/lovable-uploads/e68dd733-6a42-426b-8156-7c0a0963b7d2.png"
               />
               {!editModeEnabled && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -63,7 +83,7 @@ const HowItWorks = () => {
                 shape="circle"
                 className="w-48 h-48 bg-brand-100"
                 alt="Step 2"
-                defaultImage=""
+                defaultImage="/lovable-uploads/e68dd733-6a42-426b-8156-7c0a0963b7d2.png"
               />
               {!editModeEnabled && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -93,7 +113,7 @@ const HowItWorks = () => {
                 shape="circle"
                 className="w-48 h-48 bg-brand-100"
                 alt="Step 3"
-                defaultImage=""
+                defaultImage="/lovable-uploads/e68dd733-6a42-426b-8156-7c0a0963b7d2.png"
               />
               {!editModeEnabled && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

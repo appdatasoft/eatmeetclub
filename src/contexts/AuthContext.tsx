@@ -2,6 +2,7 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   session: Session | null;
@@ -21,6 +22,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -71,7 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           setIsAdmin(!!adminData);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading user data:', error);
       } finally {
         setIsLoading(false);
@@ -89,7 +91,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-    } catch (error) {
+    } catch (error: any) {
+      toast({
+        title: "Login Error",
+        description: error.message || "Failed to log in",
+        variant: "destructive",
+      });
       throw error;
     }
   };
@@ -98,7 +105,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
-    } catch (error) {
+    } catch (error: any) {
+      toast({
+        title: "Signup Error",
+        description: error.message || "Failed to sign up",
+        variant: "destructive",
+      });
       throw error;
     }
   };
@@ -113,10 +125,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setIsAdmin(false);
       
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+      
       // Force page refresh to clear any cached state
       setTimeout(() => window.location.href = '/', 100);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during signOut:", error);
+      toast({
+        title: "Logout Error",
+        description: error.message || "Failed to log out",
+        variant: "destructive",
+      });
       throw error;
     }
   };

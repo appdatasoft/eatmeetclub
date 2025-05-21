@@ -23,10 +23,7 @@ const AuthButtons = () => {
   const handleLogoutClick = async () => {
     try {
       await signOut();
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
+      // Toast notification handled in AuthContext
     } catch (error: any) {
       console.error("Logout error:", error);
       toast({
