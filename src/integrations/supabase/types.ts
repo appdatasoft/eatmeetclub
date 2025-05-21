@@ -408,6 +408,10 @@ export type Database = {
       }
       events: {
         Row: {
+          ambassador_fee_percentage: number | null
+          approval_date: string | null
+          approval_status: string | null
+          approved_by: string | null
           capacity: number
           cover_image: string | null
           created_at: string
@@ -418,7 +422,11 @@ export type Database = {
           payment_status: string | null
           price: number
           published: boolean | null
+          rejected_by: string | null
+          rejection_date: string | null
+          rejection_reason: string | null
           restaurant_id: string
+          submitted_for_approval_at: string | null
           tickets_sold: number | null
           time: string
           title: string
@@ -426,6 +434,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ambassador_fee_percentage?: number | null
+          approval_date?: string | null
+          approval_status?: string | null
+          approved_by?: string | null
           capacity: number
           cover_image?: string | null
           created_at?: string
@@ -436,7 +448,11 @@ export type Database = {
           payment_status?: string | null
           price: number
           published?: boolean | null
+          rejected_by?: string | null
+          rejection_date?: string | null
+          rejection_reason?: string | null
           restaurant_id: string
+          submitted_for_approval_at?: string | null
           tickets_sold?: number | null
           time: string
           title: string
@@ -444,6 +460,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ambassador_fee_percentage?: number | null
+          approval_date?: string | null
+          approval_status?: string | null
+          approved_by?: string | null
           capacity?: number
           cover_image?: string | null
           created_at?: string
@@ -454,7 +474,11 @@ export type Database = {
           payment_status?: string | null
           price?: number
           published?: boolean | null
+          rejected_by?: string | null
+          rejection_date?: string | null
+          rejection_reason?: string | null
           restaurant_id?: string
+          submitted_for_approval_at?: string | null
           tickets_sold?: number | null
           time?: string
           title?: string
@@ -1183,55 +1207,85 @@ export type Database = {
       restaurants: {
         Row: {
           address: string
+          business_license_image_url: string | null
+          business_license_number: string | null
           city: string
           created_at: string
           cuisine_type: string
+          default_ambassador_fee_percentage: number | null
           description: string | null
+          drivers_license_image_url: string | null
+          ein_number: string | null
           has_signed_contract: boolean | null
           id: string
           logo_url: string | null
           name: string
           owner_email: string | null
+          owner_name: string | null
+          owner_ssn_last4: string | null
           phone: string
           state: string
           updated_at: string
           user_id: string
+          verification_status: string | null
+          verified_at: string | null
+          verified_by: string | null
           website: string | null
           zipcode: string
         }
         Insert: {
           address: string
+          business_license_image_url?: string | null
+          business_license_number?: string | null
           city: string
           created_at?: string
           cuisine_type: string
+          default_ambassador_fee_percentage?: number | null
           description?: string | null
+          drivers_license_image_url?: string | null
+          ein_number?: string | null
           has_signed_contract?: boolean | null
           id?: string
           logo_url?: string | null
           name: string
           owner_email?: string | null
+          owner_name?: string | null
+          owner_ssn_last4?: string | null
           phone: string
           state: string
           updated_at?: string
           user_id: string
+          verification_status?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
           website?: string | null
           zipcode: string
         }
         Update: {
           address?: string
+          business_license_image_url?: string | null
+          business_license_number?: string | null
           city?: string
           created_at?: string
           cuisine_type?: string
+          default_ambassador_fee_percentage?: number | null
           description?: string | null
+          drivers_license_image_url?: string | null
+          ein_number?: string | null
           has_signed_contract?: boolean | null
           id?: string
           logo_url?: string | null
           name?: string
           owner_email?: string | null
+          owner_name?: string | null
+          owner_ssn_last4?: string | null
           phone?: string
           state?: string
           updated_at?: string
           user_id?: string
+          verification_status?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
           website?: string | null
           zipcode?: string
         }

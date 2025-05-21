@@ -1,47 +1,91 @@
 
-import React from 'react';
+import { Control } from 'react-hook-form';
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
 interface EventBasicInfoProps {
-  eventTitle: string;
-  eventDescription: string;
-  handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  control: Control<any>;
+  restaurant?: {
+    id: string;
+    default_ambassador_fee_percentage?: number;
+  } | null;
 }
 
-const EventBasicInfo = ({
-  eventTitle,
-  eventDescription,
-  handleChange
-}: EventBasicInfoProps) => {
+const EventBasicInfo: React.FC<EventBasicInfoProps> = ({ control, restaurant }) => {
   return (
-    <>
-      <div className="space-y-2">
-        <Label htmlFor="eventTitle">Event Title*</Label>
-        <Input 
-          id="eventTitle" 
-          name="eventTitle" 
-          required 
-          placeholder="Give your event a catchy title" 
-          value={eventTitle}
-          onChange={handleChange}
-        />
-      </div>
+    <div className="space-y-4">
+      <FormField
+        control={control}
+        name="title"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Event Title</FormLabel>
+            <FormControl>
+              <Input placeholder="Enter event title" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
       
-      <div className="space-y-2">
-        <Label htmlFor="eventDescription">Description*</Label>
-        <Textarea 
-          id="eventDescription"
-          name="eventDescription" 
-          required 
-          placeholder="Describe what makes this event special..." 
-          className="min-h-[120px]"
-          value={eventDescription}
-          onChange={handleChange}
-        />
-      </div>
-    </>
+      <FormField
+        control={control}
+        name="description"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Description</FormLabel>
+            <FormControl>
+              <Textarea 
+                placeholder="Describe your event" 
+                className="resize-none min-h-[150px]"
+                {...field} 
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      
+      <FormField
+        control={control}
+        name="ambassador_fee_percentage"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Ambassador Fee Percentage</FormLabel>
+            <FormControl>
+              <Input 
+                type="number" 
+                min="0"
+                max="30"
+                placeholder={restaurant?.default_ambassador_fee_percentage 
+                  ? `Default: ${restaurant.default_ambassador_fee_percentage}%` 
+                  : "Enter percentage (0-30%)"}
+                {...field}
+                onChange={(e) => {
+                  // Ensure the value is within bounds
+                  let value = parseFloat(e.target.value);
+                  if (isNaN(value)) {
+                    field.onChange("");
+                  } else {
+                    if (value < 0) value = 0;
+                    if (value > 30) value = 30;
+                    field.onChange(value.toString());
+                  }
+                }}
+              />
+            </FormControl>
+            <p className="text-xs text-gray-500 mt-1">
+              Percentage of ticket revenue that goes to the event creator (ambassador). 
+              {restaurant?.default_ambassador_fee_percentage 
+                ? ` Default is ${restaurant.default_ambassador_fee_percentage}% if left empty.` 
+                : ' Leave empty to use restaurant default.'}
+            </p>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
   );
 };
 
