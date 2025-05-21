@@ -1,144 +1,86 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useMembershipStatus } from '@/hooks/useMembershipStatus';
 
-export const useMembershipVerification = () => {
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+export const useMembershipVerification = (sessionId: string | null) => {
   const [isVerifying, setIsVerifying] = useState(false);
-  const navigate = useNavigate();
+  const [isVerified, setIsVerified] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const { toast } = useToast();
-  const { refreshMembership } = useMembershipStatus();
 
-  const verifyEmailAndMembershipStatus = async (email: string, restaurantId?: string): Promise<{ 
-    userExists: boolean; 
-    hasActiveMembership: boolean;
-    userId: string | null;
-    restaurantId?: string | null;
-    productInfo?: { name?: string; description?: string; } | null;
-  }> => {
-    try {
+  useEffect(() => {
+    const verifyPayment = async () => {
+      if (!sessionId) return;
+
       setIsVerifying(true);
-      
-      // Find a user with the provided email
-      const { data: userData, error: userError } = await supabase
-        .from('auth.users')
-        .select('id, email')
-        .eq('email', email)
-        .limit(1)
-        .single();
+      setVerificationError(null);
+
+      try {
+        // Get user email from session
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
-      if (userError || !userData) {
-        console.error('Error checking user existence:', userError || 'User not found');
-        return { userExists: false, hasActiveMembership: false, userId: null };
-      }
-      
-      const authUser = userData;
-      
-      // Check if the user has a user role
-      const { data: userRoleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('user_id', authUser.id)
-        .eq('role', 'user')
-        .maybeSingle();
-
-      if (roleError || !userRoleData) {
-        console.error('Error checking user role:', roleError || 'User role not found');
-        return { userExists: false, hasActiveMembership: false, userId: null };
-      }
-
-      // If checking for a specific restaurant membership
-      if (restaurantId) {
-        // Check if user has an active membership for this restaurant
-        const { data: membership, error: membershipError } = await supabase
-          .from('memberships')
-          .select(`
-            id,
-            status,
-            renewal_at,
-            product_id,
-            restaurant_id
-          `)
-          .eq('user_id', userRoleData.user_id)
-          .eq('restaurant_id', restaurantId)
-          .eq('status', 'active')
-          .maybeSingle();
-
-        if (membershipError) {
-          console.error('Error checking membership status:', membershipError);
-          throw new Error('Failed to verify membership status');
+        if (sessionError) {
+          throw new Error("Unable to get session: " + sessionError.message);
         }
-
-        // Check if membership is active and not expired
-        const hasActiveMembership = !!membership && 
-          membership.status === 'active' && 
-          (!membership.renewal_at || new Date(membership.renewal_at) > new Date());
         
-        // If we have a membership, fetch the product info separately
-        let productInfo = null;
-        if (membership && hasActiveMembership && membership.product_id) {
-          const { data: productData } = await supabase
-            .from('products')
-            .select('name, description')
-            .eq('id', membership.product_id)
-            .single();
-            
-          if (productData) {
-            productInfo = {
-              name: productData.name,
-              description: productData.description
-            };
+        const userEmail = sessionData?.session?.user?.email;
+        
+        if (!userEmail) {
+          throw new Error("No user email found in session");
+        }
+        
+        // Call function to verify the payment
+        const { data, error } = await supabase.functions.invoke('verify-membership-payment', {
+          body: { 
+            sessionId,
+            email: userEmail
           }
+        });
+
+        if (error) throw new Error(error.message);
+
+        if (!data?.success) {
+          throw new Error(data?.message || "Payment verification failed");
         }
 
-        return { 
-          userExists: true, 
-          hasActiveMembership: hasActiveMembership,
-          userId: userRoleData.user_id,
-          restaurantId: restaurantId,
-          productInfo: productInfo
-        };
-      } else {
-        // Otherwise just check if user exists without checking memberships
-        return { 
-          userExists: true, 
-          hasActiveMembership: false,
-          userId: userRoleData.user_id
-        };
-      }
-    } catch (error: any) {
-      console.error('Verification error:', error);
-      toast({
-        title: "Verification Error",
-        description: error.message || "Could not verify account status",
-        variant: "destructive",
-      });
-      return { userExists: false, hasActiveMembership: false, userId: null };
-    } finally {
-      setIsVerifying(false);
-    }
-  };
+        // Store the user ID if returned
+        if (data.userId) {
+          setUserId(data.userId);
+        }
 
-  const handleExistingMember = (email: string, restaurantId?: string, productInfo?: { name?: string; description?: string; } | null) => {
-    // Store email in local storage for the login form
-    localStorage.setItem('loginEmail', email);
-    
-    // Navigate to login with a message
-    toast({
-      title: "Active Membership Exists",
-      description: productInfo?.name 
-        ? `You already have an active "${productInfo.name}" membership for this restaurant. Please log in to access your account.` 
-        : "You already have an active membership for this restaurant. Please log in to access your account.",
-    });
-    
-    navigate('/login');
-  };
+        setIsVerified(true);
+        
+        toast({
+          title: "Payment Verified",
+          description: "Your membership payment has been successfully verified.",
+        });
+
+      } catch (error: any) {
+        console.error("Payment verification error:", error);
+        setVerificationError(error.message);
+
+        toast({
+          title: "Verification Error",
+          description: error.message,
+          variant: "destructive"
+        });
+      } finally {
+        setIsVerifying(false);
+      }
+    };
+
+    if (sessionId && !isVerified && !isVerifying) {
+      verifyPayment();
+    }
+  }, [sessionId, toast, isVerified, isVerifying]);
 
   return {
     isVerifying,
-    verifyEmailAndMembershipStatus,
-    handleExistingMember
+    isVerified,
+    verificationError,
+    userId
   };
 };
 

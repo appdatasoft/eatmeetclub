@@ -21,10 +21,14 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
   restaurantId
 }) => {
   const { toast } = useToast();
-  const [isProcessing, setIsProcessing] = useState(false);
   const [emailCheckDone, setEmailCheckDone] = useState(false);
   const [maxRetriesReached, setMaxRetriesReached] = useState(false);
-  const { verifyPayment, isVerifyingPayment, verificationAttempts } = usePaymentVerification({});
+  const { 
+    verifyPayment, 
+    isVerifying, 
+    verificationAttempts,
+    navigateAfterSuccess 
+  } = usePaymentVerification({});
   const { sendDirectBackupEmail } = useBackupEmail();
   const { sendWelcomeEmail } = useWelcomeEmail();
 
@@ -50,6 +54,13 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
     };
   };
 
+  // Effect to handle completed verification
+  useEffect(() => {
+    if (verificationProcessed && paymentSuccess) {
+      navigateAfterSuccess();
+    }
+  }, [verificationProcessed, paymentSuccess, navigateAfterSuccess]);
+
   // Effect to verify successful Stripe checkout completion
   useEffect(() => {
     // Only run this check once
@@ -57,7 +68,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
     
     const verifyCheckoutCompletion = async () => {
       // Verify only once with valid session ID when success parameter is present
-      if (sessionId && paymentSuccess && !verificationProcessed && !isVerifyingPayment) {
+      if (sessionId && paymentSuccess && !verificationProcessed && !isVerifying) {
         console.log("Starting payment verification with session ID:", sessionId);
         
         try {
@@ -105,9 +116,9 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             restaurantId: restaurantId || undefined
           };
           
-          const success = await verifyPayment(sessionId, verificationOptions);
+          const result = await verifyPayment(sessionId, verificationOptions);
           
-          if (success) {
+          if (result.success) {
             console.log("Payment verified successfully");
             // Clear checkout initiated flag after successful verification
             sessionStorage.removeItem('checkout_initiated');
@@ -174,7 +185,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
     };
     
     verifyCheckoutCompletion();
-  }, [sessionId, paymentSuccess, verificationProcessed, toast, setVerificationProcessed, verifyPayment, isVerifyingPayment, emailCheckDone, verificationAttempts, sendDirectBackupEmail, sendWelcomeEmail, restaurantId]);
+  }, [sessionId, paymentSuccess, verificationProcessed, toast, setVerificationProcessed, verifyPayment, isVerifying, emailCheckDone, verificationAttempts, sendDirectBackupEmail, sendWelcomeEmail, restaurantId]);
 
   return null; // This component doesn't render anything
 };

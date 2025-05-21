@@ -46,3 +46,5 @@ export const useCheckoutSession = () => {
     createCheckoutSession
   };
 };
+
+// No default export, only named export

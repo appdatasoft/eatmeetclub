@@ -1,6 +1,6 @@
 
 import { Control } from 'react-hook-form';
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -75,12 +75,12 @@ const EventBasicInfo: React.FC<EventBasicInfoProps> = ({ control, restaurant }) 
                 }}
               />
             </FormControl>
-            <p className="text-xs text-gray-500 mt-1">
+            <FormDescription>
               Percentage of ticket revenue that goes to the event creator (ambassador). 
               {restaurant?.default_ambassador_fee_percentage 
                 ? ` Default is ${restaurant.default_ambassador_fee_percentage}% if left empty.` 
                 : ' Leave empty to use restaurant default.'}
-            </p>
+            </FormDescription>
             <FormMessage />
           </FormItem>
         )}
