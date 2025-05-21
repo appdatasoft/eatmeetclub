@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,7 +45,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
       const result = await connectSocialMedia(platform);
       
       // For Instagram and Facebook, we don't show modal since it will redirect to OAuth
-      if (result && !result.pending) {
+      if (result) {
         const connection = connections.find(conn => conn.platform === platform) || result;
         setSelectedConnection(connection);
         setIsModalOpen(true);
