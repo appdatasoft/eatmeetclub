@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
@@ -55,8 +54,8 @@ const RestaurantJoin = () => {
     try {
       // Check for existing user
       const { data: existingUsers, error: userError } = await supabase
-        .from('auth.users')
-        .select('id')
+        .from('profiles') // Changed from auth.users to profiles
+        .select('id, user_id')
         .eq('email', formData.email)
         .limit(1);
         
@@ -86,7 +85,7 @@ const RestaurantJoin = () => {
           redirectTo: `${window.location.origin}/set-password`
         });
       } else {
-        userId = existingUsers[0].id;
+        userId = existingUsers[0].user_id || existingUsers[0].id;
       }
       
       // Register the restaurant

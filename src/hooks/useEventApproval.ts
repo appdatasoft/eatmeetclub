@@ -20,8 +20,14 @@ export const useEventApproval = (eventId: string) => {
 
       if (error) throw error;
       
-      setApprovalStatus(data?.approval_status || null);
-      return data?.approval_status;
+      // Ensure we only set approval status if it's a valid value
+      if (data?.approval_status && ['pending', 'approved', 'rejected'].includes(data.approval_status)) {
+        setApprovalStatus(data.approval_status as ApprovalStatus);
+      } else {
+        setApprovalStatus(null);
+      }
+      
+      return data?.approval_status as ApprovalStatus | null;
     } catch (error: any) {
       console.error('Error fetching approval status:', error);
       return null;
@@ -35,7 +41,7 @@ export const useEventApproval = (eventId: string) => {
       const { data, error } = await supabase
         .from('events')
         .update({ 
-          approval_status: 'pending',
+          approval_status: 'pending' as ApprovalStatus,
           submitted_for_approval_at: new Date().toISOString()
         })
         .eq('id', eventId);

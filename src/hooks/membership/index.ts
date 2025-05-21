@@ -11,3 +11,4 @@ export { useCheckoutSession } from './useCheckoutSession';
 export { default as useUserStorage } from './useUserStorage';
 export { default as useBackupEmail } from './useBackupEmail';
 export { useInvoiceEmail } from './useInvoiceEmail';
+export { default as useMembershipVerification } from './useMembershipVerification';
