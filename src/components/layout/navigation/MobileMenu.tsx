@@ -27,7 +27,6 @@ const MobileMenu = ({ isOpen, onClose, user, handleLogout }: MobileMenuProps) =>
         description: "You have been logged out of your account"
       });
       onClose();
-      navigate('/');
     } catch (error) {
       console.error("Logout error:", error);
       toast({

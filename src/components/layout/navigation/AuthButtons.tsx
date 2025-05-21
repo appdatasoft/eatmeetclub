@@ -27,8 +27,8 @@ const AuthButtons = () => {
         title: "Logged out",
         description: "You have been successfully logged out.",
       });
-      navigate("/login");
     } catch (error: any) {
+      console.error("Logout error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to logout.",

@@ -33,8 +33,13 @@ export const fetchPublishedEventsWithSupabase = async (): Promise<RawEventData[]
       throw response.error;
     }
     
+    if (!response.data || response.data.length === 0) {
+      console.log("No events found or empty response");
+      return [];
+    }
+    
     // Transform the nested restaurants format to our expected RawEventData format
-    const transformedData: RawEventData[] = response.data?.map(event => {
+    const transformedData: RawEventData[] = response.data.map(event => {
       // Safely extract restaurant data based on its structure
       const restaurantData = extractRestaurantData(event.restaurants);
       
@@ -45,13 +50,13 @@ export const fetchPublishedEventsWithSupabase = async (): Promise<RawEventData[]
         time: event.time,
         price: event.price,
         capacity: event.capacity,
-        cover_image: event.cover_image,
-        published: event.published,
+        cover_image: event.cover_image || '',
+        published: event.published || false,
         user_id: event.user_id,
         restaurant_id: event.restaurant_id,
         restaurants: restaurantData
       };
-    }) || [];
+    });
     
     console.log("Events fetched successfully with Supabase client:", transformedData.length, "events");
     return transformedData;

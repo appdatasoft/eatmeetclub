@@ -8,7 +8,9 @@ import { extractRestaurantData } from "../utils/restaurantDataUtils";
  */
 export const fetchEvents = async (filters: EventFilters = {}) => {
   try {
-    const { data, error } = await supabase
+    console.log("Fetching events with filters:", filters);
+    
+    let query = supabase
       .from('events')
       .select(`
         id, 
@@ -23,16 +25,46 @@ export const fetchEvents = async (filters: EventFilters = {}) => {
           state
         )
       `)
-      // Add filter conditions here based on the filters parameter
-      .order('date', { ascending: true });
+      .eq('published', true);
+      
+    // Apply filters if provided
+    if (filters.dateFrom) {
+      query = query.gte('date', filters.dateFrom);
+    }
+    
+    if (filters.dateTo) {
+      query = query.lte('date', filters.dateTo);
+    }
+    
+    if (filters.priceMin !== undefined) {
+      query = query.gte('price', filters.priceMin);
+    }
+    
+    if (filters.priceMax !== undefined) {
+      query = query.lte('price', filters.priceMax);
+    }
+    
+    if (filters.location) {
+      query = query.ilike('restaurants.city', `%${filters.location}%`);
+    }
+    
+    // Order by date
+    query = query.order('date', { ascending: true });
+    
+    const { data, error } = await query;
       
     if (error) {
       console.error('Error fetching events:', error);
       throw error;
     }
     
+    if (!data || data.length === 0) {
+      console.log("No events found matching filters");
+      return [];
+    }
+    
     // Transform the data to match our expected format
-    return (data || []).map(event => {
+    return data.map(event => {
       // Handle the restaurants property correctly
       const restaurantData = extractRestaurantData(event.restaurants);
       
@@ -42,7 +74,7 @@ export const fetchEvents = async (filters: EventFilters = {}) => {
         date: event.date,
         price: event.price,
         capacity: event.capacity,
-        cover_image: event.cover_image,
+        cover_image: event.cover_image || '',
         restaurant: restaurantData
       };
     });

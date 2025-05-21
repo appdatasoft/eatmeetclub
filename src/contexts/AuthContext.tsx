@@ -23,39 +23,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    async function loadUserData() {
-      try {
-        // First check if user is already authenticated
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Error getting session:', error.message);
-        }
-        
-        setSession(data.session);
-        setUser(data.session?.user || null);
-
-        if (data.session?.user) {
-          // Check if user is admin using direct database query instead of RPC
-          const { data: adminData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', data.session.user.id)
-            .eq('role', 'admin')
-            .maybeSingle();
-          
-          setIsAdmin(!!adminData);
-        }
-      } catch (error) {
-        console.error('Error loading user data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    // Set up auth state listener for changes
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        console.log('Auth state changed:', event);
         setSession(currentSession);
         setUser(currentSession?.user || null);
         
@@ -72,8 +43,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setIsAdmin(false);
         }
+        
+        setIsLoading(false);
       }
     );
+
+    // THEN check for existing session
+    async function loadUserData() {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error.message);
+        }
+        
+        setSession(data.session);
+        setUser(data.session?.user || null);
+
+        if (data.session?.user) {
+          // Check if user is admin using direct database query
+          const { data: adminData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', data.session.user.id)
+            .eq('role', 'admin')
+            .maybeSingle();
+          
+          setIsAdmin(!!adminData);
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
 
     loadUserData();
 
@@ -104,7 +107,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      // Clear any cached data after logout
+      setSession(null);
+      setUser(null);
+      setIsAdmin(false);
+      
+      // Force page refresh to clear any cached state
+      setTimeout(() => window.location.href = '/', 100);
     } catch (error) {
+      console.error("Error during signOut:", error);
       throw error;
     }
   };
