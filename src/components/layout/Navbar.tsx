@@ -11,7 +11,7 @@ import { toast } from '@/hooks/use-toast';
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, isAdmin, handleLogout } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
 
   // Log the authentication state to debug
@@ -46,7 +46,7 @@ const Navbar = () => {
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
         user={user}
-        handleLogout={handleLogout}
+        handleLogout={signOut}
       />
     </nav>
   );

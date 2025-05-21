@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import {
@@ -9,7 +10,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import './App.css';
 import AuthRoutes from './routes/AuthRoutes';
 import AppRoutes from './routes/AppRoutes';
-import { AuthProvider } from './hooks/useAuth';
+import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from "@/components/ui/toaster"
 import { FeatureFlagProvider } from './contexts/FeatureFlagContext';
 

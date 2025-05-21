@@ -19,13 +19,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredRole,
   adminOnly = false 
 }) => {
-  const { user, session, loading, isAdmin } = useAuth();
+  const { user, session, isLoading, isAdmin } = useAuth();
   const location = useLocation();
   
-  console.log("ProtectedRoute - loading:", loading, "authenticated:", !!session, "path:", location.pathname);
+  console.log("ProtectedRoute - loading:", isLoading, "authenticated:", !!session, "path:", location.pathname);
 
   // Show loading state while auth is being checked (but with a maximum timeout)
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full mb-4"></div>

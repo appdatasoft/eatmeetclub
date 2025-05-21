@@ -90,27 +90,31 @@ export const useFeatureFlags = () => {
 
         // If user is authenticated, check for user-specific overrides
         if (user) {
-          const { data: userOverrides, error: userError } = await supabase
-            .from('user_feature_targeting')
-            .select(`
-              feature_id,
-              is_enabled,
-              feature_flags!inner(
-                feature_key
-              )
-            `)
-            .eq('user_id', user.id);
+          try {
+            const { data: userOverrides, error: userError } = await supabase
+              .from('user_feature_targeting')
+              .select(`
+                feature_id,
+                is_enabled,
+                feature_flags:feature_id(
+                  feature_key
+                )
+              `)
+              .eq('user_id', user.id);
 
-          if (userError) {
-            console.error('Error fetching user feature targeting:', userError);
-          } else if (userOverrides) {
-            // Apply user-specific overrides
-            userOverrides.forEach(override => {
-              const featureKey = override.feature_flags?.feature_key;
-              if (featureKey) {
-                flagsMap[featureKey] = override.is_enabled;
-              }
-            });
+            if (userError) {
+              console.error('Error fetching user feature targeting:', userError);
+            } else if (userOverrides) {
+              // Apply user-specific overrides
+              userOverrides.forEach(override => {
+                const featureKey = override.feature_flags?.feature_key;
+                if (featureKey) {
+                  flagsMap[featureKey] = override.is_enabled;
+                }
+              });
+            }
+          } catch (userFetchError) {
+            console.error('Error processing user targeting:', userFetchError);
           }
         }
 

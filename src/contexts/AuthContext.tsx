@@ -11,6 +11,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  handleLogout: () => Promise<void>; // Added for compatibility
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -99,6 +100,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Add handleLogout as an alias of signOut for compatibility
+  const handleLogout = signOut;
+
   const value = {
     session,
     user,
@@ -106,7 +110,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isAdmin,
     signIn,
     signUp,
-    signOut
+    signOut,
+    handleLogout
   };
 
   return (

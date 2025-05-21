@@ -14,7 +14,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 const AuthButtons = () => {
-  const { user, handleLogout, isLoading } = useAuth();
+  const { user, signOut, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -22,7 +22,7 @@ const AuthButtons = () => {
 
   const handleLogoutClick = async () => {
     try {
-      await handleLogout();
+      await signOut();
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",

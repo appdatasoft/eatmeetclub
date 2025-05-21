@@ -66,23 +66,28 @@ export const FeatureFlagManager = () => {
       if (valuesError) throw valuesError;
 
       // Fetch user feature targeting
-      const { data: targets, error: targetsError } = await supabase
-        .from('user_feature_targeting')
-        .select(`
-          id, 
-          user_id, 
-          feature_id, 
-          is_enabled
-        `);
+      try {
+        const { data: targets, error: targetsError } = await supabase
+          .from('user_feature_targeting')
+          .select(`
+            id, 
+            user_id, 
+            feature_id, 
+            is_enabled
+          `);
 
-      if (targetsError) {
-        console.error('Error fetching user targeting:', targetsError);
+        if (targetsError) {
+          console.error('Error fetching user targeting:', targetsError);
+        } else {
+          setUserTargets(targets as UserFeatureTarget[] || []);
+        }
+      } catch (targetError) {
+        console.error('Error processing user targeting data:', targetError);
         // Continue with the flags and values, even if user targeting fails
       }
 
       setFeatureFlags(flags || []);
       setFlagValues(values || []);
-      setUserTargets(targets || []);
     } catch (err: any) {
       console.error('Error fetching feature flags:', err);
       setError(err);
@@ -130,43 +135,48 @@ export const FeatureFlagManager = () => {
       setIsUpdating(true);
 
       // Check if there's an existing record
-      const { data: existing, error: findError } = await supabase
-        .from('user_feature_targeting')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('feature_id', featureId)
-        .single();
-
-      if (findError && findError.code !== 'PGRST116') { // PGRST116 is "not found" which is expected
-        throw findError;
-      }
-
-      // Update or insert
-      let result;
-      if (existing) {
-        result = await supabase
+      try {
+        const { data: existing, error: findError } = await supabase
           .from('user_feature_targeting')
-          .update({ is_enabled: isEnabled })
-          .eq('id', existing.id);
-      } else {
-        result = await supabase
-          .from('user_feature_targeting')
-          .insert({
-            user_id: userId,
-            feature_id: featureId,
-            is_enabled: isEnabled
-          });
+          .select('id')
+          .eq('user_id', userId)
+          .eq('feature_id', featureId)
+          .single();
+
+        if (findError && findError.code !== 'PGRST116') { // PGRST116 is "not found" which is expected
+          throw findError;
+        }
+
+        // Update or insert
+        let result;
+        if (existing) {
+          result = await supabase
+            .from('user_feature_targeting')
+            .update({ is_enabled: isEnabled })
+            .eq('id', existing.id);
+        } else {
+          result = await supabase
+            .from('user_feature_targeting')
+            .insert({
+              user_id: userId,
+              feature_id: featureId,
+              is_enabled: isEnabled
+            });
+        }
+
+        if (result.error) throw result.error;
+
+        // Refresh the data
+        fetchFeatureFlags();
+
+        toast({
+          title: 'User targeting updated',
+          description: `Feature has been ${isEnabled ? 'enabled' : 'disabled'} for user`,
+        });
+      } catch (error) {
+        console.error('Error updating user targeting record:', error);
+        throw error;
       }
-
-      if (result.error) throw result.error;
-
-      // Refresh the data
-      fetchFeatureFlags();
-
-      toast({
-        title: 'User targeting updated',
-        description: `Feature has been ${isEnabled ? 'enabled' : 'disabled'} for user`,
-      });
     } catch (err: any) {
       console.error('Error updating user targeting:', err);
       toast({
