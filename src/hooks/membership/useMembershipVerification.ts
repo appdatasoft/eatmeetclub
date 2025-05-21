@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,36 +23,54 @@ export const useMembershipVerification = () => {
       // Add timestamp to prevent caching
       const timestamp = new Date().getTime();
       
-      // Check membership status
-      const { data, error } = await supabase.functions.invoke('check-membership-status', {
-        body: { email, timestamp },
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
+      // Check if user exists
+      const { data: users, error: userError } = await supabase
+        .from('auth.users')  // This is a view, not a direct table access
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
 
-      if (error) {
-        console.error('Error checking membership status:', error);
+      if (userError) {
+        console.error('Error checking user existence:', userError);
+        return { userExists: false, hasActiveMembership: false, userId: null };
+      }
+
+      // If no user found, return early
+      if (!users) {
+        return { userExists: false, hasActiveMembership: false, userId: null };
+      }
+
+      // Check if user has an active membership
+      const { data: memberships, error: membershipError } = await supabase
+        .from('memberships')
+        .select(`
+          id,
+          status,
+          renewal_at,
+          products:subscription_id (
+            name,
+            description
+          )
+        `)
+        .eq('user_id', users.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (membershipError) {
+        console.error('Error checking membership status:', membershipError);
         throw new Error('Failed to verify membership status');
       }
 
-      // If explicit error or userExists is false, user doesn't exist
-      if (data.error || data.userExists === false) {
-        return { 
-          userExists: false, 
-          hasActiveMembership: false, 
-          userId: null 
-        };
-      }
+      // Check if membership is active and not expired
+      const hasActiveMembership = !!memberships && 
+        memberships.status === 'active' && 
+        (!memberships.renewal_at || new Date(memberships.renewal_at) > new Date());
 
-      // Return the membership status with product info if available
       return { 
-        userExists: data.userExists || false, 
-        hasActiveMembership: data.active || data.hasActiveMembership || false,
-        userId: data.users?.[0]?.id || null,
-        productInfo: data.productInfo || null
+        userExists: true, 
+        hasActiveMembership: hasActiveMembership,
+        userId: users.id,
+        productInfo: memberships?.products || null
       };
     } catch (error: any) {
       console.error('Verification error:', error);

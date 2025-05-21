@@ -61,6 +61,7 @@ const CreateEvent = () => {
 
   const fetchEventFee = async () => {
     try {
+      // Get event fee from app_config instead of using RPC
       const { data, error } = await supabase
         .from('app_config')
         .select('value')

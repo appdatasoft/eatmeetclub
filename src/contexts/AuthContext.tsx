@@ -36,11 +36,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(data.session?.user || null);
 
         if (data.session?.user) {
-          // Check if user is admin
+          // Check if user is admin using direct database query instead of RPC
           const { data: adminData } = await supabase
-            .rpc('is_admin', { user_id: data.session.user.id });
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', data.session.user.id)
+            .eq('role', 'admin')
+            .maybeSingle();
           
-          setIsAdmin(adminData || false);
+          setIsAdmin(!!adminData);
         }
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -56,10 +60,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(currentSession?.user || null);
         
         if (currentSession?.user) {
+          // Check if user is admin using direct database query
           const { data: adminData } = await supabase
-            .rpc('is_admin', { user_id: currentSession.user.id });
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', currentSession.user.id)
+            .eq('role', 'admin')
+            .maybeSingle();
           
-          setIsAdmin(adminData || false);
+          setIsAdmin(!!adminData);
         } else {
           setIsAdmin(false);
         }
