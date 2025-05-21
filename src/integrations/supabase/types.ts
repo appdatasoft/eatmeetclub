@@ -33,6 +33,102 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_links: {
+        Row: {
+          code: string
+          created_at: string
+          event_id: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          event_id: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_links_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_tracking: {
+        Row: {
+          action_type: string
+          affiliate_link_id: string
+          conversion_value: number | null
+          created_at: string
+          event_id: string
+          id: string
+          ip_address: string | null
+          referred_user_id: string | null
+          ticket_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action_type: string
+          affiliate_link_id: string
+          conversion_value?: number | null
+          created_at?: string
+          event_id: string
+          id?: string
+          ip_address?: string | null
+          referred_user_id?: string | null
+          ticket_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action_type?: string
+          affiliate_link_id?: string
+          conversion_value?: number | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          ip_address?: string | null
+          referred_user_id?: string | null
+          ticket_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_tracking_affiliate_link_id_fkey"
+            columns: ["affiliate_link_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_tracking_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_tracking_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_config: {
         Row: {
           description: string | null
@@ -374,6 +470,68 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      feature_flag_values: {
+        Row: {
+          created_at: string | null
+          environment: Database["public"]["Enums"]["app_environment"]
+          feature_id: string | null
+          id: string
+          is_enabled: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          environment: Database["public"]["Enums"]["app_environment"]
+          feature_id?: string | null
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          environment?: Database["public"]["Enums"]["app_environment"]
+          feature_id?: string | null
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_flag_values_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "feature_flags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feature_flags: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_name: string
+          feature_key: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_name: string
+          feature_key: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_name?: string
+          feature_key?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       membership_payments: {
         Row: {
@@ -1214,8 +1372,16 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      is_feature_enabled: {
+        Args: {
+          feature_key: string
+          env?: Database["public"]["Enums"]["app_environment"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_environment: "development" | "staging" | "production"
       contract_template_type:
         | "restaurant"
         | "restaurant_referral"
@@ -1345,6 +1511,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_environment: ["development", "staging", "production"],
       contract_template_type: [
         "restaurant",
         "restaurant_referral",

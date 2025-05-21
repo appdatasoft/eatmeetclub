@@ -13,6 +13,7 @@ import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminPayment from "@/pages/admin/AdminPayment";
 import AdminFees from "@/pages/admin/AdminFees";
 import AdminSocialMedia from "@/pages/admin/AdminSocialMedia";
+import FeatureFlags from "@/pages/admin/FeatureFlags";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 export const AdminRoutes = () => {
@@ -96,6 +97,11 @@ export const AdminRoutes = () => {
       <Route path="users" element={
         <ProtectedRoute adminOnly={true}>
           <UsersPage />
+        </ProtectedRoute>
+      } />
+      <Route path="feature-flags" element={
+        <ProtectedRoute adminOnly={true}>
+          <FeatureFlags />
         </ProtectedRoute>
       } />
     </Routes>

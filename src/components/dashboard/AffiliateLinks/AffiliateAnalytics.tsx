@@ -11,6 +11,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recha
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useFeatureFlagContext } from '@/contexts/FeatureFlagContext';
 
 interface AnalyticsStat {
   title: string;
@@ -29,6 +30,7 @@ const AffiliateAnalytics = () => {
   const { code } = useParams();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isFeatureEnabled } = useFeatureFlagContext();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [affiliate, setAffiliate] = useState<any>(null);
@@ -37,10 +39,17 @@ const AffiliateAnalytics = () => {
   const [timeframe, setTimeframe] = useState('week');
 
   useEffect(() => {
+    // Check if the affiliates feature is enabled
+    if (!isFeatureEnabled('affiliates')) {
+      setError('The affiliates feature is currently disabled');
+      setIsLoading(false);
+      return;
+    }
+
     if (user && code) {
       fetchAffiliateData();
     }
-  }, [user, code, timeframe]);
+  }, [user, code, timeframe, isFeatureEnabled]);
 
   const fetchAffiliateData = async () => {
     if (!code) {
@@ -173,6 +182,16 @@ const AffiliateAnalytics = () => {
     }));
   };
 
+  if (!isFeatureEnabled('affiliates')) {
+    return (
+      <Alert>
+        <AlertDescription>
+          The affiliate feature is currently disabled.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
@@ -304,5 +323,5 @@ const AffiliateAnalytics = () => {
     </div>
   );
 };
-//
+
 export default AffiliateAnalytics;
