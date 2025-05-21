@@ -23,22 +23,21 @@ export const useMembershipVerification = () => {
       // Add timestamp to prevent caching
       const timestamp = new Date().getTime();
       
-      // Check if user exists - using the auth.users query instead of profiles
-      const { data: authUser, error: authError } = await supabase.auth.admin
-        .listUsers({
-          filters: {
-            email: email
-          }
-        });
+      // Check if user exists - using auth.users query
+      // Note: We need to modify this approach as auth.admin.listUsers is not available
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
 
-      if (authError) {
-        console.error('Error checking user existence:', authError);
+      if (userError) {
+        console.error('Error checking user existence:', userError);
         return { userExists: false, hasActiveMembership: false, userId: null };
       }
 
       // If no user found, return early
-      const user = authUser?.users?.[0];
-      if (!user) {
+      if (!userData) {
         return { userExists: false, hasActiveMembership: false, userId: null };
       }
 
@@ -49,12 +48,12 @@ export const useMembershipVerification = () => {
           id,
           status,
           renewal_at,
-          product:products (
+          products (
             name,
             description
           )
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', userData.id)
         .eq('status', 'active')
         .maybeSingle();
 
@@ -71,8 +70,8 @@ export const useMembershipVerification = () => {
       return { 
         userExists: true, 
         hasActiveMembership: hasActiveMembership,
-        userId: user.id,
-        productInfo: memberships?.product || null
+        userId: userData.id,
+        productInfo: memberships?.products || null
       };
     } catch (error: any) {
       console.error('Verification error:', error);

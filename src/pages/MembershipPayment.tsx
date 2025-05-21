@@ -121,7 +121,7 @@ const MembershipPayment = () => {
         {/* Display Stripe mode notification if available */}
         <div className="container-custom mb-4">
           <StripeModeNotification 
-            isStripeTestMode={isStripeTestMode}
+            isStripeTestMode={isStripeTestMode === true}
             stripeCheckError={stripeCheckError}
             onRetry={handleRetryStripeCheck}
           />

@@ -18,7 +18,7 @@ const MembershipPageContent: React.FC<MembershipPageContentProps> = ({ onSubmit,
     <div className="container-custom">
       {/* Display improved Stripe mode notification */}
       <StripeModeNotification 
-        isStripeTestMode={isStripeTestMode}
+        isStripeTestMode={isStripeTestMode === true}
         stripeCheckError={stripeCheckError}
         onRetry={handleRetryStripeCheck}
       />
