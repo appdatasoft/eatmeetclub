@@ -91,19 +91,27 @@ export const useFeatureFlags = () => {
         // If user is authenticated, check for user-specific overrides
         if (user) {
           try {
-            // Use the RPC function instead of direct table access
-            const { data: userOverrides, error: userError } = await supabase
-              .rpc('get_user_feature_targeting', { 
-                user_uuid: user.id 
-              });
+            // Query user targeting table directly instead of using RPC
+            const { data: userTargeting, error: userError } = await supabase
+              .from('user_feature_targeting')
+              .select(`
+                id,
+                feature_id,
+                is_enabled,
+                feature_flags!inner(
+                  feature_key
+                )
+              `)
+              .eq('user_id', user.id);
 
             if (userError) {
               console.error('Error fetching user feature targeting:', userError);
-            } else if (userOverrides && Array.isArray(userOverrides)) {
+            } else if (userTargeting && Array.isArray(userTargeting)) {
               // Apply user-specific overrides
-              userOverrides.forEach((override: any) => {
-                if (override.feature_key && override.is_enabled !== undefined) {
-                  flagsMap[override.feature_key] = override.is_enabled;
+              userTargeting.forEach((override) => {
+                const featureKey = override.feature_flags?.feature_key;
+                if (featureKey && override.is_enabled !== undefined) {
+                  flagsMap[featureKey] = override.is_enabled;
                 }
               });
             }
