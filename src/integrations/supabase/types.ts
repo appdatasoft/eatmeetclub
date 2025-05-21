@@ -577,7 +577,9 @@ export type Database = {
           id: string
           is_subscription: boolean
           last_payment_id: string | null
+          product_id: string | null
           renewal_at: string | null
+          restaurant_id: string | null
           started_at: string
           status: string
           subscription_id: string | null
@@ -589,7 +591,9 @@ export type Database = {
           id?: string
           is_subscription?: boolean
           last_payment_id?: string | null
+          product_id?: string | null
           renewal_at?: string | null
+          restaurant_id?: string | null
           started_at?: string
           status?: string
           subscription_id?: string | null
@@ -601,14 +605,31 @@ export type Database = {
           id?: string
           is_subscription?: boolean
           last_payment_id?: string | null
+          product_id?: string | null
           renewal_at?: string | null
+          restaurant_id?: string | null
           started_at?: string
           status?: string
           subscription_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "memberships_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memberships_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       memories: {
         Row: {
@@ -1397,6 +1418,10 @@ export type Database = {
       }
       has_active_membership: {
         Args: { user_id: string }
+        Returns: boolean
+      }
+      has_active_restaurant_membership: {
+        Args: { restaurant_id: string; user_id: string }
         Returns: boolean
       }
       is_admin: {

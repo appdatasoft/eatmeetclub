@@ -16,7 +16,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email, name, phone, address } = await req.json();
+    const { email, name, phone, address, restaurantId } = await req.json();
     
     // Get auth context - optional as this can also be used without auth
     let userId = null;
@@ -28,11 +28,32 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    
+    if (!restaurantId) {
+      return new Response(JSON.stringify({ error: "Missing restaurantId", success: false }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // Check if restaurant exists
+    const { data: restaurantData, error: restaurantError } = await supabase
+      .from("restaurants")
+      .select("id, name")
+      .eq("id", restaurantId)
+      .single();
+      
+    if (restaurantError || !restaurantData) {
+      return new Response(JSON.stringify({ error: "Restaurant not found", success: false }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // If auth header is present, verify the user
     if (authHeader) {
@@ -52,7 +73,7 @@ serve(async (req) => {
     const siteUrl = Deno.env.get("SITE_URL")!;
     const loginUrl = `${siteUrl}/login`;
 
-    // 🔹 Fetch admin config values
+    // Fetch admin config values
     const configKeys = ["membership_fee", "stripe_price_id"];
     const { data: configData, error: configError } = await supabase
       .from("admin_config")
@@ -96,13 +117,14 @@ serve(async (req) => {
       mode: "subscription",
       customer: customerId,
       line_items: [{ price: stripePriceId, quantity: 1 }],
-      success_url: `${siteUrl}/membership-confirmed?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${siteUrl}/membership-confirmed?success=true&session_id={CHECKOUT_SESSION_ID}&restaurant_id=${restaurantId}`,
       cancel_url: `${siteUrl}/signup?canceled=true`,
       metadata: {
         user_email: email,
         user_name: name,
         phone,
-        address
+        address,
+        restaurant_id: restaurantId
       },
     });
 

@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { stripe } from "../_shared/stripe.ts";
 import { userOperations } from "./user-operations.ts";
@@ -23,10 +22,22 @@ serve(async (req) => {
   try {
     // Parse the request
     const requestBody = await req.json();
-    const { sessionId, email, name, phone = null, address = null } = requestBody;
+    const { 
+      sessionId, 
+      email, 
+      name, 
+      phone = null, 
+      address = null, 
+      restaurantId = null
+    } = requestBody;
     const isSubscription = requestBody.isSubscription !== false; // Default to true
     
-    console.log("Request received:", { sessionId, email, isSubscription });
+    console.log("Request received:", { 
+      sessionId, 
+      email, 
+      isSubscription, 
+      restaurantId
+    });
     
     if (!sessionId || !email) throw new Error("Missing sessionId or email");
 
@@ -56,8 +67,11 @@ serve(async (req) => {
       }
     );
 
-    // Step 2: Check for existing membership
-    const existingMembership = await membershipOperations.checkExistingMembership(userId);
+    // Step 2: Check for existing membership for this restaurant if restaurantId provided
+    const existingMembership = await membershipOperations.checkExistingMembership(
+      userId, 
+      restaurantId
+    );
     
     // If we're doing a simplified verification, just return success
     if (requestBody.simplifiedVerification === true) {
@@ -80,8 +94,30 @@ serve(async (req) => {
       const subscriptionId = session.subscription;
       const amount = session.amount_total || 2500;
       
+      // Get product ID from Stripe if possible
+      let productId = null;
+      if (session.line_items) {
+        const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+        if (lineItems.data.length > 0 && lineItems.data[0].price?.product) {
+          // If product is a string (ID), use it directly
+          if (typeof lineItems.data[0].price.product === 'string') {
+            productId = lineItems.data[0].price.product;
+          } 
+          // Otherwise extract ID from product object
+          else if (lineItems.data[0].price.product.id) {
+            productId = lineItems.data[0].price.product.id;
+          }
+        }
+      }
+      
       // Create membership record
-      const membership = await membershipOperations.createMembership(userId, subscriptionId, sessionId);
+      const membership = await membershipOperations.createMembership(
+        userId, 
+        subscriptionId, 
+        sessionId,
+        restaurantId,
+        productId
+      );
       membershipCreated = true;
       
       // Record payment
@@ -108,6 +144,7 @@ serve(async (req) => {
       membershipCreated,
       passwordEmailSent,
       invoiceEmailSent,
+      restaurantId
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

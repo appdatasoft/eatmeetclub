@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Event } from "./types";
 import { Loader2 } from "lucide-react";
+import { useMembershipStatus } from "@/hooks/useMembershipStatus";
 
 interface EventPublishControlsProps {
   event: Event;
@@ -14,12 +15,29 @@ interface EventPublishControlsProps {
 const EventPublishControls = ({ event, onRefresh }: EventPublishControlsProps) => {
   const { toast } = useToast();
   const [publishingEventId, setPublishingEventId] = useState<string | null>(null);
+  const { restaurantMemberships } = useMembershipStatus();
+  
+  // Check if user has an active membership for this restaurant
+  const hasRestaurantMembership = restaurantMemberships.some(
+    m => m.restaurant_id === event.restaurant_id
+  );
   
   const handlePublishToggle = async (event: Event) => {
+    // Check for payment requirement
     if (event.payment_status !== 'completed' && !event.published) {
       toast({
         title: "Payment Required",
         description: "You need to complete the payment before publishing this event",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Check for restaurant membership requirement when publishing
+    if (!event.published && !hasRestaurantMembership) {
+      toast({
+        title: "Membership Required",
+        description: "You need an active membership for this restaurant to publish events",
         variant: "destructive"
       });
       return;
@@ -73,9 +91,19 @@ const EventPublishControls = ({ event, onRefresh }: EventPublishControlsProps) =
       <Switch
         checked={event.published}
         onCheckedChange={() => handlePublishToggle(event)}
-        disabled={publishingEventId === event.id || (event.payment_status !== 'completed' && !event.published)}
+        disabled={
+          publishingEventId === event.id || 
+          (event.payment_status !== 'completed' && !event.published) ||
+          (!event.published && !hasRestaurantMembership)
+        }
         className={event.published ? "data-[state=checked]:bg-green-600" : ""}
-        title={event.published ? "Unpublish Event" : "Publish Event"}
+        title={
+          !hasRestaurantMembership && !event.published 
+            ? "Requires restaurant membership" 
+            : event.published 
+              ? "Unpublish Event" 
+              : "Publish Event"
+        }
       />
     </div>
   );

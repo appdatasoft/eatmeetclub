@@ -10,13 +10,15 @@ interface PaymentVerificationHandlerProps {
   paymentSuccess: boolean;
   verificationProcessed: boolean;
   setVerificationProcessed: (value: boolean) => void;
+  restaurantId?: string | null;
 }
 
 const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
   sessionId,
   paymentSuccess,
   verificationProcessed,
-  setVerificationProcessed
+  setVerificationProcessed,
+  restaurantId
 }) => {
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -90,24 +92,22 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
             description: "Please wait while we confirm your membership...",
           });
           
-          // Force critical parameters to ensure success:
-          // 1. createMembershipRecord: true - creates record in memberships table
-          // 2. sendInvoiceEmail: true - sends invoice email
-          // Both processes create the records in the required tables
-          const success = await verifyPayment(sessionId, {
+          // Add restaurant ID to verification if available
+          const verificationOptions = {
             // Force all processes to complete even if earlier steps fail
             forceCreateUser: true,
             sendPasswordEmail: true,
-            createMembershipRecord: true, // Ensures memberships record is created
-            sendInvoiceEmail: true,       // Ensures invoice is sent and payment record is created
-            // Use simplified verification as backup if full verification fails
+            createMembershipRecord: true, 
+            sendInvoiceEmail: true,       
             simplifiedVerification: false,
-            // Set retry if first attempt fails
             retry: true,
             maxRetries: 3,
-            // Force bypass any duplicate checks
-            forceSendEmails: true
-          });
+            forceSendEmails: true,
+            // Add restaurant ID if available
+            restaurantId: restaurantId || undefined
+          };
+          
+          const success = await verifyPayment(sessionId, verificationOptions);
           
           if (success) {
             console.log("Payment verified successfully");
@@ -121,9 +121,13 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
               console.error("Failed to send welcome email with invoice link:", welcomeEmailError);
             }
             
+            const restaurantMessage = restaurantId 
+              ? " for your restaurant" 
+              : "";
+              
             toast({
               title: "Welcome to our membership!",
-              description: "Your account has been activated. Please check your email for login instructions and invoice.",
+              description: `Your membership${restaurantMessage} has been activated. Please check your email for login instructions and invoice.`,
             });
           } else if (verificationAttempts >= 3) {
             setMaxRetriesReached(true);
@@ -172,7 +176,7 @@ const PaymentVerificationHandler: React.FC<PaymentVerificationHandlerProps> = ({
     };
     
     verifyCheckoutCompletion();
-  }, [sessionId, paymentSuccess, verificationProcessed, toast, setVerificationProcessed, verifyPayment, isVerifying, emailCheckDone, verificationAttempts, sendDirectBackupEmail, sendWelcomeEmail]);
+  }, [sessionId, paymentSuccess, verificationProcessed, toast, setVerificationProcessed, verifyPayment, isVerifying, emailCheckDone, verificationAttempts, sendDirectBackupEmail, sendWelcomeEmail, restaurantId]);
 
   return null; // This component doesn't render anything
 };

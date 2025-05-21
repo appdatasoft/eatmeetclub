@@ -1,11 +1,12 @@
-import { useState, useCallback } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { useVerificationRequest } from "./payment-verification/useVerificationRequest";
-import { useBackupProcessing } from "./payment-verification/useBackupProcessing";
-import { useUserStorage } from "./payment-verification/useUserStorage";
+
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast as showToast } from "@/hooks/use-toast";
+import { NavigateFunction } from "react-router-dom";
 
 interface PaymentVerificationProps {
-  setIsProcessing: (value: boolean) => void;
+  setIsLoading?: (loading: boolean) => void;
+  navigate?: NavigateFunction;
 }
 
 interface VerificationOptions {
@@ -13,165 +14,158 @@ interface VerificationOptions {
   sendPasswordEmail?: boolean;
   createMembershipRecord?: boolean;
   sendInvoiceEmail?: boolean;
-  preventDuplicateEmails?: boolean;
   simplifiedVerification?: boolean;
-  safeMode?: boolean;
   retry?: boolean;
   maxRetries?: number;
   forceSendEmails?: boolean;
+  restaurantId?: string;
 }
 
-export const usePaymentVerification = ({ setIsProcessing }: PaymentVerificationProps) => {
-  const { toast } = useToast();
-  const [lastVerifiedSession, setLastVerifiedSession] = useState<string | null>(null);
-  
-  const {
-    sendVerificationRequest,
-    isVerifying,
-    verificationError,
-    verificationAttempts,
-    setVerificationAttempts
-  } = useVerificationRequest();
-  
-  const {
-    handleSimplifiedVerification,
-    sendBackupEmails,
-    showVerificationToasts
-  } = useBackupProcessing();
-  
-  const { getUserDetails, clearUserDetails } = useUserStorage();
-  
-  const verifyPayment = useCallback(async (paymentId: string, options: VerificationOptions = {}) => {
-    // Additional debug logging
-    console.log("verifyPayment called with options:", options);
-    console.log("Current state:", { isVerifying, verificationAttempts, lastVerifiedSession });
-    
-    // Allow forcing verification even for repeated session IDs if forceSendEmails is true
-    const bypassDuplicationCheck = options.forceSendEmails === true;
-    
-    // Check if we already verified this session and aren't bypassing duplicate checks
-    if (lastVerifiedSession === paymentId && !bypassDuplicationCheck) {
-      console.log("This session ID has already been verified:", paymentId);
-      return true; // Return success to prevent retries
-    }
-    
-    // Prevent multiple verification attempts running simultaneously
-    if (isVerifying && !bypassDuplicationCheck) {
-      console.log("Payment verification already in progress, skipping");
-      return false;
-    }
-    
-    // Allow bypassing retry limits when forceSendEmails is true
-    if (verificationAttempts >= (options.maxRetries || 3) && !bypassDuplicationCheck) {
-      console.log("Maximum verification attempts reached");
-      toast({
-        title: "Verification limit reached",
-        description: "We're still processing your payment. Please check your email for confirmation.",
-      });
-      return false;
-    }
-    
-    // Check if we have the required email in localStorage BEFORE setting any state
-    const { email, name, phone, address } = getUserDetails();
-    if (!email) {
-      console.error("Missing email for payment verification in usePaymentVerification");
-      toast({
-        title: "Email missing",
-        description: "Unable to find your email information. Please try the signup process again.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    
-    setIsProcessing(true);
-    
-    // Only store the session ID if we aren't bypassing duplicate checks
-    if (!bypassDuplicationCheck) {
-      setLastVerifiedSession(paymentId);
-    }
+export const usePaymentVerification = ({
+  setIsLoading,
+  navigate
+}: PaymentVerificationProps) => {
+  const [isPaymentVerified, setIsPaymentVerified] = useState(false);
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [verificationAttempts, setVerificationAttempts] = useState(0);
+
+  // Function to verify payment with the backend
+  const verifyPayment = async (
+    paymentId: string, 
+    options: VerificationOptions = {}
+  ): Promise<boolean> => {
+    setIsVerifyingPayment(true);
+    if (setIsLoading) setIsLoading(true);
     
     try {
-      // Pass all required options to the verification request
-      const result = await sendVerificationRequest(
-        paymentId, 
-        email, 
-        name,
+      // Update verification attempts count
+      setVerificationAttempts(prev => prev + 1);
+      
+      // Get user details from localStorage
+      const storedEmail = localStorage.getItem('signup_email');
+      const storedName = localStorage.getItem('signup_name');
+      const storedPhone = localStorage.getItem('signup_phone');
+      const storedAddress = localStorage.getItem('signup_address');
+      
+      if (!storedEmail) {
+        throw new Error("Missing email for payment verification");
+      }
+      
+      console.log("Verifying payment with session ID:", paymentId);
+      console.log("User details:", { 
+        email: storedEmail, 
+        name: storedName, 
+        phone: storedPhone,
+        restaurantId: options.restaurantId 
+      });
+      
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+      };
+      
+      const requestBody = {
+        paymentId,
+        email: storedEmail,
+        name: storedName,
+        phone: storedPhone || null,
+        address: storedAddress || null,
+        isSubscription: true,
+        restaurantId: options.restaurantId,
+        // Add other options
+        forceCreateUser: options.forceCreateUser,
+        sendPasswordEmail: options.sendPasswordEmail,
+        createMembershipRecord: options.createMembershipRecord,
+        sendInvoiceEmail: options.sendInvoiceEmail,
+        simplifiedVerification: options.simplifiedVerification,
+        forceSendEmails: options.forceSendEmails
+      };
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/verify-membership-payment`,
         {
-          phone,
-          address,
-          isSubscription: true,
-          ...options
+          method: "POST",
+          headers,
+          body: JSON.stringify(requestBody),
         }
       );
       
-      // Show appropriate message based on response
-      showVerificationToasts(result);
+      const data = await response.json();
       
-      // Clean up localStorage and sessionStorage
-      clearUserDetails();
-      
-      return true;
-    } catch (error: any) {
-      console.error("Payment verification error:", error);
-      
-      // Try the simplified verification as a fallback if not already using it
-      if (!options.simplifiedVerification && options.retry) {
-        // First get the simplified verification ready
-        const canTrySimplified = await handleSimplifiedVerification(
-          paymentId,
-          email,
-          name
-        );
-        
-        if (canTrySimplified) {
-          // If simplified verification preparation succeeded, try sending the request with simplified options
-          try {
-            const fallbackResult = await sendVerificationRequest(
-              paymentId,
-              email,
-              name,
-              {
-                simplifiedVerification: true,
-                safeMode: true,
-                forceSendEmails: true
-              }
-            );
-            
-            if (fallbackResult.success) {
-              clearUserDetails();
-              return true;
-            }
-          } catch (simplifiedError) {
-            console.error("Simplified verification request failed:", simplifiedError);
-          }
-        }
+      if (!response.ok) {
+        throw new Error(data.message || "Payment verification failed");
       }
       
-      // More descriptive toast message
-      toast({
-        title: "Verification issue",
-        description: "We had trouble completing your membership setup. Your payment was received. Please check your email or contact support.",
+      console.log("Payment verification response:", data);
+      
+      if (data.success) {
+        setIsPaymentVerified(true);
+        showToast({
+          title: "Payment successful!",
+          description: "Your membership has been activated.",
+        });
+        
+        // Clean up localStorage
+        localStorage.removeItem('signup_email');
+        localStorage.removeItem('signup_name');
+        localStorage.removeItem('signup_phone');
+        localStorage.removeItem('signup_address');
+        
+        // Redirect to login or dashboard based on user status
+        if (navigate) {
+          setTimeout(() => {
+            navigate("/login");
+          }, 3000);
+        }
+        
+        return true;
+      } else {
+        // If retry option is enabled and we're below max retries
+        if (options.retry && 
+            options.maxRetries && 
+            verificationAttempts < options.maxRetries) {
+          console.log(`Verification attempt ${verificationAttempts} failed, retrying...`);
+          
+          // Wait briefly before retrying
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Recursive retry with same options
+          return verifyPayment(paymentId, options);
+        }
+        
+        throw new Error(data.message || "Payment verification failed");
+      }
+    } catch (error: any) {
+      console.error("Payment verification error:", error);
+      showToast({
+        title: "Error",
+        description: error.message || "There was a problem verifying your payment",
         variant: "destructive",
       });
-      
-      // Attempt direct email send as last resort
-      await sendBackupEmails(paymentId, email, name);
-      
       return false;
     } finally {
-      setIsProcessing(false);
+      if (setIsLoading) setIsLoading(false);
+      setIsVerifyingPayment(false);
     }
-  }, [
-    toast, isVerifying, verificationAttempts, lastVerifiedSession, 
-    setIsProcessing, sendVerificationRequest, handleSimplifiedVerification, 
-    sendBackupEmails, showVerificationToasts, getUserDetails, clearUserDetails
-  ]);
+  };
 
-  return { 
+  // Check if we need to verify a successful payment based on URL params
+  const checkPaymentStatus = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success') === 'true';
+    const sessionId = urlParams.get('session_id');
+    const restaurantId = urlParams.get('restaurant_id');
+    
+    if (success && sessionId) {
+      verifyPayment(sessionId, { restaurantId: restaurantId || undefined });
+    }
+  };
+
+  return {
+    isPaymentVerified,
+    isVerifyingPayment,
+    verificationAttempts,
     verifyPayment,
-    verificationError,
-    isVerifying,
-    verificationAttempts
+    checkPaymentStatus
   };
 };
 

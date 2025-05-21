@@ -8,8 +8,8 @@ export const membershipOperations = {
   /**
    * Check for existing active membership
    */
-  checkExistingMembership: async (userId: string) => {
-    console.log("Checking for existing membership for user:", userId);
+  checkExistingMembership: async (userId: string, restaurantId?: string) => {
+    console.log("Checking for existing membership for user:", userId, "restaurant:", restaurantId);
     
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -17,13 +17,20 @@ export const membershipOperations = {
     );
     
     const now = new Date().toISOString();
-    const { data: existingMembership } = await supabase
+    
+    // If a restaurant ID is provided, check for that specific restaurant
+    const query = supabase
       .from("memberships")
       .select("*")
       .eq("user_id", userId)
       .eq("status", "active")
-      .or(`renewal_at.gt.${now},renewal_at.is.null`)
-      .maybeSingle();
+      .or(`renewal_at.gt.${now},renewal_at.is.null`);
+      
+    if (restaurantId) {
+      query.eq("restaurant_id", restaurantId);
+    }
+    
+    const { data: existingMembership } = await query.maybeSingle();
     
     return existingMembership;
   },
@@ -31,8 +38,14 @@ export const membershipOperations = {
   /**
    * Create a new membership
    */
-  createMembership: async (userId: string, subscriptionId: string | null, sessionId: string) => {
-    console.log("Creating new membership record");
+  createMembership: async (
+    userId: string, 
+    subscriptionId: string | null, 
+    sessionId: string,
+    restaurantId?: string,
+    productId?: string
+  ) => {
+    console.log("Creating new membership record", { userId, restaurantId, productId });
     
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -40,17 +53,29 @@ export const membershipOperations = {
     );
     
     // Insert membership
+    const membershipData: any = {
+      user_id: userId,
+      status: "active",
+      is_subscription: !!subscriptionId,
+      started_at: new Date().toISOString(),
+      renewal_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      subscription_id: subscriptionId,
+      last_payment_id: sessionId,
+    };
+    
+    // Add restaurant ID if provided
+    if (restaurantId) {
+      membershipData.restaurant_id = restaurantId;
+    }
+    
+    // Add product ID if provided
+    if (productId) {
+      membershipData.product_id = productId;
+    }
+    
     const { data: membership, error: mErr } = await supabase
       .from("memberships")
-      .insert({
-        user_id: userId,
-        status: "active",
-        is_subscription: !!subscriptionId,
-        started_at: new Date().toISOString(),
-        renewal_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        subscription_id: subscriptionId,
-        last_payment_id: sessionId,
-      })
+      .insert(membershipData)
       .select()
       .single();
 

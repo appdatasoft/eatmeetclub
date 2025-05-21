@@ -10,6 +10,8 @@ import PaymentContentArea from "@/components/membership/PaymentContentArea";
 import StripeModeNotification from "@/components/membership/StripeModeNotification";
 import EmailVerifier from "@/components/membership/EmailVerifier";
 import { useStripeMode } from "@/hooks/membership/useStripeMode";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const MembershipPayment = () => {
   const [stripeError, setStripeError] = useState<string | null>(null);
@@ -27,6 +29,7 @@ const MembershipPayment = () => {
   const sessionId = searchParams.get('session_id');
   const success = searchParams.get('success') === 'true';
   const canceled = searchParams.get('canceled') === 'true';
+  const restaurantId = searchParams.get('restaurant_id');
   
   const {
     membershipFee,
@@ -62,6 +65,11 @@ const MembershipPayment = () => {
   const onSubmitWrapper = async (values: any) => {
     setValidationError(null);
     try {
+      // If we have a restaurant ID from query params, add it to the submission
+      if (restaurantId) {
+        values.restaurantId = restaurantId;
+      }
+      
       await handleSubmit(values);
     } catch (error: any) {
       setValidationError(error.message || "An error occurred during form submission");
@@ -82,9 +90,27 @@ const MembershipPayment = () => {
     );
   }
 
+  // Check if restaurant ID is missing when needed
+  const isMissingRestaurantId = !restaurantId && !finalPaymentSuccess && !finalPaymentCanceled;
+
   return (
     <MainLayout>
       <div className="min-h-screen bg-gray-50 py-16 px-4">
+        {/* Handle missing restaurant ID */}
+        {isMissingRestaurantId && (
+          <div className="container-custom mb-8">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
+              <h2 className="text-xl font-semibold text-amber-800 mb-3">Restaurant Selection Required</h2>
+              <p className="text-amber-700 mb-4">
+                Please select a restaurant to purchase a membership for.
+              </p>
+              <Button asChild>
+                <Link to="/become-member">Select Restaurant</Link>
+              </Button>
+            </div>
+          </div>
+        )}
+        
         {/* Handle payment verification via URL parameters */}
         {finalSessionId && finalPaymentSuccess && (
           <PaymentVerificationHandler
@@ -92,6 +118,7 @@ const MembershipPayment = () => {
             paymentSuccess={finalPaymentSuccess}
             verificationProcessed={verificationProcessed}
             setVerificationProcessed={setVerificationProcessed}
+            restaurantId={restaurantId}
           />
         )}
         
@@ -127,26 +154,30 @@ const MembershipPayment = () => {
           />
         </div>
         
-        {/* Main payment content area */}
-        <PaymentContentArea
-          paymentSuccess={finalPaymentSuccess}
-          sessionId={finalSessionId}
-          paymentCanceled={finalPaymentCanceled}
-          networkError={networkError}
-          formErrors={formErrors}
-          stripeError={stripeError}
-          validationError={validationError}
-          directClientSecret={directClientSecret}
-          isProcessing={isProcessing}
-          membershipFee={membershipFee}
-          existingMembership={existingMembership}
-          proratedAmount={proratedAmount}
-          handlePaymentSuccess={handlePaymentSuccess}
-          handlePaymentError={handlePaymentError}
-          handleSubmit={onSubmitWrapper}
-          handleCancel={handleCancel}
-          clientSecret={clientSecret}
-        />
+        {/* Only show payment content if a restaurant is selected */}
+        {!isMissingRestaurantId && (
+          /* Main payment content area */
+          <PaymentContentArea
+            paymentSuccess={finalPaymentSuccess}
+            sessionId={finalSessionId}
+            paymentCanceled={finalPaymentCanceled}
+            networkError={networkError}
+            formErrors={formErrors}
+            stripeError={stripeError}
+            validationError={validationError}
+            directClientSecret={directClientSecret}
+            isProcessing={isProcessing}
+            membershipFee={membershipFee}
+            existingMembership={existingMembership}
+            proratedAmount={proratedAmount}
+            handlePaymentSuccess={handlePaymentSuccess}
+            handlePaymentError={handlePaymentError}
+            handleSubmit={onSubmitWrapper}
+            handleCancel={handleCancel}
+            clientSecret={clientSecret}
+            restaurantId={restaurantId}
+          />
+        )}
       </div>
     </MainLayout>
   );
