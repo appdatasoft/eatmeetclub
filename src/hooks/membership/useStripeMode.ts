@@ -7,12 +7,14 @@ export const useStripeMode = () => {
   const [mode, setMode] = useState<'test' | 'live' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stripeCheckError, setStripeCheckError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchStripeMode = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
+      setStripeCheckError(null);
       
       // Get stripe mode from app_config table instead of using RPC
       const { data, error } = await supabase
@@ -24,6 +26,7 @@ export const useStripeMode = () => {
       if (error) {
         console.error("Error fetching Stripe mode:", error);
         setError("Failed to check payment mode");
+        setStripeCheckError("Failed to check payment mode");
         // Default to test mode for safety
         setMode('test');
         return;
@@ -37,6 +40,7 @@ export const useStripeMode = () => {
     } catch (err) {
       console.error("Error in fetchStripeMode:", err);
       setError("Failed to check payment mode");
+      setStripeCheckError("Failed to check payment mode");
       // Default to test mode for safety
       setMode('test');
     } finally {
@@ -90,6 +94,7 @@ export const useStripeMode = () => {
     mode,
     isLoading,
     error,
+    stripeCheckError,
     updateStripeMode,
     handleRetryStripeCheck,
     isStripeTestMode: mode === 'test'

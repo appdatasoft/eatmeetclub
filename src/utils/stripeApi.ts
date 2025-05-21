@@ -2,6 +2,7 @@
 /**
  * Utility functions for interacting with Stripe API via Supabase Edge Functions
  */
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Fetches the current Stripe mode (test or live)
