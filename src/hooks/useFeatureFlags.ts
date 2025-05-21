@@ -25,6 +25,15 @@ export interface FeatureFlagValue {
   updated_at: string;
 }
 
+export interface UserFeatureTargeting {
+  id: string;
+  feature_id: string;
+  user_id: string;
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // Determine the current environment
 const getCurrentEnvironment = (): AppEnvironment => {
   // In a real application, this would be set based on deployment environment
@@ -69,7 +78,7 @@ export const useFeatureFlags = () => {
 
         if (error) throw error;
 
-        // Transform the data into a simple key-value map
+        // Initialize flags map with environmental defaults
         const flagsMap: Record<string, boolean> = {};
         
         if (data) {
@@ -77,6 +86,32 @@ export const useFeatureFlags = () => {
             const isEnabled = item.feature_flag_values?.[0]?.is_enabled || false;
             flagsMap[item.feature_key] = isEnabled;
           });
+        }
+
+        // If user is authenticated, check for user-specific overrides
+        if (user) {
+          const { data: userOverrides, error: userError } = await supabase
+            .from('user_feature_targeting')
+            .select(`
+              feature_id,
+              is_enabled,
+              feature_flags!inner(
+                feature_key
+              )
+            `)
+            .eq('user_id', user.id);
+
+          if (userError) {
+            console.error('Error fetching user feature targeting:', userError);
+          } else if (userOverrides) {
+            // Apply user-specific overrides
+            userOverrides.forEach(override => {
+              const featureKey = override.feature_flags?.feature_key;
+              if (featureKey) {
+                flagsMap[featureKey] = override.is_enabled;
+              }
+            });
+          }
         }
 
         setFeatureFlags(flagsMap);
@@ -94,7 +129,7 @@ export const useFeatureFlags = () => {
     };
 
     fetchFeatureFlags();
-  }, [currentEnv, toast]);
+  }, [currentEnv, user, toast]);
 
   // Check if a specific feature is enabled
   const isFeatureEnabled = (featureKey: string): boolean => {

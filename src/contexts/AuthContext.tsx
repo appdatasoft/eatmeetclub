@@ -1,193 +1,117 @@
 
-import { useState, useEffect, createContext } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import { User, Session } from '@supabase/supabase-js';
+import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
-  user: User | null;
   session: Session | null;
-  loading: boolean;
+  user: User | null;
   isLoading: boolean;
   isAdmin: boolean;
-  authInitialized: boolean;
-  handleLogout: () => Promise<void>;
-  handleLogin: (email: string, password: string) => Promise<{ success: boolean; error?: any }>;
-  signUp: (email: string, password: string, userData?: any) => Promise<{ error: any, data?: any }>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextType>({
-  user: null,
-  session: null,
-  loading: true,
-  isLoading: true,
-  isAdmin: false,
-  authInitialized: false,
-  handleLogout: async () => {},
-  handleLogin: async () => ({ success: false }),
-  signUp: async () => ({ error: null }),
-});
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
-    console.log("Setting up auth state listener...");
-    
-    let mounted = true;
-    
-    // Set up a safety timeout to ensure loading state ends no matter what
-    const safetyTimeoutId = window.setTimeout(() => {
-      if (mounted) {
-        console.log("Safety timeout triggered - forcing loading state to end");
-        setLoading(false);
-        setIsLoading(false);
-        setAuthInitialized(true);
-      }
-    }, 5000); // Increased timeout to 5 seconds
-
-    // Create auth subscription first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, currentSession) => {
-        if (!mounted) return;
+    async function loadUserData() {
+      try {
+        // First check if user is already authenticated
+        const { data, error } = await supabase.auth.getSession();
         
-        console.log("Auth state changed:", _event);
+        if (error) {
+          console.error('Error getting session:', error.message);
+        }
+        
+        setSession(data.session);
+        setUser(data.session?.user || null);
+
+        if (data.session?.user) {
+          // Check if user is admin
+          const { data: adminData } = await supabase
+            .rpc('is_admin', { user_id: data.session.user.id });
+          
+          setIsAdmin(adminData || false);
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    // Set up auth state listener for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
         setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-
-        // End loading state after a slight delay to avoid UI flicker
-        setTimeout(() => {
-          if (mounted) {
-            setLoading(false);
-            setIsLoading(false);
-            setAuthInitialized(true);
-          }
-        }, 300);
-
-        // Check admin status if user is authenticated
+        setUser(currentSession?.user || null);
+        
         if (currentSession?.user) {
-          checkAdminStatus(currentSession.user.id);
+          const { data: adminData } = await supabase
+            .rpc('is_admin', { user_id: currentSession.user.id });
+          
+          setIsAdmin(adminData || false);
         } else {
           setIsAdmin(false);
         }
       }
     );
 
-    // Then check the initial session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      if (!mounted) return;
-
-      console.log("Initial session check:", currentSession ? "Found session" : "No session found");
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      // End loading after a slight delay
-      setTimeout(() => {
-        if (mounted) {
-          setLoading(false);
-          setIsLoading(false);
-          setAuthInitialized(true);
-        }
-      }, 300);
-
-      // Check admin status if user is authenticated
-      if (currentSession?.user) {
-        checkAdminStatus(currentSession.user.id);
-      }
-    }).catch(error => {
-      console.error("Error checking session:", error);
-      if (mounted) {
-        setLoading(false);
-        setIsLoading(false);
-        setAuthInitialized(true);
-      }
-    });
+    loadUserData();
 
     return () => {
-      console.log("Cleaning up auth state listener...");
-      mounted = false;
-      clearTimeout(safetyTimeoutId);
       subscription.unsubscribe();
     };
   }, []);
 
-  const checkAdminStatus = async (userId: string) => {
+  const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.rpc('is_admin', { user_id: userId });
-      if (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
-        return;
-      }
-      setIsAdmin(!!data);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
     } catch (error) {
-      console.error('Failed to check admin status:', error);
-      setIsAdmin(false);
+      throw error;
     }
   };
 
-  const handleLogin = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string) => {
     try {
-      console.log("Login attempt for:", email);
-      setIsLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) {
-        console.error("Login error:", error.message);
-        return { success: false, error };
-      }
-      return { success: true, data };
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
     } catch (error) {
-      console.error("Unexpected login error:", error);
-      return { success: false, error };
-    } finally {
-      setIsLoading(false);
+      throw error;
     }
   };
 
-  const signUp = async (email: string, password: string, userData?: any) => {
+  const signOut = async () => {
     try {
-      setIsLoading(true);
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: userData
-        }
-      });
-      return { data, error };
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
     } catch (error) {
-      return { error };
-    } finally {
-      setIsLoading(false);
+      throw error;
     }
-  };
-
-  const handleLogout = async () => {
-    console.log("Logging out...");
-    setIsLoading(true);
-    await supabase.auth.signOut();
-    console.log("Logged out successfully");
-    setIsLoading(false);
   };
 
   const value = {
-    user,
     session,
-    loading,
+    user,
     isLoading,
     isAdmin,
-    handleLogout,
-    handleLogin,
+    signIn,
     signUp,
-    authInitialized,
+    signOut
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
