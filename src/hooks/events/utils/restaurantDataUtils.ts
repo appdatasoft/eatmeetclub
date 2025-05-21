@@ -1,33 +1,52 @@
-
-import { RestaurantData } from "../types/apiTypes";
+import { RestaurantData } from '../types/apiTypes';
 
 /**
- * Safely extracts restaurant data from various formats returned by Supabase
+ * Safely extracts restaurant data from potentially diverse data structures
+ * returned by Supabase
  */
 export const extractRestaurantData = (restaurantData: any): RestaurantData => {
+  // Handle case when restaurant data is null or undefined
   if (!restaurantData) {
-    return { name: 'Unknown' };
+    return {
+      name: 'Unknown Restaurant',
+      city: undefined,
+      state: undefined
+    };
   }
   
-  // Handle single restaurant object
-  if (typeof restaurantData === 'object' && !Array.isArray(restaurantData)) {
+  // If we already have an object with name, it might be in the format we expect
+  if (typeof restaurantData === 'object' && restaurantData !== null) {
+    // If it's an array, take the first item (common in some Supabase responses)
+    if (Array.isArray(restaurantData)) {
+      const firstRestaurant = restaurantData[0];
+      return {
+        name: firstRestaurant?.name || 'Unknown Restaurant',
+        city: firstRestaurant?.city,
+        state: firstRestaurant?.state
+      };
+    }
+    
+    // Otherwise return the object properties
     return {
-      name: restaurantData.name || 'Unknown',
+      name: restaurantData.name || 'Unknown Restaurant',
       city: restaurantData.city,
       state: restaurantData.state
     };
-  } 
+  }
   
-  // Handle potential array structure (first item only)
-  if (Array.isArray(restaurantData) && restaurantData.length > 0 &&
-      typeof restaurantData[0] === 'object' && restaurantData[0] !== null) {
+  // If we got a string or other primitive, use it as the name
+  if (typeof restaurantData === 'string') {
     return {
-      name: restaurantData[0].name || 'Unknown',
-      city: restaurantData[0].city,
-      state: restaurantData[0].state
+      name: restaurantData,
+      city: undefined,
+      state: undefined
     };
   }
   
-  // Default fallback
-  return { name: 'Unknown' };
+  // Default case
+  return {
+    name: 'Unknown Restaurant',
+    city: undefined,
+    state: undefined
+  };
 };
