@@ -91,17 +91,17 @@ export const useFeatureFlags = () => {
         // If user is authenticated, check for user-specific overrides
         if (user) {
           try {
-            // Use a custom RPC function to get user targeting data
+            // Use a custom function to get user targeting data
             const { data: userOverrides, error: userError } = await supabase
               .rpc('get_user_feature_targeting', { 
                 user_uuid: user.id 
-              }) as { data: Array<{feature_key: string, is_enabled: boolean}> | null, error: Error | null };
+              });
 
             if (userError) {
               console.error('Error fetching user feature targeting:', userError);
             } else if (userOverrides && Array.isArray(userOverrides)) {
               // Apply user-specific overrides
-              userOverrides.forEach((override) => {
+              userOverrides.forEach((override: any) => {
                 if (override.feature_key && override.is_enabled !== undefined) {
                   flagsMap[override.feature_key] = override.is_enabled;
                 }

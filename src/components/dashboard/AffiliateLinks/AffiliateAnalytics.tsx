@@ -65,7 +65,7 @@ const AffiliateAnalytics = () => {
           .from('affiliate_tracking')
           .select('created_at')
           .eq('action_type', 'click')
-          .eq('affiliate_link_id', user.id) // Assuming affiliate_link_id is related to user.id
+          .eq('affiliate_link_id', user.id) // Using user.id as affiliate_link_id for now
           .gte('created_at', startDateStr)
           .lte('created_at', endDateStr);
           
