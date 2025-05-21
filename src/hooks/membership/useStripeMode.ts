@@ -1,104 +1,99 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from "@/integrations/supabase/client";
-import { getStripeMode } from '@/utils/getStripeMode';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-/**
- * Hook to get and manage the current Stripe mode
- */
 export const useStripeMode = () => {
-  const [mode, setMode] = useState<"test" | "live">(getStripeMode());
-  const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<'test' | 'live' | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Add explicit flag for test mode
-  const isTestMode = mode !== "live";
-  // Add explicit flag for error state that can be checked
-  const stripeCheckError = error !== null;
-  // Add isStripeTestMode as an alias for isTestMode for consistency
-  const isStripeTestMode = isTestMode;
-  
-  const handleRetryStripeCheck = useCallback(async () => {
+  const { toast } = useToast();
+
+  const fetchStripeMode = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log("Fetching Stripe mode from admin_config...");
-      const { data, error: fetchError } = await supabase
-        .from('admin_config')
+      // Get stripe mode from app_config table instead of using RPC
+      const { data, error } = await supabase
+        .from('app_config')
         .select('value')
-        .eq('key', 'stripe_mode')
+        .eq('key', 'STRIPE_MODE')
         .single();
       
-      if (fetchError) {
-        console.warn("Error fetching Stripe mode:", fetchError);
-        setError(`Failed to fetch Stripe mode: ${fetchError.message}`);
-        // Fall back to local mode
-        setMode(getStripeMode());
-      } else {
-        console.log("Stripe mode from database:", data?.value);
-        const fetchedMode = data?.value === 'live' ? 'live' : 'test';
-        setMode(fetchedMode);
-        // Cache the mode in localStorage for offline usage
-        localStorage.setItem('stripe_mode', fetchedMode);
+      if (error) {
+        console.error("Error fetching Stripe mode:", error);
+        setError("Failed to check payment mode");
+        // Default to test mode for safety
+        setMode('test');
+        return;
       }
+      
+      // Determine the mode from the value
+      const stripeMode = data?.value === 'live' ? 'live' : 'test';
+      setMode(stripeMode);
+      
+      console.log("Stripe mode fetched:", stripeMode);
     } catch (err) {
-      console.error("Error in retrying Stripe mode check:", err);
-      setError(err instanceof Error ? err.message : "Unknown error");
-      // Fall back to local mode
-      setMode(getStripeMode());
+      console.error("Error in fetchStripeMode:", err);
+      setError("Failed to check payment mode");
+      // Default to test mode for safety
+      setMode('test');
     } finally {
       setIsLoading(false);
     }
   }, []);
-  
-  // Update function to change Stripe mode
-  const updateStripeMode = useCallback(async (newMode: "test" | "live") => {
+
+  const updateStripeMode = async (newMode: 'test' | 'live') => {
     try {
-      setIsLoading(true);
-      setError(null);
+      // Get the current user session - need to be authenticated for this
+      const { data: sessionData } = await supabase.auth.getSession();
       
-      // Update the mode in the database
-      const { error: updateError } = await supabase
-        .from('admin_config')
-        .update({ value: newMode })
-        .eq('key', 'stripe_mode');
-      
-      if (updateError) {
-        console.error("Error updating Stripe mode:", updateError);
-        setError(`Failed to update Stripe mode: ${updateError.message}`);
-        return false;
+      if (!sessionData.session) {
+        throw new Error("You must be logged in to update Stripe mode");
       }
       
-      // Update the local state
+      // Update the app_config directly instead of using RPC
+      const { error } = await supabase
+        .from('app_config')
+        .update({ value: newMode })
+        .eq('key', 'STRIPE_MODE');
+      
+      if (error) {
+        console.error("Error updating Stripe mode:", error);
+        throw new Error("Failed to update Stripe mode");
+      }
+      
       setMode(newMode);
-      
-      // Cache the new mode in localStorage
-      localStorage.setItem('stripe_mode', newMode);
-      
       return true;
-    } catch (err) {
-      console.error("Error updating Stripe mode:", err);
-      setError(err instanceof Error ? err.message : "Unknown error");
+    } catch (err: any) {
+      console.error("Error in updateStripeMode:", err);
+      setError(err.message || "Failed to update Stripe mode");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to update Stripe mode",
+        variant: "destructive",
+      });
       return false;
-    } finally {
-      setIsLoading(false);
     }
-  }, []);
-  
+  };
+
+  const handleRetryStripeCheck = () => {
+    fetchStripeMode();
+  };
+
   useEffect(() => {
-    // Load the stripe mode when the hook is first used
-    handleRetryStripeCheck();
-  }, [handleRetryStripeCheck]);
-  
-  return { 
-    mode, 
+    fetchStripeMode();
+  }, [fetchStripeMode]);
+
+  return {
+    mode,
     isLoading,
     error,
-    isTestMode,
-    isStripeTestMode,
-    stripeCheckError,
+    updateStripeMode,
     handleRetryStripeCheck,
-    updateStripeMode
+    isStripeTestMode: mode === 'test'
   };
 };
+
+export default useStripeMode;

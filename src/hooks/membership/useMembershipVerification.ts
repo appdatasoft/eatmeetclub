@@ -23,9 +23,9 @@ export const useMembershipVerification = () => {
       // Add timestamp to prevent caching
       const timestamp = new Date().getTime();
       
-      // Check if user exists
+      // Check if user exists - using the profiles table instead of auth.users
       const { data: users, error: userError } = await supabase
-        .from('auth.users')  // This is a view, not a direct table access
+        .from('profiles')  // Use profiles instead of auth.users
         .select('id')
         .eq('email', email)
         .maybeSingle();
@@ -47,7 +47,7 @@ export const useMembershipVerification = () => {
           id,
           status,
           renewal_at,
-          products:subscription_id (
+          products (
             name,
             description
           )

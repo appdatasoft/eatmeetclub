@@ -9,44 +9,27 @@
  */
 export const fetchStripeMode = async () => {
   try {
-    // Add a timestamp to prevent caching
-    const timestamp = new Date().getTime();
-    const url = `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/check-stripe-mode?_=${timestamp}`;
+    // Instead of using the edge function, fetch from the app_config table
+    const { data, error } = await supabase
+      .from('app_config')
+      .select('value')
+      .eq('key', 'STRIPE_MODE')
+      .single();
     
-    console.log("Fetching Stripe mode from:", url);
-    
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-cache"
-      },
-      // Omit credentials to prevent CORS preflight issues
-      credentials: 'omit'
-    });
-
-    console.log("Stripe mode response status:", response.status);
-
-    // Print the raw response for debugging
-    const rawResponse = await response.text();
-    console.log("Raw response:", rawResponse);
-
-    // Parse the text as JSON
-    let data;
-    try {
-      data = JSON.parse(rawResponse);
-      console.log("Stripe mode data:", data);
-    } catch (jsonError) {
-      console.error("Failed to parse JSON response:", jsonError, "Raw response:", rawResponse.substring(0, 200));
+    if (error) {
+      console.error("Error fetching Stripe mode:", error);
       return { 
         mode: "test", // Default to test mode for safety
-        error: "Invalid JSON response received"
+        error: error.message
       };
     }
     
+    // Determine the mode from the value
+    const mode = data?.value === 'live' ? 'live' : 'test';
+    
     return { 
-      mode: data.mode || "test", // Default to test mode if not specified
-      error: data.error || null
+      mode: mode,
+      error: null
     };
   } catch (error) {
     console.error("Error fetching Stripe mode:", error);

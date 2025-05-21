@@ -1,92 +1,51 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Hook to get the Stripe publishable key
- * Handles loading state and errors
- */
 export const useStripePublishableKey = () => {
   const [stripePublishableKey, setStripePublishableKey] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState<number>(0);
-  const maxRetries = 3;
 
-  const fetchKey = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Try to get from localStorage if available to avoid multiple requests
-      const cachedKey = localStorage.getItem('stripe_publishable_key');
-      
-      if (cachedKey) {
-        console.log("Using cached Stripe publishable key");
-        setStripePublishableKey(cachedKey);
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || "https://wocfwpedauuhlrfugxuu.supabase.co"}/functions/v1/get-stripe-publishable-key`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "no-cache"
-          }
+  useEffect(() => {
+    const fetchKey = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // Fetch from app_config table instead of using an edge function
+        const { data, error: fetchError } = await supabase
+          .from('app_config')
+          .select('value')
+          .eq('key', 'STRIPE_PUBLISHABLE_KEY')
+          .single();
+        
+        if (fetchError) {
+          console.error("Error fetching Stripe publishable key:", fetchError);
+          setError("Failed to load payment system configuration");
+          return;
         }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch Stripe key. Status: ${response.status}`);
+        
+        if (!data?.value) {
+          setError("Stripe publishable key not found in configuration");
+          return;
+        }
+        
+        setStripePublishableKey(data.value);
+      } catch (err) {
+        console.error("Error in fetchKey:", err);
+        setError("An error occurred while loading payment system configuration");
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      const data = await response.json();
-      
-      if (!data.key) {
-        throw new Error("No publishable key received");
-      }
-      
-      // Cache key in localStorage
-      localStorage.setItem('stripe_publishable_key', data.key);
-      
-      setStripePublishableKey(data.key);
-    } catch (err: any) {
-      console.error("Error fetching Stripe publishable key:", err);
-      setError(err.message || "Failed to load payment configuration");
-      
-      // If we have less than max retries, try again after delay
-      if (retryCount < maxRetries) {
-        setTimeout(() => setRetryCount(prev => prev + 1), 1500);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Retry logic
-  useEffect(() => {
-    if (retryCount > 0) {
-      fetchKey();
-    }
-  }, [retryCount]);
-
-  // Initial fetch
-  useEffect(() => {
     fetchKey();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const retry = () => {
-    setRetryCount(0);
-    fetchKey();
-  };
-
-  return { 
-    stripePublishableKey, 
-    isLoading, 
-    error,
-    retry
+  return {
+    stripePublishableKey,
+    isLoading,
+    error
   };
 };
