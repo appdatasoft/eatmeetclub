@@ -12,7 +12,7 @@ export interface RawEventData {
   published: boolean;
   user_id: string;
   restaurant_id?: string;
-  restaurant?: {
+  restaurants?: {
     name: string;
     city?: string;
     state?: string;
@@ -35,7 +35,7 @@ export const fetchPublishedEventsWithSupabase = async (): Promise<RawEventData[]
       published,
       user_id,
       restaurant_id,
-      restaurants:restaurants(name, city, state)
+      restaurants(name, city, state)
     `)
     .eq('published', true)
     .order('date', { ascending: true });
@@ -57,7 +57,7 @@ export const fetchPublishedEventsWithSupabase = async (): Promise<RawEventData[]
     published: event.published,
     user_id: event.user_id,
     restaurant_id: event.restaurant_id,
-    restaurant: event.restaurants ? {
+    restaurants: event.restaurants ? {
       name: event.restaurants.name,
       city: event.restaurants.city,
       state: event.restaurants.state
@@ -109,7 +109,7 @@ export const fetchPublishedEventsWithREST = async (): Promise<RawEventData[] | n
     published: event.published,
     user_id: event.user_id,
     restaurant_id: event.restaurant_id,
-    restaurant: event.restaurants ? {
+    restaurants: event.restaurants ? {
       name: event.restaurants.name,
       city: event.restaurants.city,
       state: event.restaurants.state
