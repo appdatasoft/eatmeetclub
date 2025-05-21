@@ -5,11 +5,18 @@ import { vi } from 'vitest';
 import SocialMediaTab from '../SocialMediaTab';
 import { useSocialMedia } from '@/hooks/useSocialMedia';
 import { useEditableContent } from '@/components/editor/EditableContentProvider';
-import { ToastProvider } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 // Mock the hooks
 vi.mock('@/hooks/useSocialMedia', () => ({
   useSocialMedia: vi.fn(),
+}));
+
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({
+    toast: vi.fn(),
+  }),
+  toast: vi.fn(),
 }));
 
 vi.mock('@/components/editor/EditableContentProvider', () => ({
@@ -19,7 +26,7 @@ vi.mock('@/components/editor/EditableContentProvider', () => ({
 // Mock the connection details modal
 vi.mock('../ConnectionDetailsModal', () => ({
   default: ({ isOpen, onClose }) => (
-    <div data-testid="connection-modal" data-is-open={isOpen}>
+    <div data-testid="connection-modal" data-is-open={isOpen.toString()}>
       <button onClick={onClose}>Close</button>
     </div>
   ),
@@ -27,8 +34,20 @@ vi.mock('../ConnectionDetailsModal', () => ({
 
 describe('SocialMediaTab', () => {
   const mockConnections = [
-    { id: '1', platform: 'Instagram', connected_at: '2023-01-01', meta_data: { limited_access: false } },
-    { id: '2', platform: 'Facebook', connected_at: '2023-01-02', meta_data: { limited_access: true } },
+    { 
+      id: '1', 
+      platform: 'Instagram', 
+      is_connected: true,
+      created_at: '2023-01-01', 
+      meta_data: { limited_access: false } 
+    },
+    { 
+      id: '2', 
+      platform: 'Facebook', 
+      is_connected: true,
+      created_at: '2023-01-02', 
+      meta_data: { limited_access: true } 
+    },
   ];
 
   const mockUseSocialMedia = {
@@ -61,9 +80,7 @@ describe('SocialMediaTab', () => {
 
   it('renders the component with connections', () => {
     render(
-      <ToastProvider>
-        <SocialMediaTab />
-      </ToastProvider>
+      <SocialMediaTab />
     );
 
     // Check that main card title is rendered
@@ -81,9 +98,7 @@ describe('SocialMediaTab', () => {
     });
 
     render(
-      <ToastProvider>
-        <SocialMediaTab />
-      </ToastProvider>
+      <SocialMediaTab />
     );
 
     expect(screen.getByText('Loading social media connections...')).toBeInTheDocument();
@@ -96,9 +111,7 @@ describe('SocialMediaTab', () => {
     });
 
     render(
-      <ToastProvider>
-        <SocialMediaTab />
-      </ToastProvider>
+      <SocialMediaTab />
     );
 
     expect(screen.getByText('Failed to load social media connections')).toBeInTheDocument();
@@ -110,9 +123,7 @@ describe('SocialMediaTab', () => {
     mockUseSocialMedia.getConnectionStatus.mockReturnValue(false);
 
     render(
-      <ToastProvider>
-        <SocialMediaTab />
-      </ToastProvider>
+      <SocialMediaTab />
     );
 
     // Find connect button for Instagram and click it
@@ -131,9 +142,7 @@ describe('SocialMediaTab', () => {
     mockUseSocialMedia.getConnectionStatus.mockReturnValue(true);
 
     render(
-      <ToastProvider>
-        <SocialMediaTab />
-      </ToastProvider>
+      <SocialMediaTab />
     );
 
     // Find disconnect button and click it
@@ -151,9 +160,7 @@ describe('SocialMediaTab', () => {
     });
 
     render(
-      <ToastProvider>
-        <SocialMediaTab isAdmin={true} />
-      </ToastProvider>
+      <SocialMediaTab isAdmin={true} />
     );
 
     // Check for limited access warning

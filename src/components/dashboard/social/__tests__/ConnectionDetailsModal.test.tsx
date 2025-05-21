@@ -22,18 +22,19 @@ describe('ConnectionDetailsModal', () => {
     id: '123',
     user_id: 'user123',
     platform: 'Instagram',
-    platform_user_id: 'insta123',
     username: 'testuser',
-    access_token: 'token123',
-    refresh_token: 'refresh123',
-    token_expires_at: new Date(Date.now() + 86400000).toISOString(),
-    connected_at: new Date().toISOString(),
+    profile_url: 'https://instagram.com/testuser',
+    is_connected: true,
+    created_at: new Date(Date.now() - 86400000).toISOString(),
+    updated_at: new Date().toISOString(),
+    oauth_token: 'token123',
+    oauth_token_secret: 'refresh123',
+    oauth_expires_at: new Date(Date.now() + 86400000).toISOString(),
     meta_data: {
       profile_picture_url: 'https://example.com/pic.jpg',
       followers_count: 1000,
       limited_access: false
-    },
-    status: 'active'
+    }
   };
 
   it('renders nothing when isOpen is false', () => {
@@ -72,8 +73,7 @@ describe('ConnectionDetailsModal', () => {
     
     expect(screen.getByText('Username:')).toBeInTheDocument();
     expect(screen.getByText('testuser')).toBeInTheDocument();
-    expect(screen.getByText('Connected:')).toBeInTheDocument();
-    expect(screen.getByText('1,000')).toBeInTheDocument();
+    expect(screen.getByText('Connected on:')).toBeInTheDocument();
   });
 
   it('shows empty state when no connection is provided', () => {

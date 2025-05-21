@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { SocialMediaConnection } from '@/hooks/useSocialMedia';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, LinkIcon, AtSign, User, Key, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ConnectionDetailsModalProps {
   isOpen: boolean;
@@ -16,7 +17,18 @@ const ConnectionDetailsModal: React.FC<ConnectionDetailsModalProps> = ({
   onClose,
   connection,
 }) => {
-  if (!connection) return null;
+  if (!isOpen) return null;
+  if (!connection) return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Connection Details</DialogTitle>
+          <DialogDescription>No connection details available</DialogDescription>
+        </DialogHeader>
+        <Button onClick={onClose}>Close</Button>
+      </DialogContent>
+    </Dialog>
+  );
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -104,21 +116,32 @@ const ConnectionDetailsModal: React.FC<ConnectionDetailsModalProps> = ({
                 </div>
               )}
               
-              {connection.meta_data && Object.keys(connection.meta_data).length > 0 && (
+              {connection.meta_data && Object.keys(connection.meta_data).length > 0 && connection.meta_data.instagram_user_id && (
                 <div className="flex items-start gap-2">
                   <User className="h-4 w-4 text-gray-500 mt-1" />
                   <span className="font-medium">Platform ID:</span>
                   <span className="break-all text-sm">
-                    {connection.meta_data.instagram_user_id || 'N/A'}
+                    {connection.meta_data.instagram_user_id}
                   </span>
                 </div>
               )}
             </>
           )}
+          
+          {connection.meta_data?.limited_access && (
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-amber-700 text-sm">
+              <p className="font-medium">This connection has limited access</p>
+              <p className="text-xs mt-1">Some features may be restricted due to platform limitations.</p>
+            </div>
+          )}
         </div>
         
-        <div className="text-xs text-gray-500 mt-4">
-          ID: {connection.id}
+        <div className="flex justify-end mt-4">
+          <Button onClick={onClose}>Close</Button>
+        </div>
+        
+        <div className="text-xs text-gray-500 mt-2">
+          ID: {connection.id || 'N/A'}
         </div>
       </DialogContent>
     </Dialog>

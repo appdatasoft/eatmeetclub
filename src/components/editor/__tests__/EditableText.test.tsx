@@ -14,6 +14,7 @@ describe('EditableText', () => {
   const mockHandleEdit = vi.fn();
   const mockHandleSave = vi.fn();
   const mockHandleCancel = vi.fn();
+  const mockHandleChange = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -67,9 +68,6 @@ describe('EditableText', () => {
       handleCancel: mockHandleCancel,
       canEdit: true,
     });
-
-    // We need to mock this function specifically for the editing state
-    const mockHandleChange = vi.fn();
 
     render(
       <EditableText 
