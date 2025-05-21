@@ -52,10 +52,16 @@ export const FeatureFlagManager = () => {
 
       if (valuesError) throw valuesError;
 
-      // Fetch user feature targeting data using RPC
+      // Fetch user feature targeting data using a direct query instead of RPC
       try {
         const { data: targetsData, error: targetsError } = await supabase
-          .rpc('get_all_user_feature_targeting');
+          .from('user_feature_targeting')
+          .select(`
+            id, 
+            user_id,
+            feature_id,
+            is_enabled
+          `);
 
         if (targetsError) {
           console.error('Error fetching user targeting:', targetsError);
@@ -63,12 +69,7 @@ export const FeatureFlagManager = () => {
         }
 
         if (targetsData) {
-          setUserTargets(targetsData.map((target: any) => ({
-            id: target.id,
-            user_id: target.user_id,
-            feature_id: target.feature_id,
-            is_enabled: target.is_enabled
-          })));
+          setUserTargets(targetsData);
         }
       } catch (targetError) {
         console.error('Error processing user targeting data:', targetError);

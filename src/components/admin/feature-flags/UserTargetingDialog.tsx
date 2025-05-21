@@ -77,15 +77,36 @@ const UserTargetingDialog = ({
     try {
       setIsUpdating(true);
 
-      // Use the set_user_feature_targeting RPC function
-      const { data, error } = await supabase
-        .rpc('set_user_feature_targeting', {
-          user_uuid: userId,
-          feature_uuid: featureId,
-          enabled: isEnabled
-        });
+      // Check if there's an existing record
+      const { data: existingTarget, error: queryError } = await supabase
+        .from('user_feature_targeting')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('feature_id', featureId)
+        .maybeSingle();
+
+      if (queryError) throw queryError;
+
+      let result;
+      
+      if (existingTarget) {
+        // Update existing
+        result = await supabase
+          .from('user_feature_targeting')
+          .update({ is_enabled: isEnabled, updated_at: new Date().toISOString() })
+          .eq('id', existingTarget.id);
+      } else {
+        // Insert new
+        result = await supabase
+          .from('user_feature_targeting')
+          .insert({ 
+            user_id: userId, 
+            feature_id: featureId, 
+            is_enabled: isEnabled 
+          });
+      }
         
-      if (error) throw error;
+      if (result.error) throw result.error;
 
       toast({
         title: 'User targeting updated',
@@ -112,11 +133,11 @@ const UserTargetingDialog = ({
     try {
       setIsUpdating(true);
 
-      // Use the remove_user_feature_targeting RPC function
-      const { data, error } = await supabase
-        .rpc('remove_user_feature_targeting', {
-          target_uuid: targetId
-        });
+      // Use direct query to remove the user targeting
+      const { error } = await supabase
+        .from('user_feature_targeting')
+        .delete()
+        .eq('id', targetId);
 
       if (error) throw error;
 
