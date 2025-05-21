@@ -8,13 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 // Mock dependencies
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          order: vi.fn()
-        }))
-      }))
-    }))
+    from: vi.fn()
   }
 }));
 
@@ -35,30 +29,60 @@ vi.mock('./TicketsList', () => ({
   )
 }));
 
+// Mock react-query
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: vi.fn(({ queryFn }) => {
+    // Pass the mock data to tanstack query directly
+    return {
+      data: mockData,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn()
+    };
+  })
+}));
+
+// Global mock data
+let mockData;
+
 describe('UserTickets', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (useAuth as any).mockReturnValue({ user: { id: 'user123' } });
-  });
-
-  it('should display loading state initially', () => {
-    const mockFromFn = vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          order: vi.fn(() => new Promise(() => {}))
-        }))
+    
+    // Reset mock data
+    mockData = null;
+    
+    // Setup the mock implementation for supabase.from
+    const mockSelectFn = vi.fn(() => ({
+      eq: vi.fn(() => ({
+        eq: vi.fn(() => Promise.resolve({ data: [], error: null }))
       }))
     }));
     
-    vi.mocked(supabase.from).mockImplementation(mockFromFn);
+    vi.mocked(supabase.from).mockImplementation(() => ({
+      select: mockSelectFn
+    }) as any);
+  });
+
+  it('should display loading state initially', async () => {
+    // Mock the useQuery to return loading state
+    vi.mock('@tanstack/react-query', () => ({
+      useQuery: () => ({
+        isLoading: true,
+        data: undefined,
+        error: null,
+        refetch: vi.fn()
+      })
+    }));
 
     render(<UserTickets userId="user123" />);
     
-    expect(screen.getByText(/Loading your tickets.../i)).toBeInTheDocument();
+    expect(screen.getByText(/Loading your tickets/i)).toBeInTheDocument();
   });
 
   it('should display tickets when data is loaded', async () => {
-    const mockTickets = [
+    mockData = [
       {
         id: 'ticket1',
         event_id: 'event1',
@@ -79,25 +103,10 @@ describe('UserTickets', () => {
       }
     ];
 
-    const mockOrderFn = vi.fn().mockResolvedValue({
-      data: mockTickets,
-      error: null
-    });
-
-    const mockFromFn = vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          order: mockOrderFn
-        }))
-      }))
-    }));
-    
-    vi.mocked(supabase.from).mockImplementation(mockFromFn);
-
     render(<UserTickets userId="user123" />);
     
     await waitFor(() => {
-      expect(screen.queryByText(/Loading your tickets.../i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Loading your tickets/i)).not.toBeInTheDocument();
       expect(screen.getAllByTestId('ticket-item').length).toBe(2);
       expect(screen.getByText(/Concert Night - 2 tickets/i)).toBeInTheDocument();
       expect(screen.getByText(/Food Festival - 1 tickets/i)).toBeInTheDocument();
@@ -105,49 +114,31 @@ describe('UserTickets', () => {
   });
 
   it('should display empty state when no tickets are found', async () => {
-    const mockOrderFn = vi.fn().mockResolvedValue({
-      data: [],
-      error: null
-    });
-
-    const mockFromFn = vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          order: mockOrderFn
-        }))
-      }))
-    }));
-    
-    vi.mocked(supabase.from).mockImplementation(mockFromFn);
+    mockData = [];
 
     render(<UserTickets userId="user123" />);
     
     await waitFor(() => {
-      expect(screen.queryByText(/Loading your tickets.../i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Loading your tickets/i)).not.toBeInTheDocument();
       expect(screen.getByText(/You don't have any tickets yet/i)).toBeInTheDocument();
     });
   });
 
   it('should display error state when API call fails', async () => {
-    const mockOrderFn = vi.fn().mockResolvedValue({
-      data: null,
-      error: { message: 'Failed to fetch tickets' }
-    });
-
-    const mockFromFn = vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          order: mockOrderFn
-        }))
-      }))
+    // Mock the useQuery to return error state
+    vi.mock('@tanstack/react-query', () => ({
+      useQuery: () => ({
+        isLoading: false,
+        data: undefined,
+        error: { message: 'Failed to fetch tickets' },
+        refetch: vi.fn()
+      })
     }));
-    
-    vi.mocked(supabase.from).mockImplementation(mockFromFn);
 
     render(<UserTickets userId="user123" />);
     
     await waitFor(() => {
-      expect(screen.queryByText(/Loading your tickets.../i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Loading your tickets/i)).not.toBeInTheDocument();
       expect(screen.getByText(/Error loading tickets/i)).toBeInTheDocument();
       expect(screen.getByText(/Failed to fetch tickets/i)).toBeInTheDocument();
     });

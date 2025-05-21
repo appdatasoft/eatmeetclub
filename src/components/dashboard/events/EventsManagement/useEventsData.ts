@@ -24,13 +24,30 @@ export const useEventsData = () => {
           tickets_sold,
           published,
           payment_status,
-          restaurant:restaurants(name)
+          restaurant_id,
+          restaurants(name)
         `)
         .order('date', { ascending: true });
 
       if (error) throw error;
 
-      setEvents(data || []);
+      // Transform the data to match our Event type structure
+      const formattedEvents: Event[] = (data || []).map(item => ({
+        id: item.id,
+        title: item.title,
+        date: item.date,
+        restaurant: {
+          name: item.restaurants?.name || 'Unknown'
+        },
+        price: item.price,
+        capacity: item.capacity,
+        tickets_sold: item.tickets_sold || 0,
+        published: item.published || false,
+        payment_status: item.payment_status || 'pending',
+        restaurant_id: item.restaurant_id
+      }));
+
+      setEvents(formattedEvents);
     } catch (error: any) {
       console.error("Error fetching events:", error);
       setError(error.message || "Failed to load events");

@@ -31,6 +31,17 @@ interface UserEvent {
   restaurant_name: string;
 }
 
+interface EventData {
+  id: string;
+  title: string;
+  date: string;
+  price: number;
+  cover_image?: string;
+  restaurants?: {
+    name: string;
+  } | null;
+}
+
 const UserProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -143,7 +154,7 @@ const UserProfilePage: React.FC = () => {
           }
         });
         
-        const { data: createdEvents, error: createdError } = createdEventsResponse;
+        const { data: createdEventsData, error: createdError } = createdEventsResponse;
           
         if (createdError) {
           console.error("Error fetching created events:", createdError);
@@ -180,14 +191,14 @@ const UserProfilePage: React.FC = () => {
           }
         });
         
-        const { data: tickets, error: ticketsError } = ticketsResponse;
+        const { data: ticketsData, error: ticketsError } = ticketsResponse;
           
         if (ticketsError) {
           console.error("Error fetching tickets:", ticketsError);
           throw ticketsError;
         }
         
-        console.log("Fetched data:", { userData, createdEvents, tickets });
+        console.log("Fetched data:", { userData, createdEventsData, ticketsData });
         
         // Format profile data
         const profileData = {
@@ -198,8 +209,8 @@ const UserProfilePage: React.FC = () => {
         
         setProfile(profileData);
         
-        // Format created events
-        const formattedCreatedEvents = createdEvents?.map(event => ({
+        // Format created events - properly handle the nested structure
+        const formattedCreatedEvents = (createdEventsData as EventData[])?.map(event => ({
           id: event.id,
           title: event.title,
           date: event.date,
@@ -210,8 +221,12 @@ const UserProfilePage: React.FC = () => {
         
         setEventsCreated(formattedCreatedEvents);
         
-        // Format attended events
-        const attendingEvents = tickets?.map(ticket => {
+        // Format attended events - properly handle the nested structure and null events
+        interface TicketWithEvent {
+          events: EventData | null;
+        }
+        
+        const attendingEvents = (ticketsData as TicketWithEvent[])?.map(ticket => {
           // Skip if events is null (can happen if event was deleted)
           if (!ticket.events) return null;
           
