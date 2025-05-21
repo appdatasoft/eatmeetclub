@@ -9,14 +9,24 @@ import NotFound from '@/pages/NotFound';
 import BecomeMember from '@/pages/BecomeMember';
 import Dashboard from '@/pages/dashboard/Dashboard';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import ForgotPassword from '@/pages/ForgotPassword';
+import SetPassword from '@/pages/SetPassword';
 
 const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/events" element={<Events />} />
-      <Route path="/events/:id" element={<EventDetails />} />
+      <Route path="/event/:id" element={<EventDetails />} />
       <Route path="/become-member" element={<BecomeMember />} />
+      
+      {/* Auth routes directly in the main router */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/set-password" element={<SetPassword />} />
 
       {/* Dashboard routes */}
       <Route path="/dashboard/*" element={

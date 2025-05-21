@@ -23,7 +23,7 @@ const AuthButtons = () => {
   const handleLogoutClick = async () => {
     try {
       await signOut();
-      // Toast notification handled in AuthContext
+      navigate('/');
     } catch (error: any) {
       console.error("Logout error:", error);
       toast({
@@ -45,8 +45,8 @@ const AuthButtons = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
-                <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email || ''} />
+                <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>

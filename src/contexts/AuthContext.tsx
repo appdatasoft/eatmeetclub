@@ -25,23 +25,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Critical order: First set listener, then check for existing session
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log('Auth state changed:', event);
+        
+        // Update session and user immediately with synchronous operations
         setSession(currentSession);
         setUser(currentSession?.user || null);
         
+        // Defer Supabase calls with setTimeout to prevent deadlocks
         if (currentSession?.user) {
-          // Check if user is admin using direct database query
-          const { data: adminData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', currentSession.user.id)
-            .eq('role', 'admin')
-            .maybeSingle();
-          
-          setIsAdmin(!!adminData);
+          setTimeout(async () => {
+            // Check if user is admin using direct database query
+            try {
+              const { data: adminData } = await supabase
+                .from('user_roles')
+                .select('role')
+                .eq('user_id', currentSession.user.id)
+                .eq('role', 'admin')
+                .maybeSingle();
+              
+              setIsAdmin(!!adminData);
+            } catch (error) {
+              console.error('Error checking admin status:', error);
+              setIsAdmin(false);
+            }
+          }, 0);
         } else {
           setIsAdmin(false);
         }
@@ -129,9 +141,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Logged out",
         description: "You have been successfully logged out.",
       });
-      
-      // Force page refresh to clear any cached state
-      setTimeout(() => window.location.href = '/', 100);
     } catch (error: any) {
       console.error("Error during signOut:", error);
       toast({
