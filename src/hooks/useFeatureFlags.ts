@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -58,9 +58,11 @@ const DEFAULT_FEATURE_FLAGS: Record<string, boolean> = {
 };
 
 // Maximum number of retries for fetching feature flags
-const MAX_RETRIES = 2;
+const MAX_RETRIES = 1;
 // Initial timeout for fetch operations (milliseconds)
 const INITIAL_TIMEOUT = 2500;
+// Minimum time between fetch attempts (milliseconds) - limits excessive fetching
+const MIN_FETCH_INTERVAL = 10000;
 
 export const useFeatureFlags = (retryTrigger = 0) => {
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(DEFAULT_FEATURE_FLAGS);
@@ -69,10 +71,22 @@ export const useFeatureFlags = (retryTrigger = 0) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const currentEnv = getCurrentEnvironment();
+  const lastFetchTimeRef = useRef<number>(0);
+  const isMountedRef = useRef<boolean>(true);
   
   // Use callback to allow retrying from components
   const fetchFeatureFlags = useCallback(async () => {
+    // Skip if we've fetched recently to prevent infinite loops
+    const now = Date.now();
+    if (now - lastFetchTimeRef.current < MIN_FETCH_INTERVAL && lastFetchTimeRef.current !== 0) {
+      console.log("Skipping feature flags fetch due to rate limiting");
+      return;
+    }
+    
+    lastFetchTimeRef.current = now;
+    
     try {
+      if (!isMountedRef.current) return;
       setIsLoading(true);
       setError(null);
       
@@ -163,40 +177,52 @@ export const useFeatureFlags = (retryTrigger = 0) => {
         }
       }
 
-      setFeatureFlags(flagsMap);
+      if (isMountedRef.current) {
+        setFeatureFlags(flagsMap);
+      }
     } catch (err: any) {
       console.error('Error in useFeatureFlags hook:', err);
-      setError(err);
-      // Don't show toast for repeated errors to avoid spamming the user
-      if (retryTrigger === 0) {
-        toast({
-          title: 'Feature flags could not be loaded',
-          description: 'Using default configuration. Some features may be limited.',
-          variant: 'destructive',
-        });
+      if (isMountedRef.current) {
+        setError(err);
+        // Don't show toast for repeated errors to avoid spamming the user
+        if (retryTrigger === 0) {
+          toast({
+            title: 'Feature flags could not be loaded',
+            description: 'Using default configuration. Some features may be limited.',
+            variant: 'destructive',
+          });
+        }
       }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [currentEnv, user, toast, retryTrigger]);
 
   // Fetch flags when component mounts or retryTrigger changes
   useEffect(() => {
+    isMountedRef.current = true;
     // Use a smaller delay for initial load and larger for retries
-    const delay = retryTrigger === 0 ? 0 : 1000;
+    const delay = retryTrigger === 0 ? 100 : 2000;
     
     const timerId = setTimeout(() => {
-      fetchFeatureFlags();
+      if (isMountedRef.current) {
+        fetchFeatureFlags();
+      }
     }, delay);
     
-    return () => clearTimeout(timerId);
+    return () => {
+      clearTimeout(timerId);
+      isMountedRef.current = false;
+    };
   }, [fetchFeatureFlags]);
 
   // Check if a specific feature is enabled
-  const isFeatureEnabled = (featureKey: string): boolean => {
+  const isFeatureEnabled = useCallback((featureKey: string): boolean => {
     // Default to true for core features and false for others
     return featureFlags[featureKey] ?? DEFAULT_FEATURE_FLAGS[featureKey] ?? false;
-  };
+  }, [featureFlags]);
 
   return {
     isLoading,

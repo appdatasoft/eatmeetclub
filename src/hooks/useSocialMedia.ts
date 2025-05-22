@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -57,6 +57,8 @@ const MOCK_CONNECTIONS: SocialMediaConnection[] = [
 
 // Connection fetch timeout in milliseconds
 const CONNECTION_FETCH_TIMEOUT = 3000;
+// Minimum time between fetch attempts (milliseconds)
+const MIN_FETCH_INTERVAL = 15000;
 
 export const useSocialMedia = () => {
   const { user } = useAuth();
@@ -65,9 +67,12 @@ export const useSocialMedia = () => {
   const [connections, setConnections] = useState<SocialMediaConnection[]>(MOCK_CONNECTIONS);
   const [error, setError] = useState<Error | null>(null);
   const [oauthPending, setOauthPending] = useState<boolean>(false);
+  const lastFetchTimeRef = useRef<number>(0);
+  const isMountedRef = useRef<boolean>(true);
 
   // Check for OAuth callback in URL
   useEffect(() => {
+    isMountedRef.current = true;
     // Check if we're returning from an OAuth flow
     const params = new URLSearchParams(window.location.search);
     if (params.get('oauth_provider')) {
@@ -75,10 +80,16 @@ export const useSocialMedia = () => {
       
       // This would normally be handled by a dedicated callback handler
       setTimeout(() => {
-        setOauthPending(false);
-        fetchConnections();
+        if (isMountedRef.current) {
+          setOauthPending(false);
+          fetchConnections();
+        }
       }, 1000);
     }
+    
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   const fetchConnections = useCallback(async () => {
@@ -87,6 +98,16 @@ export const useSocialMedia = () => {
       return null;
     }
 
+    // Skip if we've fetched recently to prevent infinite loops
+    const now = Date.now();
+    if (now - lastFetchTimeRef.current < MIN_FETCH_INTERVAL && lastFetchTimeRef.current !== 0) {
+      console.log("Skipping social connections fetch due to rate limiting");
+      return null;
+    }
+    
+    lastFetchTimeRef.current = now;
+    
+    if (!isMountedRef.current) return null;
     setIsLoading(true);
     setError(null);
 
@@ -117,10 +138,14 @@ export const useSocialMedia = () => {
           }
         });
         
-        setConnections(mergedConnections);
+        if (isMountedRef.current) {
+          setConnections(mergedConnections);
+        }
       } else {
         // Fall back to mock connections
-        setConnections(MOCK_CONNECTIONS);
+        if (isMountedRef.current) {
+          setConnections(MOCK_CONNECTIONS);
+        }
       }
       
       return data;
@@ -135,18 +160,35 @@ export const useSocialMedia = () => {
       }
       
       // Use mock connections as fallback
-      setConnections(MOCK_CONNECTIONS);
-      
-      toast({
-        title: 'Connection Error',
-        description: 'Failed to fetch social media connections. Using offline mode.',
-        variant: 'destructive',
-      });
+      if (isMountedRef.current) {
+        setConnections(MOCK_CONNECTIONS);
+        
+        toast({
+          title: 'Connection Error',
+          description: 'Failed to fetch social media connections. Using offline mode.',
+          variant: 'destructive',
+        });
+      }
       return null;
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [user, toast]);
+
+  useEffect(() => {
+    // Add initial delay to prevent immediate load
+    const initialTimer = setTimeout(() => {
+      if (user && isMountedRef.current) {
+        fetchConnections();
+      }
+    }, 1000);
+
+    return () => {
+      clearTimeout(initialTimer);
+    };
+  }, [user, fetchConnections]);
 
   const connectSocialMedia = async (platform: string) => {
     if (!user) {
