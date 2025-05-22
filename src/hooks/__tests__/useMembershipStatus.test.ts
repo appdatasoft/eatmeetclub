@@ -129,7 +129,7 @@ describe('useMembershipStatus hook', () => {
     
     // Test direct check for restaurant membership
     let isActive;
-    await act(async () => {
+    await waitFor(async () => {
       isActive = await result.current.refreshMembership('restaurant-1');
     });
     
