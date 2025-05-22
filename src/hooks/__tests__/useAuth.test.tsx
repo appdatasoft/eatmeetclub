@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useAuth } from '../useAuth';
 import { AuthContext } from '@/contexts/AuthContext';
