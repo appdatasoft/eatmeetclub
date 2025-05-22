@@ -8,11 +8,13 @@ import { AuthContext } from '@/contexts/AuthContext';
 describe('useAuth hook', () => {
   const mockAuthContext = {
     user: { id: 'test-user-id', email: 'test@example.com' },
+    session: { access_token: 'mock-token', refresh_token: 'mock-refresh' },
     isLoading: false,
     isAdmin: false,
     signIn: vi.fn(),
     signOut: vi.fn(),
     signUp: vi.fn(),
+    handleLogout: vi.fn(),
   };
 
   it('should return auth context values when used within provider', () => {

@@ -1,13 +1,13 @@
 
 import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useSubmissionStorage } from '../membership/membership-submission/useSubmissionStorage';
 
 describe('useSubmissionStorage hook', () => {
   beforeEach(() => {
     // Clear session storage before each test
     sessionStorage.clear();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
   
   it('should initialize with correct default values', () => {
