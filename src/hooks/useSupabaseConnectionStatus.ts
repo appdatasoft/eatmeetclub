@@ -26,12 +26,12 @@ export const useSupabaseConnectionStatus = () => {
         setStatus('error');
         setErrorMessage(error.message || 'Failed to connect to database');
         
-        // Determine error type based on the error message
-        if (error.message?.includes('Invalid API key') || error.status === 401) {
+        // Determine error type based on the error message or code instead of status
+        if (error.message?.includes('Invalid API key') || error.code === '401') {
           setErrorType('api_key');
-        } else if (error.message?.includes('permission') || error.status === 403) {
+        } else if (error.message?.includes('permission') || error.code === '403') {
           setErrorType('permission');
-        } else if (error.message?.includes('network') || error.status === -1) {
+        } else if (error.message?.includes('network') || error.code === 'NETWORK_ERROR') {
           setErrorType('network');
         } else {
           setErrorType('unknown');
