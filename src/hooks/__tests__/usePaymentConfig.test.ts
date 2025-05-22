@@ -28,10 +28,10 @@ describe('usePaymentConfig hook', () => {
   let queryClient: QueryClient;
   const mockIn = (supabase as any).__mock.in;
 
-  const wrapper = ({ children }: WrapperProps) => {
+  const wrapper = (( children ): WrapperProps) => {
     return (
-      <QueryClientProvider client={queryClient}>
-        {children}
+      <QueryClientProvider client=(queryClient)>
+      {children}
       </QueryClientProvider>
     );
   };
