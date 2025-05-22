@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import ItemDetails from '../ItemDetails';
-import { MenuItem } from '@/components/events/restaurant-menu/types';
+import { MenuItem, MediaItem } from '@/components/events/restaurant-menu/types';
 
 describe('ItemDetails', () => {
   const baseItem: MenuItem = {
@@ -38,7 +38,7 @@ describe('ItemDetails', () => {
   it('does not show photo count button with single media', () => {
     const itemWithOneImage = {
       ...baseItem,
-      media: ['image1.jpg']
+      media: [{ id: 'img1', url: 'image1.jpg', type: 'image' }] as MediaItem[]
     };
     
     const onOpenGallery = vi.fn();
@@ -50,7 +50,11 @@ describe('ItemDetails', () => {
   it('shows photo count button with multiple media', () => {
     const itemWithMultipleImages = {
       ...baseItem,
-      media: ['image1.jpg', 'image2.jpg', 'image3.jpg']
+      media: [
+        { id: 'img1', url: 'image1.jpg', type: 'image' },
+        { id: 'img2', url: 'image2.jpg', type: 'image' },
+        { id: 'img3', url: 'image3.jpg', type: 'image' }
+      ] as MediaItem[]
     };
     
     const onOpenGallery = vi.fn();
@@ -62,7 +66,10 @@ describe('ItemDetails', () => {
   it('calls onOpenGallery when photo count button is clicked', () => {
     const itemWithMultipleImages = {
       ...baseItem,
-      media: ['image1.jpg', 'image2.jpg']
+      media: [
+        { id: 'img1', url: 'image1.jpg', type: 'image' },
+        { id: 'img2', url: 'image2.jpg', type: 'image' }
+      ] as MediaItem[]
     };
     
     const onOpenGallery = vi.fn();
