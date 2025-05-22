@@ -1,155 +1,112 @@
 
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useCheckoutSession } from '@/hooks/membership/useCheckoutSession';
-import { supabase } from '@/integrations/supabase/client';
+import { useCheckoutSession } from '../useCheckoutSession';
+import { createCheckoutSession } from '@/lib/createCheckoutSession';
 
-// Mock supabase
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    functions: {
-      invoke: vi.fn()
-    }
-  }
+// Mock the createCheckoutSession function
+vi.mock('@/lib/createCheckoutSession', () => ({
+  createCheckoutSession: vi.fn()
 }));
 
 describe('useCheckoutSession hook', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    
+    // Mock window.location.href assignment
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { href: '' }
+    });
   });
 
-  it('should successfully create a checkout session', async () => {
-    const mockResponse = {
-      data: {
-        success: true,
-        url: 'https://checkout.stripe.com/test-session'
-      },
-      error: null
-    };
-    
-    (supabase.functions.invoke as any).mockResolvedValue(mockResponse);
+  it('should successfully create and redirect to checkout', async () => {
+    const mockUrl = 'https://checkout.stripe.com/test-session';
+    (createCheckoutSession as any).mockResolvedValue({ url: mockUrl });
     
     const { result } = renderHook(() => useCheckoutSession());
     
-    const response = await result.current.createCheckoutSession(
-      'test@example.com',
-      'Test User',
-      '555-1234',
-      '123 Test St',
-      { createUser: true, sendPasswordEmail: true }
-    );
+    const checkoutPromise = result.current.startCheckout({
+      email: 'test@example.com',
+      name: 'Test User',
+      phone: '123-456-7890',
+      address: '123 Test St',
+      eventId: 'event-123',
+      quantity: 2
+    });
     
-    expect(response).toEqual(mockResponse.data);
-    expect(supabase.functions.invoke).toHaveBeenCalledWith(
-      'create-membership-checkout',
-      {
-        body: {
-          email: 'test@example.com',
-          name: 'Test User',
-          phone: '555-1234',
-          address: '123 Test St',
-          options: { createUser: true, sendPasswordEmail: true }
-        }
-      }
-    );
+    expect(result.current.isLoading).toBe(true);
+    
+    await checkoutPromise;
+    
+    expect(createCheckoutSession).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      name: 'Test User',
+      phone: '123-456-7890',
+      address: '123 Test St',
+      eventId: 'event-123',
+      quantity: 2
+    });
+    
+    expect(window.location.href).toBe(mockUrl);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBe(null);
   });
 
-  it('should handle errors from the function call', async () => {
-    const mockErrorResponse = {
-      data: null,
-      error: {
-        message: 'Failed to create checkout'
-      }
-    };
-    
-    (supabase.functions.invoke as any).mockResolvedValue(mockErrorResponse);
+  it('should handle errors when checkout creation fails', async () => {
+    const mockError = 'Failed to create checkout session';
+    (createCheckoutSession as any).mockResolvedValue({ error: mockError });
     
     const { result } = renderHook(() => useCheckoutSession());
     
-    // Mock console.error to avoid test output pollution
-    const originalConsoleError = console.error;
-    console.error = vi.fn();
+    // Capture console.error calls to avoid polluting test output
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     
     await expect(
-      result.current.createCheckoutSession(
-        'test@example.com',
-        'Test User',
-        '555-1234',
-        '123 Test St'
-      )
-    ).rejects.toThrow('Failed to create checkout');
+      result.current.startCheckout({ email: 'test@example.com' })
+    ).rejects.toThrow(mockError);
     
-    expect(console.error).toHaveBeenCalled();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBe(mockError);
     
-    // Restore console.error
-    console.error = originalConsoleError;
+    // Verify error was logged
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
   });
 
   it('should handle network errors', async () => {
-    const networkError = new Error('Network error');
-    (supabase.functions.invoke as any).mockRejectedValue(networkError);
+    const networkError = new Error('Network error occurred');
+    (createCheckoutSession as any).mockRejectedValue(networkError);
     
     const { result } = renderHook(() => useCheckoutSession());
     
-    // Mock console.error to avoid test output pollution
-    const originalConsoleError = console.error;
-    console.error = vi.fn();
+    // Capture console.error calls 
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     
     await expect(
-      result.current.createCheckoutSession(
-        'test@example.com',
-        'Test User',
-        '555-1234',
-        '123 Test St'
-      )
-    ).rejects.toThrow('Network error');
+      result.current.startCheckout({ email: 'test@example.com' })
+    ).rejects.toThrow(networkError);
     
-    expect(console.error).toHaveBeenCalled();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBe(networkError.message);
     
-    // Restore console.error
-    console.error = originalConsoleError;
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
   });
 
-  it('should use optional parameters correctly', async () => {
-    const mockResponse = {
-      data: {
-        success: true,
-        url: 'https://checkout.stripe.com/test-session'
-      },
-      error: null
-    };
-    
-    (supabase.functions.invoke as any).mockResolvedValue(mockResponse);
+  it('should handle missing URL in response', async () => {
+    (createCheckoutSession as any).mockResolvedValue({ url: null });
     
     const { result } = renderHook(() => useCheckoutSession());
     
-    const options = {
-      createUser: true,
-      sendPasswordEmail: true,
-      checkExisting: true,
-      sendInvoiceEmail: true,
-      restaurantId: 'restaurant-123'
-    };
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     
-    await result.current.createCheckoutSession(
-      'test@example.com',
-      'Test User',
-      '555-1234',
-      '123 Test St',
-      options
-    );
+    await expect(
+      result.current.startCheckout({ email: 'test@example.com' })
+    ).rejects.toThrow('No checkout URL returned');
     
-    expect(supabase.functions.invoke).toHaveBeenCalledWith(
-      'create-membership-checkout',
-      {
-        body: {
-          email: 'test@example.com',
-          name: 'Test User',
-          phone: '555-1234',
-          address: '123 Test St',
-          options
-        }
-      }
-    );
+    expect(result.current.isLoading).toBe(false);
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
   });
 });
