@@ -14,8 +14,8 @@ const Hero = ({ children }: HeroProps) => {
   const [isEditingBackground, setIsEditingBackground] = useState(false);
   const [isEditingHeroImage, setIsEditingHeroImage] = useState(false);
 
-  // Use local image paths instead of Supabase
-  const heroImagePath = contentMap["hero-image"]?.content || DiningScene;
+  // Use the uploaded image as the default hero image if nothing is set
+  const heroImagePath = contentMap["hero-image"]?.content || "/lovable-uploads/d2ff6546-a0ca-4e5e-93fa-6e16f8a92466.png";
 
   const handleEditBackground = () => {
     if (!editModeEnabled) return;
@@ -70,21 +70,12 @@ const Hero = ({ children }: HeroProps) => {
           </div>
 
           <div className="w-full md:w-1/2 flex justify-center relative group">
-            {heroImagePath.startsWith('http') ? (
-              <img
-                src={heroImagePath}
-                alt="People dining together"
-                className="max-w-full h-auto rounded-lg shadow-xl"
-                style={{ maxHeight: "500px" }}
-              />
-            ) : (
-              <img
-                src={heroImagePath}
-                alt="People dining together"
-                className="max-w-full h-auto rounded-lg shadow-xl"
-                style={{ maxHeight: "500px" }}
-              />
-            )}
+            <img
+              src={heroImagePath}
+              alt="People dining together"
+              className="max-w-full h-auto rounded-lg shadow-xl"
+              style={{ maxHeight: "500px" }}
+            />
             {editModeEnabled && canEdit && (
               <button
                 className="absolute top-2 right-2 bg-white/80 hover:bg-white p-2 rounded-full z-20 transition-opacity"
