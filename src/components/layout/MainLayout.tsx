@@ -10,17 +10,17 @@ interface MainLayoutProps {
 }
 
 const MainLayout = ({ children }: MainLayoutProps) => {
-  const { canEdit } = useEditableContent();
+  const { canEdit, editModeEnabled } = useEditableContent();
   
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Navbar />
       {canEdit && <EditModeToggle />}
-      <main className="min-h-screen bg-white">
+      <main className="flex-grow bg-white">
         {children}
       </main>
       <Footer />
-    </>
+    </div>
   );
 };
 
