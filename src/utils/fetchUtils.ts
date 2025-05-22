@@ -1,5 +1,15 @@
 
 /**
+ * Configuration options for fetchWithRetry
+ */
+export interface FetchRetryOptions {
+  retries: number;
+  baseDelay: number;
+  maxDelay?: number;
+  shouldRetry?: (error: any) => boolean;
+}
+
+/**
  * Utility function to retry a fetch operation with exponential backoff
  * @param fetchFn Function that performs the fetch operation
  * @param options Configuration options for retries
@@ -7,10 +17,15 @@
  */
 export const fetchWithRetry = async <T>(
   fetchFn: () => Promise<T>,
-  options: { retries: number; baseDelay: number }
+  options: FetchRetryOptions
 ): Promise<T> => {
-  const { retries, baseDelay } = options;
-  
+  const {
+    retries,
+    baseDelay,
+    maxDelay = 5000,
+    shouldRetry = () => true,
+  } = options;
+
   let attempts = 0;
   let lastError: Error | null = null;
 
@@ -19,13 +34,19 @@ export const fetchWithRetry = async <T>(
       return await fetchFn();
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown error occurred');
-      console.warn(`Fetch attempt ${attempts + 1} failed, retrying in ${baseDelay * Math.pow(2, attempts)}ms...`);
-      
-      // Wait before retrying with exponential backoff
-      await new Promise((resolve) => 
-        setTimeout(resolve, baseDelay * Math.pow(2, attempts))
+
+      if (!shouldRetry(error)) {
+        console.warn(`FetchWithRetry: error is not retryable — aborting immediately.`);
+        throw lastError;
+      }
+
+      const delay = Math.min(baseDelay * 2 ** attempts, maxDelay);
+
+      console.warn(
+        `FetchWithRetry: attempt ${attempts + 1} failed. Retrying in ${delay}ms...`
       );
-      
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
       attempts++;
     }
   }
