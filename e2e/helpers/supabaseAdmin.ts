@@ -3,24 +3,24 @@ import { createClient } from '@supabase/supabase-js';
 
 // Define hardcoded fallback values (only used if env variables are missing)
 const SUPABASE_URL = 'https://wocfwpedauuhlrfugxuu.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SERVICE_ROLE_KEY = process.env.SERVICE_ROLE_KEY;
 
-if (!SUPABASE_SERVICE_ROLE_KEY) {
-  console.warn('SUPABASE_SERVICE_ROLE_KEY is not defined. Tests requiring admin access will fail.');
+if (!SERVICE_ROLE_KEY) {
+  console.warn('SERVICE_ROLE_KEY is not defined. Tests requiring admin access will fail.');
 }
 
 // Create a Supabase client with the service role key
 export const supabaseAdmin = createClient(
   SUPABASE_URL,
-  SUPABASE_SERVICE_ROLE_KEY || 'dummy-key-for-type-safety'
+  SERVICE_ROLE_KEY || 'dummy-key-for-type-safety'
 );
 
 /**
  * Create a test user with admin API
  */
 export async function createTestUser(email: string, password: string, userData?: Record<string, any>) {
-  if (!SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not defined. Cannot create test user.');
+  if (!SERVICE_ROLE_KEY) {
+    throw new Error('SERVICE_ROLE_KEY is not defined. Cannot create test user.');
   }
 
   try {
@@ -48,8 +48,8 @@ export async function createTestUser(email: string, password: string, userData?:
  * Delete a test user with admin API
  */
 export async function deleteTestUser(userId: string) {
-  if (!SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not defined. Cannot delete test user.');
+  if (!SERVICE_ROLE_KEY) {
+    throw new Error('SERVICE_ROLE_KEY is not defined. Cannot delete test user.');
   }
 
   try {

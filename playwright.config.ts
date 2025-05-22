@@ -43,6 +43,6 @@ export default defineConfig({
   env: {
     // Pass through environment variables
     SUPABASE_URL: process.env.SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co',
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    SERVICE_ROLE_KEY: process.env.SERVICE_ROLE_KEY || '',
   },
 });

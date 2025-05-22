@@ -5,7 +5,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
 // Create a Supabase client with the service role key (this has admin rights)
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY') || '';
+
+if (!serviceRoleKey) {
+  console.warn('SERVICE_ROLE_KEY is not defined. Administrative functions will fail.');
+}
 
 serve(async (req) => {
   // Handle CORS
@@ -21,7 +25,7 @@ serve(async (req) => {
 
   try {
     // Create supabase client with service role key
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
     
     // Get current user from the request to verify they're an admin
     const authHeader = req.headers.get('Authorization') || '';
