@@ -7,9 +7,6 @@ export interface Restaurant {
   state: string;
   zipcode: string;
   description: string;
-  phone?: string;
-  website?: string;
-  logo_url?: string;
 }
 
 export interface EventDetails {
@@ -20,9 +17,22 @@ export interface EventDetails {
   time: string;
   price: number;
   capacity: number;
-  restaurant: Restaurant;
-  tickets_sold: number;
   user_id: string;
-  cover_image?: string;
   published: boolean;
+  restaurant: Restaurant;
+  cover_image: string;
+  tickets_sold: number;
+}
+
+export interface EventFilters {
+  category?: string;
+  date?: string;
+  price?: string;
+  location?: string;
+}
+
+export interface EventCategory {
+  id: string;
+  name: string;
+  slug: string;
 }

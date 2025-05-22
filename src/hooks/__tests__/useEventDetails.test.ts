@@ -6,15 +6,23 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useEventPaymentHandler } from '@/hooks/event-payment/useEventPaymentHandler';
 
-// Mock dependencies
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    single: vi.fn()
-  }
-}));
+// Mock dependencies with proper chaining methods
+vi.mock('@/integrations/supabase/client', () => {
+  // Create a mock function for the single method
+  const mockSingle = vi.fn();
+  // Create a mock function for the eq method that returns an object with the single method
+  const mockEq = vi.fn().mockReturnValue({ single: mockSingle });
+  // Create a mock function for the select method that returns an object with the eq method
+  const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+  // Create a mock for the from method that returns an object with the select method
+  const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
+  
+  return {
+    supabase: {
+      from: mockFrom
+    }
+  };
+});
 
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: vi.fn()
@@ -64,7 +72,10 @@ describe('useEventDetails hook', () => {
     };
     
     // Mock Supabase response
-    (supabase.single as any).mockResolvedValue({ data: mockEventData, error: null });
+    (supabase.from('').select('').eq('', '').single as any).mockResolvedValue({ 
+      data: mockEventData, 
+      error: null 
+    });
     
     const { result } = renderHook(() => useEventDetails('event-123'));
     
@@ -97,7 +108,10 @@ describe('useEventDetails hook', () => {
   
   it('should handle database errors', async () => {
     const mockError = { message: 'Database error' };
-    (supabase.single as any).mockResolvedValue({ data: null, error: mockError });
+    (supabase.from('').select('').eq('', '').single as any).mockResolvedValue({ 
+      data: null, 
+      error: mockError 
+    });
     
     const { result } = renderHook(() => useEventDetails('invalid-id'));
     
@@ -115,7 +129,10 @@ describe('useEventDetails hook', () => {
       restaurants: {}
     };
     
-    (supabase.single as any).mockResolvedValue({ data: mockEventData, error: null });
+    (supabase.from('').select('').eq('', '').single as any).mockResolvedValue({ 
+      data: mockEventData, 
+      error: null 
+    });
     
     const { result } = renderHook(() => useEventDetails('event-123'));
     
@@ -132,7 +149,10 @@ describe('useEventDetails hook', () => {
       restaurants: null
     };
     
-    (supabase.single as any).mockResolvedValue({ data: mockEventData, error: null });
+    (supabase.from('').select('').eq('', '').single as any).mockResolvedValue({ 
+      data: mockEventData, 
+      error: null 
+    });
     
     const { result } = renderHook(() => useEventDetails('event-123'));
     
@@ -157,7 +177,10 @@ describe('useEventDetails hook', () => {
     };
     
     // First call returns initial data
-    (supabase.single as any).mockResolvedValueOnce({ data: initialEventData, error: null });
+    (supabase.from('').select('').eq('', '').single as any).mockResolvedValueOnce({ 
+      data: initialEventData, 
+      error: null 
+    });
     
     const { result } = renderHook(() => useEventDetails('event-123'));
     
@@ -166,9 +189,10 @@ describe('useEventDetails hook', () => {
     
     // Reset mock for next call
     (supabase.from as any).mockClear();
-    (supabase.select as any).mockClear();
-    (supabase.eq as any).mockClear();
-    (supabase.single as any).mockResolvedValueOnce({ data: updatedEventData, error: null });
+    (supabase.from('').select('').eq('', '').single as any).mockResolvedValueOnce({ 
+      data: updatedEventData, 
+      error: null 
+    });
     
     // Trigger refresh
     act(() => {

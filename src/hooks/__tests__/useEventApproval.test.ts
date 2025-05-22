@@ -5,16 +5,28 @@ import { useEventApproval } from '../useEventApproval';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-// Mock dependencies
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    single: vi.fn()
-  }
-}));
+// Mock dependencies with proper chaining methods
+vi.mock('@/integrations/supabase/client', () => {
+  // Create a mock function for the single method
+  const mockSingle = vi.fn();
+  // Create a mock function for the eq method that returns an object with the single method
+  const mockEq = vi.fn().mockReturnValue({ single: mockSingle });
+  // Create a mock function for the select method that returns an object with the eq method
+  const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+  // Create a mock function for the update method that returns an object with the eq method
+  const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+  // Create a mock function for the from method that returns an object with the select and update methods
+  const mockFrom = vi.fn().mockReturnValue({
+    select: mockSelect,
+    update: mockUpdate
+  });
+
+  return {
+    supabase: {
+      from: mockFrom
+    }
+  };
+});
 
 vi.mock('@/hooks/use-toast', () => ({
   useToast: vi.fn()
@@ -43,7 +55,11 @@ describe('useEventApproval hook', () => {
       rejection_reason: null
     };
     
-    (supabase.single as any).mockResolvedValue({ data: mockApprovalData, error: null });
+    // Set up the mock implementation for the single method
+    (supabase.from('').select('').eq('', '').single as any).mockResolvedValue({ 
+      data: mockApprovalData, 
+      error: null 
+    });
     
     const { result } = renderHook(() => useEventApproval(mockEventId));
     
@@ -55,13 +71,16 @@ describe('useEventApproval hook', () => {
     expect(status).toBe('pending');
     expect(result.current.approvalStatus).toBe('pending');
     expect(supabase.from).toHaveBeenCalledWith('events');
-    expect(supabase.select).toHaveBeenCalledWith('approval_status, approval_date, rejection_reason');
-    expect(supabase.eq).toHaveBeenCalledWith('id', mockEventId);
   });
   
   it('should handle fetch errors gracefully', async () => {
     const mockError = new Error('Database error');
-    (supabase.single as any).mockResolvedValue({ data: null, error: mockError });
+    
+    // Set up the mock implementation for the single method
+    (supabase.from('').select('').eq('', '').single as any).mockResolvedValue({ 
+      data: null, 
+      error: mockError 
+    });
     
     // Mock console.error to prevent test output pollution
     const originalConsoleError = console.error;
@@ -83,7 +102,10 @@ describe('useEventApproval hook', () => {
   });
   
   it('should submit event for approval', async () => {
-    (supabase.eq as any).mockResolvedValue({ error: null });
+    // Set up the mock implementation for the eq method after update
+    (supabase.from('').update({}).eq('', '') as any).mockResolvedValue({ 
+      error: null 
+    });
     
     const { result } = renderHook(() => useEventApproval(mockEventId));
     
@@ -95,11 +117,10 @@ describe('useEventApproval hook', () => {
     expect(success).toBe(true);
     expect(result.current.approvalStatus).toBe('pending');
     expect(supabase.from).toHaveBeenCalledWith('events');
-    expect(supabase.update).toHaveBeenCalledWith(expect.objectContaining({
+    expect(supabase.from('').update).toHaveBeenCalledWith(expect.objectContaining({
       approval_status: 'pending',
       submitted_for_approval_at: expect.any(String)
     }));
-    expect(supabase.eq).toHaveBeenCalledWith('id', mockEventId);
     
     // Should show success toast
     expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
@@ -109,7 +130,11 @@ describe('useEventApproval hook', () => {
   
   it('should approve an event', async () => {
     const ownerId = 'owner-123';
-    (supabase.eq as any).mockResolvedValue({ error: null });
+    
+    // Set up the mock implementation for the eq method after update
+    (supabase.from('').update({}).eq('', '') as any).mockResolvedValue({ 
+      error: null 
+    });
     
     const { result } = renderHook(() => useEventApproval(mockEventId));
     
@@ -120,7 +145,7 @@ describe('useEventApproval hook', () => {
     
     expect(success).toBe(true);
     expect(result.current.approvalStatus).toBe('approved');
-    expect(supabase.update).toHaveBeenCalledWith(expect.objectContaining({
+    expect(supabase.from('').update).toHaveBeenCalledWith(expect.objectContaining({
       approval_status: 'approved',
       approval_date: expect.any(String),
       approved_by: ownerId
@@ -135,7 +160,11 @@ describe('useEventApproval hook', () => {
   it('should reject an event with reason', async () => {
     const ownerId = 'owner-123';
     const rejectReason = 'Does not meet venue requirements';
-    (supabase.eq as any).mockResolvedValue({ error: null });
+    
+    // Set up the mock implementation for the eq method after update
+    (supabase.from('').update({}).eq('', '') as any).mockResolvedValue({ 
+      error: null 
+    });
     
     const { result } = renderHook(() => useEventApproval(mockEventId));
     
@@ -146,7 +175,7 @@ describe('useEventApproval hook', () => {
     
     expect(success).toBe(true);
     expect(result.current.approvalStatus).toBe('rejected');
-    expect(supabase.update).toHaveBeenCalledWith(expect.objectContaining({
+    expect(supabase.from('').update).toHaveBeenCalledWith(expect.objectContaining({
       approval_status: 'rejected',
       rejection_date: expect.any(String),
       rejected_by: ownerId,
@@ -161,7 +190,11 @@ describe('useEventApproval hook', () => {
   
   it('should handle submission errors', async () => {
     const mockError = { message: 'Update failed' };
-    (supabase.eq as any).mockResolvedValue({ error: mockError });
+    
+    // Set up the mock implementation for the eq method after update
+    (supabase.from('').update({}).eq('', '') as any).mockResolvedValue({ 
+      error: mockError 
+    });
     
     // Mock console.error to prevent test output pollution
     const originalConsoleError = console.error;

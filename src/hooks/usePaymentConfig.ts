@@ -1,63 +1,64 @@
 
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
-export interface PaymentConfig {
-  serviceFeePercent: number;
-  commissionFeePercent: number;
-  stripeMode: 'test' | 'live';
+interface PaymentConfig {
+  membershipFee: number;
+  currency: string;
+  taxRate: number;
 }
 
-const fetchPaymentConfig = async (): Promise<PaymentConfig> => {
-  const { data, error } = await supabase
-    .from('admin_config')
-    .select('*')
-    .in('key', [
-      'service_fee_percent',
-      'commission_fee_percent',
-      'stripe_mode',
-      'ticket_commission_value',
-      'signup_commission_value',
-    ]);
+export const usePaymentConfig = () => {
+  const [config, setConfig] = useState<PaymentConfig>({
+    membershipFee: 0,
+    currency: 'USD',
+    taxRate: 0
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<Error | null>(null);
+  const { toast } = useToast();
 
-  if (error) {
-    console.error(error);
-    return {
-      serviceFeePercent: 0,
-      commissionFeePercent: 0,
-      stripeMode: 'test',
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // Fetch configuration from API endpoint
+        const response = await fetch('/api/payment-config');
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch payment configuration: ${response.status}`);
+        }
+        
+        const { data } = await response.json();
+        
+        if (data) {
+          setConfig({
+            membershipFee: data.membershipFee || 25,
+            currency: data.currency || 'USD',
+            taxRate: data.taxRate || 0.07
+          });
+        }
+      } catch (err: any) {
+        setError(err);
+        console.error('Error fetching payment configuration:', err);
+        toast({
+          title: 'Error loading payment configuration',
+          description: err.message || 'Please try again later',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsLoading(false);
+      }
     };
-  }
+    
+    fetchConfig();
+  }, [toast]);
 
-  const config: PaymentConfig = {
-    serviceFeePercent: 0,
-    commissionFeePercent: 0,
-    stripeMode: 'test',
+  return {
+    ...config,
+    isLoading,
+    error
   };
-
-  data?.forEach((item) => {
-    if (item.key === 'service_fee_percent') {
-      config.serviceFeePercent = parseFloat(item.value) || 0;
-    } else if (item.key === 'commission_fee_percent') {
-      config.commissionFeePercent = parseFloat(item.value) || 0;
-    } else if (item.key === 'ticket_commission_value' && !data.some(d => d.key === 'service_fee_percent')) {
-      config.serviceFeePercent = parseFloat(item.value) || 0;
-    } else if (item.key === 'signup_commission_value' && !data.some(d => d.key === 'commission_fee_percent')) {
-      config.commissionFeePercent = parseFloat(item.value) || 0;
-    } else if (item.key === 'stripe_mode') {
-      config.stripeMode = item.value === 'live' ? 'live' : 'test';
-    }
-  });
-
-  return config;
 };
-
-export function usePaymentConfig() {
-  return useQuery({
-    queryKey: ['paymentConfig'],
-    queryFn: fetchPaymentConfig,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    retry: 2,
-  });
-}

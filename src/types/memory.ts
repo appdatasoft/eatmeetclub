@@ -1,16 +1,18 @@
 
-export interface Memory {
+export interface MemoryDish {
   id: string;
-  title: string;
-  event_id?: string;
-  restaurant_id?: string;
+  dish_name: string;
+  memory_id: string;
   user_id: string;
-  date: string;
-  location: string;
-  privacy: 'public' | 'private' | 'unlisted';
   created_at: string;
-  updated_at: string;
-  is_auto_generated?: boolean;
+}
+
+export interface MemoryAttendee {
+  id: string;
+  memory_id: string;
+  user_id: string;
+  is_tagged?: boolean;
+  created_at: string;
 }
 
 export interface MemoryContent {
@@ -23,26 +25,19 @@ export interface MemoryContent {
   updated_at: string;
 }
 
-export interface MemoryAttendee {
+export interface Memory {
   id: string;
-  memory_id: string;
   user_id: string;
-  is_tagged: boolean;
+  title: string;
+  date: string;
+  location: string;
+  event_id?: string;
+  restaurant_id?: string;
+  privacy: 'private' | 'friends' | 'public';
+  is_auto_generated?: boolean;
   created_at: string;
-}
-
-export interface MemoryDish {
-  id: string;
-  memory_id: string;
-  user_id: string;
-  dish_name: string;
-  created_at: string;
-}
-
-export interface MemoryWithRelations extends Memory {
-  content?: MemoryContent[];
-  attendees?: MemoryAttendee[];
+  updated_at: string;
   dishes?: MemoryDish[];
-  restaurant?: any;
-  event?: any;
+  attendees?: MemoryAttendee[];
+  content?: MemoryContent[];
 }

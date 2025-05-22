@@ -2,36 +2,43 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useEventFilters } from '../useEventFilters';
+import { EventCardProps } from '@/components/events/EventCard';
 
 describe('useEventFilters hook', () => {
-  // Test fixtures
-  const mockEvents = [
+  // Test fixtures with all required properties
+  const mockEvents: EventCardProps[] = [
     {
       id: 'event1',
       title: 'Summer Cookout',
       date: 'July 4, 2025',
+      time: '6:00 PM',
       price: 25,
       location: 'Downtown NYC',
       category: 'food',
-      image: '/path/to/image1.jpg'
+      image: '/path/to/image1.jpg',
+      restaurantName: 'Riverside Grill'
     },
     {
       id: 'event2',
       title: 'Wine Tasting',
       date: 'August 15, 2025',
+      time: '7:30 PM',
       price: 75,
       location: 'Brooklyn, NYC',
       category: 'drinks',
-      image: '/path/to/image2.jpg'
+      image: '/path/to/image2.jpg',
+      restaurantName: 'Vineyard Bistro'
     },
     {
       id: 'event3',
       title: 'Cooking Class',
       date: 'July 4, 2025',
+      time: '2:00 PM',
       price: 120,
       location: 'Manhattan',
       category: 'food',
-      image: '/path/to/image3.jpg'
+      image: '/path/to/image3.jpg',
+      restaurantName: 'Culinary Institute'
     }
   ];
 

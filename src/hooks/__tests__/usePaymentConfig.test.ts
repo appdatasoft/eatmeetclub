@@ -1,5 +1,4 @@
 
-/// <reference types="vitest" />
 import { renderHook } from '@testing-library/react';
 import { describe, it, vi, beforeEach, expect } from 'vitest';
 import { usePaymentConfig } from '../usePaymentConfig';
@@ -33,15 +32,15 @@ describe('usePaymentConfig', () => {
       })
     });
 
-    const { result, waitForNextUpdate } = renderHook(() => usePaymentConfig());
+    const { result, waitFor } = renderHook(() => usePaymentConfig());
     
     // Initial state should be loading
     expect(result.current.isLoading).toBe(true);
     
-    await waitForNextUpdate();
+    // Wait for loading to complete
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     
     // After loading, we should have our config
-    expect(result.current.isLoading).toBe(false);
     expect(result.current.membershipFee).toBe(25);
     expect(result.current.currency).toBe('USD');
     expect(result.current.taxRate).toBe(0.07);
@@ -52,12 +51,12 @@ describe('usePaymentConfig', () => {
     // Mock an error response
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
     
-    const { result, waitForNextUpdate } = renderHook(() => usePaymentConfig());
+    const { result, waitFor } = renderHook(() => usePaymentConfig());
     
-    await waitForNextUpdate();
+    // Wait for error state
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     
     // Should show error state
-    expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeTruthy();
     expect(mockToast.toast).toHaveBeenCalledWith({
       title: 'Error loading payment configuration',
