@@ -1,7 +1,8 @@
 
+/// <reference types="vitest" />
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import NotFound from '../NotFound';
 

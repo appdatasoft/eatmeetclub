@@ -5,9 +5,6 @@ import { vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/components/theme-provider';
-import { ToastProvider } from '@/hooks/use-toast';
-import { FeatureFlagProvider } from '@/contexts/FeatureFlagContext';
-import { AuthProvider } from '@/contexts/AuthContext';
 
 // Create a custom render function that includes all providers
 export function renderWithProviders(
@@ -20,11 +17,6 @@ export function renderWithProviders(
           retry: false,
         },
       },
-      logger: {
-        log: console.log,
-        warn: console.warn,
-        error: () => {},
-      },
     }),
     ...renderOptions
   } = {}
@@ -36,13 +28,7 @@ export function renderWithProviders(
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider defaultTheme="light">
-            <ToastProvider>
-              <AuthProvider>
-                <FeatureFlagProvider>
-                  {children}
-                </FeatureFlagProvider>
-              </AuthProvider>
-            </ToastProvider>
+            {children}
           </ThemeProvider>
         </QueryClientProvider>
       </BrowserRouter>

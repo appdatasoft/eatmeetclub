@@ -1,10 +1,11 @@
 
+/// <reference types="vitest" />
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import RestaurantMenuPreview from '../RestaurantMenuPreview';
 import { useMenuItemsFetcher } from '../restaurant-menu/hooks/useMenuItemsFetcher';
-import { ToastProvider } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 // Mock the hooks
 vi.mock('../restaurant-menu/hooks/useMenuItemsFetcher', () => ({
@@ -28,9 +29,17 @@ vi.mock('../restaurant-menu/MenuList', () => ({
   ),
 }));
 
+// Mock useToast
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: vi.fn(),
+}));
+
 describe('RestaurantMenuPreview', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (useToast as any).mockReturnValue({
+      toast: vi.fn(),
+    });
   });
 
   it('shows loading state when fetching menu items', () => {
@@ -40,11 +49,7 @@ describe('RestaurantMenuPreview', () => {
       error: null,
     });
 
-    render(
-      <ToastProvider>
-        <RestaurantMenuPreview restaurantId="123" />
-      </ToastProvider>
-    );
+    render(<RestaurantMenuPreview restaurantId="123" />);
 
     expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument();
     expect(screen.getByText('Menu')).toBeInTheDocument();
@@ -57,11 +62,7 @@ describe('RestaurantMenuPreview', () => {
       error: null,
     });
 
-    render(
-      <ToastProvider>
-        <RestaurantMenuPreview restaurantId="123" />
-      </ToastProvider>
-    );
+    render(<RestaurantMenuPreview restaurantId="123" />);
 
     expect(screen.getByTestId('empty-menu')).toBeInTheDocument();
   });
@@ -78,23 +79,16 @@ describe('RestaurantMenuPreview', () => {
       error: null,
     });
 
-    render(
-      <ToastProvider>
-        <RestaurantMenuPreview restaurantId="123" />
-      </ToastProvider>
-    );
+    render(<RestaurantMenuPreview restaurantId="123" />);
 
     expect(screen.getByTestId('menu-list')).toBeInTheDocument();
   });
 
   it('shows error state when there is an error fetching menu items', () => {
-    // We mocked the ToastProvider, so we can check if it shows an error
-    const mockToastFn = vi.fn();
-    vi.mock('@/hooks/use-toast', () => ({
-      useToast: () => ({
-        toast: mockToastFn,
-      }),
-    }));
+    const toastMock = vi.fn();
+    (useToast as any).mockReturnValue({
+      toast: toastMock,
+    });
 
     (useMenuItemsFetcher as any).mockReturnValue({
       menuItems: [],
@@ -102,15 +96,9 @@ describe('RestaurantMenuPreview', () => {
       error: 'Failed to fetch menu items',
     });
 
-    render(
-      <ToastProvider>
-        <RestaurantMenuPreview restaurantId="123" />
-      </ToastProvider>
-    );
+    render(<RestaurantMenuPreview restaurantId="123" />);
 
-    // Since we're using the mock Toast implementation,
-    // we'll at least verify the component renders without crashing
-    expect(screen.getByText('Menu')).toBeInTheDocument();
+    expect(toastMock).toHaveBeenCalled();
   });
 
   it('passes the restaurant ID to the menu items fetcher', () => {
@@ -120,11 +108,7 @@ describe('RestaurantMenuPreview', () => {
       error: null,
     });
 
-    render(
-      <ToastProvider>
-        <RestaurantMenuPreview restaurantId="test-123" />
-      </ToastProvider>
-    );
+    render(<RestaurantMenuPreview restaurantId="test-123" />);
 
     expect(useMenuItemsFetcher).toHaveBeenCalledWith('test-123');
   });
