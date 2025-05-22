@@ -4,6 +4,8 @@ import EditableImage from "@/components/editor/EditableImage";
 import { useEditableContent } from "@/components/editor/EditableContentProvider";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import SupabaseImage from "@/components/common/SupabaseImage";
+import { addCacheBuster } from "@/utils/supabaseStorage";
 
 const HowItWorks = () => {
   const { editModeEnabled } = useEditableContent();
@@ -12,11 +14,11 @@ const HowItWorks = () => {
     // Test connection to Supabase on component mount
     const testConnection = async () => {
       try {
-        const { data, error } = await supabase.from('page_content').select('count(*)').limit(1);
+        const { data, error } = await supabase.from('page_content').select('*').limit(1);
         if (error) {
           console.error("Error connecting to Supabase in HowItWorks:", error);
         } else {
-          console.log("Successfully connected to Supabase in HowItWorks");
+          console.log("Successfully connected to Supabase in HowItWorks, data:", data);
         }
       } catch (err) {
         console.error("Failed to test Supabase connection:", err);

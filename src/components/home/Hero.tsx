@@ -1,8 +1,11 @@
+
 import { ReactNode, useState } from "react";
 import { Pencil } from "lucide-react";
 import { useEditableContent } from "@/components/editor/EditableContentProvider";
 import BackgroundImageEditor from "@/components/editor/BackgroundImageEditor";
 import DiningScene from "@/assets/dining-scene.svg";
+import SupabaseImage from "@/components/common/SupabaseImage";
+import { addCacheBuster } from "@/utils/supabaseStorage";
 
 type HeroProps = {
   children?: ReactNode;
@@ -42,8 +45,19 @@ const Hero = ({ children }: HeroProps) => {
     }
   };
 
+  // Add cache buster to ensure images are fresh
+  const cachedBackgroundImage = addCacheBuster(backgroundImage);
+  const cachedHeroImage = addCacheBuster(heroImage);
+
   return (
-    <div className="w-full py-12 md:py-24 relative">
+    <div 
+      className="w-full py-12 md:py-24 relative"
+      style={{
+        backgroundImage: `url(${cachedBackgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
       <BackgroundImageEditor
         isOpen={isEditingBackground}
         onOpenChange={setIsEditingBackground}
@@ -65,12 +79,24 @@ const Hero = ({ children }: HeroProps) => {
           </div>
 
           <div className="w-full md:w-1/2 flex justify-center relative group">
-            <img
-              src={heroImage}
-              alt="People dining together"
-              className="max-w-full h-auto rounded-lg shadow-xl"
-              style={{ maxHeight: "500px" }}
-            />
+            {/* Using SupabaseImage for more reliable image loading from Supabase storage */}
+            {heroImage.startsWith('http') ? (
+              <SupabaseImage
+                src={cachedHeroImage}
+                alt="People dining together"
+                className="max-w-full h-auto rounded-lg shadow-xl"
+                width="100%"
+                height="500px"
+                fallbackSrc="/lovable-uploads/e68dd733-6a42-426b-8156-7c0a0963b7d2.png"
+              />
+            ) : (
+              <img
+                src={heroImage}
+                alt="People dining together"
+                className="max-w-full h-auto rounded-lg shadow-xl"
+                style={{ maxHeight: "500px" }}
+              />
+            )}
             {editModeEnabled && canEdit && (
               <button
                 className="absolute top-2 right-2 bg-white/80 hover:bg-white p-2 rounded-full z-20 transition-opacity"
