@@ -1,3 +1,4 @@
+
 import React, { ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -28,13 +29,12 @@ describe('usePaymentConfig hook', () => {
   let queryClient: QueryClient;
   const mockIn = (supabase as any).__mock.in;
 
-  const wrapper = (( children ): WrapperProps) => {
-    return (
-      <QueryClientProvider client=(queryClient)>
+  // ✅ Fix wrapper function syntax
+  const wrapper = ({ children }: WrapperProps) => (
+    <QueryClientProvider client={queryClient}>
       {children}
-      </QueryClientProvider>
-    );
-  };
+    </QueryClientProvider>
+  );
 
   beforeEach(() => {
     vi.resetAllMocks();
