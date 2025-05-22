@@ -4,8 +4,9 @@ import { Pencil } from "lucide-react";
 import { useEditableContent } from "@/components/editor/EditableContentProvider";
 import BackgroundImageEditor from "@/components/editor/BackgroundImageEditor";
 import DiningScene from "@/assets/dining-scene.svg";
-import SupabaseImage from "@/components/common/SupabaseImage";
-import { addCacheBuster } from "@/utils/supabaseStorage";
+
+// Use fixed background image instead of loading from Supabase
+import backgroundImage from "/public/lovable-uploads/090eb32e-b931-4f8a-a4a5-cf84992c296c.png";
 
 type HeroProps = {
   children?: ReactNode;
@@ -16,10 +17,8 @@ const Hero = ({ children }: HeroProps) => {
   const [isEditingBackground, setIsEditingBackground] = useState(false);
   const [isEditingHeroImage, setIsEditingHeroImage] = useState(false);
 
-  const backgroundImage =
-    contentMap["hero-background"]?.content ||
-    "/lovable-uploads/090eb32e-b931-4f8a-a4a5-cf84992c296c.png";
-  const heroImage = contentMap["hero-image"]?.content || DiningScene;
+  // Use local image paths instead of Supabase
+  const heroImagePath = contentMap["hero-image"]?.content || DiningScene;
 
   const handleEditBackground = () => {
     if (!editModeEnabled) return;
@@ -45,15 +44,11 @@ const Hero = ({ children }: HeroProps) => {
     }
   };
 
-  // Add cache buster to ensure images are fresh
-  const cachedBackgroundImage = addCacheBuster(backgroundImage);
-  const cachedHeroImage = addCacheBuster(heroImage);
-
   return (
     <div 
       className="w-full py-12 md:py-24 relative"
       style={{
-        backgroundImage: `url(${cachedBackgroundImage})`,
+        backgroundImage: `url(${backgroundImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
@@ -68,7 +63,7 @@ const Hero = ({ children }: HeroProps) => {
       <BackgroundImageEditor
         isOpen={isEditingHeroImage}
         onOpenChange={setIsEditingHeroImage}
-        currentImage={heroImage}
+        currentImage={heroImagePath}
         onSave={handleSaveHeroImage}
       />
 
@@ -79,19 +74,16 @@ const Hero = ({ children }: HeroProps) => {
           </div>
 
           <div className="w-full md:w-1/2 flex justify-center relative group">
-            {/* Using SupabaseImage for more reliable image loading from Supabase storage */}
-            {heroImage.startsWith('http') ? (
-              <SupabaseImage
-                src={cachedHeroImage}
+            {heroImagePath.startsWith('http') ? (
+              <img
+                src={heroImagePath}
                 alt="People dining together"
                 className="max-w-full h-auto rounded-lg shadow-xl"
-                width="100%"
-                height="500px"
-                fallbackSrc="/lovable-uploads/e68dd733-6a42-426b-8156-7c0a0963b7d2.png"
+                style={{ maxHeight: "500px" }}
               />
             ) : (
               <img
-                src={heroImage}
+                src={heroImagePath}
                 alt="People dining together"
                 className="max-w-full h-auto rounded-lg shadow-xl"
                 style={{ maxHeight: "500px" }}

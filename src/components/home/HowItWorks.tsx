@@ -2,32 +2,14 @@
 import EditableText from "@/components/editor/EditableText";
 import EditableImage from "@/components/editor/EditableImage";
 import { useEditableContent } from "@/components/editor/EditableContentProvider";
-import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import SupabaseImage from "@/components/common/SupabaseImage";
-import { addCacheBuster } from "@/utils/supabaseStorage";
+
+// Import local images instead of relying on Supabase
+import step1Image from "/public/lovable-uploads/46144c94-b752-4704-930d-f0c4cf2e68cc.png";
+import step2Image from "/public/lovable-uploads/82113d9c-640f-41aa-a1ec-c74259bf348d.png";
+import step3Image from "/public/lovable-uploads/e25949c9-5d4a-4ad3-b3dd-fb90924a6e1f.png";
 
 const HowItWorks = () => {
   const { editModeEnabled } = useEditableContent();
-  
-  useEffect(() => {
-    // Test connection to Supabase on component mount
-    const testConnection = async () => {
-      try {
-        // Changed from count(*) to a proper select statement
-        const { data, error } = await supabase.from('page_content').select('*').limit(1);
-        if (error) {
-          console.error("Error connecting to Supabase in HowItWorks:", error);
-        } else {
-          console.log("Successfully connected to Supabase in HowItWorks, data:", data);
-        }
-      } catch (err) {
-        console.error("Failed to test Supabase connection:", err);
-      }
-    };
-    
-    testConnection();
-  }, []);
 
   return (
     <section className="section-padding bg-white">
@@ -56,7 +38,7 @@ const HowItWorks = () => {
                 shape="circle"
                 className="w-48 h-48 bg-brand-100"
                 alt="Step 1"
-                defaultImage="/lovable-uploads/e68dd733-6a42-426b-8156-7c0a0963b7d2.png"
+                defaultImage={step1Image}
               />
               {!editModeEnabled && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -86,7 +68,7 @@ const HowItWorks = () => {
                 shape="circle"
                 className="w-48 h-48 bg-brand-100"
                 alt="Step 2"
-                defaultImage="/lovable-uploads/e68dd733-6a42-426b-8156-7c0a0963b7d2.png"
+                defaultImage={step2Image}
               />
               {!editModeEnabled && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -116,7 +98,7 @@ const HowItWorks = () => {
                 shape="circle"
                 className="w-48 h-48 bg-brand-100"
                 alt="Step 3"
-                defaultImage="/lovable-uploads/e68dd733-6a42-426b-8156-7c0a0963b7d2.png"
+                defaultImage={step3Image}
               />
               {!editModeEnabled && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
