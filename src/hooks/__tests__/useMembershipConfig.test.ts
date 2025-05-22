@@ -46,7 +46,7 @@ describe('useMembershipConfig hook', () => {
       })
     });
 
-    const { result, waitForNextUpdate } = renderHook(() => useMembershipConfig());
+    const { result } = renderHook(() => useMembershipConfig());
     
     // Wait for the async operation to complete
     await vi.runAllTimersAsync();
@@ -81,7 +81,7 @@ describe('useMembershipConfig hook', () => {
       })
     });
 
-    const { result, waitForNextUpdate } = renderHook(() => useMembershipConfig());
+    const { result } = renderHook(() => useMembershipConfig());
     
     // Wait for the async operations to complete
     await vi.runAllTimersAsync();
@@ -116,7 +116,7 @@ describe('useMembershipConfig hook', () => {
     const originalConsoleError = console.error;
     console.error = vi.fn();
 
-    const { result, waitForNextUpdate } = renderHook(() => useMembershipConfig());
+    const { result } = renderHook(() => useMembershipConfig());
     
     // Wait for the async operations to complete
     await vi.runAllTimersAsync();

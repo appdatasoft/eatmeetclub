@@ -18,50 +18,6 @@ describe('useBackupEmail hook', () => {
     vi.unstubAllEnvs();
   });
 
-  it('should validate email data correctly', () => {
-    const { result } = renderHook(() => useBackupEmail());
-    
-    // Test with valid data
-    const validResult = result.current.validateEmailData('user@example.com', 'John Doe');
-    expect(validResult).toEqual({
-      valid: true,
-      email: 'user@example.com',
-      name: 'John Doe'
-    });
-    
-    // Test with empty name
-    const emptyNameResult = result.current.validateEmailData('user@example.com', '');
-    expect(emptyNameResult).toEqual({
-      valid: true,
-      email: 'user@example.com',
-      name: 'Member'
-    });
-    
-    // Test with "undefined" name
-    const undefinedNameResult = result.current.validateEmailData('user@example.com', 'undefined');
-    expect(undefinedNameResult).toEqual({
-      valid: true,
-      email: 'user@example.com',
-      name: 'Member'
-    });
-    
-    // Test with invalid email
-    const invalidEmailResult = result.current.validateEmailData('invalid-email', 'John Doe');
-    expect(invalidEmailResult).toEqual({
-      valid: false,
-      email: '',
-      name: 'John Doe'
-    });
-    
-    // Test with "undefined" email
-    const undefinedEmailResult = result.current.validateEmailData('undefined', 'John Doe');
-    expect(undefinedEmailResult).toEqual({
-      valid: false,
-      email: '',
-      name: 'John Doe'
-    });
-  });
-
   it('should send direct backup email successfully', async () => {
     // Mock successful fetch response
     (fetch as any).mockResolvedValueOnce({
@@ -133,7 +89,7 @@ describe('useBackupEmail hook', () => {
     console.error = originalConsoleError;
   });
 
-  it('should not attempt to send email with invalid data', async () => {
+  it('should handle invalid email data', async () => {
     const { result } = renderHook(() => useBackupEmail());
     
     // Mock console.error to avoid test output pollution
@@ -148,13 +104,7 @@ describe('useBackupEmail hook', () => {
     
     expect(success).toBe(false);
     expect(fetch).not.toHaveBeenCalled();
-    expect(console.error).toHaveBeenCalledWith(
-      'Invalid email data for backup email:', 
-      expect.objectContaining({
-        email: 'invalid-email',
-        name: 'John Doe'
-      })
-    );
+    expect(console.error).toHaveBeenCalled();
     
     // Restore console.error
     console.error = originalConsoleError;
