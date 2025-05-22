@@ -1,65 +1,82 @@
-
 import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
-// Define hardcoded fallback values (only used if env variables are missing)
-const SUPABASE_URL = 'https://wocfwpedauuhlrfugxuu.supabase.co';
+// Load environment variables from .env.test
+dotenv.config({ path: '.env.test' });
+
+// Safely access environment variables
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://your-project.supabase.co';
 const SERVICE_ROLE_KEY = process.env.SERVICE_ROLE_KEY;
 
-if (!SERVICE_ROLE_KEY) {
-  console.warn('SERVICE_ROLE_KEY is not defined. Tests requiring admin access will fail.');
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.warn('[supabaseAdmin] Missing SUPABASE_URL or SERVICE_ROLE_KEY');
 }
 
-// Create a Supabase client with the service role key
+// Create Supabase admin client
 export const supabaseAdmin = createClient(
   SUPABASE_URL,
-  SERVICE_ROLE_KEY || 'dummy-key-for-type-safety'
+  SERVICE_ROLE_KEY || 'invalid-key'
 );
 
 /**
- * Create a test user with admin API
+ * Creates a new user using Supabase Admin API
+ * @param email - Email address
+ * @param password - Password
+ * @param userMetadata - Optional user_metadata (must be an object, e.g., { role: 'ambassador' })
  */
-export async function createTestUser(email: string, password: string, userData?: Record<string, any>) {
+export async function createTestUser(
+  email: string,
+  password: string,
+  userMetadata: Record<string, any> = { full_name: 'Test User' }
+) {
   if (!SERVICE_ROLE_KEY) {
-    throw new Error('SERVICE_ROLE_KEY is not defined. Cannot create test user.');
+    throw new Error('❌ SERVICE_ROLE_KEY is missing. Cannot create user.');
   }
 
+  const payload = {
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: userMetadata, // ✅ must be a plain object
+  };
+
+  console.log('[createTestUser] Payload:', payload);
+
   try {
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // Auto-confirm email
-      user_metadata: userData || {
-        full_name: 'Test User'
-      }
-    });
+    const { data, error } = await supabaseAdmin.auth.admin.createUser(payload);
 
     if (error) {
+      console.error('[createTestUser] ❌ Supabase error:', error.message);
       throw error;
     }
 
     return data.user;
-  } catch (error) {
-    console.error('Failed to create test user:', error);
-    throw error;
+  } catch (err) {
+    console.error('[createTestUser] ❌ Unexpected error:', err);
+    throw err;
   }
 }
 
 /**
- * Delete a test user with admin API
+ * Deletes a user using Supabase Admin API
+ * @param userId - Supabase user ID
  */
 export async function deleteTestUser(userId: string) {
   if (!SERVICE_ROLE_KEY) {
-    throw new Error('SERVICE_ROLE_KEY is not defined. Cannot delete test user.');
+    throw new Error('❌ SERVICE_ROLE_KEY is missing. Cannot delete user.');
   }
 
   try {
     const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
     if (error) {
+      console.error('[deleteTestUser] ❌ Supabase error:', error.message);
       throw error;
     }
+
     return true;
-  } catch (error) {
-    console.error('Failed to delete test user:', error);
-    throw error;
+  } catch (err) {
+    console.error('[deleteTestUser] ❌ Unexpected error:', err);
+    throw err;
   }
 }
