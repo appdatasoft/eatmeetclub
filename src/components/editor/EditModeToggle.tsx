@@ -9,7 +9,7 @@ export const EditModeToggle = () => {
   if (!canEdit) return null;
 
   return (
-    <div className="w-full bg-gray-50 py-2 border-b border-gray-200 sticky top-0 z-20">
+    <div className="w-full bg-gray-50 py-2 border-b border-gray-200 z-10">
       <div className="container-custom flex justify-between items-center">
         <span className="text-gray-700 font-medium">Admin Tools:</span>
         <button
