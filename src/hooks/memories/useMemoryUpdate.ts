@@ -1,9 +1,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Memory } from '@/types/memory';
+import { Memory, MemoryWithRelations } from '@/types/memory';
 
-export const useMemoryUpdate = (onSuccessCallback?: () => Promise<void>) => {
+export const useMemoryUpdate = (onSuccessCallback?: () => Promise<MemoryWithRelations[]>) => {
   const { toast } = useToast();
 
   const updateMemory = async (memoryId: string, updates: Partial<Memory>) => {

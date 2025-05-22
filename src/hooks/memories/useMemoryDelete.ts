@@ -1,8 +1,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { MemoryWithRelations } from '@/types/memory';
 
-export const useMemoryDelete = (onSuccessCallback?: () => Promise<void>) => {
+export const useMemoryDelete = (onSuccessCallback?: () => Promise<MemoryWithRelations[]>) => {
   const { toast } = useToast();
 
   const deleteMemory = async (memoryId: string) => {

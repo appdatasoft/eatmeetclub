@@ -1,10 +1,10 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Memory } from '@/types/memory';
+import { Memory, MemoryWithRelations } from '@/types/memory';
 import { useAuth } from '@/hooks/useAuth';
 
-export const useMemoryCreate = (onSuccessCallback?: () => Promise<void>) => {
+export const useMemoryCreate = (onSuccessCallback?: () => Promise<MemoryWithRelations[]>) => {
   const { toast } = useToast();
   const { user } = useAuth();
 
