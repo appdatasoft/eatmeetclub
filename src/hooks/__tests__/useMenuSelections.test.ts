@@ -1,7 +1,7 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useMenuSelections } from '@/hooks/membership/useMenuSelections';
+import { useMenuSelections } from '@/components/events/menu-selection/useMenuSelections';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
