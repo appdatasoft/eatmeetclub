@@ -9,72 +9,54 @@ export interface PaymentConfig {
 }
 
 const fetchPaymentConfig = async (): Promise<PaymentConfig> => {
-  console.log('Fetching payment config...');
-  
-  try {
-    const { data, error } = await supabase
-      .from('admin_config')
-      .select('*')
-      .in('key', [
-        'service_fee_percent', 
-        'commission_fee_percent', 
-        'stripe_mode',
-        'ticket_commission_value',
-        'signup_commission_value'
-      ]);
+  const { data, error } = await supabase
+    .from('admin_config')
+    .select('*')
+    .in('key', [
+      'service_fee_percent',
+      'commission_fee_percent',
+      'stripe_mode',
+      'ticket_commission_value',
+      'signup_commission_value'
+    ]);
 
-    if (error) {
-      console.error('Supabase error fetching payment config:', error);
-      throw error;
-    }
-    
-    console.log('Payment config data received:', data);
-    
-    // Initialize with defaults
-    const config: PaymentConfig = {
-      serviceFeePercent: 0,
-      commissionFeePercent: 0,
-      stripeMode: 'test',
-    };
-    
-    // Update with data from database
-    if (data && data.length > 0) {
-      data.forEach((item) => {
-        if (item.key === 'service_fee_percent') {
-          config.serviceFeePercent = parseFloat(item.value) || 0;
-        } else if (item.key === 'commission_fee_percent') {
-          config.commissionFeePercent = parseFloat(item.value) || 0;
-        } else if (item.key === 'ticket_commission_value' && !data.some(d => d.key === 'service_fee_percent')) {
-          // Use ticket_commission_value as fallback for serviceFeePercent
-          config.serviceFeePercent = parseFloat(item.value) || 0;
-        } else if (item.key === 'signup_commission_value' && !data.some(d => d.key === 'commission_fee_percent')) {
-          // Use signup_commission_value as fallback for commissionFeePercent
-          config.commissionFeePercent = parseFloat(item.value) || 0;
-        } else if (item.key === 'stripe_mode') {
-          config.stripeMode = item.value === 'live' ? 'live' : 'test';
-        }
-      });
-    } else {
-      console.log('No payment config found, using defaults');
-    }
-    
-    return config;
-  } catch (error) {
-    console.error('Error fetching payment config:', error);
-    // Return defaults if there's an error
+  if (error) {
+    console.error(error);
     return {
       serviceFeePercent: 0,
       commissionFeePercent: 0,
-      stripeMode: 'test',
+      stripeMode: 'test'
     };
   }
+
+  const config: PaymentConfig = {
+    serviceFeePercent: 0,
+    commissionFeePercent: 0,
+    stripeMode: 'test'
+  };
+
+  data?.forEach((item) => {
+    if (item.key === 'service_fee_percent') {
+      config.serviceFeePercent = parseFloat(item.value) || 0;
+    } else if (item.key === 'commission_fee_percent') {
+      config.commissionFeePercent = parseFloat(item.value) || 0;
+    } else if (item.key === 'ticket_commission_value' && !data.some(d => d.key === 'service_fee_percent')) {
+      config.serviceFeePercent = parseFloat(item.value) || 0;
+    } else if (item.key === 'signup_commission_value' && !data.some(d => d.key === 'commission_fee_percent')) {
+      config.commissionFeePercent = parseFloat(item.value) || 0;
+    } else if (item.key === 'stripe_mode') {
+      config.stripeMode = item.value === 'live' ? 'live' : 'test';
+    }
+  });
+
+  return config;
 };
 
 export function usePaymentConfig() {
   return useQuery({
     queryKey: ['paymentConfig'],
     queryFn: fetchPaymentConfig,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: 2,
   });
