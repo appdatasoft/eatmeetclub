@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useEffect } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -19,12 +20,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     <div className="flex flex-col min-h-screen">
       <Navbar />
 
-      {/* ✅ Only render toggle if user can edit */}
-      {canEdit && (
-        <div className="relative z-50 w-full bg-gray-50 border-b border-gray-200">
-          <EditModeToggle />
-        </div>
-      )}
+      {/* Fix: Use proper conditional rendering without console.log in JSX */}
+      {canEdit && <EditModeToggle />}
 
       <main className="flex-grow bg-white">
         {children}

@@ -19,8 +19,10 @@ export const useInlineEdit = () => {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Add direct debug logging
-  console.log('ADMIN_DEBUG: useInlineEdit - user:', user?.email, 'isAdmin:', isAdmin);
+  // Fix: Directly use isAdmin for canEdit value
+  const canEdit = !!isAdmin && !!user;
+  
+  console.log('ADMIN_DEBUG: useInlineEdit - user:', user?.email, 'isAdmin:', isAdmin, 'canEdit:', canEdit);
   
   // Save content to the database
   const saveContent = async (content: EditableContent) => {
@@ -168,6 +170,6 @@ export const useInlineEdit = () => {
     isEditing,
     setIsEditing,
     isLoading,
-    canEdit: isAdmin && !!user,
+    canEdit,
   };
 };

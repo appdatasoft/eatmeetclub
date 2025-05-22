@@ -12,7 +12,6 @@ interface EditableContextType {
   isLoading: boolean;
   fetchPageContent: () => Promise<void>;
   
-  // Add missing properties and functions
   isEditing: string | null;
   handleEdit: (id: string) => void;
   handleSave: (content: EditableContent) => Promise<boolean>;
@@ -29,7 +28,6 @@ const EditableContext = createContext<EditableContextType>({
   isLoading: false,
   fetchPageContent: async () => {},
   
-  // Add missing properties and functions to default context
   isEditing: null,
   handleEdit: () => {},
   handleSave: async () => false,
@@ -46,19 +44,27 @@ export const useEditableContent = () => {
 };
 
 export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { saveContent: saveInlineContent, fetchContent, isLoading, canEdit } = useInlineEdit();
+  const { saveContent: saveInlineContent, fetchContent, isLoading, canEdit: userCanEdit } = useInlineEdit();
   const [contentMap, setContentMap] = useState<Record<string, EditableContent>>({});
   const [editModeEnabled, setEditModeEnabled] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   
+  // For clarity, create a local canEdit variable that's explicitly set from useInlineEdit
+  const canEdit = userCanEdit;
+  
+  useEffect(() => {
+    console.log('[EditableContentProvider] canEdit status from useInlineEdit:', userCanEdit);
+    console.log('[EditableContentProvider] Using canEdit value:', canEdit);
+  }, [userCanEdit, canEdit]);
+  
   const fetchPageContent = async () => {
     try {
-      console.log('Fetching page content for path:', window.location.pathname);
+      console.log('[EditableContentProvider] Fetching page content for path:', window.location.pathname);
       const content = await fetchContent(window.location.pathname);
-      console.log('Fetched content:', content);
+      console.log('[EditableContentProvider] Fetched content:', content);
       setContentMap(content);
     } catch (error) {
-      console.error('Error fetching content:', error);
+      console.error('[EditableContentProvider] Error fetching content:', error);
     }
   };
   
@@ -136,6 +142,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   
   // Toggle edit mode function
   const toggleEditMode = () => {
+    console.log('[EditableContentProvider] Toggling edit mode from', editModeEnabled, 'to', !editModeEnabled);
     setEditModeEnabled(prev => !prev);
   };
   
