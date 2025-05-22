@@ -1,53 +1,50 @@
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/common/Button';
 import Logo from '@/components/common/Logo';
-import { useAuth } from '@/hooks/useAuth';
-import NavLinks from './navigation/NavLinks';
-import AuthButtons from './navigation/AuthButtons';
-import MobileMenuButton from './navigation/MobileMenuButton';
-import MobileMenu from './navigation/MobileMenu';
-import { toast } from '@/hooks/use-toast';
+import NavLinks from '@/components/layout/navigation/NavLinks';
+import MobileMenu from '@/components/layout/navigation/MobileMenu';
+import MobileMenuButton from '@/components/layout/navigation/MobileMenuButton';
+import AuthButtons from '@/components/layout/navigation/AuthButtons';
 
 const Navbar = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, isAdmin, signOut } = useAuth();
-  const navigate = useNavigate();
-
-  // Log the authentication state to debug
-  useEffect(() => {
-    console.log('Navbar auth state:', { user, isLoggedIn: !!user });
-  }, [user]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
+    setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
   return (
-    <nav className="bg-white shadow-sm sticky top-0 z-50">
-      <div className="container-custom py-3">
+    <nav className="bg-white shadow-sm">
+      <div className="container-custom mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
-          {/* Logo */}
-          <Logo />
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center">
+              <Logo className="h-10 w-auto" />
+            </Link>
+          </div>
 
           {/* Desktop Navigation */}
-          <NavLinks />
+          <div className="hidden md:flex items-center space-x-6">
+            <NavLinks />
+            <Link to="/restaurants/join" className="text-brand-600 hover:text-brand-700 font-medium">
+              Register Restaurant
+            </Link>
+            <AuthButtons />
+          </div>
 
-          {/* Authentication/User Buttons */}
-          <AuthButtons />
-
-          {/* Mobile menu button */}
-          <MobileMenuButton isOpen={mobileMenuOpen} onClick={toggleMobileMenu} />
+          {/* Mobile Menu Button */}
+          <MobileMenuButton 
+            isOpen={isMobileMenuOpen} 
+            onClick={toggleMobileMenu} 
+            className="md:hidden"
+          />
         </div>
       </div>
 
-      {/* Mobile menu */}
-      <MobileMenu 
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-        user={user}
-        handleLogout={signOut}
-      />
+      {/* Mobile Menu */}
+      <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
     </nav>
   );
 };
