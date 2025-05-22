@@ -6,15 +6,28 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Mock the Supabase client
 vi.mock('@/integrations/supabase/client', () => {
+  const mockSingle = vi.fn();
+  const mockOrder = vi.fn();
+  const mockEq = vi.fn();
+  
   return {
     supabase: {
       from: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       update: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockImplementation(() => {
+        mockEq.mockReturnValue({ error: null, data: null });
+        return mockEq();
+      }),
       in: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      single: vi.fn()
+      order: vi.fn().mockImplementation(() => {
+        mockOrder.mockReturnValue({ data: [], error: null });
+        return mockOrder();
+      }),
+      single: vi.fn().mockImplementation(() => {
+        mockSingle.mockReturnValue({ data: {}, error: null });
+        return mockSingle();
+      })
     }
   };
 });
@@ -28,7 +41,10 @@ describe('useTicketDistribution hook', () => {
   
   it('should initialize with default values and loading state', () => {
     // Mock database calls to simulate loading state
-    vi.mocked(supabase.single).mockReturnValue(new Promise(() => {}));
+    vi.mocked(supabase.from).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockReturnValue(new Promise(() => {}))
+    } as any);
     
     const { result } = renderHook(() => useTicketDistribution(mockEventId));
     
@@ -42,7 +58,7 @@ describe('useTicketDistribution hook', () => {
   
   it('should fetch configuration from database', async () => {
     // Mock event config response
-    vi.mocked(supabase.single)
+    const mockSingleFn = vi.fn()
       .mockResolvedValueOnce({
         data: {
           ambassador_fee_percentage: 12, // Event-specific override
@@ -58,13 +74,21 @@ describe('useTicketDistribution hook', () => {
       });
     
     // Mock app config response
-    vi.mocked(supabase.order).mockResolvedValueOnce({
+    const mockOrderFn = vi.fn().mockResolvedValueOnce({
       data: [
         { key: 'APP_FEE_PERCENTAGE', value: '4' },
         { key: 'AFFILIATE_FEE_PERCENTAGE', value: '8' }
       ],
       error: null
     });
+    
+    vi.mocked(supabase.from).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      order: mockOrderFn,
+      single: mockSingleFn
+    } as any);
     
     const { result } = renderHook(() => useTicketDistribution(mockEventId));
     
@@ -86,7 +110,7 @@ describe('useTicketDistribution hook', () => {
   
   it('should calculate revenue distribution correctly', async () => {
     // Set up mock responses
-    vi.mocked(supabase.single)
+    const mockSingleFn = vi.fn()
       .mockResolvedValueOnce({
         data: { ambassador_fee_percentage: 10, restaurant_id: 'rest-123' },
         error: null
@@ -96,13 +120,21 @@ describe('useTicketDistribution hook', () => {
         error: null
       });
     
-    vi.mocked(supabase.order).mockResolvedValueOnce({
+    const mockOrderFn = vi.fn().mockResolvedValueOnce({
       data: [
         { key: 'APP_FEE_PERCENTAGE', value: '5' },
         { key: 'AFFILIATE_FEE_PERCENTAGE', value: '10' }
       ],
       error: null
     });
+    
+    vi.mocked(supabase.from).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      order: mockOrderFn,
+      single: mockSingleFn
+    } as any);
     
     const { result } = renderHook(() => useTicketDistribution(mockEventId));
     
@@ -134,7 +166,7 @@ describe('useTicketDistribution hook', () => {
     const newPercentage = 20;
     
     // Mock responses for initial loading
-    vi.mocked(supabase.single)
+    const mockSingleFn = vi.fn()
       .mockResolvedValueOnce({
         data: { ambassador_fee_percentage: 15, restaurant_id: 'rest-123' },
         error: null
@@ -144,13 +176,21 @@ describe('useTicketDistribution hook', () => {
         error: null
       });
     
-    vi.mocked(supabase.order).mockResolvedValueOnce({
+    const mockOrderFn = vi.fn().mockResolvedValueOnce({
       data: [],
       error: null
     });
+
+    const mockEqFn = vi.fn().mockResolvedValue({ error: null, data: null });
     
-    // Mock successful update
-    vi.mocked(supabase.eq).mockResolvedValueOnce({ error: null, data: null });
+    vi.mocked(supabase.from).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockImplementation(() => mockEqFn()),
+      in: vi.fn().mockReturnThis(),
+      order: mockOrderFn,
+      single: mockSingleFn
+    } as any);
     
     const { result } = renderHook(() => useTicketDistribution(mockEventId));
     

@@ -8,12 +8,17 @@ import { UserTicket } from '@/components/dashboard/tickets/types';
 
 // Mock dependencies
 vi.mock('@/integrations/supabase/client', () => {
+  const mockOrderFn = vi.fn().mockImplementation(() => ({
+    data: [],
+    error: null
+  }));
+
   return {
     supabase: {
       from: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis()
+      order: mockOrderFn
     }
   };
 });
@@ -76,7 +81,12 @@ describe('useUserTickets hook', () => {
     }));
     
     // Mock successful ticket fetch
-    vi.mocked(supabase.order).mockResolvedValue({ data: mockTickets, error: null });
+    const mockDataResponse = { data: mockTickets, error: null };
+    vi.mocked(supabase.from).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnValue(mockDataResponse)
+    } as any);
     
     const { result } = renderHook(() => useUserTickets('user-123'));
     
