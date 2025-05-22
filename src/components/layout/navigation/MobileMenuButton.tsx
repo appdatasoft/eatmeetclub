@@ -2,11 +2,12 @@
 interface MobileMenuButtonProps {
   isOpen: boolean;
   onClick: () => void;
+  className?: string;
 }
 
-const MobileMenuButton = ({ isOpen, onClick }: MobileMenuButtonProps) => {
+const MobileMenuButton = ({ isOpen, onClick, className }: MobileMenuButtonProps) => {
   return (
-    <div className="md:hidden">
+    <div className={className}>
       <button
         onClick={onClick}
         className="text-gray-600 hover:text-brand-500 focus:outline-none"

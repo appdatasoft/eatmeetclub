@@ -8,25 +8,24 @@ import { useToast } from '@/hooks/use-toast';
 interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  user: any;
-  handleLogout: () => Promise<void>;
 }
 
-const MobileMenu = ({ isOpen, onClose, user, handleLogout }: MobileMenuProps) => {
-  const { isAdmin } = useAuth();
+const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
+  const { user, signOut, isLoading, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
   if (!isOpen) return null;
 
-  const onLogout = async () => {
+  const handleLogout = async () => {
     try {
-      await handleLogout();
+      await signOut();
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account"
       });
       onClose();
+      navigate('/');
     } catch (error) {
       console.error("Logout error:", error);
       toast({
@@ -56,9 +55,8 @@ const MobileMenu = ({ isOpen, onClose, user, handleLogout }: MobileMenuProps) =>
           <Link to="/" onClick={onClose} className="text-lg py-2">Home</Link>
           <Link to="/events" onClick={onClose} className="text-lg py-2">Events</Link>
           <Link to="/venues" onClick={onClose} className="text-lg py-2">Venues</Link>
-          <Link to="/dashboard/memories" onClick={onClose} className="text-lg py-2">Memories</Link>
-          <Link to="/about" onClick={onClose} className="text-lg py-2">About</Link>
           <Link to="/how-it-works" onClick={onClose} className="text-lg py-2">How it Works</Link>
+          <Link to="/restaurants/join" onClick={onClose} className="text-lg py-2">Register Restaurant</Link>
           
           {user ? (
             <>
@@ -69,7 +67,7 @@ const MobileMenu = ({ isOpen, onClose, user, handleLogout }: MobileMenuProps) =>
                 )}
                 <Button 
                   variant="ghost" 
-                  onClick={onLogout}
+                  onClick={handleLogout}
                   className="w-full justify-start p-0 text-lg py-2"
                 >
                   Logout
