@@ -43,9 +43,8 @@ const Hero = ({ children }: HeroProps) => {
 
   return (
     <div 
-      className="w-full py-12 md:py-24 relative"
+      className="w-full py-12 md:py-24 relative bg-white"
       style={{
-        backgroundColor: '#9B5E31', // Warm brown color from the uploaded image
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
