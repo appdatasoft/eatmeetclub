@@ -1,7 +1,7 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useMenuSelections } from '@/components/events/menu-selection/useMenuSelections';
+import { useMenuSelections } from '@/hooks/membership/useMenuSelections';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -77,7 +77,6 @@ describe('useMenuSelections hook', () => {
     // Mock selections fetch
     (supabase.from as any).mockImplementationOnce(() => ({
       select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnValue(Promise.resolve({
         data: mockSelections,
         error: null
@@ -90,15 +89,15 @@ describe('useMenuSelections hook', () => {
       abort: vi.fn()
     }));
     
-    const { result, waitForNextUpdate } = renderHook(() => 
+    const { result } = renderHook(() => 
       useMenuSelections(mockEventId, mockRestaurantId, mockUserId, mockOnClose)
     );
     
-    // Workaround since waitForNextUpdate is not fully supported in @testing-library/react-hooks v8
-    await new Promise(resolve => setTimeout(resolve, 0));
-    
-    // TODO: Assertions after state updates would go here
-    // Since we can't reliably use waitForNextUpdate, this test is incomplete
+    // Wait for state updates
+    await vi.waitFor(() => {
+      expect(result.current.menuItems).toEqual(mockMenuItems);
+      expect(result.current.selectedItems).toEqual(['item-1']);
+    });
   });
   
   it('should toggle selection correctly', () => {

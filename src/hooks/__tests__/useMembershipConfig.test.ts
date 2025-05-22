@@ -1,5 +1,5 @@
 
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useMembershipConfig } from '@/hooks/membership/useMembershipConfig';
 import { supabase } from '@/integrations/supabase/client';
