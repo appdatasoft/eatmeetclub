@@ -3,6 +3,7 @@ import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useEventAiAgent } from '../useEventAiAgent';
 import { useEventAiAgent as useEventAiAgentOriginal } from '../ai-agent';
+import { EventDetails } from '@/types/event';
 
 // Mock the original implementation
 vi.mock('../ai-agent', () => ({
@@ -10,7 +11,21 @@ vi.mock('../ai-agent', () => ({
 }));
 
 describe('useEventAiAgent hook', () => {
-  const mockEvent = { id: 'event-123', title: 'Test Event' };
+  // Create a proper mock that matches EventDetails type
+  const mockEvent: EventDetails = { 
+    id: 'event-123', 
+    title: 'Test Event',
+    description: 'Test description',
+    date: '2023-06-01',
+    time: '19:00',
+    price: 25,
+    capacity: 100,
+    restaurant_id: 'restaurant-123',
+    user_id: 'user-123',
+    status: 'published',
+    image_url: 'https://example.com/image.jpg'
+  };
+
   const mockResult = {
     messages: [{ id: '1', role: 'assistant', content: 'Hello', timestamp: new Date() }],
     isLoading: false,
