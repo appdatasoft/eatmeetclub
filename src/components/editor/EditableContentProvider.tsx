@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useInlineEdit, EditableContent } from '@/hooks/useInlineEdit';
 import { toast } from 'sonner';

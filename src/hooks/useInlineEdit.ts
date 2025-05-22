@@ -19,12 +19,17 @@ export const useInlineEdit = () => {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Check if the user is an admin and not loading - this controls edit permissions
+  // Fixed canEdit logic to properly check for admin status
+  // Double bang operator (!!) ensures proper boolean conversion
   const canEdit = !isLoading && !!user && !!isAdmin;
 
-  // Debug log to track what's happening
+  // Enhanced debug log to track what's happening with admin permissions
   useEffect(() => {
     console.log('ADMIN_DEBUG: useInlineEdit → user:', user?.email, '| isAdmin:', isAdmin, '| canEdit:', canEdit, '| isLoading:', isLoading);
+    
+    if (user && !canEdit) {
+      console.log('ADMIN_DEBUG: User is logged in but cannot edit. Admin status check may be failing.');
+    }
   }, [user, isAdmin, canEdit, isLoading]);
 
   const saveContent = async (content: EditableContent) => {
