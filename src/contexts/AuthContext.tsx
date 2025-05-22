@@ -25,12 +25,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log("Initializing auth provider");
+    console.log("ADMIN_DEBUG: AuthProvider initializing");
     
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log('Auth state changed:', event);
+        console.log('ADMIN_DEBUG: Auth state changed:', event, 'user:', currentSession?.user?.email);
         
         // Update session and user immediately with synchronous operations
         setSession(currentSession);
@@ -41,16 +41,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setTimeout(async () => {
             try {
               // Check if user is admin using direct database query
-              const { data: adminData } = await supabase
+              console.log('ADMIN_DEBUG: Checking admin status for:', currentSession.user.email);
+              const { data: adminData, error: adminError } = await supabase
                 .from('user_roles')
                 .select('role')
                 .eq('user_id', currentSession.user.id)
                 .eq('role', 'admin')
                 .maybeSingle();
               
+              if (adminError) {
+                console.error('ADMIN_DEBUG: Admin check error:', adminError);
+              }
+              
+              console.log('ADMIN_DEBUG: Admin check result:', adminData);
               setIsAdmin(!!adminData);
+              console.log('ADMIN_DEBUG: isAdmin set to:', !!adminData);
             } catch (error) {
-              console.error('Error checking admin status:', error);
+              console.error('ADMIN_DEBUG: Error checking admin status:', error);
               setIsAdmin(false);
             } finally {
               setIsLoading(false);
@@ -66,30 +73,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // THEN check for existing session
     const loadUserData = async () => {
       try {
+        console.log('ADMIN_DEBUG: Loading initial user session');
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Error getting session:', error.message);
+          console.error('ADMIN_DEBUG: Error getting session:', error.message);
           setIsLoading(false);
           return;
         }
         
+        console.log('ADMIN_DEBUG: Initial session loaded:', !!data.session, 'user:', data.session?.user?.email);
         setSession(data.session);
         setUser(data.session?.user || null);
 
         if (data.session?.user) {
           // Check if user is admin using direct database query
-          const { data: adminData } = await supabase
+          console.log('ADMIN_DEBUG: Checking initial admin status for:', data.session.user.email);
+          const { data: adminData, error: adminError } = await supabase
             .from('user_roles')
             .select('role')
             .eq('user_id', data.session.user.id)
             .eq('role', 'admin')
             .maybeSingle();
           
+          if (adminError) {
+            console.error('ADMIN_DEBUG: Initial admin check error:', adminError);
+          }
+          
+          console.log('ADMIN_DEBUG: Initial admin check result:', adminData);
           setIsAdmin(!!adminData);
+          console.log('ADMIN_DEBUG: Initial isAdmin set to:', !!adminData);
         }
       } catch (error: any) {
-        console.error('Error loading user data:', error);
+        console.error('ADMIN_DEBUG: Error loading user data:', error);
       } finally {
         setIsLoading(false);
       }

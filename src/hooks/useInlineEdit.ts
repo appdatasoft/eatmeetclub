@@ -19,6 +19,9 @@ export const useInlineEdit = () => {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
+  // Add direct debug logging
+  console.log('ADMIN_DEBUG: useInlineEdit - user:', user?.email, 'isAdmin:', isAdmin);
+  
   // Save content to the database
   const saveContent = async (content: EditableContent) => {
     if (!user || !isAdmin) {

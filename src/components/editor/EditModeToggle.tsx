@@ -1,14 +1,22 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useEditableContent } from './EditableContentProvider';
 import { Pencil, Eye } from 'lucide-react';
 
 export const EditModeToggle = () => {
   const { canEdit, editModeEnabled, toggleEditMode } = useEditableContent();
+  
+  useEffect(() => {
+    console.log('ADMIN_DEBUG: EditModeToggle component - canEdit:', canEdit);
+  }, [canEdit]);
 
   // Only render the component if user can edit content
-  if (!canEdit) return null;
+  if (!canEdit) {
+    console.log('ADMIN_DEBUG: EditModeToggle not showing - canEdit is false');
+    return null;
+  }
 
+  console.log('ADMIN_DEBUG: EditModeToggle IS SHOWING - canEdit is true');
   return (
     <div className="w-full bg-gray-50 py-2 border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="container-custom flex justify-between items-center">
