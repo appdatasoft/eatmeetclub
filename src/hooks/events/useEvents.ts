@@ -1,12 +1,16 @@
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { EventCardProps } from "@/components/events/EventCard";
 import { useEventsAPI } from "./useEventsAPI";
 import { useEventSubscription } from "./useEventSubscription";
+import { useToast } from "@/hooks/use-toast";
 
 export const useEvents = () => {
+  const { toast } = useToast();
   const [events, setEvents] = useState<EventCardProps[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [hasSubscriptionError, setHasSubscriptionError] = useState(false);
   const isMountedRef = useRef(true);
   const initialLoadComplete = useRef(false);
 
@@ -27,30 +31,35 @@ export const useEvents = () => {
       setFetchError(null);
       const newEvents = await fetchPublishedEvents();
 
+      if (!isMountedRef.current) return;
+
       if (!newEvents || areEventsEqual(events, newEvents)) {
         console.log("No update needed");
         return;
       }
 
-      if (isMountedRef.current) {
-        setEvents(newEvents);
-        console.log("Updated events list with new data");
-      }
+      setEvents(newEvents);
+      console.log("Updated events list with new data");
+      
+      // Clear subscription error state if successful
+      setHasSubscriptionError(false);
     } catch (error: any) {
-      if (isMountedRef.current) {
-        setFetchError(error.message || "Unknown error");
-      }
+      if (!isMountedRef.current) return;
+      
+      setFetchError(error.message || "Unknown error");
+      console.error("Error fetching events:", error);
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false);
         initialLoadComplete.current = true;
       }
     }
-  }, [fetchPublishedEvents, events]); // ✅ Fixed dependency list
+  }, [fetchPublishedEvents, events]);
 
   useEffect(() => {
     isMountedRef.current = true;
 
+    // Initial data fetch
     if (!initialLoadComplete.current) {
       refreshEvents();
     }
@@ -61,22 +70,41 @@ export const useEvents = () => {
   }, [refreshEvents]);
 
   useEffect(() => {
-    const unsubscribe = subscribeToEventChanges(() => {
-      if (isMountedRef.current && initialLoadComplete.current) {
-        console.log("Event change detected via subscription");
-        refreshEvents();
-      }
-    });
+    let unsubscribe = () => {};
+    
+    try {
+      unsubscribe = subscribeToEventChanges(() => {
+        if (isMountedRef.current && initialLoadComplete.current) {
+          console.log("Event change detected via subscription");
+          refreshEvents();
+        }
+      });
+    } catch (error) {
+      console.error("Failed to subscribe to event changes:", error);
+      setHasSubscriptionError(true);
+      
+      // Show toast for subscription error (only once)
+      toast({
+        title: "Realtime Updates Unavailable",
+        description: "You may need to refresh the page to see new events.",
+        variant: "default"
+      });
+    }
 
     return () => {
-      unsubscribe();
+      try {
+        unsubscribe();
+      } catch (error) {
+        console.error("Error during unsubscribe:", error);
+      }
     };
-  }, [subscribeToEventChanges, refreshEvents]);
+  }, [subscribeToEventChanges, refreshEvents, toast]);
 
   return {
     events,
     isLoading,
     fetchError,
+    hasSubscriptionError,
     refreshEvents,
   };
 };

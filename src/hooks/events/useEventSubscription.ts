@@ -1,12 +1,38 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 
 export const useEventSubscription = () => {
   const lastRefreshRef = useRef(0);
   const timeoutIdRef = useRef<number | null>(null);
-  const throttleDelay = 15000; // Increased to 15-second throttle to reduce network calls
+  const throttleDelay = 15000; // 15-second throttle to reduce network calls
   const subscribedRef = useRef(false);
+  const reconnectAttemptsRef = useRef(0);
+  const maxReconnectAttempts = 5;
+  
+  // Add a utility function to handle connection issues
+  const setupReconnectionHandler = (channel: any) => {
+    channel.on('disconnect', (event: any) => {
+      const reason = event?.reason || 'unknown';
+      console.warn(`Supabase realtime disconnected: ${reason}`);
+      
+      // Only attempt reconnection if under max attempts
+      if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+        const backoffTime = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+        console.log(`Will attempt reconnection in ${backoffTime}ms (attempt ${reconnectAttemptsRef.current + 1})`);
+        
+        setTimeout(() => {
+          reconnectAttemptsRef.current++;
+          console.log(`Attempting to reconnect to events (attempt ${reconnectAttemptsRef.current})`);
+          channel.subscribe();
+        }, backoffTime);
+      } else {
+        console.error('Maximum reconnection attempts reached. Please refresh the application.');
+      }
+    });
+    
+    return channel;
+  };
   
   const subscribeToEventChanges = (onChangeCallback: () => void) => {
     // Don't create duplicate subscriptions
@@ -22,6 +48,7 @@ export const useEventSubscription = () => {
     }
 
     subscribedRef.current = true;
+    reconnectAttemptsRef.current = 0;
 
     const throttledCallback = () => {
       const now = Date.now();
@@ -44,7 +71,11 @@ export const useEventSubscription = () => {
     };
 
     const channel = supabase
-      .channel("public:events")
+      .channel("events-channel", {
+        config: {
+          broadcast: { self: true }
+        }
+      })
       .on(
         "postgres_changes",
         {
@@ -59,8 +90,18 @@ export const useEventSubscription = () => {
       )
       .subscribe((status) => {
         console.log("Subscription status:", status);
+        
+        // Reset reconnect counter when successfully connected
+        if (status === 'SUBSCRIBED') {
+          reconnectAttemptsRef.current = 0;
+          console.log('Successfully subscribed to events channel');
+        }
       });
+    
+    // Setup reconnection handler
+    setupReconnectionHandler(channel);
 
+    // Clean up function that will be called when the component unmounts
     return () => {
       if (timeoutIdRef.current !== null) {
         window.clearTimeout(timeoutIdRef.current);
@@ -70,6 +111,17 @@ export const useEventSubscription = () => {
       supabase.removeChannel(channel);
     };
   };
+  
+  // Add a useEffect to handle lifecycle and initialize at the right time
+  useEffect(() => {
+    return () => {
+      // Clean up any pending timeouts on unmount
+      if (timeoutIdRef.current !== null) {
+        window.clearTimeout(timeoutIdRef.current);
+        timeoutIdRef.current = null;
+      }
+    };
+  }, []);
 
   return { subscribeToEventChanges };
 };

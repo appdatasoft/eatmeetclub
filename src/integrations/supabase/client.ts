@@ -16,6 +16,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storage: localStorage
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 1 // Limit to prevent rate limiting
+    },
+    headers: {
+      apikey: supabaseAnonKey
+    }
   }
 });
 
