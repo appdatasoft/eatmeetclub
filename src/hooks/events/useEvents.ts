@@ -13,6 +13,7 @@ export const useEvents = () => {
   const [hasSubscriptionError, setHasSubscriptionError] = useState(false);
   const isMountedRef = useRef(true);
   const initialLoadComplete = useRef(false);
+  const refreshIntervalRef = useRef<number | null>(null);
 
   const { fetchPublishedEvents } = useEventsAPI();
   const { subscribeToEventChanges } = useEventSubscription();
@@ -66,6 +67,12 @@ export const useEvents = () => {
 
     return () => {
       isMountedRef.current = false;
+      
+      // Clear any intervals when component unmounts
+      if (refreshIntervalRef.current) {
+        window.clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
     };
   }, [refreshEvents]);
 
@@ -86,9 +93,20 @@ export const useEvents = () => {
       // Show toast for subscription error (only once)
       toast({
         title: "Realtime Updates Unavailable",
-        description: "You may need to refresh the page to see new events.",
+        description: "Events will refresh periodically instead of in real-time.",
         variant: "default"
       });
+      
+      // Set up polling as fallback when subscription fails
+      if (!refreshIntervalRef.current && isMountedRef.current) {
+        console.log("Setting up polling fallback for events");
+        refreshIntervalRef.current = window.setInterval(() => {
+          console.log("Polling for events updates");
+          if (isMountedRef.current && initialLoadComplete.current) {
+            refreshEvents();
+          }
+        }, 30000); // Poll every 30 seconds
+      }
     }
 
     return () => {
@@ -96,6 +114,12 @@ export const useEvents = () => {
         unsubscribe();
       } catch (error) {
         console.error("Error during unsubscribe:", error);
+      }
+      
+      // Clear interval on cleanup
+      if (refreshIntervalRef.current) {
+        window.clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
       }
     };
   }, [subscribeToEventChanges, refreshEvents, toast]);
