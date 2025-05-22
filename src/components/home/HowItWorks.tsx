@@ -14,6 +14,7 @@ const HowItWorks = () => {
     // Test connection to Supabase on component mount
     const testConnection = async () => {
       try {
+        // Changed from count(*) to a proper select statement
         const { data, error } = await supabase.from('page_content').select('*').limit(1);
         if (error) {
           console.error("Error connecting to Supabase in HowItWorks:", error);
