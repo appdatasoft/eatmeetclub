@@ -1,12 +1,11 @@
-
+import React, { ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { usePaymentConfig } from '../usePaymentConfig';
 import { supabase } from '@/integrations/supabase/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 
-// Mock supabase client and method chaining
+// Fix the Supabase mock setup
 vi.mock('@/integrations/supabase/client', () => {
   const mockIn = vi.fn();
   const mockSelect = vi.fn(() => ({ in: mockIn }));
@@ -16,8 +15,6 @@ vi.mock('@/integrations/supabase/client', () => {
     supabase: {
       from: mockFrom,
       __mock: {
-        from: mockFrom,
-        select: mockSelect,
         in: mockIn,
       },
     },
@@ -28,8 +25,10 @@ describe('usePaymentConfig hook', () => {
   let queryClient: QueryClient;
   const { in: mockIn } = (supabase as any).__mock;
 
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
   );
 
   beforeEach(() => {
@@ -103,7 +102,10 @@ describe('usePaymentConfig hook', () => {
   });
 
   it('handles errors and returns default config', async () => {
-    mockIn.mockResolvedValue({ data: null, error: new Error('Database error') });
+    mockIn.mockResolvedValue({
+      data: null,
+      error: new Error('Database error'),
+    });
 
     const originalConsoleError = console.error;
     console.error = vi.fn();
