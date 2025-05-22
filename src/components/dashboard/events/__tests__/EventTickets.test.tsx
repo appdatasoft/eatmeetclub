@@ -13,7 +13,6 @@ describe('EventTickets', () => {
       quantity: 2,
       purchase_date: '2023-01-01',
       user_id: 'user1',
-      event_id: 'event1',
       payment_status: 'paid',
       total_amount: 50
     },
@@ -23,7 +22,6 @@ describe('EventTickets', () => {
       quantity: 1,
       purchase_date: '2023-01-02',
       user_id: 'user2',
-      event_id: 'event1',
       payment_status: 'paid',
       total_amount: 25
     }
