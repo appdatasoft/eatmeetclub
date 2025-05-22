@@ -10,7 +10,7 @@ interface MainLayoutProps {
 }
 
 const MainLayout = ({ children }: MainLayoutProps) => {
-  const { canEdit, editModeEnabled } = useEditableContent();
+  const { canEdit } = useEditableContent();
   
   return (
     <div className="flex flex-col min-h-screen">
