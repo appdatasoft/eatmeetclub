@@ -17,7 +17,7 @@ const fetchPaymentConfig = async (): Promise<PaymentConfig> => {
       'commission_fee_percent',
       'stripe_mode',
       'ticket_commission_value',
-      'signup_commission_value'
+      'signup_commission_value',
     ]);
 
   if (error) {
@@ -25,14 +25,14 @@ const fetchPaymentConfig = async (): Promise<PaymentConfig> => {
     return {
       serviceFeePercent: 0,
       commissionFeePercent: 0,
-      stripeMode: 'test'
+      stripeMode: 'test',
     };
   }
 
   const config: PaymentConfig = {
     serviceFeePercent: 0,
     commissionFeePercent: 0,
-    stripeMode: 'test'
+    stripeMode: 'test',
   };
 
   data?.forEach((item) => {
