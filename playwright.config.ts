@@ -36,4 +36,8 @@ export default defineConfig({
     port: 8080,
     reuseExistingServer: !process.env.CI,
   },
+  env: {
+    // Pass through environment variables
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  },
 });
