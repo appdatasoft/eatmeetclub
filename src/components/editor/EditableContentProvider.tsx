@@ -12,6 +12,7 @@ interface EditableContextType {
   isLoading: boolean;
   fetchPageContent: () => Promise<void>;
   
+  // Add missing properties and functions
   isEditing: string | null;
   handleEdit: (id: string) => void;
   handleSave: (content: EditableContent) => Promise<boolean>;
@@ -28,6 +29,7 @@ const EditableContext = createContext<EditableContextType>({
   isLoading: false,
   fetchPageContent: async () => {},
   
+  // Add missing properties and functions to default context
   isEditing: null,
   handleEdit: () => {},
   handleSave: async () => false,
