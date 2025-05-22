@@ -19,8 +19,8 @@ export const useInlineEdit = () => {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Fix: Directly use isAdmin for canEdit value
-  const canEdit = !!isAdmin && !!user;
+  // Make sure canEdit is always a boolean derived directly from isAdmin and user
+  const canEdit = Boolean(isAdmin && user);
   
   console.log('ADMIN_DEBUG: useInlineEdit - user:', user?.email, 'isAdmin:', isAdmin, 'canEdit:', canEdit);
   

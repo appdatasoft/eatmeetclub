@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useInlineEdit, EditableContent } from '@/hooks/useInlineEdit';
 import { toast } from 'sonner';
@@ -49,7 +48,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   const [editModeEnabled, setEditModeEnabled] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   
-  // For clarity, create a local canEdit variable that's explicitly set from useInlineEdit
+  // IMPORTANT: Make sure we're directly using the boolean value from useInlineEdit without any transformation
   const canEdit = userCanEdit;
   
   useEffect(() => {
