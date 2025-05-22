@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { usePaymentConfig } from '../usePaymentConfig';
 import { supabase } from '@/integrations/supabase/client';
 
-// ✅ Supabase mock
+// ✅ Mock Supabase client with chained method support
 vi.mock('@/integrations/supabase/client', () => {
   const mockIn = vi.fn();
   const mockSelect = vi.fn(() => ({ in: mockIn }));
@@ -15,12 +15,14 @@ vi.mock('@/integrations/supabase/client', () => {
   return {
     supabase: {
       from: mockFrom,
-      __mock: { in: mockIn },
+      __mock: {
+        in: mockIn,
+      },
     },
   };
 });
 
-// ✅ Use named interface instead of inline type (fixes TS1005)
+// ✅ Define a proper type for wrapper props
 interface WrapperProps {
   children: ReactNode;
 }
@@ -29,12 +31,14 @@ describe('usePaymentConfig hook', () => {
   let queryClient: QueryClient;
   const mockIn = (supabase as any).__mock.in;
 
-  // ✅ Fix wrapper function syntax
-  const wrapper = ({ children }: WrapperProps) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  );
+  // ✅ Wrapper for React Query Provider
+  const wrapper = ({ children }: WrapperProps) => {
+    return (
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    );
+  };
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -123,6 +127,7 @@ describe('usePaymentConfig hook', () => {
     });
 
     expect(console.error).toHaveBeenCalled();
+
     console.error = originalConsoleError;
   });
 });
