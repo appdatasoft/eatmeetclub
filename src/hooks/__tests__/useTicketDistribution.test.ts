@@ -4,21 +4,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useTicketDistribution } from '../useTicketDistribution';
 import { supabase } from '@/integrations/supabase/client';
 
-// Mock the Supabase client with proper type
+// Mock the Supabase client
 vi.mock('@/integrations/supabase/client', () => {
-  // Create a properly typed mock object
-  const mockSupabase = {
-    from: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    in: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    single: vi.fn()
-  };
-  
   return {
-    supabase: mockSupabase
+    supabase: {
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      single: vi.fn()
+    }
   };
 });
 

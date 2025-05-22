@@ -7,14 +7,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { UserTicket } from '@/components/dashboard/tickets/types';
 
 // Mock dependencies
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis()
-  }
-}));
+vi.mock('@/integrations/supabase/client', () => {
+  return {
+    supabase: {
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis()
+    }
+  };
+});
 
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: vi.fn()
