@@ -5,7 +5,41 @@ import { useEventPaymentHandler } from '../useEventPaymentHandler';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { createMockEvent, createMockLocalStorage } from './test-utils';
+import { EventDetails } from '@/types/event';
+
+// Helper function to create a mock event
+const createMockEvent = (): EventDetails => ({
+  id: 'event-123',
+  title: 'Test Event',
+  description: 'Test event description',
+  date: '2025-05-15',
+  time: '18:00',
+  price: 25,
+  capacity: 100,
+  user_id: 'user-123',
+  published: true,
+  restaurant: {
+    id: 'restaurant-123',
+    name: 'Test Restaurant',
+    address: '123 Main St',
+    city: 'Test City',
+    state: 'TS',
+    zipcode: '12345',
+    description: 'Test restaurant description'
+  },
+  cover_image: null,
+  tickets_sold: 0
+});
+
+// Helper function to create mock localStorage
+const createMockLocalStorage = () => {
+  const store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, value: string) => { store[key] = value; },
+    clear: () => { Object.keys(store).forEach(key => delete store[key]); }
+  };
+};
 
 // Mock dependencies
 vi.mock('@/hooks/use-toast', () => ({

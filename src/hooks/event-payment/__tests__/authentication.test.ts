@@ -3,7 +3,7 @@
 import { describe, it, vi, expect, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useEventPaymentHandler } from '../useEventPaymentHandler';
-import { EventDetails } from '@/hooks/types/eventTypes';
+import { EventDetails } from '@/types/event';
 
 vi.mock('@/lib/navigation', () => ({
   redirectToLogin: vi.fn(),
@@ -13,7 +13,7 @@ vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 
-// ✅ Mock Supabase auth completely
+// Mock Supabase auth completely
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     auth: {
@@ -59,7 +59,8 @@ describe('useEventPaymentHandler authentication flow', () => {
       },
       user_id: 'user123',
       published: true,
-      tickets_sold: 0
+      tickets_sold: 0,
+      cover_image: null
     };
 
     const { result } = renderHook(() => useEventPaymentHandler(mockEvent));

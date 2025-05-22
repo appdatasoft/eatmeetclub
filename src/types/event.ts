@@ -7,6 +7,9 @@ export interface Restaurant {
   state: string;
   zipcode: string;
   description: string;
+  phone?: string;
+  website?: string;
+  logo_url?: string;
 }
 
 export interface EventDetails {
@@ -20,7 +23,7 @@ export interface EventDetails {
   user_id: string;
   published: boolean;
   restaurant: Restaurant;
-  cover_image: string;
+  cover_image: string | null;
   tickets_sold: number;
 }
 

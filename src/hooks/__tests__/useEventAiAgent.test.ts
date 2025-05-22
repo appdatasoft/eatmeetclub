@@ -1,4 +1,3 @@
-
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useEventAiAgent } from '../useEventAiAgent';
@@ -31,7 +30,8 @@ describe('useEventAiAgent hook', () => {
     },
     tickets_sold: 0,
     user_id: 'user-123',
-    published: true
+    published: true,
+    cover_image: null
   };
 
   const mockResult = {

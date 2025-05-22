@@ -1,4 +1,3 @@
-
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useEventFilters } from '../useEventFilters';
@@ -14,7 +13,7 @@ describe('useEventFilters hook', () => {
       time: '6:00 PM',
       price: 25,
       location: 'Downtown NYC',
-      category: 'food',
+      category: 'dinner',  // Changed from 'food' to 'dinner'
       image: '/path/to/image1.jpg',
       restaurantName: 'Riverside Grill'
     },
@@ -25,7 +24,7 @@ describe('useEventFilters hook', () => {
       time: '7:30 PM',
       price: 75,
       location: 'Brooklyn, NYC',
-      category: 'drinks',
+      category: 'dinner',  // Changed from 'drinks' to 'dinner'
       image: '/path/to/image2.jpg',
       restaurantName: 'Vineyard Bistro'
     },
@@ -36,7 +35,7 @@ describe('useEventFilters hook', () => {
       time: '2:00 PM',
       price: 120,
       location: 'Manhattan',
-      category: 'food',
+      category: 'lunch',  // Changed from 'food' to 'lunch'
       image: '/path/to/image3.jpg',
       restaurantName: 'Culinary Institute'
     }
@@ -60,22 +59,22 @@ describe('useEventFilters hook', () => {
     const { result } = renderHook(() => useEventFilters(mockEvents));
     
     act(() => {
-      result.current.handleFilterChange('category', 'food');
+      result.current.handleFilterChange('category', 'lunch');
     });
     
-    // Should have two "food" category events
+    // Should have one "lunch" category event
+    expect(result.current.filteredEvents).toHaveLength(1);
+    expect(result.current.filteredEvents[0].id).toBe('event3');
+    
+    // Change to dinner
+    act(() => {
+      result.current.handleFilterChange('category', 'dinner');
+    });
+    
+    // Should have two "dinner" category events
     expect(result.current.filteredEvents).toHaveLength(2);
     expect(result.current.filteredEvents[0].id).toBe('event1');
-    expect(result.current.filteredEvents[1].id).toBe('event3');
-    
-    // Change to drinks
-    act(() => {
-      result.current.handleFilterChange('category', 'drinks');
-    });
-    
-    // Should have one "drinks" category event
-    expect(result.current.filteredEvents).toHaveLength(1);
-    expect(result.current.filteredEvents[0].id).toBe('event2');
+    expect(result.current.filteredEvents[1].id).toBe('event2');
   });
   
   it('should filter events by date', () => {
@@ -138,7 +137,7 @@ describe('useEventFilters hook', () => {
     
     // Apply category filter
     act(() => {
-      result.current.handleFilterChange('category', 'food');
+      result.current.handleFilterChange('category', 'lunch');
     });
     
     // Apply date filter on top of that
@@ -146,8 +145,8 @@ describe('useEventFilters hook', () => {
       result.current.handleFilterChange('date', '2025-07-04');
     });
     
-    // Should have 2 events matching both filters
-    expect(result.current.filteredEvents).toHaveLength(2);
+    // Should have 1 event matching both filters
+    expect(result.current.filteredEvents).toHaveLength(1);
     
     // Add price filter to narrow it down further
     act(() => {
@@ -166,7 +165,7 @@ describe('useEventFilters hook', () => {
     
     // Applying filters should not cause errors
     act(() => {
-      result.current.handleFilterChange('category', 'food');
+      result.current.handleFilterChange('category', 'lunch');
     });
     
     expect(result.current.filteredEvents).toEqual([]);

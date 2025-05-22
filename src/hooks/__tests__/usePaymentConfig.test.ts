@@ -1,5 +1,5 @@
 
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { describe, it, vi, beforeEach, expect } from 'vitest';
 import { usePaymentConfig } from '../usePaymentConfig';
 
@@ -32,15 +32,19 @@ describe('usePaymentConfig', () => {
       })
     });
 
-    const { result, waitFor } = renderHook(() => usePaymentConfig());
+    const { result } = renderHook(() => usePaymentConfig());
     
     // Initial state should be loading
     expect(result.current.isLoading).toBe(true);
     
-    // Wait for loading to complete
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    // Use act to wait for asynchronous update
+    await act(async () => {
+      // Wait for async effect to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
     
     // After loading, we should have our config
+    expect(result.current.isLoading).toBe(false);
     expect(result.current.membershipFee).toBe(25);
     expect(result.current.currency).toBe('USD');
     expect(result.current.taxRate).toBe(0.07);
@@ -51,12 +55,16 @@ describe('usePaymentConfig', () => {
     // Mock an error response
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
     
-    const { result, waitFor } = renderHook(() => usePaymentConfig());
+    const { result } = renderHook(() => usePaymentConfig());
     
-    // Wait for error state
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    // Wait for error state using act
+    await act(async () => {
+      // Wait for async effect to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
     
     // Should show error state
+    expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeTruthy();
     expect(mockToast.toast).toHaveBeenCalledWith({
       title: 'Error loading payment configuration',
