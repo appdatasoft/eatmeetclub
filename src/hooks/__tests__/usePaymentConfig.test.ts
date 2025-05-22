@@ -1,12 +1,11 @@
-
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { usePaymentConfig } from '../usePaymentConfig';
 import { supabase } from '@/integrations/supabase/client';
 
-// Fix the Supabase mock setup
+// ✅ Fully working Supabase mock
 vi.mock('@/integrations/supabase/client', () => {
   const mockIn = vi.fn();
   const mockSelect = vi.fn(() => ({ in: mockIn }));
@@ -15,22 +14,23 @@ vi.mock('@/integrations/supabase/client', () => {
   return {
     supabase: {
       from: mockFrom,
-      __mock: {
-        in: mockIn,
-      },
+      __mock: { in: mockIn },
     },
   };
 });
 
 describe('usePaymentConfig hook', () => {
   let queryClient: QueryClient;
-  const { in: mockIn } = (supabase as any).__mock;
+  const mockIn = (supabase as any).__mock.in;
 
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  );
+  // ✅ Correct wrapper function — where your current error is
+  const wrapper = (props: { children: React.ReactNode }) => {
+    return (
+      <QueryClientProvider client={queryClient}>
+        {props.children}
+      </QueryClientProvider>
+    );
+  };
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -103,10 +103,7 @@ describe('usePaymentConfig hook', () => {
   });
 
   it('handles errors and returns default config', async () => {
-    mockIn.mockResolvedValue({
-      data: null,
-      error: new Error('Database error'),
-    });
+    mockIn.mockResolvedValue({ data: null, error: new Error('Database error') });
 
     const originalConsoleError = console.error;
     console.error = vi.fn();
@@ -122,7 +119,6 @@ describe('usePaymentConfig hook', () => {
     });
 
     expect(console.error).toHaveBeenCalled();
-
     console.error = originalConsoleError;
   });
 });
