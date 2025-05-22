@@ -17,13 +17,18 @@ export const fetchPublishedEventsWithREST = async (): Promise<RawEventData[] | n
   const response = await fetch(publicUrl, {
     headers: {
       'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvY2Z3cGVkYXV1aGxyZnVneHV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4MjIzNzAsImV4cCI6MjA2MTM5ODM3MH0.ddkNFmDcRtkPA6ubax7_GJxGQ6oNvbmsZ_FTY9DuzhM',
-      'Content-Type': 'application/json'
+      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvY2Z3cGVkYXV1aGxyZnVneHV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4MjIzNzAsImV4cCI6MjA2MTM5ODM3MH0.ddkNFmDcRtkPA6ubax7_GJxGQ6oNvbmsZ_FTY9DuzhM',
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
     },
     method: 'GET'
   });
   
   if (!response.ok) {
     console.error("REST API response status:", response.status);
+    console.error("REST API response headers:", Object.fromEntries(response.headers.entries()));
+    const errorText = await response.text();
+    console.error("REST API error response:", errorText);
     throw new Error(`REST API request failed with status: ${response.status}`);
   }
   
