@@ -64,6 +64,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     }
   };
   
+  // Load content on mount
   useEffect(() => {
     fetchPageContent();
   }, []);

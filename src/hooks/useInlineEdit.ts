@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,8 +19,8 @@ export const useInlineEdit = () => {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Fix: Explicitly convert to boolean to ensure proper type
-  const canEdit = !isLoading && Boolean(user && isAdmin);
+  // Check if the user is an admin and not loading - this controls edit permissions
+  const canEdit = !isLoading && !!user && !!isAdmin;
 
   // Debug log to track what's happening
   useEffect(() => {
