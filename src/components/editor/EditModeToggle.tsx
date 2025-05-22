@@ -6,6 +6,7 @@ import { Pencil, Eye } from 'lucide-react';
 export const EditModeToggle = () => {
   const { canEdit, editModeEnabled, toggleEditMode } = useEditableContent();
 
+  // Only render the component if user can edit content
   if (!canEdit) return null;
 
   return (
