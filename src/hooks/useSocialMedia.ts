@@ -55,6 +55,9 @@ const MOCK_CONNECTIONS: SocialMediaConnection[] = [
   }
 ];
 
+// Connection fetch timeout in milliseconds
+const CONNECTION_FETCH_TIMEOUT = 3000;
+
 export const useSocialMedia = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -88,24 +91,17 @@ export const useSocialMedia = () => {
     setError(null);
 
     try {
-      // Set a timeout promise to cancel the fetch if it takes too long
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Connection fetch timeout')), 5000);
-      });
+      // Create an AbortController for the timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), CONNECTION_FETCH_TIMEOUT);
       
-      // Create the fetch promise
-      const fetchPromise = supabase
+      const { data, error } = await supabase
         .from('social_media_connections')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .abortSignal(controller.signal);
       
-      // Race between fetch and timeout
-      const { data, error } = await Promise.race([
-        fetchPromise,
-        timeoutPromise.then(() => {
-          throw new Error('Connection fetch timed out');
-        })
-      ]) as any;
+      clearTimeout(timeoutId);
 
       if (error) throw error;
 
@@ -130,7 +126,13 @@ export const useSocialMedia = () => {
       return data;
     } catch (err: any) {
       console.error('Error fetching social media connections:', err);
-      setError(err instanceof Error ? err : new Error(err.message || 'Unknown error'));
+      
+      // Handle abort errors specifically
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setError(new Error('Connection fetch timeout'));
+      } else {
+        setError(err instanceof Error ? err : new Error(err.message || 'Unknown error'));
+      }
       
       // Use mock connections as fallback
       setConnections(MOCK_CONNECTIONS);

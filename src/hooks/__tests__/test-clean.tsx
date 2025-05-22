@@ -1,10 +1,17 @@
+
 import React, { ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 describe('Basic test', () => {
-  const queryClient = new QueryClient();
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
 
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>

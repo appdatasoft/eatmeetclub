@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { fetchWithRetry } from '@/utils/fetchUtils';
 
 export type AppEnvironment = 'development' | 'staging' | 'production';
 
@@ -56,6 +57,11 @@ const DEFAULT_FEATURE_FLAGS: Record<string, boolean> = {
   'payment-processing': true,
 };
 
+// Maximum number of retries for fetching feature flags
+const MAX_RETRIES = 2;
+// Initial timeout for fetch operations (milliseconds)
+const INITIAL_TIMEOUT = 2500;
+
 export const useFeatureFlags = (retryTrigger = 0) => {
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(DEFAULT_FEATURE_FLAGS);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,8 +82,11 @@ export const useFeatureFlags = (retryTrigger = 0) => {
       const flagsMap: Record<string, boolean> = { ...DEFAULT_FEATURE_FLAGS };
       
       try {
-        // Try to get feature flags from Supabase with a timeout
-        const fetchPromise = supabase
+        // Create an AbortController for the timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), INITIAL_TIMEOUT);
+        
+        const { data, error } = await supabase
           .from('feature_flags')
           .select(`
             id,
@@ -90,24 +99,15 @@ export const useFeatureFlags = (retryTrigger = 0) => {
               is_enabled
             )
           `)
-          .eq('feature_flag_values.environment', currentEnv);
+          .eq('feature_flag_values.environment', currentEnv)
+          .abortSignal(controller.signal);
+          
+        clearTimeout(timeoutId);
         
-        // Set a timeout for the fetch operation
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => {
-            reject(new Error('Fetch timeout after 5 seconds'));
-          }, 5000);
-        });
-        
-        // Race between fetch and timeout
-        const { data } = await Promise.race([
-          fetchPromise,
-          timeoutPromise.then(() => {
-            throw new Error('Fetch timeout');
-          })
-        ]) as { data: any };
-        
-        if (data) {
+        if (error) {
+          console.warn('Error fetching feature flags:', error);
+          // Continue with default flags
+        } else if (data) {
           data.forEach((item: any) => {
             const isEnabled = item.feature_flag_values?.[0]?.is_enabled || false;
             flagsMap[item.feature_key] = isEnabled;
@@ -115,15 +115,22 @@ export const useFeatureFlags = (retryTrigger = 0) => {
           console.log("Successfully fetched feature flags:", data.length);
         }
       } catch (fetchError) {
-        console.error('Error fetching feature flags:', fetchError);
+        console.warn('Error in feature flags fetch:', fetchError);
+        // If it's an abort error, log differently
+        if (fetchError instanceof DOMException && fetchError.name === 'AbortError') {
+          console.warn('Feature flags fetch timed out, using defaults');
+        }
         // Continue with default flags
       }
 
       // If user is authenticated, try to get user-specific overrides
       if (user) {
         try {
-          // Set a timeout for user targeting fetch
-          const fetchPromise = supabase
+          // Create an AbortController for the timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), INITIAL_TIMEOUT);
+          
+          const { data: userTargeting, error: userError } = await supabase
             .from('user_feature_targeting')
             .select(`
               id,
@@ -131,23 +138,13 @@ export const useFeatureFlags = (retryTrigger = 0) => {
               is_enabled,
               feature_flags!inner(feature_key)
             `)
-            .eq('user_id', user.id);
-          
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => {
-              reject(new Error('User targeting fetch timeout'));
-            }, 3000);
-          });
-          
-          const { data: userTargeting, error: userError } = await Promise.race([
-            fetchPromise,
-            timeoutPromise.then(() => {
-              throw new Error('User targeting fetch timeout');
-            })
-          ]) as { data: any, error: any };
+            .eq('user_id', user.id)
+            .abortSignal(controller.signal);
+            
+          clearTimeout(timeoutId);
           
           if (userError) {
-            console.error('Error fetching user targeting:', userError);
+            console.warn('Error fetching user targeting:', userError);
           } else if (userTargeting && Array.isArray(userTargeting)) {
             userTargeting.forEach((targeting) => {
               const featureKey = targeting.feature_flags?.feature_key;
@@ -158,8 +155,11 @@ export const useFeatureFlags = (retryTrigger = 0) => {
             console.log("Applied user targeting overrides:", userTargeting.length);
           }
         } catch (userFetchError) {
-          console.error('Error processing user targeting:', userFetchError);
+          console.warn('Error processing user targeting:', userFetchError);
           // Continue with the flags we already have
+          if (userFetchError instanceof DOMException && userFetchError.name === 'AbortError') {
+            console.warn('User targeting fetch timed out, using default values');
+          }
         }
       }
 
@@ -182,7 +182,14 @@ export const useFeatureFlags = (retryTrigger = 0) => {
 
   // Fetch flags when component mounts or retryTrigger changes
   useEffect(() => {
-    fetchFeatureFlags();
+    // Use a smaller delay for initial load and larger for retries
+    const delay = retryTrigger === 0 ? 0 : 1000;
+    
+    const timerId = setTimeout(() => {
+      fetchFeatureFlags();
+    }, delay);
+    
+    return () => clearTimeout(timerId);
   }, [fetchFeatureFlags]);
 
   // Check if a specific feature is enabled

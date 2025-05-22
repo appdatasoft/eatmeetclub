@@ -26,31 +26,67 @@ serve(async (req) => {
     }
 
     // Create Supabase client with admin privileges
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing Supabase environment variables');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Initialize Supabase client
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: authHeader },
+      },
+      auth: {
+        persistSession: false,
+      },
+    });
     
-    // Get the user from the auth context
+    // Get the user from the auth context with timeout handling
+    const userPromise = supabaseClient.auth.getUser();
+    
+    // Set a timeout for auth verification
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Auth verification timeout')), 5000);
+    });
+    
+    // Race between auth verification and timeout
+    const userResult = await Promise.race([
+      userPromise,
+      timeoutPromise.then(() => {
+        throw new Error('Auth verification timed out');
+      })
+    ]) as { data: { user: any }, error: any };
+    
     const {
       data: { user },
       error: userError,
-    } = await supabaseClient.auth.getUser();
+    } = userResult;
 
     if (userError || !user) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: userError?.message || 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Parse request body
-    const { eventId, ticketQuantity, ticketUnitPrice } = await req.json();
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (e) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { eventId, ticketQuantity, ticketUnitPrice } = requestBody;
 
     if (!eventId || !ticketQuantity || !ticketUnitPrice) {
       return new Response(
@@ -59,16 +95,31 @@ serve(async (req) => {
       );
     }
 
-    // Verify event exists
-    const { data: event, error: eventError } = await supabaseClient
+    // Verify event exists with timeout handling
+    const eventPromise = supabaseClient
       .from('events')
       .select('title, tickets_sold, capacity, published')
       .eq('id', eventId)
       .single();
+      
+    // Set a timeout for event fetch
+    const eventTimeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Event fetch timeout')), 5000);
+    });
+    
+    // Race between event fetch and timeout
+    const eventResult = await Promise.race([
+      eventPromise,
+      eventTimeoutPromise.then(() => {
+        throw new Error('Event fetch timed out');
+      })
+    ]) as { data: any, error: any };
+
+    const { data: event, error: eventError } = eventResult;
 
     if (eventError || !event) {
       return new Response(
-        JSON.stringify({ error: 'Event not found' }),
+        JSON.stringify({ error: eventError?.message || 'Event not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -166,25 +217,43 @@ serve(async (req) => {
       },
     });
 
-    // Create a pending ticket record in the database
-    const { data: ticketData, error: ticketError } = await supabaseClient
-      .from('tickets')
-      .insert([
-        {
-          user_id: user.id,
-          event_id: eventId,
-          quantity: ticketQuantity,
-          price: ticketUnitPrice,
-          service_fee: ticketServiceFee,
-          total_amount: ticketTotal,
-          payment_id: session.id,
-          payment_status: 'pending'
-        }
-      ]);
+    // Use background processing for database operations to avoid response delays
+    const createTicketRecord = async () => {
+      try {
+        // Create a pending ticket record in the database
+        const { data: ticketData, error: ticketError } = await supabaseClient
+          .from('tickets')
+          .insert([
+            {
+              user_id: user.id,
+              event_id: eventId,
+              quantity: ticketQuantity,
+              price: ticketUnitPrice,
+              service_fee: ticketServiceFee,
+              total_amount: ticketTotal,
+              payment_id: session.id,
+              payment_status: 'pending'
+            }
+          ]);
 
-    if (ticketError) {
-      console.error('Error creating ticket record:', ticketError);
-      // Continue anyway as the payment might still be processed
+        if (ticketError) {
+          console.error('Error creating ticket record:', ticketError);
+          // Continue anyway as the payment might still be processed
+        } else {
+          console.log('Successfully created ticket record');
+        }
+      } catch (err) {
+        console.error('Exception in background ticket creation:', err);
+      }
+    };
+
+    // Process the ticket creation in the background
+    try {
+      // @ts-ignore: Deno-specific API
+      EdgeRuntime.waitUntil(createTicketRecord());
+    } catch (waitUntilErr) {
+      // If waitUntil is not available, execute normally
+      createTicketRecord();
     }
 
     return new Response(
