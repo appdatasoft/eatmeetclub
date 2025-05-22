@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { usePaymentConfig } from '../usePaymentConfig';
 import { supabase } from '@/integrations/supabase/client';
 
-// ✅ Fully working Supabase mock
+// ✅ Supabase mock
 vi.mock('@/integrations/supabase/client', () => {
   const mockIn = vi.fn();
   const mockSelect = vi.fn(() => ({ in: mockIn }));
@@ -19,15 +19,19 @@ vi.mock('@/integrations/supabase/client', () => {
   };
 });
 
+// ✅ Use named interface instead of inline type (fixes TS1005)
+interface WrapperProps {
+  children: ReactNode;
+}
+
 describe('usePaymentConfig hook', () => {
   let queryClient: QueryClient;
   const mockIn = (supabase as any).__mock.in;
 
-  // ✅ Correct wrapper function — where your current error is
-  const wrapper = (props: { children: React.ReactNode }) => {
+  const wrapper = ({ children }: WrapperProps) => {
     return (
       <QueryClientProvider client={queryClient}>
-        {props.children}
+        {children}
       </QueryClientProvider>
     );
   };
