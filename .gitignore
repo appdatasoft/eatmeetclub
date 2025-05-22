@@ -30,3 +30,4 @@ dist-ssr
 /blob-report/
 /test-results/
 /playwright/.auth/
+/.env
