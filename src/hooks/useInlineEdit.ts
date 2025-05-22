@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,9 +20,9 @@ export const useInlineEdit = () => {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Fixed canEdit logic to properly check for admin status
-  // Double bang operator (!!) ensures proper boolean conversion
-  const canEdit = !isLoading && !!user && !!isAdmin;
+  // Explicitly check admin status to fix permission issues
+  // Don't rely on truthy checks alone - explicitly compare to true
+  const canEdit = !isLoading && user !== null && isAdmin === true;
 
   // Enhanced debug log to track what's happening with admin permissions
   useEffect(() => {
@@ -29,6 +30,25 @@ export const useInlineEdit = () => {
     
     if (user && !canEdit) {
       console.log('ADMIN_DEBUG: User is logged in but cannot edit. Admin status check may be failing.');
+      // Additional check - if user exists but cannot edit, verify admin status directly
+      const checkAdminDirectly = async () => {
+        try {
+          if (user) {
+            const { data, error } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', user.id)
+              .eq('role', 'admin')
+              .maybeSingle();
+            
+            console.log('ADMIN_DEBUG: Direct admin check result:', data, 'Error:', error);
+          }
+        } catch (err) {
+          console.error('ADMIN_DEBUG: Error in direct admin check:', err);
+        }
+      };
+      
+      checkAdminDirectly();
     }
   }, [user, isAdmin, canEdit, isLoading]);
 

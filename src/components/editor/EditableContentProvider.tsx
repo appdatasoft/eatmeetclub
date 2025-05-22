@@ -49,7 +49,13 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   const [isEditing, setIsEditing] = useState<string | null>(null);
   
   useEffect(() => {
-    console.log('[EditableContentProvider] canEdit received from useInlineEdit:', canEdit);
+    console.log('[EditableContentProvider] canEdit received from useInlineEdit:', canEdit, 'Type:', typeof canEdit);
+    
+    if (canEdit === false) {
+      console.log('[EditableContentProvider] Edit access denied - canEdit is false');
+    } else if (canEdit === true) {
+      console.log('[EditableContentProvider] Edit access granted - canEdit is true');
+    }
   }, [canEdit]);
   
   const fetchPageContent = async () => {
@@ -139,8 +145,14 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   
   // Toggle edit mode function
   const toggleEditMode = () => {
-    console.log('[EditableContentProvider] Toggling edit mode from', editModeEnabled, 'to', !editModeEnabled);
-    setEditModeEnabled(prev => !prev);
+    console.log('[EditableContentProvider] Toggling edit mode from', editModeEnabled, 'to', !editModeEnabled, 'canEdit:', canEdit);
+    
+    // Only toggle if user can edit
+    if (canEdit) {
+      setEditModeEnabled(prev => !prev);
+    } else {
+      console.log('[EditableContentProvider] Cannot toggle edit mode - user does not have edit permission');
+    }
   };
   
   const contextValue = {
