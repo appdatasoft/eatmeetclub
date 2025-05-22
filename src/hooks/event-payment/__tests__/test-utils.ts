@@ -1,5 +1,6 @@
 
 import { EventDetails } from '@/hooks/types/eventTypes';
+import { vi } from 'vitest';
 
 export const createMockEvent = (overrides = {}): EventDetails => ({
   id: 'event-123',
