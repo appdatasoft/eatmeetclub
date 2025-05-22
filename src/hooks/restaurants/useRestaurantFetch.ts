@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -69,7 +68,7 @@ export const useRestaurantFetch = (restaurantId: string | undefined, retryTrigge
         }
         
         // Use the enhanced fetchWithRetry function with proper cloning
-        const { data, error } = await fetchWithRetry(async () => {
+        const result = await fetchWithRetry(async () => {
           return await supabase
             .from('restaurants')
             .select('*')
@@ -77,23 +76,22 @@ export const useRestaurantFetch = (restaurantId: string | undefined, retryTrigge
             .single();
         }, {
           retries: 3,
-          baseDelay: 1000,
-          maxDelay: 10000
+          baseDelay: 1000
         });
         
-        if (error) {
-          console.error('Error fetching restaurant:', error);
-          setError(error.message);
+        if (result.error) {
+          console.error('Error fetching restaurant:', result.error);
+          setError(result.error.message);
           return;
         }
         
-        if (!data) {
+        if (!result.data) {
           setError('Restaurant not found');
           return;
         }
         
         // Create a safe clone to ensure we don't run into issues
-        const safeData = JSON.parse(JSON.stringify(data));
+        const safeData = JSON.parse(JSON.stringify(result.data));
         
         // Response exists, save it
         setRestaurant(safeData);

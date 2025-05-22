@@ -1,11 +1,10 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { EventDetails } from "@/types/event";
 import { useEventDataFetch } from "./events/useEventDataFetch";
 import { useEventOwnership } from "./events/useEventOwnership";
-import { fetchWithRetry } from "@/utils/fetch";
+import { fetchWithRetry } from "@/utils/fetchUtils";
 import { createSessionCache } from "@/utils/fetch/sessionStorageCache";
 
 export const useEventFetching = (eventId?: string) => {
@@ -74,7 +73,6 @@ export const useEventFetching = (eventId?: string) => {
         {
           retries: 3,
           baseDelay: 1000,
-          maxDelay: 5000,
           shouldRetry: (error) => {
             // Only retry network errors or 500 errors
             return error.message !== "Event not found";

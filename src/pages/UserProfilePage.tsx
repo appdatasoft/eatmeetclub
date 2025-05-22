@@ -127,6 +127,9 @@ const UserProfilePage: React.FC = () => {
           }
           
           return data;
+        }, {
+          retries: 3,
+          baseDelay: 1000
         });
         
         // Get user's created events (if any) with improved error handling
@@ -156,6 +159,9 @@ const UserProfilePage: React.FC = () => {
             console.error("Error in created events fetch:", err);
             throw err;
           }
+        }, {
+          retries: 3,
+          baseDelay: 1000
         });
         
         const { data: createdEventsData, error: createdError } = createdEventsResponse;
@@ -193,6 +199,9 @@ const UserProfilePage: React.FC = () => {
             console.error("Error in tickets fetch:", err);
             throw err;
           }
+        }, {
+          retries: 3,
+          baseDelay: 1000
         });
         
         const { data: ticketsData, error: ticketsError } = ticketsResponse;

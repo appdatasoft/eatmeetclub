@@ -29,24 +29,27 @@ const VenuesPage = () => {
       
       try {
         // Use the fetchWithRetry utility for safe response handling
-        const { data, error } = await fetchWithRetry(async () => {
+        const result = await fetchWithRetry(async () => {
           return await supabase
             .from("restaurants")
             .select("*");
+        }, {
+          retries: 3,
+          baseDelay: 1000
         });
         
-        if (error) {
-          console.error("Error fetching restaurants:", error);
+        if (result.error) {
+          console.error("Error fetching restaurants:", result.error);
           toast({
             title: "Error fetching venues",
-            description: error.message,
+            description: result.error.message,
             variant: "destructive",
           });
-          throw error;
+          throw result.error;
         }
         
-        console.log("Restaurants data received:", data);
-        return data as Restaurant[];
+        console.log("Restaurants data received:", result.data);
+        return result.data as Restaurant[];
       } catch (err: any) {
         console.error("Failed to fetch restaurants:", err);
         toast({

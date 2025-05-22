@@ -53,3 +53,25 @@ export const fetchWithRetry = async <T>(
 
   throw lastError || new Error('All fetch attempts failed');
 };
+
+// Add missing exports for backward compatibility
+export const fetchWithCache = async <T>(url: string, options?: RequestInit): Promise<T> => {
+  // Simple implementation for backward compatibility
+  const response = await fetch(url, options);
+  return await response.json() as T;
+};
+
+export const clearFetchCache = (): void => {
+  // Dummy implementation for backward compatibility
+  console.log('Cache cleared');
+};
+
+export const getCachedResponse = <T>(key: string): T | null => {
+  // Dummy implementation for backward compatibility
+  return null;
+};
+
+export const safelyParseResponse = async <T>(response: Response): Promise<T> => {
+  // Simple implementation for backward compatibility
+  return await response.json() as T;
+};

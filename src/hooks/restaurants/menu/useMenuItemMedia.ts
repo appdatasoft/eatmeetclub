@@ -1,4 +1,3 @@
-
 import { MediaItem } from '@/components/restaurants/menu/types/mediaTypes';
 import { fetchMediaForMenuItem, fetchIngredientsForMenuItem } from './media/fetchMediaUtils';
 import { deleteMediaItem } from './media/mediaManagement';
@@ -22,7 +21,6 @@ export const useMenuItemMedia = () => {
         { 
           retries: 3,
           baseDelay: 1000,
-          maxDelay: 5000,
           shouldRetry: (error) => {
             // Don't retry not found errors
             if (error.message && error.message.includes("not found")) {
@@ -61,7 +59,6 @@ export const useMenuItemMedia = () => {
         { 
           retries: 3,
           baseDelay: 1000,
-          maxDelay: 5000,
           shouldRetry: (error) => {
             // Don't retry not found errors
             if (error.message && error.message.includes("not found")) {
@@ -91,8 +88,7 @@ export const useMenuItemMedia = () => {
         () => deleteMediaItem(filePath),
         { 
           retries: 3, 
-          baseDelay: 500,
-          maxDelay: 5000
+          baseDelay: 500
         }
       );
       
