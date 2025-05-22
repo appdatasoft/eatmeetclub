@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,6 +20,7 @@ export const useInlineEdit = () => {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Make sure canEdit is properly calculated as a boolean value
   const canEdit = !isLoading && Boolean(user && isAdmin);
 
   console.log('ADMIN_DEBUG: useInlineEdit → user:', user?.email, '| isAdmin:', isAdmin, '| canEdit:', canEdit, '| isLoading:', isLoading);
@@ -99,16 +101,17 @@ export const useInlineEdit = () => {
         }
       }
 
-      // ✅ Properly pass an async function to fetchWithRetry
-      const result = await fetchWithRetry(
+      // Fixed TypeScript error by properly typing the callback function and its return value
+      const result = await fetchWithRetry<{ data: EditableContent[]; error: any }>(
         async () => {
-          return await supabase
+          const response = await supabase
             .from('page_content')
             .select('*')
             .eq('page_path', page_path);
+          return response;
         },
         { retries: 2, baseDelay: 1000 }
-      ) as { data: EditableContent[]; error: any };
+      );
 
       if (result.error) throw result.error;
 
