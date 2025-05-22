@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { AlertTriangle, CheckCircle, RefreshCcw } from 'lucide-react';
+import { AlertTriangle, CheckCircle, RefreshCcw, ExternalLink } from 'lucide-react';
 import { Button } from './button';
 import { useSupabaseConnectionStatus } from '@/hooks/useSupabaseConnectionStatus';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { ConnectionIssueHelper } from './ConnectionIssueHelper';
 
 interface ConnectionStatusBannerProps {
   className?: string;
@@ -17,9 +18,10 @@ export const ConnectionStatusBanner: React.FC<ConnectionStatusBannerProps> = ({
   onManualRefresh,
   showOnConnected = false
 }) => {
-  const { status, lastChecked, errorMessage, checkConnection } = useSupabaseConnectionStatus();
+  const { status, lastChecked, errorMessage, errorType, checkConnection, getErrorSuggestion } = useSupabaseConnectionStatus();
   const [isRetrying, setIsRetrying] = React.useState(false);
   const [manualRetryAttempted, setManualRetryAttempted] = React.useState(false);
+  const [showDetailedHelp, setShowDetailedHelp] = React.useState(false);
   
   const handleRetry = async () => {
     if (isRetrying) return;
@@ -36,7 +38,7 @@ export const ConnectionStatusBanner: React.FC<ConnectionStatusBannerProps> = ({
       setIsRetrying(false);
     }
   };
-  
+
   // Don't show anything if connected and showOnConnected is false
   if (status === 'connected' && !showOnConnected && !manualRetryAttempted) {
     return null;
@@ -54,6 +56,17 @@ export const ConnectionStatusBanner: React.FC<ConnectionStatusBannerProps> = ({
     );
   }
   
+  // Show API key error with expanded helper
+  if (status === 'error' && errorType === 'api_key' && showDetailedHelp) {
+    return (
+      <ConnectionIssueHelper 
+        errorMessage={errorMessage || undefined}
+        onRetry={handleRetry}
+        isRetrying={isRetrying}
+      />
+    );
+  }
+  
   // Show error if status is error
   if (status === 'error') {
     return (
@@ -64,8 +77,11 @@ export const ConnectionStatusBanner: React.FC<ConnectionStatusBannerProps> = ({
             <h3 className="text-sm font-medium text-amber-800">Connection Issue</h3>
             <div className="mt-1 text-sm">
               <p>{errorMessage || "Unable to connect to the database. Some features may not work."}</p>
+              {errorType && (
+                <p className="mt-1 text-amber-700">{getErrorSuggestion()}</p>
+              )}
             </div>
-            <div className="mt-3">
+            <div className="mt-3 flex flex-wrap gap-2">
               <Button 
                 size="sm" 
                 variant="outline" 
@@ -85,6 +101,17 @@ export const ConnectionStatusBanner: React.FC<ConnectionStatusBannerProps> = ({
                   </>
                 )}
               </Button>
+              
+              {!showDetailedHelp && errorType === 'api_key' && (
+                <Button
+                  size="sm"
+                  variant="link"
+                  onClick={() => setShowDetailedHelp(true)}
+                  className="text-amber-700 px-2"
+                >
+                  Show More Help
+                </Button>
+              )}
             </div>
           </div>
         </div>

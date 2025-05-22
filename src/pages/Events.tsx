@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -9,10 +8,11 @@ import useEventFilters from "@/hooks/useEventFilters";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Calendar, Plus, RefreshCw } from "lucide-react";
+import { Calendar, Plus, RefreshCw, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ConnectionStatusBanner } from "@/components/ui/ConnectionStatusBanner";
 import { RetryAlert } from "@/components/ui/RetryAlert";
+import { ConnectionIssueHelper } from "@/components/ui/ConnectionIssueHelper";
 
 const Events = () => {
   const { events, isLoading, fetchError, refreshEvents, hasSubscriptionError } = useEvents();
@@ -21,6 +21,12 @@ const Events = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isManuallyRefreshing, setIsManuallyRefreshing] = useState(false);
+  const [showDetailedHelp, setShowDetailedHelp] = useState(false);
+  
+  // Check if the error is related to API key
+  const isApiKeyError = fetchError?.includes('Invalid API key') || 
+                        fetchError?.includes('401') ||
+                        fetchError?.includes('Unauthorized');
   
   // Show toast for errors - only once per error
   useEffect(() => {
@@ -88,20 +94,52 @@ const Events = () => {
         </div>
 
         <div className="container-custom py-8">
-          {/* Connection status banner that shows on error or when live updates fail */}
-          <ConnectionStatusBanner 
-            onManualRefresh={refreshEvents}
-          />
-          
-          {/* Show a warning if real-time updates are unavailable */}
-          {hasSubscriptionError && !fetchError && (
-            <RetryAlert 
-              severity="info"
-              title="Real-time Updates Unavailable"
-              message="Event updates will automatically refresh periodically. You can also refresh manually."
+          {/* API Key Error Helper - show expanded help if requested */}
+          {isApiKeyError && showDetailedHelp ? (
+            <ConnectionIssueHelper 
+              errorMessage={fetchError || undefined}
               onRetry={handleRefresh}
               isRetrying={isManuallyRefreshing}
             />
+          ) : (
+            <>
+              {/* Connection status banner that shows on error or when live updates fail */}
+              <ConnectionStatusBanner onManualRefresh={refreshEvents} />
+              
+              {/* Show a specific error for API key issues */}
+              {isApiKeyError && !showDetailedHelp && (
+                <div className="mb-4">
+                  <RetryAlert 
+                    severity="error"
+                    title="API Key Error"
+                    message="The application can't connect to Supabase due to an invalid API key."
+                    onRetry={handleRefresh}
+                    isRetrying={isManuallyRefreshing}
+                    isApiKeyError={true}
+                  />
+                  <div className="flex justify-end">
+                    <Button 
+                      variant="link" 
+                      onClick={() => setShowDetailedHelp(true)}
+                      className="text-amber-700 text-sm"
+                    >
+                      Show more detailed help
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Show a warning if real-time updates are unavailable but not due to API key issue */}
+              {hasSubscriptionError && !fetchError && !isApiKeyError && (
+                <RetryAlert 
+                  severity="info"
+                  title="Real-time Updates Unavailable"
+                  message="Event updates will automatically refresh periodically. You can also refresh manually."
+                  onRetry={handleRefresh}
+                  isRetrying={isManuallyRefreshing}
+                />
+              )}
+            </>
           )}
           
           <EventFilters 

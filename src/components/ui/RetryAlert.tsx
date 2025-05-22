@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AlertCircle, RefreshCcw } from 'lucide-react';
+import { AlertCircle, RefreshCcw, ExternalLink } from 'lucide-react';
 import { Button } from './button';
 
 interface RetryAlertProps {
@@ -10,6 +10,7 @@ interface RetryAlertProps {
   title?: string;
   severity?: 'warning' | 'error' | 'info';
   showSpinner?: boolean;
+  isApiKeyError?: boolean;
 }
 
 const RetryAlert = ({ 
@@ -18,7 +19,8 @@ const RetryAlert = ({
   isRetrying = false, 
   title = "Connection Error",
   severity = 'warning',
-  showSpinner = true
+  showSpinner = true,
+  isApiKeyError = false
 }: RetryAlertProps) => {
   const severityClasses = {
     warning: {
@@ -57,8 +59,19 @@ const RetryAlert = ({
           <h3 className={`text-sm font-medium ${classes.text}`}>{title}</h3>
           <div className={`mt-1 text-sm ${classes.description}`}>
             <p>{message}</p>
+            
+            {isApiKeyError && (
+              <div className="mt-2 text-sm">
+                <p className="font-medium">How to fix API key issues:</p>
+                <ul className="list-disc ml-5 mt-1 space-y-1">
+                  <li>Check your Supabase project settings</li>
+                  <li>Verify environment variables are correctly configured</li>
+                  <li>Ensure the API key has not been revoked or rotated</li>
+                </ul>
+              </div>
+            )}
           </div>
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap gap-2">
             <Button 
               size="sm" 
               variant="outline" 
@@ -78,6 +91,18 @@ const RetryAlert = ({
                 </>
               )}
             </Button>
+            
+            {isApiKeyError && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => window.open("https://supabase.com/dashboard", "_blank")}
+                className={`ml-2 ${classes.text}`}
+              >
+                <ExternalLink className="mr-2 h-3 w-3" />
+                <span>Supabase Dashboard</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>
