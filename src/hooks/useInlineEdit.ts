@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -19,13 +19,17 @@ export const useInlineEdit = () => {
 
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-
+  
+  // Fix: Explicitly convert to boolean to ensure proper type
   const canEdit = !isLoading && Boolean(user && isAdmin);
 
-  console.log('ADMIN_DEBUG: useInlineEdit → user:', user?.email, '| isAdmin:', isAdmin, '| canEdit:', canEdit, '| isLoading:', isLoading);
+  // Debug log to track what's happening
+  useEffect(() => {
+    console.log('ADMIN_DEBUG: useInlineEdit → user:', user?.email, '| isAdmin:', isAdmin, '| canEdit:', canEdit, '| isLoading:', isLoading);
+  }, [user, isAdmin, canEdit, isLoading]);
 
   const saveContent = async (content: EditableContent) => {
-    if (!user || !isAdmin) {
+    if (!canEdit) {
       toast({
         title: 'Permission denied',
         description: 'You must be an admin to edit content',
@@ -53,15 +57,15 @@ export const useInlineEdit = () => {
             .from('page_content')
             .update({
               content: content.content,
-              updated_by: user.id,
+              updated_by: user!.id,
             })
             .eq('id', existingContent.id)
         : await supabase
             .from('page_content')
             .insert({
               ...content,
-              created_by: user.id,
-              updated_by: user.id,
+              created_by: user!.id,
+              updated_by: user!.id,
             });
 
       if (result.error) throw result.error;
@@ -100,8 +104,7 @@ export const useInlineEdit = () => {
         }
       }
 
-      // ✅ FIX: Execute the query inside an async function
-      const result = await fetchWithRetry(
+      const result = await fetchWithRetry<{data: EditableContent[], error: any}>(
         async () => {
           return await supabase
             .from('page_content')
@@ -109,7 +112,7 @@ export const useInlineEdit = () => {
             .eq('page_path', page_path);
         },
         { retries: 2, baseDelay: 1000 }
-      ) as { data: EditableContent[]; error: any };
+      );
 
       if (result.error) throw result.error;
 

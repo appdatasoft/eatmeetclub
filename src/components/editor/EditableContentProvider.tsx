@@ -68,6 +68,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     fetchPageContent();
   }, []);
   
+  // Only add keyboard event listeners when user can edit
   useEffect(() => {
     if (canEdit) {
       const handleKeyDown = (e: KeyboardEvent) => {
