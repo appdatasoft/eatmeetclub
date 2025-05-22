@@ -1,19 +1,19 @@
 
-import React, { useEffect } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import EditModeToggle from '@/components/editor/EditModeToggle';
 import { useEditableContent } from '@/components/editor/EditableContentProvider';
 
 interface MainLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 const MainLayout = ({ children }: MainLayoutProps) => {
   const { canEdit } = useEditableContent();
   
   useEffect(() => {
-    console.log('ADMIN_DEBUG: MainLayout - canEdit:', canEdit);
+    console.log('[MainLayout] canEdit status:', canEdit);
   }, [canEdit]);
   
   return (
@@ -22,7 +22,10 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       {canEdit ? (
         <EditModeToggle />
       ) : (
-        console.log('ADMIN_DEBUG: MainLayout not showing EditModeToggle - canEdit is false')
+        // Fix: Use a fragment with an effect instead of direct console.log
+        <React.Fragment>
+          {console.log('[MainLayout] Not rendering EditModeToggle - canEdit is false')}
+        </React.Fragment>
       )}
       <main className="flex-grow bg-white">
         {children}
