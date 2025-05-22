@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { createMockEvent, createMockLocalStorage, setupWindowLocation } from './test-utils';
+import { EventDetails } from '@/types/event';
 
 // Mock dependencies
 vi.mock('@/hooks/use-toast', () => ({
@@ -28,7 +29,30 @@ vi.mock('@/integrations/supabase/client', () => ({
 }));
 
 describe('useEventPaymentHandler payment processing', () => {
-  const mockEvent = createMockEvent();
+  // Create a mock event that matches the required type
+  const mockEvent: EventDetails = { 
+    id: 'event123',
+    title: 'Test Event',
+    description: 'Test Description',
+    price: 25,
+    capacity: 100,
+    user_id: 'user123',
+    published: true,
+    restaurant: {
+      id: 'rest123',
+      name: 'Test Restaurant',
+      address: '123 Test St',
+      city: 'Test City',
+      state: 'Test State',
+      zipcode: '12345',
+      description: 'Test Description'
+    },
+    date: '2023-06-15',
+    time: '19:00',
+    tickets_sold: 0,
+    cover_image: null
+  };
+  
   const mockToast = { toast: vi.fn() };
   const mockNavigate = vi.fn();
   const mockLocalStorage = createMockLocalStorage();

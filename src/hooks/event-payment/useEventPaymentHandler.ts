@@ -8,8 +8,15 @@ export const useEventPaymentHandler = (event: EventDetails | null) => {
   const { toast } = useToast();
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
 
-  const handleBuyTickets = async (event: EventDetails | null, ticketCount: number) => {
-    if (!event) return;
+  const handleBuyTickets = async (ticketCount: number) => {
+    if (!event) {
+      toast({
+        title: "Error",
+        description: "Event details not available",
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
       setIsPaymentProcessing(true);

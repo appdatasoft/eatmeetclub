@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Mock the Supabase client to handle chained methods
 vi.mock('@/integrations/supabase/client', () => {
-  // Create mock implementation that returns itself for chained methods
+  // Create mock implementation that returns methods for chaining
   const mockSupabase = {
     from: vi.fn(() => mockSupabase),
     select: vi.fn(() => mockSupabase),
@@ -31,7 +31,7 @@ describe('useTicketDistribution hook', () => {
   
   it('should initialize with default values and loading state', () => {
     // Mock database calls to simulate loading state
-    (supabase.single as any).mockReturnValue(new Promise(() => {}));
+    (supabase.single as jest.Mock).mockReturnValue(new Promise(() => {}));
     
     const { result } = renderHook(() => useTicketDistribution(mockEventId));
     
@@ -45,7 +45,7 @@ describe('useTicketDistribution hook', () => {
   
   it('should fetch configuration from database', async () => {
     // Mock event config response
-    (supabase.single as any)
+    (supabase.single as jest.Mock)
       .mockResolvedValueOnce({
         data: {
           ambassador_fee_percentage: 12, // Event-specific override
@@ -61,7 +61,7 @@ describe('useTicketDistribution hook', () => {
       });
     
     // Mock app config response
-    (supabase.order as any).mockResolvedValueOnce({
+    (supabase.order as jest.Mock).mockResolvedValueOnce({
       data: [
         { key: 'APP_FEE_PERCENTAGE', value: '4' },
         { key: 'AFFILIATE_FEE_PERCENTAGE', value: '8' }
@@ -89,7 +89,7 @@ describe('useTicketDistribution hook', () => {
   
   it('should calculate revenue distribution correctly', async () => {
     // Set up mock responses
-    (supabase.single as any)
+    (supabase.single as jest.Mock)
       .mockResolvedValueOnce({
         data: { ambassador_fee_percentage: 10, restaurant_id: 'rest-123' },
         error: null
@@ -99,7 +99,7 @@ describe('useTicketDistribution hook', () => {
         error: null
       });
     
-    (supabase.order as any).mockResolvedValueOnce({
+    (supabase.order as jest.Mock).mockResolvedValueOnce({
       data: [
         { key: 'APP_FEE_PERCENTAGE', value: '5' },
         { key: 'AFFILIATE_FEE_PERCENTAGE', value: '10' }
@@ -137,7 +137,7 @@ describe('useTicketDistribution hook', () => {
     const newPercentage = 20;
     
     // Mock responses for initial loading
-    (supabase.single as any)
+    (supabase.single as jest.Mock)
       .mockResolvedValueOnce({
         data: { ambassador_fee_percentage: 15, restaurant_id: 'rest-123' },
         error: null
@@ -147,13 +147,13 @@ describe('useTicketDistribution hook', () => {
         error: null
       });
     
-    (supabase.order as any).mockResolvedValueOnce({
+    (supabase.order as jest.Mock).mockResolvedValueOnce({
       data: [],
       error: null
     });
     
     // Mock successful update
-    (supabase.eq as any).mockResolvedValueOnce({ error: null });
+    (supabase.eq as jest.Mock).mockResolvedValueOnce({ error: null });
     
     const { result } = renderHook(() => useTicketDistribution(mockEventId));
     
