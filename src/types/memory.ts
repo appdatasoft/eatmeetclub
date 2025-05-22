@@ -56,3 +56,11 @@ export interface Event {
   title: string;
   date: string;
 }
+
+export interface MemoryWithRelations extends Memory {
+  content?: MemoryContent[];
+  attendees?: MemoryAttendee[];
+  dishes?: MemoryDish[];
+  restaurant?: Restaurant;
+  event?: Event;
+}

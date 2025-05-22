@@ -74,7 +74,7 @@ describe('useUserTickets hook', () => {
     }));
     
     // Mock successful ticket fetch
-    (supabase.order as jest.Mock).mockResolvedValue({ data: mockTickets, error: null });
+    (supabase.order as vi.Mock).mockResolvedValue({ data: mockTickets, error: null });
     
     const { result } = renderHook(() => useUserTickets('user-123'));
     

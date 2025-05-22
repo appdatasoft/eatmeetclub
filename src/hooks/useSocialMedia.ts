@@ -1,299 +1,152 @@
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
+import { useToast } from './use-toast';
+import { Json } from '@/integrations/supabase/types';
 
 export interface SocialMediaConnection {
-  id?: string;
-  user_id?: string;
+  id: string;
+  user_id: string;
   platform: string;
   username?: string;
-  profile_url?: string;
-  is_connected: boolean;
-  created_at?: string;
-  updated_at?: string;
   oauth_token?: string;
   oauth_token_secret?: string;
   oauth_expires_at?: string;
+  profile_url?: string;
   meta_data?: Record<string, any>;
+  is_connected: boolean;
+  created_at: string;
+  updated_at: string;
 }
-
-// Mock connections to use as fallback when API fails
-const MOCK_CONNECTIONS: SocialMediaConnection[] = [
-  {
-    platform: 'Instagram',
-    is_connected: false
-  },
-  {
-    platform: 'Facebook',
-    is_connected: false
-  },
-  {
-    platform: 'X/Twitter',
-    is_connected: false
-  },
-  {
-    platform: 'YouTube',
-    is_connected: false
-  },
-  {
-    platform: 'Google Business',
-    is_connected: false
-  },
-  {
-    platform: 'Google Maps',
-    is_connected: false
-  },
-  {
-    platform: 'TikTok',
-    is_connected: false
-  },
-  {
-    platform: 'Yelp',
-    is_connected: false
-  }
-];
-
-// Connection fetch timeout in milliseconds
-const CONNECTION_FETCH_TIMEOUT = 3000;
-// Minimum time between fetch attempts (milliseconds)
-const MIN_FETCH_INTERVAL = 15000;
 
 export const useSocialMedia = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [connections, setConnections] = useState<SocialMediaConnection[]>(MOCK_CONNECTIONS);
-  const [error, setError] = useState<Error | null>(null);
-  const [oauthPending, setOauthPending] = useState<boolean>(false);
-  const lastFetchTimeRef = useRef<number>(0);
-  const isMountedRef = useRef<boolean>(true);
+  const [connections, setConnections] = useState<SocialMediaConnection[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Check for OAuth callback in URL
-  useEffect(() => {
-    isMountedRef.current = true;
-    // Check if we're returning from an OAuth flow
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('oauth_provider')) {
-      setOauthPending(true);
-      
-      // This would normally be handled by a dedicated callback handler
-      setTimeout(() => {
-        if (isMountedRef.current) {
-          setOauthPending(false);
-          fetchConnections();
-        }
-      }, 1000);
-    }
-    
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  const fetchConnections = useCallback(async () => {
+  // Load user's social media connections
+  const fetchConnections = async () => {
     if (!user) {
-      setError(new Error('User not authenticated'));
-      return null;
+      setIsLoading(false);
+      return;
     }
-
-    // Skip if we've fetched recently to prevent infinite loops
-    const now = Date.now();
-    if (now - lastFetchTimeRef.current < MIN_FETCH_INTERVAL && lastFetchTimeRef.current !== 0) {
-      console.log("Skipping social connections fetch due to rate limiting");
-      return null;
-    }
-    
-    lastFetchTimeRef.current = now;
-    
-    if (!isMountedRef.current) return null;
-    setIsLoading(true);
-    setError(null);
 
     try {
-      // Create an AbortController for the timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), CONNECTION_FETCH_TIMEOUT);
+      setIsLoading(true);
+      setError(null);
       
       const { data, error } = await supabase
         .from('social_media_connections')
         .select('*')
-        .eq('user_id', user.id)
-        .abortSignal(controller.signal);
+        .eq('user_id', user.id);
       
-      clearTimeout(timeoutId);
-
-      if (error) throw error;
-
-      // Merge with mock connections to ensure all platforms are represented
-      if (data && Array.isArray(data)) {
-        const platforms = data.map(conn => conn.platform);
-        const mergedConnections = [...data];
-        
-        // Add mock entries for any platforms not present in the data
-        MOCK_CONNECTIONS.forEach(mock => {
-          if (!platforms.includes(mock.platform)) {
-            mergedConnections.push(mock);
-          }
-        });
-        
-        if (isMountedRef.current) {
-          setConnections(mergedConnections);
-        }
-      } else {
-        // Fall back to mock connections
-        if (isMountedRef.current) {
-          setConnections(MOCK_CONNECTIONS);
-        }
+      if (error) {
+        throw error;
       }
       
-      return data;
+      // Transform data to match our internal type
+      const transformedConnections: SocialMediaConnection[] = data.map(conn => ({
+        id: conn.id,
+        user_id: conn.user_id,
+        platform: conn.platform,
+        username: conn.username || undefined,
+        oauth_token: conn.oauth_token || undefined,
+        oauth_token_secret: conn.oauth_token_secret || undefined,
+        oauth_expires_at: conn.oauth_expires_at || undefined,
+        profile_url: conn.profile_url || undefined,
+        meta_data: conn.meta_data as Record<string, any> || {},
+        is_connected: conn.is_connected,
+        created_at: conn.created_at,
+        updated_at: conn.updated_at
+      }));
+      
+      setConnections(transformedConnections);
     } catch (err: any) {
       console.error('Error fetching social media connections:', err);
-      
-      // Handle abort errors specifically
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        setError(new Error('Connection fetch timeout'));
-      } else {
-        setError(err instanceof Error ? err : new Error(err.message || 'Unknown error'));
-      }
-      
-      // Use mock connections as fallback
-      if (isMountedRef.current) {
-        setConnections(MOCK_CONNECTIONS);
-        
-        toast({
-          title: 'Connection Error',
-          description: 'Failed to fetch social media connections. Using offline mode.',
-          variant: 'destructive',
-        });
-      }
-      return null;
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [user, toast]);
-
-  useEffect(() => {
-    // Add initial delay to prevent immediate load
-    const initialTimer = setTimeout(() => {
-      if (user && isMountedRef.current) {
-        fetchConnections();
-      }
-    }, 1000);
-
-    return () => {
-      clearTimeout(initialTimer);
-    };
-  }, [user, fetchConnections]);
-
-  const connectSocialMedia = async (platform: string) => {
-    if (!user) {
-      setError(new Error('User not authenticated'));
+      setError(err.message || 'Failed to load social media connections');
       toast({
-        title: 'Authentication Required',
-        description: 'Please log in to connect your social media account',
+        title: 'Error',
+        description: 'Failed to load social media connections',
         variant: 'destructive',
       });
-      return null;
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    setIsLoading(true);
-    setError(null);
-
+  // Connect a social media platform
+  const connectPlatform = async (platform: string) => {
     try {
-      // Simulate successful connection for demo purposes
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update local state with mock connection
-      const updatedConnections = connections.map(conn => 
-        conn.platform === platform 
-          ? { ...conn, is_connected: true, username: `user_${platform.toLowerCase()}` } 
-          : conn
-      );
-      
-      setConnections(updatedConnections);
-      
-      toast({
-        title: 'Success',
-        description: `Connected to ${platform} successfully`,
+      // This would typically redirect to an OAuth flow
+      const { data, error } = await supabase.functions.invoke('connect-social-media', {
+        body: { platform }
       });
       
-      return { platform, is_connected: true, username: `user_${platform.toLowerCase()}` };
-    } catch (err: any) {
-      console.error('Error connecting social media:', err);
-      setError(err instanceof Error ? err : new Error(err.message || 'Unknown error'));
+      if (error) throw error;
       
+      // Redirect to the authorization URL
+      if (data?.authUrl) {
+        window.location.href = data.authUrl;
+      }
+    } catch (err: any) {
+      console.error(`Error connecting to ${platform}:`, err);
       toast({
         title: 'Connection Failed',
-        description: err.message || 'Failed to connect social media account',
+        description: `Could not connect to ${platform}. Please try again.`,
         variant: 'destructive',
       });
-      return null;
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const disconnectSocialMedia = async (platform: string) => {
-    if (!user) {
-      setError(new Error('User not authenticated'));
-      toast({
-        title: 'Authentication Required',
-        description: 'Please log in to disconnect your social media account',
-        variant: 'destructive',
-      });
-      return null;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
+  // Disconnect a social media platform
+  const disconnectPlatform = async (connectionId: string) => {
+    if (!user) return;
+    
     try {
-      // Simulate disconnect for demo purposes
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Update the is_connected status
+      const { error } = await supabase
+        .from('social_media_connections')
+        .update({ is_connected: false })
+        .eq('id', connectionId)
+        .eq('user_id', user.id);
       
-      // Update local state by marking platform as disconnected
-      setConnections(connections.map(conn => 
-        conn.platform === platform 
-          ? { ...conn, is_connected: false, username: undefined } 
-          : conn
-      ));
+      if (error) throw error;
+      
+      // Update local state
+      setConnections(prev =>
+        prev.map(conn =>
+          conn.id === connectionId ? { ...conn, is_connected: false } : conn
+        )
+      );
       
       toast({
-        title: 'Account Disconnected',
-        description: `Successfully disconnected your ${platform} account.`,
+        title: 'Disconnected',
+        description: 'Social media account has been disconnected.',
       });
-      
-      return true;
     } catch (err: any) {
       console.error('Error disconnecting social media:', err);
-      setError(err instanceof Error ? err : new Error(err.message || 'Unknown error'));
-      
       toast({
-        title: 'Disconnection Failed',
-        description: err.message || 'Failed to disconnect social media account',
+        title: 'Error',
+        description: 'Failed to disconnect social media account',
         variant: 'destructive',
       });
-      return null;
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  // Load connections when user changes
+  useEffect(() => {
+    fetchConnections();
+  }, [user]);
 
   return {
     connections,
     isLoading,
-    oauthPending,
     error,
-    fetchConnections,
-    connectSocialMedia,
-    disconnectSocialMedia,
-    getConnectionStatus: (platform: string) => {
-      return connections.find(conn => conn.platform === platform)?.is_connected || false;
-    }
+    connectPlatform,
+    disconnectPlatform,
+    refreshConnections: fetchConnections
   };
 };

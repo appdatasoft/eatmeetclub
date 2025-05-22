@@ -1,103 +1,83 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '../useAuth';
 import { MemoryWithRelations } from '@/types/memory';
-import { useAuth } from '@/hooks/useAuth';
 
 export const useMemoriesFetch = () => {
-  const [memories, setMemories] = useState<MemoryWithRelations[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
   const { user } = useAuth();
-
-  const fetchMemories = async () => {
+  const [memories, setMemories] = useState<MemoryWithRelations[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  
+  const fetchMemories = useCallback(async () => {
     if (!user) {
       setIsLoading(false);
-      return;
+      setMemories([]);
+      return [];
     }
-
+    
     try {
       setIsLoading(true);
       setError(null);
-
-      // First fetch just the memories without any nested relations
-      const { data: memoriesData, error: memoriesError } = await supabase
+      
+      const { data, error } = await supabase
         .from('memories')
-        .select('*')
+        .select(`
+          *,
+          restaurant:restaurants(*),
+          event:events(*)
+        `)
         .eq('user_id', user.id)
         .order('date', { ascending: false });
-
-      if (memoriesError) throw memoriesError;
-
-      if (!memoriesData || memoriesData.length === 0) {
-        // No memories found, return empty array
-        setMemories([]);
-        setIsLoading(false);
-        return;
-      }
-
-      // Get memory IDs to use in subsequent queries
-      const memoryIds = memoriesData.map(memory => memory.id);
+        
+      if (error) throw error;
       
-      // Fetch related data separately (avoiding attendees completely)
-      const [
-        contentResult, 
-        restaurantsResult, 
-        eventsResult
-      ] = await Promise.all([
-        supabase
-          .from('memory_content')
-          .select('*')
-          .in('memory_id', memoryIds)
-          .order('created_at', { ascending: true }),
-        supabase
-          .from('restaurants')
-          .select('id, name')
-          .in('id', memoriesData.filter(m => m.restaurant_id).map(m => m.restaurant_id)),
-        supabase
-          .from('events')
-          .select('id, title')
-          .in('id', memoriesData.filter(m => m.event_id).map(m => m.event_id))
-      ]);
-
-      // Map the related data to each memory
-      const memoriesWithRelations = memoriesData.map(memory => {
-        return {
-          ...memory,
-          content: contentResult.data?.filter(c => c.memory_id === memory.id) || [],
-          restaurant: restaurantsResult.data?.find(r => r.id === memory.restaurant_id),
-          event: eventsResult.data?.find(e => e.id === memory.event_id),
-          // Don't try to fetch attendees at all - just set to empty array
-          attendees: []
-        };
-      });
-
+      // Get related data for each memory
+      const memoriesWithRelations = await Promise.all(
+        data.map(async (memory) => {
+          // Fetch content for the memory
+          const { data: contentData } = await supabase
+            .from('memory_content')
+            .select('*')
+            .eq('memory_id', memory.id);
+            
+          // Fetch attendees for the memory
+          const { data: attendeesData } = await supabase
+            .from('memory_attendees')
+            .select('*')
+            .eq('memory_id', memory.id);
+            
+          // Fetch dishes for the memory
+          const { data: dishesData } = await supabase
+            .from('memory_dishes')
+            .select('*')
+            .eq('memory_id', memory.id);
+          
+          return {
+            ...memory,
+            content: contentData || [],
+            attendees: attendeesData || [],
+            dishes: dishesData || [],
+          } as MemoryWithRelations;
+        })
+      );
+      
       setMemories(memoriesWithRelations);
-    } catch (error: any) {
-      console.error('Error fetching memories:', error);
-      setError(error.message);
-      toast({
-        title: 'Error',
-        description: 'Failed to load memories.',
-        variant: 'destructive',
-      });
+      return memoriesWithRelations;
+    } catch (err) {
+      console.error('Error fetching memories:', err);
+      setError(err as Error);
+      return [];
     } finally {
       setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchMemories();
-    }
   }, [user]);
-
+  
   return {
     memories,
     isLoading,
     error,
-    fetchMemories,
+    fetchMemories
   };
 };

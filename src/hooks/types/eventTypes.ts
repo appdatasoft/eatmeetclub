@@ -23,7 +23,7 @@ export interface EventDetails {
   restaurant: Restaurant;
   tickets_sold: number;
   user_id: string;
-  cover_image?: string;
+  cover_image: string | null;
   published: boolean;
 }
 
