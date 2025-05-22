@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,17 +13,16 @@ export interface EditableContent {
 }
 
 export const useInlineEdit = () => {
-  const { user, isAdmin, isLoading } = useAuth(); // ✅ get loading state
+  const { user, isAdmin, isLoading } = useAuth();
   const { toast } = useToast();
+
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // ✅ Ensure canEdit is always a boolean value to prevent type issues
-  const canEdit = Boolean(user && isAdmin && !isLoading);
+  const canEdit = !isLoading && Boolean(user && isAdmin);
 
   console.log('ADMIN_DEBUG: useInlineEdit → user:', user?.email, '| isAdmin:', isAdmin, '| canEdit:', canEdit, '| isLoading:', isLoading);
 
-  // Save content to the database
   const saveContent = async (content: EditableContent) => {
     if (!user || !isAdmin) {
       toast({
@@ -87,13 +85,11 @@ export const useInlineEdit = () => {
     }
   };
 
-  // Fetch content from Supabase
   const fetchContent = async (page_path: string): Promise<Record<string, EditableContent>> => {
     try {
       const cacheKey = `page_content_${page_path}`;
       let contentMap: Record<string, EditableContent> = {};
 
-      // Try to use cached content
       const cached = sessionStorage.getItem(cacheKey);
       if (cached) {
         const parsed = JSON.parse(cached);
@@ -103,26 +99,25 @@ export const useInlineEdit = () => {
         }
       }
 
-      // Fetch with retry
+      // ✅ Fix: Properly typecast result to expected shape
       const result = await fetchWithRetry(() =>
         supabase.from('page_content').select('*').eq('page_path', page_path),
         { retries: 2, baseDelay: 1000 }
-      );
+      ) as { data: EditableContent[]; error: any };
 
       if (result.error) throw result.error;
 
       const data = result.data;
       if (Array.isArray(data)) {
         data.forEach((item) => {
-          contentMap[item.element_id] = item as EditableContent;
+          contentMap[item.element_id] = item;
         });
 
-        // Cache result
         sessionStorage.setItem(
           cacheKey,
           JSON.stringify({
             data: contentMap,
-            expiry: Date.now() + 300000,
+            expiry: Date.now() + 300000, // 5 minutes
           })
         );
       }
