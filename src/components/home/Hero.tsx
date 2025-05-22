@@ -5,9 +5,6 @@ import { useEditableContent } from "@/components/editor/EditableContentProvider"
 import BackgroundImageEditor from "@/components/editor/BackgroundImageEditor";
 import DiningScene from "@/assets/dining-scene.svg";
 
-// Use fixed background image instead of loading from Supabase
-import backgroundImage from "/public/lovable-uploads/090eb32e-b931-4f8a-a4a5-cf84992c296c.png";
-
 type HeroProps = {
   children?: ReactNode;
 };
@@ -48,7 +45,7 @@ const Hero = ({ children }: HeroProps) => {
     <div 
       className="w-full py-12 md:py-24 relative"
       style={{
-        backgroundImage: `url(${backgroundImage})`,
+        backgroundColor: '#9B5E31', // Warm brown color from the uploaded image
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
@@ -56,7 +53,7 @@ const Hero = ({ children }: HeroProps) => {
       <BackgroundImageEditor
         isOpen={isEditingBackground}
         onOpenChange={setIsEditingBackground}
-        currentImage={backgroundImage}
+        currentImage={contentMap["hero-background"]?.content || ""}
         onSave={handleSaveBackground}
       />
 
