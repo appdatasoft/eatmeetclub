@@ -20,7 +20,6 @@ export const useInlineEdit = () => {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Make sure canEdit is properly calculated as a boolean value
   const canEdit = !isLoading && Boolean(user && isAdmin);
 
   console.log('ADMIN_DEBUG: useInlineEdit → user:', user?.email, '| isAdmin:', isAdmin, '| canEdit:', canEdit, '| isLoading:', isLoading);
@@ -101,17 +100,16 @@ export const useInlineEdit = () => {
         }
       }
 
-      // Fixed TypeScript error by properly typing the callback function and its return value
-      const result = await fetchWithRetry<{ data: EditableContent[]; error: any }>(
+      // ✅ FIX: Execute the query inside an async function
+      const result = await fetchWithRetry(
         async () => {
-          const response = await supabase
+          return await supabase
             .from('page_content')
             .select('*')
             .eq('page_path', page_path);
-          return response;
         },
         { retries: 2, baseDelay: 1000 }
-      );
+      ) as { data: EditableContent[]; error: any };
 
       if (result.error) throw result.error;
 
