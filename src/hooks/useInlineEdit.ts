@@ -99,9 +99,14 @@ export const useInlineEdit = () => {
         }
       }
 
-      // ✅ Fix: Properly typecast result to expected shape
-      const result = await fetchWithRetry(() =>
-        supabase.from('page_content').select('*').eq('page_path', page_path),
+      // ✅ Properly pass an async function to fetchWithRetry
+      const result = await fetchWithRetry(
+        async () => {
+          return await supabase
+            .from('page_content')
+            .select('*')
+            .eq('page_path', page_path);
+        },
         { retries: 2, baseDelay: 1000 }
       ) as { data: EditableContent[]; error: any };
 
