@@ -19,14 +19,10 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-
-      {/* Fix: Use proper conditional rendering without console.log in JSX */}
       {canEdit && <EditModeToggle />}
-
       <main className="flex-grow bg-white">
         {children}
       </main>
-
       <Footer />
     </div>
   );

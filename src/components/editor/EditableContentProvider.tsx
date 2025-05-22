@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useInlineEdit, EditableContent } from '@/hooks/useInlineEdit';
 import { toast } from 'sonner';
@@ -43,18 +44,14 @@ export const useEditableContent = () => {
 };
 
 export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { saveContent: saveInlineContent, fetchContent, isLoading, canEdit: userCanEdit } = useInlineEdit();
+  const { saveContent: saveInlineContent, fetchContent, isLoading, canEdit } = useInlineEdit();
   const [contentMap, setContentMap] = useState<Record<string, EditableContent>>({});
   const [editModeEnabled, setEditModeEnabled] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   
-  // IMPORTANT: Make sure we're directly using the boolean value from useInlineEdit without any transformation
-  const canEdit = userCanEdit;
-  
   useEffect(() => {
-    console.log('[EditableContentProvider] canEdit status from useInlineEdit:', userCanEdit);
-    console.log('[EditableContentProvider] Using canEdit value:', canEdit);
-  }, [userCanEdit, canEdit]);
+    console.log('[EditableContentProvider] canEdit received from useInlineEdit:', canEdit);
+  }, [canEdit]);
   
   const fetchPageContent = async () => {
     try {

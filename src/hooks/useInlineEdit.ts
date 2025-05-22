@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,10 +19,10 @@ export const useInlineEdit = () => {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // ✅ Wait for loading to complete before evaluating
-  const canEdit = !isLoading && Boolean(user && isAdmin);
+  // ✅ Ensure canEdit is always a boolean value to prevent type issues
+  const canEdit = Boolean(user && isAdmin && !isLoading);
 
-  console.log('ADMIN_DEBUG: useInlineEdit → user:', user?.email, '| isAdmin:', isAdmin, '| canEdit:', canEdit);
+  console.log('ADMIN_DEBUG: useInlineEdit → user:', user?.email, '| isAdmin:', isAdmin, '| canEdit:', canEdit, '| isLoading:', isLoading);
 
   // Save content to the database
   const saveContent = async (content: EditableContent) => {
