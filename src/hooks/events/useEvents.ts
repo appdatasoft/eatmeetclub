@@ -14,6 +14,8 @@ export const useEvents = () => {
   const isMountedRef = useRef(true);
   const initialLoadComplete = useRef(false);
   const refreshIntervalRef = useRef<number | null>(null);
+  const lastRefreshTimeRef = useRef<number>(0);
+  const refreshCooldown = 5000; // 5 seconds cooldown between manual refreshes
 
   const { fetchPublishedEvents } = useEventsAPI();
   const { subscribeToEventChanges } = useEventSubscription();
@@ -25,11 +27,22 @@ export const useEvents = () => {
   };
 
   const refreshEvents = useCallback(async () => {
+    const now = Date.now();
+    
+    // Prevent too frequent refreshes (except first load)
+    if (initialLoadComplete.current && now - lastRefreshTimeRef.current < refreshCooldown) {
+      console.log(`Skipping refresh - cooldown period (${Math.round((now - lastRefreshTimeRef.current) / 1000)}s)`);
+      return;
+    }
+    
+    lastRefreshTimeRef.current = now;
+    
     if (!isMountedRef.current) return;
 
     try {
       setIsLoading(true);
       setFetchError(null);
+      
       const newEvents = await fetchPublishedEvents();
 
       if (!isMountedRef.current) return;
@@ -80,8 +93,11 @@ export const useEvents = () => {
     let unsubscribe = () => {};
     
     try {
-      unsubscribe = subscribeToEventChanges(() => {
-        if (isMountedRef.current && initialLoadComplete.current) {
+      unsubscribe = subscribeToEventChanges((error) => {
+        if (error) {
+          console.warn("Subscription error detected:", error);
+          setHasSubscriptionError(true);
+        } else if (isMountedRef.current && initialLoadComplete.current) {
           console.log("Event change detected via subscription");
           refreshEvents();
         }
@@ -96,17 +112,18 @@ export const useEvents = () => {
         description: "Events will refresh periodically instead of in real-time.",
         variant: "default"
       });
-      
-      // Set up polling as fallback when subscription fails
-      if (!refreshIntervalRef.current && isMountedRef.current) {
-        console.log("Setting up polling fallback for events");
-        refreshIntervalRef.current = window.setInterval(() => {
-          console.log("Polling for events updates");
-          if (isMountedRef.current && initialLoadComplete.current) {
-            refreshEvents();
-          }
-        }, 30000); // Poll every 30 seconds
-      }
+    }
+    
+    // Set up polling as fallback regardless of subscription status
+    // This ensures we always have a way to get updates if subscription fails silently
+    if (!refreshIntervalRef.current && isMountedRef.current) {
+      console.log("Setting up polling fallback for events");
+      refreshIntervalRef.current = window.setInterval(() => {
+        console.log("Polling for events updates");
+        if (isMountedRef.current && initialLoadComplete.current) {
+          refreshEvents();
+        }
+      }, 30000); // Poll every 30 seconds
     }
 
     return () => {

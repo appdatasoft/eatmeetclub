@@ -1,17 +1,19 @@
 
 import { fetchPublishedEventsWithSupabase, fetchPublishedEventsWithREST } from "./api";
 import { mapToEventCardProps } from "./eventMappers";
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import { EventCardProps } from "@/components/events/EventCard";
 
 export const useEventsAPI = () => {
   const [isFetching, setIsFetching] = useState(false);
   const fetchPromiseRef = useRef<Promise<EventCardProps[]> | null>(null);
   const lastFetchTimeRef = useRef<number>(0);
-  const cacheDuration = 60000; // Increased to 60 seconds cache to reduce network calls
+  const cacheDuration = 60000; // 60 seconds cache to reduce network calls
   const cachedEventsRef = useRef<EventCardProps[] | null>(null);
+  const errorCountRef = useRef<number>(0);
+  const maxErrorsBeforeReset = 3;
 
-  const fetchPublishedEvents = async () => {
+  const fetchPublishedEvents = useCallback(async () => {
     const now = Date.now();
     
     // If we have cached data and it's still fresh, return it immediately
@@ -38,6 +40,8 @@ export const useEventsAPI = () => {
         try {
           console.log("Fetching events with Supabase client");
           rawEvents = await fetchPublishedEventsWithSupabase();
+          // Reset error count on success
+          errorCountRef.current = 0;
         } catch (clientError) {
           console.error("Error in Supabase client approach:", clientError);
           
@@ -45,8 +49,21 @@ export const useEventsAPI = () => {
           try {
             console.log("Falling back to direct REST API");
             rawEvents = await fetchPublishedEventsWithREST();
+            // Reset error count on success
+            errorCountRef.current = 0;
           } catch (fetchError: any) {
             console.error("Error in REST API fetch attempt:", fetchError);
+            
+            // Increment error counter
+            errorCountRef.current++;
+            
+            // If we've had too many consecutive errors, clear the cache
+            // This prevents us from showing stale data indefinitely
+            if (errorCountRef.current >= maxErrorsBeforeReset) {
+              console.warn(`${errorCountRef.current} consecutive fetch errors - clearing events cache`);
+              cachedEventsRef.current = null;
+            }
+            
             throw fetchError;
           }
         }
@@ -74,7 +91,7 @@ export const useEventsAPI = () => {
     } finally {
       setIsFetching(false);
     }
-  };
+  }, []);
   
-  return { fetchPublishedEvents };
+  return { fetchPublishedEvents, clearCache: () => { cachedEventsRef.current = null; } };
 };

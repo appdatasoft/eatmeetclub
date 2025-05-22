@@ -9,11 +9,13 @@ import useEventFilters from "@/hooks/useEventFilters";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Calendar, Plus } from "lucide-react";
+import { Calendar, Plus, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ConnectionStatusBanner } from "@/components/ui/ConnectionStatusBanner";
+import { RetryAlert } from "@/components/ui/RetryAlert";
 
 const Events = () => {
-  const { events, isLoading, fetchError, refreshEvents } = useEvents();
+  const { events, isLoading, fetchError, refreshEvents, hasSubscriptionError } = useEvents();
   const { filters, filteredEvents, handleFilterChange } = useEventFilters(events);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -86,10 +88,40 @@ const Events = () => {
         </div>
 
         <div className="container-custom py-8">
+          {/* Connection status banner that shows on error or when live updates fail */}
+          <ConnectionStatusBanner 
+            onManualRefresh={refreshEvents}
+          />
+          
+          {/* Show a warning if real-time updates are unavailable */}
+          {hasSubscriptionError && !fetchError && (
+            <RetryAlert 
+              severity="info"
+              title="Real-time Updates Unavailable"
+              message="Event updates will automatically refresh periodically. You can also refresh manually."
+              onRetry={handleRefresh}
+              isRetrying={isManuallyRefreshing}
+            />
+          )}
+          
           <EventFilters 
             filters={filters}
             onFilterChange={handleFilterChange} 
           />
+
+          {/* Add manual refresh button above the events list */}
+          <div className="flex justify-end mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={effectiveLoading}
+              className="text-xs"
+            >
+              <RefreshCw className={`h-3 w-3 mr-1 ${effectiveLoading ? 'animate-spin' : ''}`} />
+              {effectiveLoading ? 'Refreshing...' : 'Refresh'}
+            </Button>
+          </div>
 
           {/* Display the events list conditionally */}
           <EventsList 

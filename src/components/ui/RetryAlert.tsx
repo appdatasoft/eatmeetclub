@@ -86,3 +86,4 @@ const RetryAlert = ({
 };
 
 export default RetryAlert;
+export { RetryAlert };
