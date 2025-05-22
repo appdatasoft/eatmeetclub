@@ -4,11 +4,18 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useAuth } from '../useAuth';
 import { AuthContext } from '@/contexts/AuthContext';
+import { Session } from '@supabase/supabase-js';
 
 describe('useAuth hook', () => {
   const mockAuthContext = {
     user: { id: 'test-user-id', email: 'test@example.com' },
-    session: { access_token: 'mock-token', refresh_token: 'mock-refresh' },
+    session: {
+      access_token: 'mock-token',
+      refresh_token: 'mock-refresh',
+      expires_in: 3600,
+      token_type: 'bearer',
+      user: { id: 'test-user-id', email: 'test@example.com' }
+    } as Session,
     isLoading: false,
     isAdmin: false,
     signIn: vi.fn(),
