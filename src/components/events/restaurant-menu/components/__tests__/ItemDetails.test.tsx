@@ -3,15 +3,17 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import ItemDetails from '../ItemDetails';
+import { MenuItem } from '@/components/events/restaurant-menu/types';
 
 describe('ItemDetails', () => {
-  const baseItem = {
+  const baseItem: MenuItem = {
     id: '1',
     name: 'Test Item',
     price: 12.99,
     type: 'Entree',
     description: 'Test description',
     ingredients: ['Ingredient 1', 'Ingredient 2'],
+    restaurant_id: 'rest1',
   };
   
   it('renders item name and price', () => {

@@ -8,8 +8,8 @@ import { MemoryDish } from '@/types/memory';
 describe('MemoryDishes', () => {
   it('renders dishes when provided', () => {
     const dishes: MemoryDish[] = [
-      { id: '1', dish_name: 'Pasta' },
-      { id: '2', dish_name: 'Pizza' },
+      { id: '1', dish_name: 'Pasta', memory_id: 'mem1', user_id: 'user1', created_at: '2023-01-01' },
+      { id: '2', dish_name: 'Pizza', memory_id: 'mem1', user_id: 'user1', created_at: '2023-01-01' },
     ];
     
     render(<MemoryDishes dishes={dishes} />);
