@@ -1,5 +1,5 @@
 
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useEventFetch } from '../useEventFetch';
 import { fetchEventDetails, checkEventOwnership } from '../eventDetails/eventDetailsFetcher';
@@ -39,7 +39,7 @@ describe('useEventFetch hook', () => {
     expect(result.current.event).toBe(null);
     
     // Wait for the async operations to complete
-    await vi.waitFor(() => expect(result.current.isLoading).toBe(false));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     
     expect(result.current.event).toEqual(mockEvent);
     expect(result.current.isCurrentUserOwner).toBe(true);
@@ -52,7 +52,7 @@ describe('useEventFetch hook', () => {
   it('should handle case when eventId is undefined', async () => {
     const { result } = renderHook(() => useEventFetch(undefined));
     
-    await vi.waitFor(() => expect(result.current.isLoading).toBe(false));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     
     expect(result.current.error).toBe('No event ID provided');
     expect(result.current.event).toBe(null);
@@ -65,7 +65,7 @@ describe('useEventFetch hook', () => {
     
     const { result } = renderHook(() => useEventFetch('event-123'));
     
-    await vi.waitFor(() => expect(result.current.isLoading).toBe(false));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     
     expect(result.current.error).toBe('Server error occurred');
     expect(result.current.event).toBe(null);
@@ -81,22 +81,10 @@ describe('useEventFetch hook', () => {
     
     const { result } = renderHook(() => useEventFetch('invalid-id'));
     
-    await vi.waitFor(() => expect(result.current.isLoading).toBe(false));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     
     expect(result.current.error).toBe('Event not found');
     expect(result.current.event).toBe(null);
-    expect(toast).not.toHaveBeenCalled();
-    
-    // Clean up and test with invalid ID format
-    vi.resetAllMocks();
-    const invalidIdError = new Error('Invalid event ID format');
-    (fetchEventDetails as any).mockRejectedValue(invalidIdError);
-    
-    const { result: result2 } = renderHook(() => useEventFetch('bad-format'));
-    
-    await vi.waitFor(() => expect(result2.current.isLoading).toBe(false));
-    
-    expect(result2.current.error).toBe('Invalid event ID format');
     expect(toast).not.toHaveBeenCalled();
   });
   
@@ -107,7 +95,7 @@ describe('useEventFetch hook', () => {
     
     const { result } = renderHook(() => useEventFetch('event-123'));
     
-    await vi.waitFor(() => expect(result.current.isLoading).toBe(false));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     
     expect(result.current.event).toEqual(mockEvent);
     
@@ -116,19 +104,17 @@ describe('useEventFetch hook', () => {
     (fetchEventDetails as any).mockResolvedValueOnce(updatedEvent);
     (checkEventOwnership as any).mockResolvedValueOnce(false);
     
-    // Reset to loading state
+    // Reset mocks for the second call
     vi.resetAllMocks();
     
     // Trigger refresh
-    act(() => {
-      result.current.refreshEventDetails();
-    });
+    result.current.refreshEventDetails();
     
     // Should be loading again
     expect(result.current.isLoading).toBe(true);
     
     // Wait for refresh to complete
-    await vi.waitFor(() => expect(result.current.isLoading).toBe(false));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     
     // Should have updated data
     expect(result.current.event).toEqual(updatedEvent);

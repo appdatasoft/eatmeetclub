@@ -1,0 +1,167 @@
+
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { useEventFilters } from '../useEventFilters';
+
+describe('useEventFilters hook', () => {
+  // Test fixtures
+  const mockEvents = [
+    {
+      id: 'event1',
+      title: 'Summer Cookout',
+      date: 'July 4, 2025',
+      price: 25,
+      location: 'Downtown NYC',
+      category: 'food',
+      image: '/path/to/image1.jpg'
+    },
+    {
+      id: 'event2',
+      title: 'Wine Tasting',
+      date: 'August 15, 2025',
+      price: 75,
+      location: 'Brooklyn, NYC',
+      category: 'drinks',
+      image: '/path/to/image2.jpg'
+    },
+    {
+      id: 'event3',
+      title: 'Cooking Class',
+      date: 'July 4, 2025',
+      price: 120,
+      location: 'Manhattan',
+      category: 'food',
+      image: '/path/to/image3.jpg'
+    }
+  ];
+
+  it('should initialize with all events and default filters', () => {
+    const { result } = renderHook(() => useEventFilters(mockEvents));
+    
+    expect(result.current.filters).toEqual({
+      category: 'all',
+      date: '',
+      price: '',
+      location: ''
+    });
+    
+    // With no filters applied, all events should be shown
+    expect(result.current.filteredEvents).toEqual(mockEvents);
+  });
+  
+  it('should filter events by category', () => {
+    const { result } = renderHook(() => useEventFilters(mockEvents));
+    
+    act(() => {
+      result.current.handleFilterChange('category', 'food');
+    });
+    
+    // Should have two "food" category events
+    expect(result.current.filteredEvents).toHaveLength(2);
+    expect(result.current.filteredEvents[0].id).toBe('event1');
+    expect(result.current.filteredEvents[1].id).toBe('event3');
+    
+    // Change to drinks
+    act(() => {
+      result.current.handleFilterChange('category', 'drinks');
+    });
+    
+    // Should have one "drinks" category event
+    expect(result.current.filteredEvents).toHaveLength(1);
+    expect(result.current.filteredEvents[0].id).toBe('event2');
+  });
+  
+  it('should filter events by date', () => {
+    const { result } = renderHook(() => useEventFilters(mockEvents));
+    
+    // Hard-coded date matching July 4, 2025
+    act(() => {
+      result.current.handleFilterChange('date', '2025-07-04');
+    });
+    
+    // Should have two events on July 4
+    expect(result.current.filteredEvents).toHaveLength(2);
+    expect(result.current.filteredEvents[0].id).toBe('event1');
+    expect(result.current.filteredEvents[1].id).toBe('event3');
+  });
+  
+  it('should filter events by price range', () => {
+    const { result } = renderHook(() => useEventFilters(mockEvents));
+    
+    // Price range 50-100
+    act(() => {
+      result.current.handleFilterChange('price', '50-100');
+    });
+    
+    // Only one event in this range
+    expect(result.current.filteredEvents).toHaveLength(1);
+    expect(result.current.filteredEvents[0].id).toBe('event2');
+    
+    // Price over 100
+    act(() => {
+      result.current.handleFilterChange('price', '100+');
+    });
+    
+    expect(result.current.filteredEvents).toHaveLength(1);
+    expect(result.current.filteredEvents[0].id).toBe('event3');
+  });
+  
+  it('should filter events by location', () => {
+    const { result } = renderHook(() => useEventFilters(mockEvents));
+    
+    // Filter for NYC
+    act(() => {
+      result.current.handleFilterChange('location', 'NYC');
+    });
+    
+    // Should match 2 events with NYC in the location
+    expect(result.current.filteredEvents).toHaveLength(2);
+    
+    // More specific location
+    act(() => {
+      result.current.handleFilterChange('location', 'Brooklyn');
+    });
+    
+    expect(result.current.filteredEvents).toHaveLength(1);
+    expect(result.current.filteredEvents[0].id).toBe('event2');
+  });
+  
+  it('should apply multiple filters together', () => {
+    const { result } = renderHook(() => useEventFilters(mockEvents));
+    
+    // Apply category filter
+    act(() => {
+      result.current.handleFilterChange('category', 'food');
+    });
+    
+    // Apply date filter on top of that
+    act(() => {
+      result.current.handleFilterChange('date', '2025-07-04');
+    });
+    
+    // Should have 2 events matching both filters
+    expect(result.current.filteredEvents).toHaveLength(2);
+    
+    // Add price filter to narrow it down further
+    act(() => {
+      result.current.handleFilterChange('price', '100+');
+    });
+    
+    // Now should only have 1 event matching all criteria
+    expect(result.current.filteredEvents).toHaveLength(1);
+    expect(result.current.filteredEvents[0].id).toBe('event3');
+  });
+  
+  it('should handle empty events array', () => {
+    const { result } = renderHook(() => useEventFilters([]));
+    
+    expect(result.current.filteredEvents).toEqual([]);
+    
+    // Applying filters should not cause errors
+    act(() => {
+      result.current.handleFilterChange('category', 'food');
+    });
+    
+    expect(result.current.filteredEvents).toEqual([]);
+  });
+});
