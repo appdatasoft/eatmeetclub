@@ -2,6 +2,7 @@
 export interface Ticket {
   id: string;
   user_id: string;
+  event_id: string;
   quantity: number;
   purchase_date: string;
   payment_status: string;
