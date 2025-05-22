@@ -152,7 +152,7 @@ describe('useTicketDistribution hook', () => {
     });
     
     // Mock successful update
-    vi.mocked(supabase.eq).mockResolvedValueOnce({ error: null });
+    vi.mocked(supabase.eq).mockResolvedValueOnce({ error: null, data: null });
     
     const { result } = renderHook(() => useTicketDistribution(mockEventId));
     
