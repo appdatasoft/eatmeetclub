@@ -20,10 +20,18 @@ describe('useEventAiAgent hook', () => {
     time: '19:00',
     price: 25,
     capacity: 100,
-    restaurant_id: 'restaurant-123',
+    restaurant: {
+      id: 'restaurant-123',
+      name: 'Test Restaurant',
+      address: '123 Test St',
+      city: 'Test City',
+      state: 'Test State',
+      zipcode: '12345',
+      description: 'Test Description',
+    },
+    tickets_sold: 0,
     user_id: 'user-123',
-    status: 'published',
-    image_url: 'https://example.com/image.jpg'
+    published: true
   };
 
   const mockResult = {
