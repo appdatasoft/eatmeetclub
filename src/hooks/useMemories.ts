@@ -8,10 +8,11 @@ import { useCallback } from 'react';
 
 export const useMemories = () => {
   const { memories, isLoading, error, fetchMemories } = useMemoriesFetch();
-  const { createMemory } = useMemoryCreate(fetchMemories);
-  const { updateMemory } = useMemoryUpdate(fetchMemories);
-  const { deleteMemory } = useMemoryDelete(fetchMemories);
-  const { addMemoryContent } = useMemoryContent(fetchMemories);
+  // Fix return type issues by creating hooks with correct callback functions
+  const { createMemory } = useMemoryCreate(() => fetchMemories());
+  const { updateMemory } = useMemoryUpdate(() => fetchMemories());
+  const { deleteMemory } = useMemoryDelete(() => fetchMemories());
+  const { addMemoryContent } = useMemoryContent(() => fetchMemories());
   
   // Ensure fetchMemories is memoized properly
   const refetchMemories = useCallback(async () => {

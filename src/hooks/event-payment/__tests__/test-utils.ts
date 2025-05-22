@@ -1,53 +1,26 @@
 
-import { vi } from 'vitest';
 import { EventDetails } from '@/hooks/types/eventTypes';
 
-// Create mock event data for tests
-export const createMockEvent = (): EventDetails => ({
-  id: 'event123',
+export const createMockEvent = (overrides = {}): EventDetails => ({
+  id: 'event-123',
   title: 'Test Event',
-  description: 'Test Description',
+  description: 'Test event description',
   price: 25,
   capacity: 100,
-  user_id: 'user123',
+  user_id: 'user-123',
   published: true,
   restaurant: {
-    id: 'rest123',
+    id: 'restaurant-123',
     name: 'Test Restaurant',
-    address: '123 Test St',
+    address: '123 Main St',
     city: 'Test City',
-    state: 'Test State',
+    state: 'TS',
     zipcode: '12345',
-    description: 'Test Description'
+    description: 'Test restaurant description',
   },
-  date: '2023-06-15',
-  time: '19:00',
-  tickets_sold: 0
+  date: '2025-05-15',
+  time: '18:00',
+  tickets_sold: 0,
+  cover_image: null, // Adding the required cover_image property
+  ...overrides
 });
-
-// Create a mock localStorage for tests
-export const createMockLocalStorage = () => {
-  let store: Record<string, string> = {};
-  return {
-    getItem: vi.fn((key: string) => store[key] || null),
-    setItem: vi.fn((key: string, value: string) => {
-      store[key] = value.toString();
-    }),
-    removeItem: vi.fn((key: string) => {
-      delete store[key];
-    }),
-    clear: vi.fn(() => {
-      store = {};
-    }),
-  };
-};
-
-// Mock window.location functionality
-export const setupWindowLocation = () => {
-  Object.defineProperty(window, 'location', {
-    value: {
-      href: ''
-    },
-    writable: true
-  });
-};

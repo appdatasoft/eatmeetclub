@@ -19,12 +19,10 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
   const { 
     connections, 
     isLoading, 
-    oauthPending,
     error,
-    fetchConnections, 
-    connectSocialMedia,
-    getConnectionStatus,
-    disconnectSocialMedia
+    connectPlatform,
+    disconnectPlatform,
+    refreshConnections
   } = useSocialMedia();
   
   const [selectedConnection, setSelectedConnection] = useState<SocialMediaConnection | null>(null);
@@ -34,7 +32,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
   useEffect(() => {
     // Add a small delay to prevent immediate fetch on first render
     const timer = setTimeout(() => {
-      fetchConnections();
+      refreshConnections();
     }, 500);
     
     return () => clearTimeout(timer);
@@ -42,11 +40,11 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
 
   const handleConnectAccount = async (platform: string) => {
     try {
-      const result = await connectSocialMedia(platform);
+      await connectPlatform(platform);
       
       // For Instagram and Facebook, we don't show modal since it will redirect to OAuth
-      if (result) {
-        const connection = connections.find(conn => conn.platform === platform) || result;
+      const connection = connections.find(conn => conn.platform === platform);
+      if (connection) {
         setSelectedConnection(connection);
         setIsModalOpen(true);
       }
@@ -61,11 +59,14 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
 
   const handleDisconnectAccount = async (platform: string) => {
     try {
-      await disconnectSocialMedia(platform);
-      toast({
-        title: 'Account Disconnected',
-        description: `Successfully disconnected your ${platform} account.`,
-      });
+      const connection = connections.find(conn => conn.platform === platform);
+      if (connection) {
+        await disconnectPlatform(connection.id);
+        toast({
+          title: 'Account Disconnected',
+          description: `Successfully disconnected your ${platform} account.`,
+        });
+      }
     } catch (error) {
       toast({
         title: `${platform} Disconnection Error`,
@@ -80,7 +81,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
   };
 
   const renderConnectionButton = (platform: string) => {
-    const isConnected = getConnectionStatus(platform);
+    const isConnected = connections.some(conn => conn.platform === platform && conn.is_connected);
     const connection = connections.find(conn => conn.platform === platform);
     const hasLimitedAccess = connection?.meta_data?.limited_access;
     
@@ -97,7 +98,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
                 setIsModalOpen(true);
               }
             }}
-            disabled={isLoading || oauthPending}
+            disabled={isLoading}
             className={hasLimitedAccess ? "text-amber-500 border-amber-200" : ""}
           >
             {hasLimitedAccess ? (
@@ -114,7 +115,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
             size="sm"
             className="text-red-500 border-red-200 hover:bg-red-50"
             onClick={() => handleDisconnectAccount(platform)}
-            disabled={isLoading || oauthPending}
+            disabled={isLoading}
           >
             <Link2Off className="h-4 w-4 mr-1" />
             <span>Disconnect</span>
@@ -127,7 +128,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
           variant="outline" 
           size="sm"
           onClick={() => handleConnectAccount(platform)}
-          disabled={isLoading || oauthPending}
+          disabled={isLoading}
         >
           Connect
         </Button>
@@ -144,7 +145,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
           <AlertDescription className="flex items-center justify-between">
             <div>
               <p className="font-semibold">Failed to load social media connections</p>
-              <p className="text-sm">{error.message || 'An unknown error occurred'}</p>
+              <p className="text-sm">{error}</p>
             </div>
             <Button 
               size="sm"
@@ -189,24 +190,7 @@ const SocialMediaTab: React.FC<SocialMediaTabProps> = ({ isAdmin = false }) => {
 
   return (
     <div className="space-y-6">
-      {oauthPending && (
-        <Alert className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Processing social media connection. Please wait...
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {(isAdmin) && (
-        <Alert className="mb-4 border-amber-200 text-amber-800 bg-amber-50">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Instagram and Facebook integrations have limited access in development mode. User data access is restricted to basic profile information.
-          </AlertDescription>
-        </Alert>
-      )}
-      
+      {/* Instagram, Facebook, Twitter, etc. sections */}
       <Card>
         <CardHeader>
           <CardTitle>Social Media Accounts</CardTitle>

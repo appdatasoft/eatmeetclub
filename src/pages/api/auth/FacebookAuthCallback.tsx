@@ -1,312 +1,64 @@
+
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useSocialMedia } from '@/hooks/useSocialMedia';
-import { supabase } from '@/lib/supabaseClient';
-import { Spinner } from '@/components/ui/spinner';
-import { customFetch } from '@/integrations/supabase/utils/fetchUtils';
+import { supabase } from '@/integrations/supabase/client';
 
-const FacebookAuthCallback: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const location = useLocation();
+export const FacebookAuthCallback = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('Processing authentication...');
-  const [debugInfo, setDebugInfo] = useState<Record<string, any>>({});
-  const { fetchConnections } = useSocialMedia();
-  
+  const [isProcessing, setIsProcessing] = useState(true);
+  const { refreshConnections } = useSocialMedia();
+
   useEffect(() => {
-    // This function handles the OAuth callback
-    const processCallback = async () => {
+    const processOAuthCallback = async () => {
       try {
-        console.log('[FacebookAuthCallback] Starting callback processing');
+        // Process the OAuth callback
+        const { data, error } = await supabase.auth.getSession();
         
-        // Get all URL parameters
-        const code = searchParams.get('code');
-        const state = searchParams.get('state');
-        const error = searchParams.get('error');
-        const errorReason = searchParams.get('error_reason');
-        const errorDescription = searchParams.get('error_description');
+        if (error) throw error;
         
-        // Current URL for debugging
-        const currentUrl = window.location.href;
-        const urlWithoutHash = currentUrl.split('#')[0]; // Remove hash fragments
-        
-        // Log all parameters for debugging
-        console.log('[FacebookAuthCallback] Parameters:', {
-          code: code ? `${code.substring(0, 10)}... (length: ${code?.length})` : 'null',
-          state,
-          error,
-          errorReason,
-          errorDescription,
-          currentUrl: urlWithoutHash,
-          path: location.pathname
-        });
-        
-        // Store debug info
-        setDebugInfo({
-          code: code ? `${code.substring(0, 10)}... (length: ${code?.length})` : 'null',
-          state,
-          error,
-          errorReason,
-          errorDescription,
-          url: urlWithoutHash,
-          path: location.pathname,
-          time: new Date().toISOString(),
-          userAgent: navigator.userAgent
-        });
-        
-        // Check for error parameters
-        if (error || errorReason || errorDescription) {
-          console.error('[FacebookAuthCallback] OAuth error:', { error, errorReason, errorDescription });
-          setStatus('error');
-          setMessage(`Authentication failed: ${errorDescription || errorReason || error}`);
-          return;
-        }
-        
-        // Validate required parameters
-        if (!code || !state) {
-          setStatus('error');
-          setMessage('Invalid callback: missing required parameters');
-          return;
-        }
-        
-        // Check if user is authenticated
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          console.log('[FacebookAuthCallback] No active session found, redirecting to login');
-          setStatus('error');
-          setMessage('Authentication failed: No active user session');
-          
-          // Store the URL to redirect back after login
-          localStorage.setItem('redirectAfterLogin', window.location.href);
-          
-          setTimeout(() => {
-            navigate('/login', { replace: true });
-          }, 2000);
-          return;
-        }
-        
-        console.log('[FacebookAuthCallback] Session found, user is authenticated');
-        
-        // Determine platform from state parameter
-        const platform = state.startsWith('instagram_') ? 'Instagram' : 'Facebook';
-        console.log(`[FacebookAuthCallback] Processing ${platform} connection`);
-        
-        // Get Supabase URL
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wocfwpedauuhlrfugxuu.supabase.co';
-        
-        // Determine the appropriate redirect URI based on the environment and path
-        let redirectUri = window.location.hostname === 'localhost' 
-          ? `${window.location.protocol}//${window.location.hostname}:${window.location.port}${location.pathname}`
-          : `${window.location.protocol}//${window.location.hostname}${location.pathname}`;
-        
-        console.log(`[FacebookAuthCallback] Using redirectUri: ${redirectUri}`);
-        
-        const edgeFunctionUrl = `${supabaseUrl}/functions/v1/connect-social-media`;
-        console.log(`[FacebookAuthCallback] Edge function URL: ${edgeFunctionUrl}`);
-        
-        setDebugInfo(prev => ({ 
-          ...prev, 
-          platform,
-          redirectUri,
-          edgeFunctionUrl,
-          sessionExists: !!session,
-          sessionUser: session?.user?.id,
-          timestamp: new Date().toISOString()
-        }));
-        
-        try {
-          // Use customFetch utility with better error handling
-          console.log(`[FacebookAuthCallback] Sending request to edge function with code (length: ${code?.length})`);
-          const response = await customFetch(edgeFunctionUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({
-              platform,
-              action: 'callback',
-              code,
-              redirectUri,
-              state
-            })
-          });
-          
-          console.log(`[FacebookAuthCallback] Edge function response status: ${response.status}`);
-          
-          // Try to get raw response and parse it
-          let rawResponse = '';
-          try {
-            // First try to get the response as text
-            rawResponse = await response.text();
-            console.log('[FacebookAuthCallback] Raw edge function response:', rawResponse?.substring(0, 500));
-            
-            let result;
-            try {
-              result = JSON.parse(rawResponse);
-              console.log('[FacebookAuthCallback] Parsed response:', result);
-              
-              setDebugInfo(prev => ({ 
-                ...prev, 
-                edgeFunctionStatus: response.status,
-                edgeFunctionResponse: result,
-                requestTime: new Date().toISOString()
-              }));
-              
-              if (!response.ok || !result.success) {
-                throw new Error(result?.error || `Failed to complete ${platform} authentication`);
-              }
-              
-              // Check if the connection was saved to database
-              if (result.connection) {
-                console.log(`[FacebookAuthCallback] ${platform} connection saved, id: ${result.connection.id}`);
-                setDebugInfo(prev => ({ 
-                  ...prev, 
-                  connection: result.connection
-                }));
-              } else {
-                console.warn(`[FacebookAuthCallback] ${platform} connection may not have been saved properly`);
-                setDebugInfo(prev => ({ 
-                  ...prev, 
-                  warning: `${platform} connection may not have been saved properly`
-                }));
-              }
-              
-              // Refresh the connections list
-              await fetchConnections();
-              
-              // Show success message
-              setStatus('success');
-              setMessage(`Your ${platform} account has been successfully connected!`);
-              
-              toast({
-                title: `${platform} Connected`,
-                description: result.limited_access 
-                  ? `Your ${platform} account was connected with limited functionality.` 
-                  : `Your ${platform} account has been successfully connected!`,
-                variant: 'default',
-              });
-              
-              // Redirect after a delay
-              setTimeout(() => {
-                navigate('/dashboard/social-media', { replace: true });
-              }, 2000);
-              
-            } catch (parseError) {
-              console.error('[FacebookAuthCallback] Error parsing response:', parseError);
-              setDebugInfo(prev => ({ 
-                ...prev, 
-                parseError: parseError.message, 
-                rawResponse: rawResponse?.substring(0, 1000) 
-              }));
-              throw new Error(`Failed to parse response: ${parseError.message}`);
-            }
-          } catch (responseError) {
-            console.error('[FacebookAuthCallback] Error reading response:', responseError);
-            setDebugInfo(prev => ({ 
-              ...prev, 
-              responseError: responseError.message,
-              rawResponse: rawResponse?.substring(0, 1000)
-            }));
-            throw responseError;
-          }
-        } catch (fetchError: any) {
-          console.error('[FacebookAuthCallback] Fetch error:', fetchError);
-          setDebugInfo(prev => ({ 
-            ...prev, 
-            fetchError: fetchError.message,
-            fetchStack: fetchError.stack
-          }));
-          throw fetchError;
-        }
-      } catch (err: any) {
-        console.error('[FacebookAuthCallback] Error processing callback:', err);
-        setStatus('error');
-        setMessage(err.message || 'Failed to process authentication');
-        setDebugInfo(prev => ({ 
-          ...prev, 
-          finalError: err.message, 
-          stack: err.stack 
-        }));
+        await refreshConnections();
         
         toast({
-          title: 'Connection Failed',
-          description: err.message || 'Failed to connect social media account',
-          variant: 'destructive',
+          title: "Account Connected",
+          description: "Your Facebook account has been successfully connected.",
         });
         
-        // Still redirect to dashboard after error for better user experience
-        setTimeout(() => {
-          navigate('/dashboard/social-media', { replace: true });
-        }, 5000); // Longer timeout to give user time to see the error
+        // Redirect back to social media page
+        navigate('/dashboard/social-media');
+      } catch (error) {
+        console.error('Error processing OAuth callback:', error);
+        toast({
+          title: "Connection Error",
+          description: "There was a problem connecting your account. Please try again.",
+          variant: "destructive",
+        });
+        
+        navigate('/dashboard/social-media');
+      } finally {
+        setIsProcessing(false);
       }
     };
     
-    // Add a small delay to ensure all params are properly loaded
-    const timeoutId = setTimeout(() => {
-      processCallback();
-    }, 1000); // Increase timeout for better reliability
-    
-    return () => clearTimeout(timeoutId);
-  }, [searchParams, navigate, toast, fetchConnections, location]);
-  
+    processOAuthCallback();
+  }, []);
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold text-center mb-6">Social Media Connection</h1>
-        
-        {status === 'loading' && (
-          <div className="flex flex-col items-center my-8">
-            <Spinner size="lg" className="text-primary" />
-            <p className="mt-4 text-gray-600">{message}</p>
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-lg">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Processing Connection</h1>
+          {isProcessing ? (
+            <p className="mt-2 text-gray-600">Please wait while we verify your account...</p>
+          ) : (
+            <p className="mt-2 text-gray-600">Redirecting you back...</p>
+          )}
+          
+          <div className="mt-6 flex justify-center">
+            <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
           </div>
-        )}
-        
-        {status === 'success' && (
-          <Alert variant="default" className="bg-green-50 border-green-200 mb-6">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">{message}</AlertDescription>
-          </Alert>
-        )}
-        
-        {status === 'error' && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
-        
-        {/* Debug info panel */}
-        <div className="mt-4 border border-gray-300 rounded p-4 overflow-auto max-h-80 text-xs">
-          <h3 className="font-bold mb-2 flex items-center justify-between">
-            <span>Debug Information</span>
-            <a 
-              href="https://supabase.com/dashboard/project/wocfwpedauuhlrfugxuu/functions/connect-social-media/logs" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:underline flex items-center"
-            >
-              <span className="text-xs">View Logs</span>
-              <ExternalLink className="h-3 w-3 ml-1" />
-            </a>
-          </h3>
-          <pre className="whitespace-pre-wrap break-words">{JSON.stringify(debugInfo, null, 2)}</pre>
-        </div>
-        
-        <div className="flex justify-center mt-6">
-          <Button 
-            onClick={() => navigate('/dashboard/social-media')}
-            className="w-full"
-          >
-            Go to Social Media Dashboard
-          </Button>
         </div>
       </div>
     </div>

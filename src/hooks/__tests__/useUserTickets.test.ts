@@ -45,21 +45,21 @@ describe('useUserTickets hook', () => {
         id: 'ticket1',
         event_id: 'event1',
         event_title: 'Summer BBQ',
-        event_date: '2025-07-04',
+        event_date: '2023-06-15',
         restaurant_name: 'Test Restaurant',
         quantity: 2,
         price: 25,
-        purchase_date: '2025-05-01'
+        purchase_date: '2023-06-01'
       },
       {
         id: 'ticket2',
         event_id: 'event2',
         event_title: 'Wine Tasting',
-        event_date: '2025-08-15',
+        event_date: '2023-07-20',
         restaurant_name: 'Wine Bar',
         quantity: 1,
         price: 35,
-        purchase_date: '2025-05-02'
+        purchase_date: '2023-06-10'
       }
     ];
     
@@ -74,7 +74,7 @@ describe('useUserTickets hook', () => {
     }));
     
     // Mock successful ticket fetch
-    (supabase.order as vi.Mock).mockResolvedValue({ data: mockTickets, error: null });
+    vi.mocked(supabase.order).mockResolvedValue({ data: mockTickets, error: null });
     
     const { result } = renderHook(() => useUserTickets('user-123'));
     
@@ -85,7 +85,7 @@ describe('useUserTickets hook', () => {
   });
   
   it('should handle fetch errors gracefully', () => {
-    const mockError = { message: 'Database error' };
+    const mockError = { message: 'Failed to fetch tickets' };
     
     // Mock hook return value for error case
     const { result } = renderHook(() => ({
