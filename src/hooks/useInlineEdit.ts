@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,7 +20,7 @@ export const useInlineEdit = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   
-  // Update canEdit whenever isAdmin changes
+  // Update canEdit whenever isAdmin changes with improved logging and reactivity
   useEffect(() => {
     console.log('ADMIN_DEBUG: useInlineEdit → Admin status updated:');
     console.log('ADMIN_DEBUG: authLoading =', authLoading);
