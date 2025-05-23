@@ -1,7 +1,6 @@
-
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabaseClient'; // Use a single consistent supabase client
+import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
@@ -12,7 +11,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  handleLogout: () => Promise<void>; // Added for compatibility
+  handleLogout: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,21 +25,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     console.log("ADMIN_DEBUG: AuthProvider initializing");
-    
-    // Set up auth state listener FIRST
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log('ADMIN_DEBUG: Auth state changed:', event, 'user:', currentSession?.user?.email);
-        
-        // Update session and user immediately with synchronous operations
+
         setSession(currentSession);
         setUser(currentSession?.user || null);
-        
-        // Defer Supabase calls with setTimeout to prevent deadlocks
+
         if (currentSession?.user) {
           setTimeout(async () => {
             try {
-              // Check if user is admin using direct database query
               console.log('ADMIN_DEBUG: Checking admin status for:', currentSession.user.email);
               const { data: adminData, error: adminError } = await supabase
                 .from('user_roles')
@@ -48,14 +43,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 .eq('user_id', currentSession.user.id)
                 .eq('role', 'admin')
                 .maybeSingle();
-              
-              if (adminError) {
-                console.error('ADMIN_DEBUG: Admin check error:', adminError);
-              }
-              
+
+              if (adminError) console.error('ADMIN_DEBUG: Admin check error:', adminError);
               console.log('ADMIN_DEBUG: Admin check result:', adminData);
-              setIsAdmin(!!adminData);
-              console.log('ADMIN_DEBUG: isAdmin set to:', !!adminData);
+
+              const isAdminNow = adminData?.role === 'admin';
+              setIsAdmin(isAdminNow);
+              console.log('ADMIN_DEBUG: isAdmin set to:', isAdminNow);
             } catch (error) {
               console.error('ADMIN_DEBUG: Error checking admin status:', error);
               setIsAdmin(false);
@@ -70,24 +64,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // THEN check for existing session
     const loadUserData = async () => {
       try {
         console.log('ADMIN_DEBUG: Loading initial user session');
         const { data, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           console.error('ADMIN_DEBUG: Error getting session:', error.message);
           setIsLoading(false);
           return;
         }
-        
+
         console.log('ADMIN_DEBUG: Initial session loaded:', !!data.session, 'user:', data.session?.user?.email);
         setSession(data.session);
         setUser(data.session?.user || null);
 
         if (data.session?.user) {
-          // Check if user is admin using direct database query
           console.log('ADMIN_DEBUG: Checking initial admin status for:', data.session.user.email);
           const { data: adminData, error: adminError } = await supabase
             .from('user_roles')
@@ -95,14 +87,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .eq('user_id', data.session.user.id)
             .eq('role', 'admin')
             .maybeSingle();
-          
-          if (adminError) {
-            console.error('ADMIN_DEBUG: Initial admin check error:', adminError);
-          }
-          
+
+          if (adminError) console.error('ADMIN_DEBUG: Initial admin check error:', adminError);
           console.log('ADMIN_DEBUG: Initial admin check result:', adminData);
-          setIsAdmin(!!adminData);
-          console.log('ADMIN_DEBUG: Initial isAdmin set to:', !!adminData);
+
+          const isAdminNow = adminData?.role === 'admin';
+          setIsAdmin(isAdminNow);
+          console.log('ADMIN_DEBUG: Initial isAdmin set to:', isAdminNow);
         }
       } catch (error: any) {
         console.error('ADMIN_DEBUG: Error loading user data:', error);
@@ -124,7 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log(`Attempting to sign in: ${email}`);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      
+
       toast({
         title: "Login successful",
         description: "Welcome back!",
@@ -147,7 +138,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
-      
+
       toast({
         title: "Registration successful",
         description: "Please check your email to verify your account.",
@@ -170,12 +161,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log("Signing out user");
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
-      // Clear any cached data after logout
+
       setSession(null);
       setUser(null);
       setIsAdmin(false);
-      
+
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
@@ -193,7 +183,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Add handleLogout as an alias of signOut for compatibility
   const handleLogout = signOut;
 
   const value = {
@@ -204,8 +193,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signIn,
     signUp,
     signOut,
-    handleLogout
+    handleLogout,
   };
+
+  console.log('[AuthContext.Provider] Exported isAdmin:', isAdmin);
 
   return (
     <AuthContext.Provider value={value}>
