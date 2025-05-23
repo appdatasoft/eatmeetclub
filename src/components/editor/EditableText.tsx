@@ -26,7 +26,8 @@ const EditableText: React.FC<EditableTextProps> = ({
     handleEdit, 
     handleSave, 
     handleCancel, 
-    canEdit 
+    canEdit,
+    editModeEnabled 
   } = useEditableContent();
   
   // Get content from the map if it exists, otherwise use children or defaultContent
@@ -58,6 +59,7 @@ const EditableText: React.FC<EditableTextProps> = ({
       onEdit={() => handleEdit(id)}
       onSave={handleSave}
       onCancel={handleCancel}
+      editModeEnabled={editModeEnabled}
     >
       {content || children || ''}
     </EditableElement>
