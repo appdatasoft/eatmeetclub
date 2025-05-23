@@ -1,5 +1,4 @@
-
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Validates email data to prevent undefined placeholders

@@ -1,5 +1,4 @@
-
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CheckoutPayload {
   email: string;

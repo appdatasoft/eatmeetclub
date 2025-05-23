@@ -12,7 +12,7 @@ import AppRoutes from './routes/AppRoutes';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from "@/components/ui/toaster"
 import { FeatureFlagProvider } from './contexts/FeatureFlagContext';
-import { checkSupabaseConnection } from './lib/supabaseClient';
+import { checkSupabaseConnection } from '@/integrations/supabase/client';
 
 // Create a single QueryClient instance to prevent multiple instances
 const queryClient = new QueryClient({

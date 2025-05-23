@@ -1,12 +1,11 @@
-
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useMembershipStatus } from '../useMembershipStatus';
-import { supabase } from '@/lib/supabaseClient';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 // Mock dependencies
-vi.mock('@/lib/supabaseClient', () => ({
+vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),

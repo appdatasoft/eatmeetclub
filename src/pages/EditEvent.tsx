@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { supabase, retryFetch } from "@/lib/supabaseClient";
+import { supabase, retryFetch } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import EventForm from "@/components/events/EventForm";
 import { useAuth } from "@/hooks/useAuth";

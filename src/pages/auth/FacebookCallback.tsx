@@ -1,17 +1,18 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, ExternalLink } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { Spinner } from '@/components/ui/spinner';
-import { supabase } from '@/lib/supabaseClient';
+import { Loader2 } from 'lucide-react';
+import MainLayout from '@/components/layout/MainLayout';
+import { supabase } from '@/integrations/supabase/client';
 
 const FacebookCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Processing authentication...');
   const [debugInfo, setDebugInfo] = useState<Record<string, any>>({});
@@ -54,9 +55,7 @@ const FacebookCallback: React.FC = () => {
         }
         
         // Check if user is authenticated
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
+        if (!user) {
           console.log('[FacebookCallback] No active session found, redirecting to login');
           setStatus('error');
           setMessage('Authentication failed: No active user session');
@@ -91,7 +90,7 @@ const FacebookCallback: React.FC = () => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
+              'Authorization': `Bearer ${user.access_token}`
             },
             body: JSON.stringify({
               platform,
@@ -190,7 +189,7 @@ const FacebookCallback: React.FC = () => {
         
         {status === 'loading' && (
           <div className="flex flex-col items-center my-8">
-            <Spinner size="lg" className="text-primary" />
+            <Loader2 size="lg" className="text-primary" />
             <p className="mt-4 text-gray-600">{message}</p>
           </div>
         )}

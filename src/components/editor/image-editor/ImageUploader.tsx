@@ -1,7 +1,7 @@
 
 import { useState, useRef } from "react";
 import { Upload } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface ImageUploaderProps {

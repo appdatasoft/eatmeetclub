@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { checkSupabaseConnection } from '@/lib/supabaseClient';
+import { checkSupabaseConnection } from '@/integrations/supabase/client';
 
 interface UseConnectionCheckResult {
   connectionChecking: boolean;

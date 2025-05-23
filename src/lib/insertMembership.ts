@@ -1,5 +1,4 @@
-
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 
 export async function insertMembership({
   email,

@@ -4,7 +4,7 @@ import { useEditableContent } from './EditableContentProvider';
 import { Image, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ImageEditorDialog from './image-editor/ImageEditorDialog';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useImageContent } from '@/hooks/useImageContent';
 
