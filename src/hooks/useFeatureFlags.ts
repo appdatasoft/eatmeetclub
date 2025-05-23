@@ -160,7 +160,7 @@ export const useFeatureFlags = (retryTrigger = 0) => {
           if (userError) {
             console.warn('Error fetching user targeting:', userError);
           } else if (userTargeting && Array.isArray(userTargeting)) {
-            userTargeting.forEach((targeting) => {
+            userTargeting.forEach((targeting: any) => {
               const featureKey = targeting.feature_flags?.feature_key;
               if (featureKey) {
                 flagsMap[featureKey] = targeting.is_enabled;

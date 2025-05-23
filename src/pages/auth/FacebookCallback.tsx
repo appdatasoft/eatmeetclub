@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -86,11 +86,20 @@ const FacebookCallback: React.FC = () => {
         
         try {
           console.log(`[FacebookCallback] Contacting edge function at ${edgeFunctionUrl}`);
+          
+          // Get fresh session token
+          const { data: sessionData } = await supabase.auth.getSession();
+          const accessToken = sessionData.session?.access_token;
+          
+          if (!accessToken) {
+            throw new Error('No valid session token available');
+          }
+          
           const response = await fetch(edgeFunctionUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${user.access_token}`
+              'Authorization': `Bearer ${accessToken}`
             },
             body: JSON.stringify({
               platform,
@@ -189,7 +198,7 @@ const FacebookCallback: React.FC = () => {
         
         {status === 'loading' && (
           <div className="flex flex-col items-center my-8">
-            <Loader2 size="lg" className="text-primary" />
+            <Loader2 size={48} className="text-primary animate-spin" />
             <p className="mt-4 text-gray-600">{message}</p>
           </div>
         )}
