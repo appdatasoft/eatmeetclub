@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,19 +20,23 @@ export const useInlineEdit = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   
-  // Simplified logic: if user is admin, they can always edit
+  // Immediately set canEdit to true if isAdmin is true, regardless of loading state
   useEffect(() => {
-    console.log('ADMIN_DEBUG: useInlineEdit → canEdit update check:');
-    console.log('ADMIN_DEBUG: authLoading =', authLoading);
-    console.log('ADMIN_DEBUG: user =', user ? user.email : null);
+    console.log('ADMIN_DEBUG: useInlineEdit → canEdit priority update check:');
     console.log('ADMIN_DEBUG: isAdmin =', isAdmin);
     
-    // Simple rule: if not loading, user exists, and user is admin, they can edit
-    const hasEditAccess = !authLoading && user !== null && isAdmin === true;
-    console.log('ADMIN_DEBUG: useInlineEdit → calculated canEdit =', hasEditAccess);
-    
-    setCanEdit(hasEditAccess);
-  }, [user, isAdmin, authLoading]);
+    // If admin status is confirmed true, immediately enable editing
+    if (isAdmin === true) {
+      console.log('ADMIN_DEBUG: useInlineEdit → Admin detected, setting canEdit to true immediately');
+      setCanEdit(true);
+    } 
+    // Only update to false if we're done loading and user exists but isn't admin
+    else if (!authLoading && user !== null && isAdmin === false) {
+      console.log('ADMIN_DEBUG: useInlineEdit → Not admin, setting canEdit to false');
+      setCanEdit(false);
+    }
+    // Don't change canEdit if still loading or no user (keep previous state)
+  }, [isAdmin, user, authLoading]);
 
   // Log canEdit changes
   useEffect(() => {

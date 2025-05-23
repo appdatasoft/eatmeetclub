@@ -15,10 +15,17 @@ export const EditModeToggle = () => {
     console.log('ADMIN_DEBUG: EditModeToggle component - editModeEnabled:', editModeEnabled);
   }, [canEdit, editModeEnabled, isAdmin]);
 
+  // Log click events for debugging
+  const handleToggleClick = () => {
+    console.log('ADMIN_DEBUG: Toggle edit mode button clicked');
+    toggleEditMode();
+  };
+
   // For debugging purposes, always render the component with conditional content
   console.log('ADMIN_DEBUG: EditModeToggle rendering decision - canEdit:', canEdit, 'isAdmin:', isAdmin);
   
-  if (!canEdit && !isAdmin) {
+  // First check isAdmin, then fall back to canEdit
+  if (!isAdmin && !canEdit) {
     console.log('ADMIN_DEBUG: EditModeToggle not rendering content - no edit permissions');
     return (
       <div className="w-full bg-yellow-50 py-2 border-b border-yellow-200 sticky top-0 z-50 shadow-sm">
@@ -35,10 +42,7 @@ export const EditModeToggle = () => {
       <div className="container-custom flex justify-between items-center">
         <span className="text-gray-700 font-medium">Admin Tools:</span>
         <button
-          onClick={() => {
-            console.log('ADMIN_DEBUG: Toggle edit mode button clicked');
-            toggleEditMode();
-          }}
+          onClick={handleToggleClick}
           className={`
             flex items-center gap-2 px-6 py-2 rounded-full transition-all
             ${editModeEnabled 
