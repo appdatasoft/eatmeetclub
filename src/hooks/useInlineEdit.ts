@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -20,35 +20,74 @@ export const useInlineEdit = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   const [roleCheckCompleted, setRoleCheckCompleted] = useState(false);
+  const [directAdminCheck, setDirectAdminCheck] = useState<boolean | null>(null);
+  
+  // Perform direct admin check independent of other systems
+  const performDirectAdminCheck = useCallback(async () => {
+    if (user && !roleCheckCompleted) {
+      try {
+        console.log('ADMIN_DEBUG: useInlineEdit → Performing direct admin check for:', user.email);
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('is_admin', { 
+          user_id: user.id 
+        });
+        
+        if (rpcError) {
+          console.error('ADMIN_DEBUG: useInlineEdit → Direct admin check error:', rpcError);
+          return false;
+        }
+        
+        console.log('ADMIN_DEBUG: useInlineEdit → Direct admin check result:', rpcResult);
+        setDirectAdminCheck(rpcResult === true);
+        return rpcResult === true;
+      } catch (error) {
+        console.error('ADMIN_DEBUG: useInlineEdit → Error in direct admin check:', error);
+        return false;
+      }
+    }
+    return false;
+  }, [user, roleCheckCompleted]);
+  
+  // Run direct admin check on initial load
+  useEffect(() => {
+    performDirectAdminCheck();
+  }, [performDirectAdminCheck]);
   
   // Immediately react to admin status changes with highest priority
   useEffect(() => {
-    console.log('ADMIN_DEBUG: useInlineEdit → Admin status change detected:', isAdmin);
+    console.log('ADMIN_DEBUG: useInlineEdit → Admin status check:');
+    console.log('ADMIN_DEBUG: useInlineEdit → isAdmin:', isAdmin);
+    console.log('ADMIN_DEBUG: useInlineEdit → directAdminCheck:', directAdminCheck);
     
-    // If admin status is explicitly true, immediately enable editing
-    if (isAdmin === true) {
+    // Check all admin sources
+    const effectiveAdmin = isAdmin === true || directAdminCheck === true;
+    
+    // If admin status is confirmed from any source, immediately enable editing
+    if (effectiveAdmin) {
       console.log('ADMIN_DEBUG: useInlineEdit → Admin confirmed, enabling edit mode');
       setCanEdit(true);
       setRoleCheckCompleted(true);
     } 
     // Only set to false if we're sure user is not admin and auth loading is complete
-    else if (!authLoading && isAdmin === false) {
+    else if (!authLoading && isAdmin === false && directAdminCheck === false) {
       console.log('ADMIN_DEBUG: useInlineEdit → Not admin, disabling edit mode');
       setCanEdit(false);
       setRoleCheckCompleted(true);
     }
-    // If still loading or undefined, don't change anything yet
-  }, [isAdmin, authLoading]);
+  }, [isAdmin, authLoading, directAdminCheck]);
 
   // Log canEdit changes
   useEffect(() => {
     console.log('ADMIN_DEBUG: useInlineEdit → canEdit state updated to:', canEdit);
     console.log('ADMIN_DEBUG: useInlineEdit → roleCheckCompleted state is:', roleCheckCompleted);
-  }, [canEdit, roleCheckCompleted]);
+    console.log('ADMIN_DEBUG: useInlineEdit → directAdminCheck state is:', directAdminCheck);
+  }, [canEdit, roleCheckCompleted, directAdminCheck]);
 
   const saveContent = async (content: EditableContent) => {
-    // Always check isAdmin first with highest priority
-    if (isAdmin !== true && !canEdit) {
+    // Check all admin sources first
+    const effectiveAdmin = isAdmin === true || directAdminCheck === true;
+    
+    // Always check admin status first with highest priority
+    if (!effectiveAdmin && !canEdit) {
       toast({
         title: 'Permission denied',
         description: 'You must be an admin to edit content',
@@ -163,7 +202,8 @@ export const useInlineEdit = () => {
     isEditing,
     setIsEditing,
     isLoading: isSaving,
-    canEdit: isAdmin === true || canEdit, // HIGHEST PRIORITY: Always enable for admins
+    canEdit: isAdmin === true || directAdminCheck === true || canEdit, // HIGHEST PRIORITY: Always enable for admins from any source
     roleCheckCompleted,
+    checkAdminDirectly: performDirectAdminCheck,
   };
 };

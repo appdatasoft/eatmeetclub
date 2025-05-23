@@ -1,26 +1,50 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useEditableContent } from './EditableContentProvider';
 import { Pencil, Eye, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export const EditModeToggle = () => {
   // Move isAdmin check to the TOP - highest priority
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const { canEdit, editModeEnabled, toggleEditMode } = useEditableContent();
+  const [adminChecked, setAdminChecked] = useState<boolean>(false);
+  const [adminStatus, setAdminStatus] = useState<boolean | null>(null);
   
+  // Immediate admin check when component mounts
   useEffect(() => {
     console.log('ADMIN_DEBUG: EditModeToggle component mounting');
     console.log('ADMIN_DEBUG: EditModeToggle component - isAdmin:', isAdmin);
     console.log('ADMIN_DEBUG: EditModeToggle component - canEdit:', canEdit);
     console.log('ADMIN_DEBUG: EditModeToggle component - editModeEnabled:', editModeEnabled);
     
-    // Auto-initialize edit permissions for admins
-    if (isAdmin === true && !canEdit && !editModeEnabled) {
-      console.log('ADMIN_DEBUG: Admin detected, auto-initializing edit permissions');
-    }
-  }, [canEdit, editModeEnabled, isAdmin]);
+    // Perform immediate admin check if user exists but admin status is uncertain
+    const checkAdminStatus = async () => {
+      if (user && !adminChecked) {
+        try {
+          console.log('ADMIN_DEBUG: EditModeToggle - Performing direct admin check for user:', user.email);
+          const { data: rpcResult, error: rpcError } = await supabase.rpc('is_admin', { 
+            user_id: user.id 
+          });
+          
+          if (rpcError) {
+            console.error('ADMIN_DEBUG: EditModeToggle - RPC admin check error:', rpcError);
+          } else {
+            console.log('ADMIN_DEBUG: EditModeToggle - Direct RPC admin check result:', rpcResult);
+            setAdminStatus(rpcResult === true);
+          }
+        } catch (error) {
+          console.error('ADMIN_DEBUG: EditModeToggle - Error in direct admin check:', error);
+        } finally {
+          setAdminChecked(true);
+        }
+      }
+    };
+    
+    checkAdminStatus();
+  }, [user, canEdit, editModeEnabled, isAdmin, adminChecked]);
 
   // Enhanced click handler with more logging
   const handleToggleClick = () => {
@@ -28,18 +52,19 @@ export const EditModeToggle = () => {
     console.log('ADMIN_DEBUG: Before toggle - isAdmin:', isAdmin, 'canEdit:', canEdit, 'editModeEnabled:', editModeEnabled);
     toggleEditMode();
     
-    if (isAdmin === true && !canEdit) {
+    // Show success toast for admin activation
+    const effectiveAdmin = isAdmin === true || adminStatus === true;
+    if (effectiveAdmin && !canEdit) {
       toast.success('Admin edit permissions activated');
     }
   };
 
-  // For debugging purposes, render based on isAdmin first, then canEdit
-  console.log('ADMIN_DEBUG: EditModeToggle rendering decision - canEdit:', canEdit, 'isAdmin:', isAdmin);
+  // Determine if we should show the admin mode
+  const effectiveAdmin = isAdmin === true || adminStatus === true;
   
   // Show the permissions debug banner if there's an inconsistency
-  // Explicit check for isAdmin first
-  if (isAdmin === true && canEdit !== true) {
-    console.log('ADMIN_DEBUG: Inconsistent permissions detected - isAdmin is true but canEdit is false');
+  if (effectiveAdmin && canEdit !== true) {
+    console.log('ADMIN_DEBUG: Inconsistent permissions detected - admin is true but canEdit is false');
     return (
       <div className="w-full bg-yellow-50 py-2 border-b border-yellow-200 sticky top-0 z-50 shadow-sm">
         <div className="container-custom flex justify-between items-center">
@@ -59,7 +84,7 @@ export const EditModeToggle = () => {
   }
   
   // ALWAYS allow rendering for admins, regardless of canEdit state
-  if (isAdmin !== true && !canEdit) {
+  if (!effectiveAdmin && !canEdit) {
     console.log('ADMIN_DEBUG: EditModeToggle not rendering content - no edit permissions');
     return null;
   }
