@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,57 +13,24 @@ export interface EditableContent {
 }
 
 export const useInlineEdit = () => {
-  const { user, isAdmin, isLoading } = useAuth();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
 
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Explicitly check admin status to fix permission issues
-  // Don't rely on truthy checks alone - explicitly compare to true
-  const canEdit = !isLoading && user !== null && isAdmin === true;
+  // Simplified canEdit logic - only rely on isAdmin from useAuth
+  // This fixes issues where canEdit wasn't being calculated correctly
+  const canEdit = !authLoading && user !== null && isAdmin === true;
 
-  // Enhanced debug log to track what's happening with admin permissions
+  // Debug log for admin status
   useEffect(() => {
-    console.log('ADMIN_DEBUG: useInlineEdit → Components of canEdit calculation:');
-    console.log('ADMIN_DEBUG: isLoading =', isLoading, 'Type:', typeof isLoading);
-    console.log('ADMIN_DEBUG: user =', user ? user.email : null, 'Type:', typeof user);
-    console.log('ADMIN_DEBUG: isAdmin =', isAdmin, 'Type:', typeof isAdmin);
-    console.log('ADMIN_DEBUG: canEdit result =', canEdit, 'Type:', typeof canEdit);
-    
-    if (user && !canEdit) {
-      console.log('ADMIN_DEBUG: User is logged in but cannot edit. Admin status check may be failing.');
-      // Additional check - if user exists but cannot edit, verify admin status directly
-      const checkAdminDirectly = async () => {
-        try {
-          if (user) {
-            const { data, error } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', user.id)
-              .eq('role', 'admin')
-              .maybeSingle();
-            
-            console.log('ADMIN_DEBUG: Direct admin check result:', data, 'Error:', error);
-            
-            // Add a second verification method using RPC if available
-            try {
-              const { data: rpcCheck, error: rpcError } = await supabase.rpc('is_admin', {
-                user_id: user.id
-              });
-              console.log('ADMIN_DEBUG: RPC admin check result:', rpcCheck, 'Error:', rpcError);
-            } catch (rpcErr) {
-              console.log('ADMIN_DEBUG: RPC function may not exist:', rpcErr);
-            }
-          }
-        } catch (err) {
-          console.error('ADMIN_DEBUG: Error in direct admin check:', err);
-        }
-      };
-      
-      checkAdminDirectly();
-    }
-  }, [user, isAdmin, canEdit, isLoading]);
+    console.log('ADMIN_DEBUG: useInlineEdit → Admin status check:');
+    console.log('ADMIN_DEBUG: authLoading =', authLoading);
+    console.log('ADMIN_DEBUG: user =', user ? user.email : null);
+    console.log('ADMIN_DEBUG: isAdmin =', isAdmin);
+    console.log('ADMIN_DEBUG: canEdit result =', canEdit);
+  }, [user, isAdmin, canEdit, authLoading]);
 
   const saveContent = async (content: EditableContent) => {
     if (!canEdit) {

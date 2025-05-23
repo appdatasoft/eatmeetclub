@@ -13,13 +13,13 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const { canEdit } = useEditableContent();
 
   useEffect(() => {
-    console.log('[MainLayout] canEdit status:', canEdit);
+    console.log('[MainLayout] canEdit status:', canEdit, 'Type:', typeof canEdit);
   }, [canEdit]);
 
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      {canEdit && <EditModeToggle />}
+      {canEdit === true && <EditModeToggle />}
       <main className="flex-grow bg-white">
         {children}
       </main>
