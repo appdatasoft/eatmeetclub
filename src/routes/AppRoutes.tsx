@@ -17,6 +17,7 @@ import SetPassword from '@/pages/SetPassword';
 import Signup from '@/pages/Signup';
 import AuthRedirect from '@/components/auth/AuthRedirect';
 import RestaurantJoin from '@/pages/restaurants/RestaurantJoin';
+import UserProfilePage from '@/pages/UserProfilePage';
 
 const AppRoutes = () => {
   return (
@@ -26,6 +27,8 @@ const AppRoutes = () => {
       <Route path="/event/:id" element={<EventDetails />} />
       <Route path="/become-member" element={<BecomeMember />} />
       <Route path="/restaurants/join" element={<RestaurantJoin />} />
+      <Route path="/profile" element={<UserProfilePage />} />
+      <Route path="/profile/:id" element={<UserProfilePage />} />
       
       {/* Auth routes with AuthRedirect for authenticated users */}
       <Route path="/login" element={<AuthRedirect><Login /></AuthRedirect>} />

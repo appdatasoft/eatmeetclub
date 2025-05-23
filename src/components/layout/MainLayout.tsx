@@ -14,21 +14,26 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const [showEditToggle, setShowEditToggle] = useState(false);
 
   useEffect(() => {
-    console.log('[MainLayout] canEdit status:', canEdit, 'Type:', typeof canEdit);
+    console.log('[MainLayout] canEdit status received:', canEdit, 'Type:', typeof canEdit);
     
-    // Use a small delay to ensure we have the latest canEdit value
-    // This is necessary because canEdit might change after initial render
-    const timer = setTimeout(() => {
-      setShowEditToggle(canEdit === true);
-    }, 100);
-    
-    return () => clearTimeout(timer);
+    // Update showEditToggle immediately when canEdit changes
+    setShowEditToggle(canEdit === true);
+    console.log('[MainLayout] showEditToggle updated to:', canEdit === true);
   }, [canEdit]);
+
+  console.log('[MainLayout] About to render, showEditToggle:', showEditToggle, 'canEdit:', canEdit);
 
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      {showEditToggle && <EditModeToggle />}
+      {showEditToggle && (
+        <>
+          <div style={{ border: '2px solid red', padding: '4px', fontSize: '12px' }}>
+            DEBUG: EditModeToggle should be visible (showEditToggle: {showEditToggle.toString()}, canEdit: {canEdit?.toString()})
+          </div>
+          <EditModeToggle />
+        </>
+      )}
       <main className="flex-grow bg-white">
         {children}
       </main>

@@ -211,7 +211,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     toggleEditMode,
   };
   
-  console.log('[EditableContentProvider] Providing context with editModeEnabled:', editModeEnabled);
+  console.log('[EditableContentProvider] Providing context with canEdit:', canEdit);
   
   return (
     <EditableContext.Provider value={contextValue}>
