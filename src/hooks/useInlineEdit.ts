@@ -28,7 +28,8 @@ export const useInlineEdit = () => {
     console.log('ADMIN_DEBUG: user =', user ? user.email : null);
     console.log('ADMIN_DEBUG: isAdmin =', isAdmin);
     
-    // Only grant edit access when authentication is complete and user is admin
+    // FIXED: Simplify logic - admin always has edit access
+    // Only check if auth is not loading and user exists
     const hasEditAccess = !authLoading && user !== null && isAdmin === true;
     console.log('ADMIN_DEBUG: useInlineEdit → canEdit calculated result =', hasEditAccess);
     

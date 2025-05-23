@@ -1,7 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useInlineEdit, EditableContent } from '@/hooks/useInlineEdit';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 interface EditableContextType {
   contentMap: Record<string, EditableContent>;
@@ -44,15 +44,21 @@ export const useEditableContent = () => {
 };
 
 export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { saveContent: saveInlineContent, fetchContent, isLoading, canEdit } = useInlineEdit();
+  const { isAdmin } = useAuth();
+  const { saveContent: saveInlineContent, fetchContent, isLoading, canEdit: inlineEditCanEdit } = useInlineEdit();
   const [contentMap, setContentMap] = useState<Record<string, EditableContent>>({});
   const [editModeEnabled, setEditModeEnabled] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   
+  // FIXED: Consider both inlineEditCanEdit and isAdmin
+  const canEdit = inlineEditCanEdit || isAdmin === true;
+  
   // Enhanced logging for canEdit status and improved reactivity
   useEffect(() => {
-    console.log('[EditableContentProvider] canEdit received from useInlineEdit:', canEdit, 'Type:', typeof canEdit);
-    console.log('[EditableContentProvider] Current editModeEnabled state:', editModeEnabled);
+    console.log('[EditableContentProvider] canEdit sources:');
+    console.log('[EditableContentProvider] inlineEditCanEdit =', inlineEditCanEdit);
+    console.log('[EditableContentProvider] isAdmin =', isAdmin);
+    console.log('[EditableContentProvider] Final canEdit =', canEdit);
     
     if (canEdit === false) {
       console.log('[EditableContentProvider] Edit access denied - canEdit is false');
@@ -64,7 +70,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     } else if (canEdit === true) {
       console.log('[EditableContentProvider] Edit access granted - canEdit is true');
     }
-  }, [canEdit, editModeEnabled]);
+  }, [canEdit, editModeEnabled, inlineEditCanEdit, isAdmin]);
   
   // Add dedicated logging for editModeEnabled changes
   useEffect(() => {
@@ -211,7 +217,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     toggleEditMode,
   };
   
-  console.log('[EditableContentProvider] Providing context with canEdit:', canEdit);
+  console.log('[EditableContentProvider] Providing context with canEdit:', canEdit, 'isAdmin:', isAdmin);
   
   return (
     <EditableContext.Provider value={contextValue}>

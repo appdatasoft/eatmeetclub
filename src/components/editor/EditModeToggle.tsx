@@ -2,22 +2,35 @@
 import React, { useEffect } from 'react';
 import { useEditableContent } from './EditableContentProvider';
 import { Pencil, Eye } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 export const EditModeToggle = () => {
+  const { isAdmin } = useAuth();
   const { canEdit, editModeEnabled, toggleEditMode } = useEditableContent();
   
   useEffect(() => {
+    console.log('ADMIN_DEBUG: EditModeToggle component mounting');
+    console.log('ADMIN_DEBUG: EditModeToggle component - isAdmin:', isAdmin);
     console.log('ADMIN_DEBUG: EditModeToggle component - canEdit:', canEdit);
     console.log('ADMIN_DEBUG: EditModeToggle component - editModeEnabled:', editModeEnabled);
-  }, [canEdit, editModeEnabled]);
+  }, [canEdit, editModeEnabled, isAdmin]);
 
-  // Only render the component if user can edit content
-  if (canEdit !== true) {
-    console.log('ADMIN_DEBUG: EditModeToggle not rendering - canEdit is not true');
-    return null;
+  // For debugging purposes, always render the component with conditional content
+  // This helps us identify if the component itself is rendering or not
+  console.log('ADMIN_DEBUG: EditModeToggle rendering decision - canEdit:', canEdit, 'isAdmin:', isAdmin);
+  
+  if (!canEdit && !isAdmin) {
+    console.log('ADMIN_DEBUG: EditModeToggle not rendering content - no edit permissions');
+    return (
+      <div className="w-full bg-yellow-50 py-2 border-b border-yellow-200 sticky top-0 z-50 shadow-sm">
+        <div className="container-custom flex justify-between items-center">
+          <span className="text-yellow-700 font-medium">Debug: Component rendered but permissions missing (isAdmin: {String(isAdmin)}, canEdit: {String(canEdit)})</span>
+        </div>
+      </div>
+    );
   }
 
-  console.log('ADMIN_DEBUG: EditModeToggle IS RENDERING - canEdit is true');
+  console.log('ADMIN_DEBUG: EditModeToggle IS RENDERING - has edit permissions');
   return (
     <div className="w-full bg-gray-50 py-2 border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="container-custom flex justify-between items-center">
