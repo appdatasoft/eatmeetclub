@@ -46,6 +46,16 @@ export const useInlineEdit = () => {
               .maybeSingle();
             
             console.log('ADMIN_DEBUG: Direct admin check result:', data, 'Error:', error);
+            
+            // Add a second verification method using RPC if available
+            try {
+              const { data: rpcCheck, error: rpcError } = await supabase.rpc('is_admin', {
+                user_id: user.id
+              });
+              console.log('ADMIN_DEBUG: RPC admin check result:', rpcCheck, 'Error:', rpcError);
+            } catch (rpcErr) {
+              console.log('ADMIN_DEBUG: RPC function may not exist:', rpcErr);
+            }
           }
         } catch (err) {
           console.error('ADMIN_DEBUG: Error in direct admin check:', err);

@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
@@ -23,6 +24,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
 
+  // Function to check admin status - separating this for clarity
+  const checkAdminStatus = async (userId: string) => {
+    console.log('ADMIN_DEBUG: Checking admin status for user ID:', userId);
+    
+    try {
+      // First method: Check user_roles table
+      const { data: adminData, error: adminError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (adminError) console.error('ADMIN_DEBUG: Admin check error:', adminError);
+      console.log('ADMIN_DEBUG: Admin check result from user_roles:', adminData);
+      
+      // Second method: Try using is_admin function if available
+      try {
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('is_admin', { 
+          user_id: userId 
+        });
+        
+        if (rpcError) {
+          console.error('ADMIN_DEBUG: RPC admin check error:', rpcError);
+        } else {
+          console.log('ADMIN_DEBUG: RPC admin check result:', rpcResult);
+          // If RPC check is successful, prefer its result
+          return rpcResult === true;
+        }
+      } catch (rpcErr) {
+        console.log('ADMIN_DEBUG: RPC admin check not available:', rpcErr);
+      }
+      
+      // Fall back to first method's result
+      return adminData?.role === 'admin';
+    } catch (error) {
+      console.error('ADMIN_DEBUG: Error checking admin status:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     console.log("ADMIN_DEBUG: AuthProvider initializing");
 
@@ -37,19 +79,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setTimeout(async () => {
             try {
               console.log('ADMIN_DEBUG: Checking admin status for:', currentSession.user.email);
-              const { data: adminData, error: adminError } = await supabase
-                .from('user_roles')
-                .select('role')
-                .eq('user_id', currentSession.user.id)
-                .eq('role', 'admin')
-                .maybeSingle();
-
-              if (adminError) console.error('ADMIN_DEBUG: Admin check error:', adminError);
-              console.log('ADMIN_DEBUG: Admin check result:', adminData);
-
-              const isAdminNow = adminData?.role === 'admin';
-              setIsAdmin(isAdminNow);
-              console.log('ADMIN_DEBUG: isAdmin set to:', isAdminNow);
+              const isUserAdmin = await checkAdminStatus(currentSession.user.id);
+              
+              setIsAdmin(isUserAdmin);
+              console.log('ADMIN_DEBUG: isAdmin set to:', isUserAdmin, '(Type:', typeof isUserAdmin, ')');
             } catch (error) {
               console.error('ADMIN_DEBUG: Error checking admin status:', error);
               setIsAdmin(false);
@@ -81,19 +114,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (data.session?.user) {
           console.log('ADMIN_DEBUG: Checking initial admin status for:', data.session.user.email);
-          const { data: adminData, error: adminError } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', data.session.user.id)
-            .eq('role', 'admin')
-            .maybeSingle();
-
-          if (adminError) console.error('ADMIN_DEBUG: Initial admin check error:', adminError);
-          console.log('ADMIN_DEBUG: Initial admin check result:', adminData);
-
-          const isAdminNow = adminData?.role === 'admin';
-          setIsAdmin(isAdminNow);
-          console.log('ADMIN_DEBUG: Initial isAdmin set to:', isAdminNow);
+          const isUserAdmin = await checkAdminStatus(data.session.user.id);
+          
+          setIsAdmin(isUserAdmin);
+          console.log('ADMIN_DEBUG: Initial isAdmin set to:', isUserAdmin, '(Type:', typeof isUserAdmin, ')');
         }
       } catch (error: any) {
         console.error('ADMIN_DEBUG: Error loading user data:', error);
