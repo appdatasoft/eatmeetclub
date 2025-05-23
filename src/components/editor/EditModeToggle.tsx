@@ -31,7 +31,12 @@ export const EditModeToggle = () => {
         <button
           onClick={() => {
             console.log('ADMIN_DEBUG: Toggle edit mode button clicked');
+            console.log('ADMIN_DEBUG: Before toggle - editModeEnabled:', editModeEnabled);
             toggleEditMode();
+            // We can't log the after state here because setState is async
+            setTimeout(() => {
+              console.log('ADMIN_DEBUG: After toggle (timeout) - editModeEnabled should be updated now');
+            }, 0);
           }}
           className={`
             flex items-center gap-2 px-6 py-2 rounded-full transition-all

@@ -52,6 +52,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   // Enhanced logging for canEdit status
   useEffect(() => {
     console.log('[EditableContentProvider] canEdit received from useInlineEdit:', canEdit, 'Type:', typeof canEdit);
+    console.log('[EditableContentProvider] Current editModeEnabled state:', editModeEnabled);
     
     if (canEdit === false) {
       console.log('[EditableContentProvider] Edit access denied - canEdit is false');
@@ -68,6 +69,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   // Add dedicated logging for editModeEnabled changes
   useEffect(() => {
     console.log('[EditableContentProvider] Edit mode is now:', editModeEnabled ? 'ENABLED' : 'DISABLED');
+    console.log('[EditableContentProvider] editModeEnabled value:', editModeEnabled, 'Type:', typeof editModeEnabled);
   }, [editModeEnabled]);
   
   const fetchPageContent = async () => {
@@ -83,25 +85,36 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   
   // Load content on mount
   useEffect(() => {
+    console.log('[EditableContentProvider] Provider mounted - preparing to fetch content');
     fetchPageContent();
   }, []);
   
   // Only add keyboard event listeners when user can edit
   useEffect(() => {
+    console.log('[EditableContentProvider] Setting up keyboard listeners, canEdit:', canEdit);
+    
     if (canEdit) {
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
           console.log('[EditableContentProvider] Escape key pressed - disabling edit mode');
+          console.log('[EditableContentProvider] Before Escape key - editModeEnabled:', editModeEnabled);
           setEditModeEnabled(false);
         }
       };
       
+      console.log('[EditableContentProvider] Adding keyboard event listener');
       window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
+      return () => {
+        console.log('[EditableContentProvider] Removing keyboard event listener');
+        window.removeEventListener('keydown', handleKeyDown);
+      };
     }
   }, [canEdit]);
   
   const saveContent = async (id: string, content: string, contentType: string = 'text') => {
+    console.log('[EditableContentProvider] Saving content for element:', id);
+    console.log('[EditableContentProvider] Content:', content);
+    
     const success = await saveInlineContent({
       page_path: window.location.pathname,
       element_id: id,
@@ -122,8 +135,10 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
         },
       }));
       toast.success('Content saved successfully');
+      console.log('[EditableContentProvider] Content saved successfully');
     } else {
       toast.error('Failed to save content');
+      console.error('[EditableContentProvider] Failed to save content');
     }
     
     return success;
@@ -136,6 +151,8 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   };
   
   const handleSave = async (content: EditableContent) => {
+    console.log('[EditableContentProvider] Saving edited content:', content);
+    
     const success = await saveInlineContent(content);
     
     if (success) {
@@ -146,8 +163,10 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
       }));
       setIsEditing(null);
       toast.success('Content saved successfully');
+      console.log('[EditableContentProvider] Save successful, updated contentMap');
     } else {
       toast.error('Failed to save content');
+      console.error('[EditableContentProvider] Save failed');
     }
     
     return success;
@@ -166,7 +185,11 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     // Only toggle if user can edit
     if (canEdit) {
       console.log('[EditableContentProvider] Toggling edit mode from', editModeEnabled, 'to', !editModeEnabled);
-      setEditModeEnabled(prev => !prev);
+      setEditModeEnabled(prev => {
+        const newValue = !prev;
+        console.log('[EditableContentProvider] Edit mode toggled to:', newValue);
+        return newValue;
+      });
     } else {
       console.log('[EditableContentProvider] Cannot toggle edit mode - user does not have edit permission (canEdit is false)');
       toast.error("You don't have permission to edit content");
@@ -187,6 +210,8 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     handleCancel,
     toggleEditMode,
   };
+  
+  console.log('[EditableContentProvider] Providing context with editModeEnabled:', editModeEnabled);
   
   return (
     <EditableContext.Provider value={contextValue}>
