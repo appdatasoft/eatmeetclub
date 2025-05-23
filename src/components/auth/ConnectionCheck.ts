@@ -26,14 +26,16 @@ export const useConnectionCheck = (): UseConnectionCheckResult => {
   }, []);
 
   useEffect(() => {
-    // Set a timeout to prevent the connection check from hanging
+    // Set a shorter timeout to prevent the connection check from hanging
     const connectionTimeout = setTimeout(() => {
-      setConnectionChecking(false);
       console.log("Connection check timed out, continuing anyway");
-    }, 3000);
+      setConnectionChecking(false);
+      setConnectionOk(true); // Assume connection is OK if check times out
+    }, 2000); // Reduced to 2 seconds
     
     checkConnection().finally(() => clearTimeout(connectionTimeout));
     
+    return () => clearTimeout(connectionTimeout);
   }, [checkConnection]);
 
   return { connectionChecking, connectionOk };

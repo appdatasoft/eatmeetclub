@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,8 +49,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     console.log("ADMIN_DEBUG: AuthProvider initializing");
 
+    let isMounted = true;
+    
+    // Set a timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      if (isMounted) {
+        console.log("ADMIN_DEBUG: Auth loading timeout reached, stopping loading state");
+        setIsLoading(false);
+      }
+    }, 10000); // 10 second timeout
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        if (!isMounted) return;
+        
         console.log('ADMIN_DEBUG: Auth state changed:', event, 'user:', currentSession?.user?.email);
 
         setSession(currentSession);
@@ -60,31 +73,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.log('ADMIN_DEBUG: Checking admin status for:', currentSession.user.email);
             const isUserAdmin = await checkAdminStatus(currentSession.user.id);
             
-            setIsAdmin(isUserAdmin);
-            console.log('ADMIN_DEBUG: isAdmin set to:', isUserAdmin, '(Type:', typeof isUserAdmin, ')');
+            if (isMounted) {
+              setIsAdmin(isUserAdmin);
+              console.log('ADMIN_DEBUG: isAdmin set to:', isUserAdmin, '(Type:', typeof isUserAdmin, ')');
+            }
           } catch (error) {
             console.error('ADMIN_DEBUG: Error checking admin status:', error);
-            setIsAdmin(false);
+            if (isMounted) {
+              setIsAdmin(false);
+            }
           } finally {
-            setIsLoading(false);
+            if (isMounted) {
+              setIsLoading(false);
+              clearTimeout(loadingTimeout);
+            }
           }
         } else {
-          setIsAdmin(false);
-          setIsLoading(false);
+          if (isMounted) {
+            setIsAdmin(false);
+            setIsLoading(false);
+            clearTimeout(loadingTimeout);
+          }
         }
       }
     );
 
     const loadUserData = async () => {
+      if (!isMounted) return;
+      
       try {
         console.log('ADMIN_DEBUG: Loading initial user session');
         const { data, error } = await supabase.auth.getSession();
 
         if (error) {
           console.error('ADMIN_DEBUG: Error getting session:', error.message);
-          setIsLoading(false);
+          if (isMounted) {
+            setIsLoading(false);
+            clearTimeout(loadingTimeout);
+          }
           return;
         }
+
+        if (!isMounted) return;
 
         console.log('ADMIN_DEBUG: Initial session loaded:', !!data.session, 'user:', data.session?.user?.email);
         setSession(data.session);
@@ -92,21 +122,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (data.session?.user) {
           console.log('ADMIN_DEBUG: Checking initial admin status for:', data.session.user.email);
-          const isUserAdmin = await checkAdminStatus(data.session.user.id);
-          
-          setIsAdmin(isUserAdmin);
-          console.log('ADMIN_DEBUG: Initial isAdmin set to:', isUserAdmin, '(Type:', typeof isUserAdmin, ')');
+          try {
+            const isUserAdmin = await checkAdminStatus(data.session.user.id);
+            
+            if (isMounted) {
+              setIsAdmin(isUserAdmin);
+              console.log('ADMIN_DEBUG: Initial isAdmin set to:', isUserAdmin, '(Type:', typeof isUserAdmin, ')');
+            }
+          } catch (error) {
+            console.error('ADMIN_DEBUG: Error in initial admin check:', error);
+            if (isMounted) {
+              setIsAdmin(false);
+            }
+          }
         }
       } catch (error: any) {
         console.error('ADMIN_DEBUG: Error loading user data:', error);
+        if (isMounted) {
+          setIsAdmin(false);
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+          clearTimeout(loadingTimeout);
+        }
       }
     };
 
     loadUserData();
 
     return () => {
+      isMounted = false;
+      clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
   }, []);
