@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("ADMIN_DEBUG: Auth loading timeout reached, stopping loading state");
         setIsLoading(false);
       }
-    }, 10000); // 10 second timeout
+    }, 5000); // Reduced to 5 seconds
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
@@ -163,7 +163,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log(`Attempting to sign in: ${email}`);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      
+      if (error) {
+        console.error("Login error:", error);
+        
+        // Handle different types of authentication errors
+        let errorMessage = "Failed to log in";
+        
+        if (error.message.includes("Invalid login credentials")) {
+          errorMessage = "Invalid email or password";
+        } else if (error.message.includes("Email not confirmed")) {
+          errorMessage = "Please check your email and confirm your account";
+        } else if (error.message.includes("Too many requests")) {
+          errorMessage = "Too many login attempts. Please try again later";
+        } else {
+          errorMessage = error.message;
+        }
+        
+        toast({
+          title: "Login Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        throw error;
+      }
 
       toast({
         title: "Login successful",
@@ -171,11 +194,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
     } catch (error: any) {
       console.error("Login error:", error);
-      toast({
-        title: "Login Error",
-        description: error.message || "Failed to log in",
-        variant: "destructive",
-      });
+      // Error is already handled above, just re-throw
       throw error;
     } finally {
       setIsLoading(false);
@@ -186,18 +205,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
+      
+      if (error) {
+        console.error("Signup error:", error);
+        
+        let errorMessage = "Failed to sign up";
+        
+        if (error.message.includes("User already registered")) {
+          errorMessage = "An account with this email already exists";
+        } else if (error.message.includes("Password should be")) {
+          errorMessage = "Password does not meet requirements";
+        } else {
+          errorMessage = error.message;
+        }
+        
+        toast({
+          title: "Signup Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        throw error;
+      }
 
       toast({
         title: "Registration successful",
         description: "Please check your email to verify your account.",
       });
     } catch (error: any) {
-      toast({
-        title: "Signup Error",
-        description: error.message || "Failed to sign up",
-        variant: "destructive",
-      });
+      // Error is already handled above, just re-throw
       throw error;
     } finally {
       setIsLoading(false);

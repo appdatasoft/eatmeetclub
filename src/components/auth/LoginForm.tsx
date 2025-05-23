@@ -30,11 +30,25 @@ export const LoginForm: React.FC<LoginFormProps> = ({ connectionOk, onSubmit, lo
       return;
     }
 
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setInternalLoading(true);
     console.log("Attempting login for:", email);
     
     try {
       await onSubmit(email, password);
+    } catch (error: any) {
+      console.error("Login form error:", error);
+      // Error handling is done in the AuthContext, no need to show toast here
     } finally {
       setInternalLoading(false);
     }
@@ -62,6 +76,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ connectionOk, onSubmit, lo
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading || internalLoading}
             />
           </div>
           <div className="space-y-2">
@@ -73,6 +88,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ connectionOk, onSubmit, lo
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading || internalLoading}
             />
           </div>
           <Button 
