@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useInlineEdit, EditableContent } from '@/hooks/useInlineEdit';
 import { toast } from 'sonner';
@@ -50,15 +51,14 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [localCanEdit, setLocalCanEdit] = useState(false);
 
-  // PRIORITY CHECK: First check isAdmin directly, before inlineEditCanEdit
+  // PRIORITY: First react to isAdmin directly, then fallback to inlineEditCanEdit
   useEffect(() => {
-    // We prioritize admin status - if admin, they can always edit regardless of other checks
+    // Admin status is the highest priority
     if (isAdmin === true) {
       console.log('[EditableContentProvider] isAdmin is true, enabling canEdit immediately');
       setLocalCanEdit(true);
     } else {
-      // Fall back to inlineEditCanEdit if not admin
-      console.log('[EditableContentProvider] isAdmin is false, using inlineEditCanEdit:', inlineEditCanEdit);
+      console.log('[EditableContentProvider] isAdmin is not true, using inlineEditCanEdit:', inlineEditCanEdit);
       setLocalCanEdit(inlineEditCanEdit);
     }
   }, [isAdmin, inlineEditCanEdit]);
@@ -166,7 +166,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     console.log('[EditableContentProvider] isAdmin =', isAdmin);
     console.log('[EditableContentProvider] current editModeEnabled =', editModeEnabled);
     
-    // Prioritize checking isAdmin first for immediate response
+    // Always prioritize isAdmin check before localCanEdit
     if (isAdmin === true || localCanEdit) {
       const newMode = !editModeEnabled;
       console.log('[EditableContentProvider] Setting editModeEnabled to:', newMode);

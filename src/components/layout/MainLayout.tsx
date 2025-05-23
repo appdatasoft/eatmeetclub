@@ -20,7 +20,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     console.log('[MainLayout] isAdmin:', isAdmin);
     console.log('[MainLayout] canEdit from context:', canEdit);
     
-    // FIXED: Use a direct assignment - if admin or canEdit is true, show toggle
+    // Always prioritize isAdmin status first - if admin, always show toggle
     const shouldShow = isAdmin === true || canEdit === true;
     setShowEditToggle(shouldShow);
     console.log('[MainLayout] showEditToggle updated to:', shouldShow);
@@ -32,9 +32,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     <div className="flex flex-col min-h-screen">
       <Navbar />
       
-      {/* Admin diagnostic banner */}
+      {/* Debug banner when permissions are inconsistent */}
       {isAdmin === true && canEdit !== true && (
-        <div style={{ background: 'red', color: 'white', padding: 8, textAlign: 'center', fontSize: '14px' }}>
+        <div className="bg-red-600 text-white px-4 py-2 text-center text-sm font-medium">
           Admin detected, but canEdit is FALSE. Check permissions in EditableContentProvider.
         </div>
       )}

@@ -15,16 +15,18 @@ export const EditModeToggle = () => {
     console.log('ADMIN_DEBUG: EditModeToggle component - editModeEnabled:', editModeEnabled);
   }, [canEdit, editModeEnabled, isAdmin]);
 
-  // Log click events for debugging
+  // Enhanced click handler with more logging
   const handleToggleClick = () => {
     console.log('ADMIN_DEBUG: Toggle edit mode button clicked');
+    console.log('ADMIN_DEBUG: Before toggle - isAdmin:', isAdmin, 'canEdit:', canEdit, 'editModeEnabled:', editModeEnabled);
     toggleEditMode();
+    // We can't log the after state here since state updates are async
   };
 
-  // For debugging purposes, always render the component with conditional content
+  // For debugging purposes, render based on isAdmin first, then canEdit
   console.log('ADMIN_DEBUG: EditModeToggle rendering decision - canEdit:', canEdit, 'isAdmin:', isAdmin);
   
-  // First check isAdmin, then fall back to canEdit
+  // Use isAdmin as the primary permission check, fallback to canEdit
   if (!isAdmin && !canEdit) {
     console.log('ADMIN_DEBUG: EditModeToggle not rendering content - no edit permissions');
     return (
