@@ -6,7 +6,7 @@ import { requestQueue } from './utils/requestQueue';
 
 // Define hardcoded fallback values (only used if env variables are missing)
 const SUPABASE_URL = 'https://wocfwpedauuhlrfugxuu.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvY2Z3cGVkYXV1aGxyZnVneHV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4MjIzNzAsImV4cCI6MjA2MTM5ODM3MH0.ddkNFmDcRtkPA6ubax7_GJxGQ6oNvbmsZ_FTY9DuzhM';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvY2Z3cGVkYXV1aGxyZnVneHV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4OTU2NDcsImV4cCI6MjA2MzQ3MTY0N30.VCqFImrejoKwHdrO0bw0v9LjgSGt5y4u3mStCrq7CE0';
 
 // Get environment variables with fallbacks to the hardcoded values
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL;
