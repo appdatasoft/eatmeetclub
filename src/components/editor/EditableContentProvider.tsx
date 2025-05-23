@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useInlineEdit, EditableContent } from '@/hooks/useInlineEdit';
 import { toast } from 'sonner';
@@ -20,7 +21,7 @@ interface EditableContextType {
 
 const EditableContext = createContext<EditableContextType>({
   contentMap: {},
-  canEdit: true, // temporarily set to true for debug safety
+  canEdit: false,
   editModeEnabled: false,
   setEditModeEnabled: () => {},
   saveContent: async () => false,
@@ -49,19 +50,19 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   const [editModeEnabled, setEditModeEnabled] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
 
-  // ✅ Force canEdit true if isAdmin is true
-  const canEdit = isAdmin || inlineEditCanEdit;
+  // Force canEdit true if isAdmin is true
+  const canEdit = isAdmin === true || inlineEditCanEdit === true;
 
   useEffect(() => {
-    console.log('[EditableContentProvider] canEdit sources:');
-    console.log('[EditableContentProvider] inlineEditCanEdit =', inlineEditCanEdit);
+    console.log('[EditableContentProvider] canEdit calculation:');
     console.log('[EditableContentProvider] isAdmin =', isAdmin);
+    console.log('[EditableContentProvider] inlineEditCanEdit =', inlineEditCanEdit);
     console.log('[EditableContentProvider] Final canEdit =', canEdit);
 
-    if (canEdit === false) {
-      if (editModeEnabled) {
-        setEditModeEnabled(false);
-      }
+    // If user loses edit permissions, turn off edit mode
+    if (!canEdit && editModeEnabled) {
+      console.log('[EditableContentProvider] Disabling edit mode - no permissions');
+      setEditModeEnabled(false);
     }
   }, [canEdit, editModeEnabled, inlineEditCanEdit, isAdmin]);
 
@@ -147,9 +148,16 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   };
 
   const toggleEditMode = () => {
+    console.log('[EditableContentProvider] toggleEditMode called');
+    console.log('[EditableContentProvider] canEdit =', canEdit);
+    console.log('[EditableContentProvider] current editModeEnabled =', editModeEnabled);
+    
     if (canEdit) {
-      setEditModeEnabled((prev) => !prev);
+      const newMode = !editModeEnabled;
+      console.log('[EditableContentProvider] Setting editModeEnabled to:', newMode);
+      setEditModeEnabled(newMode);
     } else {
+      console.log('[EditableContentProvider] Cannot toggle - no permissions');
       toast.error("You don't have permission to edit content");
     }
   };

@@ -21,26 +21,23 @@ export const useInlineEdit = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   
-  // Update canEdit whenever isAdmin or user changes with improved logging and reactivity
+  // Simplified logic: if user is admin, they can always edit
   useEffect(() => {
-    console.log('ADMIN_DEBUG: useInlineEdit → Admin status updated:');
+    console.log('ADMIN_DEBUG: useInlineEdit → canEdit update check:');
     console.log('ADMIN_DEBUG: authLoading =', authLoading);
     console.log('ADMIN_DEBUG: user =', user ? user.email : null);
     console.log('ADMIN_DEBUG: isAdmin =', isAdmin);
     
-    // FIXED: Simplify logic - admin always has edit access
-    // Only check if auth is not loading and user exists
-    const hasEditAccess = !authLoading && user !== null && (isAdmin === true);
-    console.log('ADMIN_DEBUG: useInlineEdit → canEdit calculated result =', hasEditAccess);
+    // Simple rule: if not loading, user exists, and user is admin, they can edit
+    const hasEditAccess = !authLoading && user !== null && isAdmin === true;
+    console.log('ADMIN_DEBUG: useInlineEdit → calculated canEdit =', hasEditAccess);
     
-    // Always update canEdit, even if it's the same value to ensure reactivity
     setCanEdit(hasEditAccess);
-    console.log('ADMIN_DEBUG: useInlineEdit → canEdit state updated to:', hasEditAccess);
   }, [user, isAdmin, authLoading]);
 
   // Log canEdit changes
   useEffect(() => {
-    console.log('ADMIN_DEBUG: useInlineEdit → canEdit state changed to:', canEdit);
+    console.log('ADMIN_DEBUG: useInlineEdit → canEdit state updated to:', canEdit);
   }, [canEdit]);
 
   const saveContent = async (content: EditableContent) => {
