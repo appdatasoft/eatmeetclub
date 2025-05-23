@@ -26,7 +26,11 @@ export const useInlineEdit = () => {
 
   // Enhanced debug log to track what's happening with admin permissions
   useEffect(() => {
-    console.log('ADMIN_DEBUG: useInlineEdit → user:', user?.email, '| isAdmin:', isAdmin, '| canEdit:', canEdit, '| isLoading:', isLoading);
+    console.log('ADMIN_DEBUG: useInlineEdit → Components of canEdit calculation:');
+    console.log('ADMIN_DEBUG: isLoading =', isLoading, 'Type:', typeof isLoading);
+    console.log('ADMIN_DEBUG: user =', user ? user.email : null, 'Type:', typeof user);
+    console.log('ADMIN_DEBUG: isAdmin =', isAdmin, 'Type:', typeof isAdmin);
+    console.log('ADMIN_DEBUG: canEdit result =', canEdit, 'Type:', typeof canEdit);
     
     if (user && !canEdit) {
       console.log('ADMIN_DEBUG: User is logged in but cannot edit. Admin status check may be failing.');

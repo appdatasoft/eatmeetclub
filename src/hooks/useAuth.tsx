@@ -7,7 +7,9 @@ export const useAuth = () => {
   
   useEffect(() => {
     if (context) {
-      console.log('ADMIN_DEBUG: useAuth - isLoggedIn:', !!context.user, 'email:', context.user?.email, 'isAdmin:', context.isAdmin);
+      console.log('ADMIN_DEBUG: useAuth - isLoggedIn:', !!context.user, 'email:', context.user?.email);
+      console.log('ADMIN_DEBUG: useAuth - isAdmin value:', context.isAdmin, 'Type:', typeof context.isAdmin);
+      console.log('ADMIN_DEBUG: useAuth - isLoading value:', context.isLoading, 'Type:', typeof context.isLoading);
       
       // Force a re-evaluation of admin status if user is logged in but not admin
       if (context.user && !context.isAdmin) {
