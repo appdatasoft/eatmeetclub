@@ -14,10 +14,14 @@ interface WithInlineEditProps {
 const withInlineEdit = <P extends object>(Component: React.ComponentType<P>) => {
   return (props: P & WithInlineEditProps) => {
     const { id, contentType = 'text', className, tag = 'div', children, ...rest } = props;
-    const { contentMap, isEditing, handleEdit, handleSave, handleCancel, canEdit } = useEditableContent();
+    const { contentMap, isEditing, handleEdit, handleSave, handleCancel, canEdit, editModeEnabled } = useEditableContent();
+
+    // Log component render info for debugging
+    console.log(`WithInlineEdit[${id}] - canEdit:`, canEdit, 'editModeEnabled:', editModeEnabled);
 
     // If user can't edit, just render the component normally
     if (!canEdit) {
+      console.log(`WithInlineEdit[${id}] - No edit permission, rendering normal component`);
       return <Component {...rest as P}>{children}</Component>;
     }
 
@@ -36,6 +40,7 @@ const withInlineEdit = <P extends object>(Component: React.ComponentType<P>) => 
         onEdit={() => handleEdit(id)}
         onSave={handleSave}
         onCancel={handleCancel}
+        editModeEnabled={editModeEnabled}
       >
         {content || children}
       </EditableElement>

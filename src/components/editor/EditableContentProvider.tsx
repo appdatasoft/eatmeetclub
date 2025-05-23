@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useInlineEdit, EditableContent } from '@/hooks/useInlineEdit';
 import { toast } from 'sonner';
@@ -129,7 +130,8 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     console.log('[EditableContentProvider] inlineEditCanEdit =', inlineEditCanEdit);
     console.log('[EditableContentProvider] localCanEdit =', localCanEdit);
     console.log('[EditableContentProvider] adminInitialized =', adminInitialized);
-  }, [isAdmin, inlineEditCanEdit, localCanEdit, adminInitialized, directAdminCheck]);
+    console.log('[EditableContentProvider] editModeEnabled =', editModeEnabled);
+  }, [isAdmin, inlineEditCanEdit, localCanEdit, adminInitialized, directAdminCheck, editModeEnabled]);
 
   // If user loses edit permissions, turn off edit mode
   useEffect(() => {
@@ -198,6 +200,11 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   };
 
   const handleEdit = (id: string) => {
+    if (!editModeEnabled) {
+      console.log('[EditableContentProvider] Cannot edit - edit mode not enabled');
+      return;
+    }
+    console.log('[EditableContentProvider] Setting isEditing for element:', id);
     setIsEditing(id);
   };
 
@@ -232,26 +239,21 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     
     // Always prioritize admin check
     if (effectiveAdmin) {
-      const newMode = !editModeEnabled;
-      console.log('[EditableContentProvider] Admin detected, setting editModeEnabled to:', newMode);
-      setEditModeEnabled(newMode);
-      
-      // If this is the first time enabling edit mode, show a welcome message
-      if (newMode && !adminInitialized) {
-        toast.success('Welcome, admin! Edit mode is now enabled');
-        setAdminInitialized(true);
-      }
-    } else if (localCanEdit) {
-      const newMode = !editModeEnabled;
-      console.log('[EditableContentProvider] User has edit permissions, setting editModeEnabled to:', newMode);
-      setEditModeEnabled(newMode);
+      console.log('[EditableContentProvider] Admin detected, toggling edit mode');
+      // Toggle edit mode state
+      setEditModeEnabled(prev => !prev);
+      return;
+    }
+    
+    if (localCanEdit) {
+      console.log('[EditableContentProvider] User has edit permissions, toggling edit mode');
+      setEditModeEnabled(prev => !prev);
     } else {
       // Try a direct admin check before giving up
       checkAdminStatus().then(isAdmin => {
         if (isAdmin) {
-          const newMode = !editModeEnabled;
-          console.log('[EditableContentProvider] Admin confirmed by direct check, setting editModeEnabled to:', newMode);
-          setEditModeEnabled(newMode);
+          console.log('[EditableContentProvider] Admin confirmed by direct check, enabling edit mode');
+          setEditModeEnabled(true);
           toast.success('Admin permissions confirmed! Edit mode enabled');
         } else {
           console.log('[EditableContentProvider] Cannot toggle - no permissions confirmed');
@@ -265,18 +267,27 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   const effectiveAdmin = isAdmin === true || directAdminCheck === true;
   const effectiveCanEdit = effectiveAdmin || localCanEdit;
 
+  // Save all the handlers and state for context
+  const saveHandler = async (id: string, content: string, contentType: string = 'text') => {
+    return await saveContent(id, content, contentType);
+  };
+
+  const fetchPageContentHandler = async () => {
+    await fetchPageContent();
+  };
+
   const contextValue = {
     contentMap,
     canEdit: effectiveCanEdit, // Always prioritize isAdmin from any source
     editModeEnabled,
     setEditModeEnabled,
-    saveContent: async () => false, // Placeholder, actual implementation omitted for brevity
+    saveContent: saveHandler,
     isLoading,
-    fetchPageContent: async () => {}, // Placeholder, actual implementation omitted for brevity
+    fetchPageContent: fetchPageContentHandler,
     isEditing,
-    handleEdit: () => {}, // Placeholder, actual implementation omitted for brevity
-    handleSave: async () => false, // Placeholder, actual implementation omitted for brevity
-    handleCancel: () => {}, // Placeholder, actual implementation omitted for brevity
+    handleEdit,
+    handleSave,
+    handleCancel,
     toggleEditMode,
     checkAdminStatus,
   };

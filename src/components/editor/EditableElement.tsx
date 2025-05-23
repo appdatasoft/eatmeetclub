@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { EditableContent } from '@/hooks/useInlineEdit';
 import { Button } from '@/components/ui/button';
 import { Pencil, Check, X } from 'lucide-react';
-import { useEditableContent } from './EditableContentProvider';
 
 interface EditableElementProps {
   children: React.ReactNode;
@@ -13,6 +12,7 @@ interface EditableElementProps {
   className?: string;
   tag?: keyof JSX.IntrinsicElements;
   isEditing: boolean;
+  editModeEnabled: boolean;
   onEdit: () => void;
   onSave: (content: EditableContent) => Promise<boolean>;
   onCancel: () => void;
@@ -26,6 +26,7 @@ const EditableElement: React.FC<EditableElementProps> = ({
   className = '',
   tag = 'div',
   isEditing,
+  editModeEnabled,
   onEdit,
   onSave,
   onCancel
@@ -33,7 +34,11 @@ const EditableElement: React.FC<EditableElementProps> = ({
   const [editedContent, setEditedContent] = useState<string>('');
   const editableRef = useRef<HTMLDivElement>(null);
   const Tag = tag;
-  const { editModeEnabled } = useEditableContent();
+  
+  // For debugging purposes
+  useEffect(() => {
+    console.log(`EditableElement[${id}] - isEditing:`, isEditing, 'editModeEnabled:', editModeEnabled);
+  }, [id, isEditing, editModeEnabled]);
   
   useEffect(() => {
     if (isEditing && editableRef.current) {
