@@ -8,13 +8,14 @@ export const EditModeToggle = () => {
   
   useEffect(() => {
     console.log('ADMIN_DEBUG: EditModeToggle component - canEdit:', canEdit, 'Type:', typeof canEdit);
+    console.log('ADMIN_DEBUG: EditModeToggle component - editModeEnabled:', editModeEnabled, 'Type:', typeof editModeEnabled);
     
     if (canEdit === false) {
       console.log('ADMIN_DEBUG: EditModeToggle not showing - canEdit is false');
     } else if (canEdit === true) {
       console.log('ADMIN_DEBUG: EditModeToggle IS SHOWING - canEdit is true');
     }
-  }, [canEdit]);
+  }, [canEdit, editModeEnabled]);
 
   // Only render the component if user can edit content
   if (canEdit !== true) {
@@ -28,7 +29,10 @@ export const EditModeToggle = () => {
       <div className="container-custom flex justify-between items-center">
         <span className="text-gray-700 font-medium">Admin Tools:</span>
         <button
-          onClick={toggleEditMode}
+          onClick={() => {
+            console.log('ADMIN_DEBUG: Toggle edit mode button clicked');
+            toggleEditMode();
+          }}
           className={`
             flex items-center gap-2 px-6 py-2 rounded-full transition-all
             ${editModeEnabled 
