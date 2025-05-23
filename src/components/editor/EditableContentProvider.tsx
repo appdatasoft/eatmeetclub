@@ -3,7 +3,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useInlineEdit, EditableContent } from '@/hooks/useInlineEdit';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 
 interface EditableContextType {
   contentMap: Record<string, EditableContent>;
@@ -51,7 +50,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     saveContent: saveInlineContent, 
     fetchContent, 
     isLoading, 
-    canEdit: inlineEditCanEdit, 
+    canEdit, 
     isEditing, 
     setIsEditing, 
     checkAdminDirectly
@@ -59,74 +58,17 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
 
   const [contentMap, setContentMap] = useState<Record<string, EditableContent>>({});
   const [editModeEnabled, setEditModeEnabled] = useState(false);
-  const [directAdminCheck, setDirectAdminCheck] = useState<boolean | null>(null);
 
-  // Function to directly check admin status
-  const checkAdminStatus = async (): Promise<boolean> => {
-    if (!user) return false;
-    
-    try {
-      console.log('[EditableContentProvider] Performing direct admin check');
-      const { data: rpcResult, error: rpcError } = await supabase.rpc('is_admin', { 
-        user_id: user.id 
-      });
-      
-      if (rpcError) {
-        console.error('[EditableContentProvider] Direct admin check error:', rpcError);
-        return false;
-      }
-      
-      console.log('[EditableContentProvider] Direct admin check result:', rpcResult);
-      setDirectAdminCheck(rpcResult === true);
-      
-      return rpcResult === true;
-    } catch (error) {
-      console.error('[EditableContentProvider] Error in direct admin check:', error);
-      return false;
-    }
-  };
-
-  // Run direct admin check when component mounts if needed
-  useEffect(() => {
-    if (user && isAdmin !== true && directAdminCheck === null) {
-      checkAdminStatus();
-    }
-  }, [user, isAdmin, directAdminCheck]);
-
-  // HIGHEST PRIORITY: Determine effective canEdit status
-  // Always immediately prioritize isAdmin from auth context
-  const effectiveCanEdit = React.useMemo(() => {
-    console.log('[EditableContentProvider] Computing effectiveCanEdit:');
-    console.log('[EditableContentProvider] isAdmin =', isAdmin);
-    console.log('[EditableContentProvider] directAdminCheck =', directAdminCheck);
-    console.log('[EditableContentProvider] inlineEditCanEdit =', inlineEditCanEdit);
-    
-    // If auth context says user is admin, immediately return true
-    if (isAdmin === true) {
-      console.log('[EditableContentProvider] Admin from auth context - canEdit = true');
-      return true;
-    }
-    
-    // If direct admin check confirms admin, return true
-    if (directAdminCheck === true) {
-      console.log('[EditableContentProvider] Admin from direct check - canEdit = true');
-      return true;
-    }
-    
-    // Fall back to inline edit permissions
-    console.log('[EditableContentProvider] Using inlineEditCanEdit =', inlineEditCanEdit);
-    return inlineEditCanEdit;
-  }, [isAdmin, directAdminCheck, inlineEditCanEdit]);
+  // Use the canEdit from useInlineEdit hook directly
+  const effectiveCanEdit = canEdit;
 
   // Logging for debugging
   useEffect(() => {
     console.log('[EditableContentProvider] State update:');
     console.log('[EditableContentProvider] isAdmin =', isAdmin);
-    console.log('[EditableContentProvider] directAdminCheck =', directAdminCheck);
-    console.log('[EditableContentProvider] inlineEditCanEdit =', inlineEditCanEdit);
-    console.log('[EditableContentProvider] effectiveCanEdit =', effectiveCanEdit);
+    console.log('[EditableContentProvider] canEdit =', canEdit);
     console.log('[EditableContentProvider] editModeEnabled =', editModeEnabled);
-  }, [isAdmin, inlineEditCanEdit, effectiveCanEdit, directAdminCheck, editModeEnabled]);
+  }, [isAdmin, canEdit, editModeEnabled]);
 
   // If user loses edit permissions, turn off edit mode
   useEffect(() => {
@@ -222,23 +164,15 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     console.log('[EditableContentProvider] toggleEditMode called');
     console.log('[EditableContentProvider] effectiveCanEdit =', effectiveCanEdit);
     console.log('[EditableContentProvider] isAdmin =', isAdmin);
-    console.log('[EditableContentProvider] directAdminCheck =', directAdminCheck);
     console.log('[EditableContentProvider] current editModeEnabled =', editModeEnabled);
     
-    // Always prioritize admin check first
-    if (isAdmin === true || directAdminCheck === true) {
-      console.log('[EditableContentProvider] Admin detected, toggling edit mode');
-      setEditModeEnabled(prev => !prev);
-      return;
-    }
-    
-    if (effectiveCanEdit) {
+    if (isAdmin === true || effectiveCanEdit) {
       console.log('[EditableContentProvider] User has edit permissions, toggling edit mode');
       setEditModeEnabled(prev => !prev);
     } else {
       // Try a direct admin check before giving up
-      checkAdminStatus().then(isAdmin => {
-        if (isAdmin) {
+      checkAdminDirectly().then(isAdminDirect => {
+        if (isAdminDirect) {
           console.log('[EditableContentProvider] Admin confirmed by direct check, enabling edit mode');
           setEditModeEnabled(true);
           toast.success('Admin permissions confirmed! Edit mode enabled');
@@ -252,7 +186,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
 
   const contextValue = {
     contentMap,
-    canEdit: effectiveCanEdit, // Use the computed effective value
+    canEdit: effectiveCanEdit,
     editModeEnabled,
     setEditModeEnabled,
     saveContent,
@@ -263,7 +197,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     handleSave,
     handleCancel,
     toggleEditMode,
-    checkAdminStatus,
+    checkAdminStatus: checkAdminDirectly,
   };
 
   return (

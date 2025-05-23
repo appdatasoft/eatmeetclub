@@ -1,7 +1,6 @@
-
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
@@ -24,43 +23,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
 
-  // Function to check admin status - separating this for clarity
+  // Single function to check admin status using only RPC
   const checkAdminStatus = async (userId: string) => {
-    console.log('ADMIN_DEBUG: Checking admin status for user ID:', userId);
+    console.log('ADMIN_DEBUG: Checking admin status via RPC for user ID:', userId);
     
     try {
-      // First method: Check user_roles table
-      const { data: adminData, error: adminError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .maybeSingle();
-
-      if (adminError) console.error('ADMIN_DEBUG: Admin check error:', adminError);
-      console.log('ADMIN_DEBUG: Admin check result from user_roles:', adminData);
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('is_admin', { 
+        user_id: userId 
+      });
       
-      // Second method: Try using is_admin function if available
-      try {
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('is_admin', { 
-          user_id: userId 
-        });
-        
-        if (rpcError) {
-          console.error('ADMIN_DEBUG: RPC admin check error:', rpcError);
-        } else {
-          console.log('ADMIN_DEBUG: RPC admin check result:', rpcResult);
-          // If RPC check is successful, prefer its result
-          return rpcResult === true;
-        }
-      } catch (rpcErr) {
-        console.log('ADMIN_DEBUG: RPC admin check not available:', rpcErr);
+      if (rpcError) {
+        console.error('ADMIN_DEBUG: RPC admin check error:', rpcError);
+        return false;
       }
       
-      // Fall back to first method's result
-      return adminData?.role === 'admin';
+      console.log('ADMIN_DEBUG: RPC admin check result:', rpcResult);
+      return rpcResult === true;
     } catch (error) {
-      console.error('ADMIN_DEBUG: Error checking admin status:', error);
+      console.error('ADMIN_DEBUG: Error in RPC admin check:', error);
       return false;
     }
   };
@@ -76,20 +56,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(currentSession?.user || null);
 
         if (currentSession?.user) {
-          setTimeout(async () => {
-            try {
-              console.log('ADMIN_DEBUG: Checking admin status for:', currentSession.user.email);
-              const isUserAdmin = await checkAdminStatus(currentSession.user.id);
-              
-              setIsAdmin(isUserAdmin);
-              console.log('ADMIN_DEBUG: isAdmin set to:', isUserAdmin, '(Type:', typeof isUserAdmin, ')');
-            } catch (error) {
-              console.error('ADMIN_DEBUG: Error checking admin status:', error);
-              setIsAdmin(false);
-            } finally {
-              setIsLoading(false);
-            }
-          }, 0);
+          try {
+            console.log('ADMIN_DEBUG: Checking admin status for:', currentSession.user.email);
+            const isUserAdmin = await checkAdminStatus(currentSession.user.id);
+            
+            setIsAdmin(isUserAdmin);
+            console.log('ADMIN_DEBUG: isAdmin set to:', isUserAdmin, '(Type:', typeof isUserAdmin, ')');
+          } catch (error) {
+            console.error('ADMIN_DEBUG: Error checking admin status:', error);
+            setIsAdmin(false);
+          } finally {
+            setIsLoading(false);
+          }
         } else {
           setIsAdmin(false);
           setIsLoading(false);

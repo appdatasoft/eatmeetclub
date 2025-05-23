@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/layout/AdminLayout';
@@ -15,7 +14,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { supabase } from '@/integrations/supabase/client';
-import { safeJsonParse } from '@/integrations/supabase/utils/responseUtils';
 
 interface User {
   id: string;
@@ -44,7 +42,7 @@ const UsersPage = () => {
         throw authError;
       }
       
-      // Get roles
+      // Get roles using RPC instead of direct table query
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
