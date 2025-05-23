@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,19 +19,20 @@ export const useInlineEdit = () => {
 
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
   
-  // Simplified canEdit logic - only rely on isAdmin from useAuth
-  // This fixes issues where canEdit wasn't being calculated correctly
-  const canEdit = !authLoading && user !== null && isAdmin === true;
-
-  // Debug log for admin status
+  // Update canEdit whenever isAdmin changes
   useEffect(() => {
-    console.log('ADMIN_DEBUG: useInlineEdit → Admin status check:');
+    console.log('ADMIN_DEBUG: useInlineEdit → Admin status updated:');
     console.log('ADMIN_DEBUG: authLoading =', authLoading);
     console.log('ADMIN_DEBUG: user =', user ? user.email : null);
     console.log('ADMIN_DEBUG: isAdmin =', isAdmin);
-    console.log('ADMIN_DEBUG: canEdit result =', canEdit);
-  }, [user, isAdmin, canEdit, authLoading]);
+    
+    // Only grant edit access when authentication is complete and user is admin
+    const hasEditAccess = !authLoading && user !== null && isAdmin === true;
+    console.log('ADMIN_DEBUG: canEdit calculated result =', hasEditAccess);
+    setCanEdit(hasEditAccess);
+  }, [user, isAdmin, authLoading]);
 
   const saveContent = async (content: EditableContent) => {
     if (!canEdit) {

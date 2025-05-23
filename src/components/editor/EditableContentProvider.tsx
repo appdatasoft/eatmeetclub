@@ -49,7 +49,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   const [editModeEnabled, setEditModeEnabled] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   
-  // Enhanced logging for canEdit status
+  // Enhanced logging for canEdit status and improved reactivity
   useEffect(() => {
     console.log('[EditableContentProvider] canEdit received from useInlineEdit:', canEdit, 'Type:', typeof canEdit);
     console.log('[EditableContentProvider] Current editModeEnabled state:', editModeEnabled);

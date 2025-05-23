@@ -12,7 +12,6 @@ export const EditModeToggle = () => {
   }, [canEdit, editModeEnabled]);
 
   // Only render the component if user can edit content
-  // Using strict equality operator to ensure we only show when canEdit is true
   if (canEdit !== true) {
     console.log('ADMIN_DEBUG: EditModeToggle not rendering - canEdit is not true');
     return null;
