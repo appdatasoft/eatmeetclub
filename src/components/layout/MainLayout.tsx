@@ -15,6 +15,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const { isAdmin } = useAuth();
   const { canEdit } = useEditableContent();
   const [showEditToggle, setShowEditToggle] = useState(false);
+  const [permissionLoaded, setPermissionLoaded] = useState(false);
 
   // Always prioritize isAdmin status for edit toggle
   useEffect(() => {
@@ -26,8 +27,15 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     // Use === true for explicit check
     const shouldShow = isAdmin === true || canEdit === true;
     setShowEditToggle(shouldShow);
+    
+    // Set permission as loaded after the first check is complete
+    if (!permissionLoaded && isAdmin !== undefined) {
+      setPermissionLoaded(true);
+    }
+    
     console.log('[MainLayout] showEditToggle updated to:', shouldShow);
-  }, [canEdit, isAdmin]);
+    console.log('[MainLayout] permissionLoaded updated to:', permissionLoaded);
+  }, [canEdit, isAdmin, permissionLoaded]);
 
   console.log('[MainLayout] About to render, showEditToggle:', showEditToggle, 'canEdit:', canEdit, 'isAdmin:', isAdmin);
 

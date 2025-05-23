@@ -1,8 +1,9 @@
 
 import React, { useEffect } from 'react';
 import { useEditableContent } from './EditableContentProvider';
-import { Pencil, Eye } from 'lucide-react';
+import { Pencil, Eye, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 export const EditModeToggle = () => {
   // Move isAdmin check to the TOP - highest priority
@@ -14,6 +15,11 @@ export const EditModeToggle = () => {
     console.log('ADMIN_DEBUG: EditModeToggle component - isAdmin:', isAdmin);
     console.log('ADMIN_DEBUG: EditModeToggle component - canEdit:', canEdit);
     console.log('ADMIN_DEBUG: EditModeToggle component - editModeEnabled:', editModeEnabled);
+    
+    // Auto-initialize edit permissions for admins
+    if (isAdmin === true && !canEdit && !editModeEnabled) {
+      console.log('ADMIN_DEBUG: Admin detected, auto-initializing edit permissions');
+    }
   }, [canEdit, editModeEnabled, isAdmin]);
 
   // Enhanced click handler with more logging
@@ -21,7 +27,10 @@ export const EditModeToggle = () => {
     console.log('ADMIN_DEBUG: Toggle edit mode button clicked');
     console.log('ADMIN_DEBUG: Before toggle - isAdmin:', isAdmin, 'canEdit:', canEdit, 'editModeEnabled:', editModeEnabled);
     toggleEditMode();
-    // We can't log the after state here since state updates are async
+    
+    if (isAdmin === true && !canEdit) {
+      toast.success('Admin edit permissions activated');
+    }
   };
 
   // For debugging purposes, render based on isAdmin first, then canEdit
@@ -34,7 +43,10 @@ export const EditModeToggle = () => {
     return (
       <div className="w-full bg-yellow-50 py-2 border-b border-yellow-200 sticky top-0 z-50 shadow-sm">
         <div className="container-custom flex justify-between items-center">
-          <span className="text-yellow-700 font-medium">Admin detected but edit permissions are not active. Trying to resolve...</span>
+          <span className="flex items-center gap-2 text-yellow-700 font-medium">
+            <AlertCircle size={16} />
+            Admin detected but edit permissions are not active. Trying to resolve...
+          </span>
           <button
             onClick={handleToggleClick}
             className="px-6 py-2 rounded-full bg-yellow-200 text-yellow-800 border border-yellow-300 hover:bg-yellow-300"

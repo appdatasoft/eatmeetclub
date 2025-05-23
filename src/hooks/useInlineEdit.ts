@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,6 +19,7 @@ export const useInlineEdit = () => {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
+  const [roleCheckCompleted, setRoleCheckCompleted] = useState(false);
   
   // Immediately react to admin status changes with highest priority
   useEffect(() => {
@@ -29,11 +29,13 @@ export const useInlineEdit = () => {
     if (isAdmin === true) {
       console.log('ADMIN_DEBUG: useInlineEdit → Admin confirmed, enabling edit mode');
       setCanEdit(true);
+      setRoleCheckCompleted(true);
     } 
     // Only set to false if we're sure user is not admin and auth loading is complete
     else if (!authLoading && isAdmin === false) {
       console.log('ADMIN_DEBUG: useInlineEdit → Not admin, disabling edit mode');
       setCanEdit(false);
+      setRoleCheckCompleted(true);
     }
     // If still loading or undefined, don't change anything yet
   }, [isAdmin, authLoading]);
@@ -41,7 +43,8 @@ export const useInlineEdit = () => {
   // Log canEdit changes
   useEffect(() => {
     console.log('ADMIN_DEBUG: useInlineEdit → canEdit state updated to:', canEdit);
-  }, [canEdit]);
+    console.log('ADMIN_DEBUG: useInlineEdit → roleCheckCompleted state is:', roleCheckCompleted);
+  }, [canEdit, roleCheckCompleted]);
 
   const saveContent = async (content: EditableContent) => {
     // Always check isAdmin first with highest priority
@@ -161,5 +164,6 @@ export const useInlineEdit = () => {
     setIsEditing,
     isLoading: isSaving,
     canEdit: isAdmin === true || canEdit, // HIGHEST PRIORITY: Always enable for admins
+    roleCheckCompleted,
   };
 };

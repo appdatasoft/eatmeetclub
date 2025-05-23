@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useInlineEdit, EditableContent } from '@/hooks/useInlineEdit';
 import { toast } from 'sonner';
@@ -49,18 +48,24 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   const [contentMap, setContentMap] = useState<Record<string, EditableContent>>({});
   const [editModeEnabled, setEditModeEnabled] = useState(false);
   const [localCanEdit, setLocalCanEdit] = useState(false);
+  const [adminInitialized, setAdminInitialized] = useState(false);
 
   // HIGHEST PRIORITY: Always immediately respect isAdmin status
   useEffect(() => {
     if (isAdmin === true) {
       console.log('[EditableContentProvider] isAdmin is true, enabling canEdit immediately');
       setLocalCanEdit(true);
+      
+      // Track that we've initialized admin status to prevent repeated updates
+      if (!adminInitialized) {
+        setAdminInitialized(true);
+      }
     } else if (isAdmin === false) {
       // Only use inlineEditCanEdit when we know for sure user is not admin
       console.log('[EditableContentProvider] isAdmin is false, using inlineEditCanEdit:', inlineEditCanEdit);
       setLocalCanEdit(inlineEditCanEdit);
     }
-  }, [isAdmin, inlineEditCanEdit]);
+  }, [isAdmin, inlineEditCanEdit, adminInitialized]);
 
   // Logging for debugging
   useEffect(() => {
@@ -68,7 +73,8 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     console.log('[EditableContentProvider] isAdmin =', isAdmin);
     console.log('[EditableContentProvider] inlineEditCanEdit =', inlineEditCanEdit);
     console.log('[EditableContentProvider] localCanEdit =', localCanEdit);
-  }, [isAdmin, inlineEditCanEdit, localCanEdit]);
+    console.log('[EditableContentProvider] adminInitialized =', adminInitialized);
+  }, [isAdmin, inlineEditCanEdit, localCanEdit, adminInitialized]);
 
   // If user loses edit permissions, turn off edit mode
   useEffect(() => {
@@ -170,6 +176,12 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
       const newMode = !editModeEnabled;
       console.log('[EditableContentProvider] Admin detected, setting editModeEnabled to:', newMode);
       setEditModeEnabled(newMode);
+      
+      // If this is the first time enabling edit mode, show a welcome message
+      if (newMode && !adminInitialized) {
+        toast.success('Welcome, admin! Edit mode is now enabled');
+        setAdminInitialized(true);
+      }
     } else if (localCanEdit) {
       const newMode = !editModeEnabled;
       console.log('[EditableContentProvider] User has edit permissions, setting editModeEnabled to:', newMode);
