@@ -21,7 +21,7 @@ export const useInlineEdit = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   
-  // Update canEdit whenever isAdmin changes with improved logging and reactivity
+  // Update canEdit whenever isAdmin or user changes with improved logging and reactivity
   useEffect(() => {
     console.log('ADMIN_DEBUG: useInlineEdit → Admin status updated:');
     console.log('ADMIN_DEBUG: authLoading =', authLoading);
@@ -30,7 +30,7 @@ export const useInlineEdit = () => {
     
     // FIXED: Simplify logic - admin always has edit access
     // Only check if auth is not loading and user exists
-    const hasEditAccess = !authLoading && user !== null && isAdmin === true;
+    const hasEditAccess = !authLoading && user !== null && (isAdmin === true);
     console.log('ADMIN_DEBUG: useInlineEdit → canEdit calculated result =', hasEditAccess);
     
     // Always update canEdit, even if it's the same value to ensure reactivity

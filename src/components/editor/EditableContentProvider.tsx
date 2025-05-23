@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useInlineEdit, EditableContent } from '@/hooks/useInlineEdit';
 import { toast } from 'sonner';
@@ -115,7 +116,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
         window.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [canEdit]);
+  }, [canEdit, editModeEnabled]); // Added editModeEnabled to dependencies
   
   const saveContent = async (id: string, content: string, contentType: string = 'text') => {
     console.log('[EditableContentProvider] Saving content for element:', id);
@@ -191,7 +192,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     // Only toggle if user can edit
     if (canEdit) {
       console.log('[EditableContentProvider] Toggling edit mode from', editModeEnabled, 'to', !editModeEnabled);
-      setEditModeEnabled(prev => {
+      setEditModeEnabled((prev) => {
         const newValue = !prev;
         console.log('[EditableContentProvider] Edit mode toggled to:', newValue);
         return newValue;

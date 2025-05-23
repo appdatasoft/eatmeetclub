@@ -16,7 +16,6 @@ export const EditModeToggle = () => {
   }, [canEdit, editModeEnabled, isAdmin]);
 
   // For debugging purposes, always render the component with conditional content
-  // This helps us identify if the component itself is rendering or not
   console.log('ADMIN_DEBUG: EditModeToggle rendering decision - canEdit:', canEdit, 'isAdmin:', isAdmin);
   
   if (!canEdit && !isAdmin) {
