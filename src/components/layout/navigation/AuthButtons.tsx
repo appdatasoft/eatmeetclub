@@ -14,7 +14,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 const AuthButtons = () => {
-  const { user, signOut, isLoading } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -61,7 +61,7 @@ const AuthButtons = () => {
               <Link to="/dashboard">Dashboard</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogoutClick} disabled={isLoading}>
+            <DropdownMenuItem onClick={handleLogoutClick}>
               Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
