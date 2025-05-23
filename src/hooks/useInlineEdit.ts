@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,22 +21,21 @@ export const useInlineEdit = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   
-  // Immediately react to admin status changes - this is the highest priority
+  // Immediately react to admin status changes with highest priority
   useEffect(() => {
     console.log('ADMIN_DEBUG: useInlineEdit → Admin status change detected:', isAdmin);
     
-    // If admin status is true, immediately enable editing regardless of any other state
+    // If admin status is explicitly true, immediately enable editing
     if (isAdmin === true) {
       console.log('ADMIN_DEBUG: useInlineEdit → Admin confirmed, enabling edit mode');
       setCanEdit(true);
-      return; // Skip other checks when admin is confirmed
     } 
     // Only set to false if we're sure user is not admin and auth loading is complete
     else if (!authLoading && isAdmin === false) {
       console.log('ADMIN_DEBUG: useInlineEdit → Not admin, disabling edit mode');
       setCanEdit(false);
     }
-    // If still loading, don't change anything yet
+    // If still loading or undefined, don't change anything yet
   }, [isAdmin, authLoading]);
 
   // Log canEdit changes
@@ -44,8 +44,8 @@ export const useInlineEdit = () => {
   }, [canEdit]);
 
   const saveContent = async (content: EditableContent) => {
-    // Always check isAdmin first, then fallback to canEdit
-    if (!isAdmin && !canEdit) {
+    // Always check isAdmin first with highest priority
+    if (isAdmin !== true && !canEdit) {
       toast({
         title: 'Permission denied',
         description: 'You must be an admin to edit content',
@@ -160,6 +160,6 @@ export const useInlineEdit = () => {
     isEditing,
     setIsEditing,
     isLoading: isSaving,
-    canEdit: isAdmin || canEdit, // Important: Prioritize isAdmin before canEdit
+    canEdit: isAdmin === true || canEdit, // HIGHEST PRIORITY: Always enable for admins
   };
 };

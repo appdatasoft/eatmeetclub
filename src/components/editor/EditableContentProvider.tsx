@@ -50,14 +50,14 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   const [editModeEnabled, setEditModeEnabled] = useState(false);
   const [localCanEdit, setLocalCanEdit] = useState(false);
 
-  // PRIORITY: First react to isAdmin directly, then fallback to inlineEditCanEdit
+  // HIGHEST PRIORITY: Always immediately respect isAdmin status
   useEffect(() => {
-    // Admin status is the highest priority
     if (isAdmin === true) {
       console.log('[EditableContentProvider] isAdmin is true, enabling canEdit immediately');
       setLocalCanEdit(true);
-    } else {
-      console.log('[EditableContentProvider] isAdmin is not true, using inlineEditCanEdit:', inlineEditCanEdit);
+    } else if (isAdmin === false) {
+      // Only use inlineEditCanEdit when we know for sure user is not admin
+      console.log('[EditableContentProvider] isAdmin is false, using inlineEditCanEdit:', inlineEditCanEdit);
       setLocalCanEdit(inlineEditCanEdit);
     }
   }, [isAdmin, inlineEditCanEdit]);
@@ -96,7 +96,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
   }, []);
 
   useEffect(() => {
-    if (localCanEdit) {
+    if (isAdmin || localCanEdit) {
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
           setEditModeEnabled(false);
@@ -107,7 +107,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
         window.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [localCanEdit, editModeEnabled]);
+  }, [isAdmin, localCanEdit, editModeEnabled]);
 
   const saveContent = async (id: string, content: string, contentType: string = 'text') => {
     const success = await saveInlineContent({
@@ -166,9 +166,13 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     console.log('[EditableContentProvider] current editModeEnabled =', editModeEnabled);
     
     // Always prioritize isAdmin check before localCanEdit
-    if (isAdmin === true || localCanEdit) {
+    if (isAdmin === true) {
       const newMode = !editModeEnabled;
-      console.log('[EditableContentProvider] Setting editModeEnabled to:', newMode);
+      console.log('[EditableContentProvider] Admin detected, setting editModeEnabled to:', newMode);
+      setEditModeEnabled(newMode);
+    } else if (localCanEdit) {
+      const newMode = !editModeEnabled;
+      console.log('[EditableContentProvider] User has edit permissions, setting editModeEnabled to:', newMode);
       setEditModeEnabled(newMode);
     } else {
       console.log('[EditableContentProvider] Cannot toggle - no permissions');
@@ -176,9 +180,11 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
     }
   };
 
+  const effectiveCanEdit = isAdmin === true || localCanEdit;
+
   const contextValue = {
     contentMap,
-    canEdit: isAdmin || localCanEdit, // Always prioritize isAdmin
+    canEdit: effectiveCanEdit, // Always prioritize isAdmin
     editModeEnabled,
     setEditModeEnabled,
     saveContent,

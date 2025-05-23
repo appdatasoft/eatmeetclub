@@ -11,16 +11,19 @@ interface MainLayoutProps {
 }
 
 const MainLayout = ({ children }: MainLayoutProps) => {
+  // Move isAdmin to the top - highest priority
   const { isAdmin } = useAuth();
   const { canEdit } = useEditableContent();
   const [showEditToggle, setShowEditToggle] = useState(false);
 
+  // Always prioritize isAdmin status for edit toggle
   useEffect(() => {
     console.log('[MainLayout] Admin & Edit status:');
     console.log('[MainLayout] isAdmin:', isAdmin);
     console.log('[MainLayout] canEdit from context:', canEdit);
     
     // Always prioritize isAdmin status first - if admin, always show toggle
+    // Use === true for explicit check
     const shouldShow = isAdmin === true || canEdit === true;
     setShowEditToggle(shouldShow);
     console.log('[MainLayout] showEditToggle updated to:', shouldShow);

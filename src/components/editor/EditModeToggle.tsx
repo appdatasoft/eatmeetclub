@@ -5,6 +5,7 @@ import { Pencil, Eye } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 export const EditModeToggle = () => {
+  // Move isAdmin check to the TOP - highest priority
   const { isAdmin } = useAuth();
   const { canEdit, editModeEnabled, toggleEditMode } = useEditableContent();
   
@@ -27,7 +28,8 @@ export const EditModeToggle = () => {
   console.log('ADMIN_DEBUG: EditModeToggle rendering decision - canEdit:', canEdit, 'isAdmin:', isAdmin);
   
   // Show the permissions debug banner if there's an inconsistency
-  if (isAdmin && !canEdit) {
+  // Explicit check for isAdmin first
+  if (isAdmin === true && canEdit !== true) {
     console.log('ADMIN_DEBUG: Inconsistent permissions detected - isAdmin is true but canEdit is false');
     return (
       <div className="w-full bg-yellow-50 py-2 border-b border-yellow-200 sticky top-0 z-50 shadow-sm">
@@ -44,8 +46,8 @@ export const EditModeToggle = () => {
     );
   }
   
-  // Use isAdmin as the primary permission check, fallback to canEdit
-  if (!isAdmin && !canEdit) {
+  // ALWAYS allow rendering for admins, regardless of canEdit state
+  if (isAdmin !== true && !canEdit) {
     console.log('ADMIN_DEBUG: EditModeToggle not rendering content - no edit permissions');
     return null;
   }
