@@ -26,16 +26,28 @@ export const EditModeToggle = () => {
   // For debugging purposes, render based on isAdmin first, then canEdit
   console.log('ADMIN_DEBUG: EditModeToggle rendering decision - canEdit:', canEdit, 'isAdmin:', isAdmin);
   
-  // Use isAdmin as the primary permission check, fallback to canEdit
-  if (!isAdmin && !canEdit) {
-    console.log('ADMIN_DEBUG: EditModeToggle not rendering content - no edit permissions');
+  // Show the permissions debug banner if there's an inconsistency
+  if (isAdmin && !canEdit) {
+    console.log('ADMIN_DEBUG: Inconsistent permissions detected - isAdmin is true but canEdit is false');
     return (
       <div className="w-full bg-yellow-50 py-2 border-b border-yellow-200 sticky top-0 z-50 shadow-sm">
         <div className="container-custom flex justify-between items-center">
-          <span className="text-yellow-700 font-medium">Debug: Component rendered but permissions missing (isAdmin: {String(isAdmin)}, canEdit: {String(canEdit)})</span>
+          <span className="text-yellow-700 font-medium">Admin detected but edit permissions are not active. Trying to resolve...</span>
+          <button
+            onClick={handleToggleClick}
+            className="px-6 py-2 rounded-full bg-yellow-200 text-yellow-800 border border-yellow-300 hover:bg-yellow-300"
+          >
+            Try Enabling Edit Mode
+          </button>
         </div>
       </div>
     );
+  }
+  
+  // Use isAdmin as the primary permission check, fallback to canEdit
+  if (!isAdmin && !canEdit) {
+    console.log('ADMIN_DEBUG: EditModeToggle not rendering content - no edit permissions');
+    return null;
   }
 
   console.log('ADMIN_DEBUG: EditModeToggle IS RENDERING - has edit permissions');

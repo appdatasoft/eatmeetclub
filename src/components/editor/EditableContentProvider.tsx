@@ -44,11 +44,10 @@ export const useEditableContent = () => {
 
 export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAdmin } = useAuth();
-  const { saveContent: saveInlineContent, fetchContent, isLoading, canEdit: inlineEditCanEdit } = useInlineEdit();
+  const { saveContent: saveInlineContent, fetchContent, isLoading, canEdit: inlineEditCanEdit, isEditing, setIsEditing } = useInlineEdit();
 
   const [contentMap, setContentMap] = useState<Record<string, EditableContent>>({});
   const [editModeEnabled, setEditModeEnabled] = useState(false);
-  const [isEditing, setIsEditing] = useState<string | null>(null);
   const [localCanEdit, setLocalCanEdit] = useState(false);
 
   // PRIORITY: First react to isAdmin directly, then fallback to inlineEditCanEdit
@@ -179,7 +178,7 @@ export const EditableContentProvider: React.FC<{ children: React.ReactNode }> = 
 
   const contextValue = {
     contentMap,
-    canEdit: localCanEdit, // use our local state that prioritizes isAdmin
+    canEdit: isAdmin || localCanEdit, // Always prioritize isAdmin
     editModeEnabled,
     setEditModeEnabled,
     saveContent,

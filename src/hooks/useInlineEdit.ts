@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,6 +28,7 @@ export const useInlineEdit = () => {
     if (isAdmin === true) {
       console.log('ADMIN_DEBUG: useInlineEdit → Admin confirmed, enabling edit mode');
       setCanEdit(true);
+      return; // Skip other checks when admin is confirmed
     } 
     // Only set to false if we're sure user is not admin and auth loading is complete
     else if (!authLoading && isAdmin === false) {
@@ -44,7 +44,8 @@ export const useInlineEdit = () => {
   }, [canEdit]);
 
   const saveContent = async (content: EditableContent) => {
-    if (!canEdit) {
+    // Always check isAdmin first, then fallback to canEdit
+    if (!isAdmin && !canEdit) {
       toast({
         title: 'Permission denied',
         description: 'You must be an admin to edit content',
@@ -159,6 +160,6 @@ export const useInlineEdit = () => {
     isEditing,
     setIsEditing,
     isLoading: isSaving,
-    canEdit,
+    canEdit: isAdmin || canEdit, // Important: Prioritize isAdmin before canEdit
   };
 };

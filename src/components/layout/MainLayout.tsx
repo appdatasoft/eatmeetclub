@@ -35,7 +35,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       {/* Debug banner when permissions are inconsistent */}
       {isAdmin === true && canEdit !== true && (
         <div className="bg-red-600 text-white px-4 py-2 text-center text-sm font-medium">
-          Admin detected, but canEdit is FALSE. Check permissions in EditableContentProvider.
+          Admin detected, but canEdit is FALSE. Admin permissions may be delayed in loading.
         </div>
       )}
       
